@@ -1,0 +1,25 @@
+{
+  "name": "saas-booking",
+  "main": "index.js",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "", 
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": [
+    "apps/*",
+    "libs/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.6.0"
+  }
+}
+
+
