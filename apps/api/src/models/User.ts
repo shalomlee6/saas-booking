@@ -1,4 +1,4 @@
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Document, Types } from 'mongoose';
 
 export type UserRole = 'owner' | 'admin';
 
@@ -6,7 +6,7 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   role: UserRole;
-  businessId?: string; // נוסיף בהמשך קשר ל-Business
+  businessId?: Types.ObjectId; // נוסיף בהמשך קשר ל-Business
   createdAt: Date;
   updatedAt: Date;
 }

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
+import { Business } from '../models/Business';
+import { generateSlug } from '../utils/slug';
 
 export const authRouter = Router();
 
@@ -21,24 +23,45 @@ authRouter.post('/register', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Create User
     const user = await User.create({
       email,
       passwordHash,
       role: 'owner',
     });
 
+    // Create User business
+    const business = await Business.create({
+      ownerId: user._id,
+      name: email.split('@')[0] + "'s business", 
+      slug: generateSlug(email.split('@')[0] + '-' + user._id.toString()),
+    });
+
+    // לעדכן את ה-user עם ה-businessId
+    user.businessId = business._id;
+    await user.save();
+
+
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+    {
+      userId: user._id,
+      role: user.role,
+      businessId: user.businessId, 
+    },
       process.env.JWT_SECRET || 'dev-secret',
-      { expiresIn: '7d' }
-    );
+    { expiresIn: '7d' }
+  );
+
+
 
     return res.status(201).json({
       token,
+      business,
       user: {
         id: user._id,
         email: user.email,
         role: user.role,
+        businessId: user.businessId,
       },
     });
   } catch (err) {
