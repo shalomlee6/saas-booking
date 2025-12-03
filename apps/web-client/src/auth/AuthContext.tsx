@@ -7,7 +7,7 @@ interface AuthContextValue {
   business: Business | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -19,22 +19,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // טעינה ראשונית מה-localStorage
   useEffect(() => {
-    const token = localStorage.getItem('sb_token');
-    const userJson = localStorage.getItem('sb_user');
 
-    if (!token || !userJson) {
-      setLoading(false);
-      return;
+
+    const loadUser = async () => {
+      try {
+        const res = await api.get('/auth/me');
+        if(!res) {
+          setUser(null);
+          setBusiness(null);
+          setLoading(false);
+          return;
+        }
+        setUser(res.data?.user);
+        setBusiness(res.data?.business);
+      } catch {
+        setUser(null);
+        setBusiness(null);
+      } finally {
+        setLoading(false);
+      }
     }
-
-    const parsedUser: User = JSON.parse(userJson);
-    setUser(parsedUser);
-
-    // להביא business
-    api
-      .get<Business>('/business/me')
-      .then((res: { data: any; }) => setBusiness(res.data))
-      .finally(() => setLoading(false));
+    loadUser();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -44,21 +49,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       business?: Business;
     }>('/auth/login', { email, password });
 
-    const { token, user: loggedUser } = res.data;
-
-    localStorage.setItem('sb_token', token);
-    localStorage.setItem('sb_user', JSON.stringify(loggedUser));
-
-    setUser(loggedUser);
-
-    // להביא business
-    const bizRes = await api.get<Business>('/business/me');
-    setBusiness(bizRes.data);
+    setUser(res.data?.user);
+    setBusiness(res.data.business ?? null);
   };
 
-  const logout = () => {
-    localStorage.removeItem('sb_token');
-    localStorage.removeItem('sb_user');
+  const logout = async () => {
+    await api.post('/auth/logout');
     setUser(null);
     setBusiness(null);
   };

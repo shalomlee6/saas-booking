@@ -2,8 +2,8 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
-import { DashboardPage } from './pages/DashboardPage';
 import { PublicWelcomePage } from './pages/PublicWelcomePage';
+import { CustomersPage } from './pages/CustomersPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -20,7 +20,7 @@ const AppInner: React.FC = () => {
         path="/dashboard"
         element={
           <PrivateRoute>
-            <DashboardPage />
+             <CustomersPage />
           </PrivateRoute>
         }
       />

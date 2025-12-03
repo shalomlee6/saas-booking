@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User';
 import { Business } from '../models/Business';
 import { generateSlug } from '../utils/slug';
+import { auth, AuthRequest } from '../middleware/auth';
 
 export const authRouter = Router();
 
@@ -43,15 +44,21 @@ authRouter.post('/register', async (req, res) => {
 
 
     const token = jwt.sign(
-    {
-      userId: user._id,
-      role: user.role,
-      businessId: user.businessId, 
-    },
-      process.env.JWT_SECRET || 'dev-secret',
-    { expiresIn: '7d' }
-  );
+      {
+        userId: user._id,
+        role: user.role,
+        businessId: user.businessId, 
+      },
+        process.env.JWT_SECRET || 'dev-secret',
+      { expiresIn: '7d' }
+    );
 
+    res.cookie('sb_token', token, {
+      httpOnly: true,
+      secure: false,        // ב-https production לשים true
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // שבוע
+    });
 
 
     return res.status(201).json({
@@ -90,10 +97,20 @@ authRouter.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { userId: user._id, role: user.role },
+      { userId: user._id,
+        role: user.role,
+        businessId: user.businessId
+      },
       process.env.JWT_SECRET || 'dev-secret',
       { expiresIn: '7d' }
     );
+
+    res.cookie('sb_token', token, {
+      httpOnly: true,
+      secure: false,        // ב-https production לשים true
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // שבוע
+    });
 
     return res.json({
       token,
@@ -101,6 +118,7 @@ authRouter.post('/login', async (req, res) => {
         id: user._id,
         email: user.email,
         role: user.role,
+        businessId: user?.businessId
       },
     });
   } catch (err) {
@@ -108,3 +126,44 @@ authRouter.post('/login', async (req, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+// get current user
+authRouter.get('/me', auth, async (req: AuthRequest, res) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(401).json({ message: 'User not found' });
+    }
+
+    let business = null;
+    if (user?.businessId) {
+      business = await Business.findById(user.businessId);
+    }
+
+    return res.json({
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        businessId: user.businessId,
+      },
+      business,
+    });
+  } catch (err) {
+    console.error('Error GET /auth/me:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// logout
+authRouter.post('/logout', (req, res) => {
+  res.clearCookie('sb_token');
+  return res.json({ success: true });
+});
+
+
+

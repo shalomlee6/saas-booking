@@ -7,12 +7,21 @@ import { authRouter } from './routes/auth';
 import { customersRouter } from './routes/customers';
 import { servicesRouter } from './routes/services';
 import { appointmentsRouter } from './routes/appointments';
+import cookieParser from 'cookie-parser';
 
 dotenv.config();
 
 const app = express();
+const PORT = Number(process.env.PORT || 5173);
+const MONGO_URI = process.env.MONGO_URI || '';
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true // enable coockis
+}));
+app.use(cookieParser());
 app.use(express.json());
 app.use('/api/auth', authRouter);
 app.use('/api/business', businessRouter);
@@ -24,8 +33,7 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'saas-booking-api' });
 });
 
-const PORT = Number(process.env.PORT || 5088);
-const MONGO_URI = process.env.MONGO_URI || '';
+
 
 async function bootstrap() {
   if (!MONGO_URI) {
