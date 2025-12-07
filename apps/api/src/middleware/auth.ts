@@ -12,25 +12,31 @@ export interface AuthUser {
 }
 
 export function auth(req: AuthRequest, res: Response, next: NextFunction) {
-  const header = req.headers['authorization'];
-  let token: string | undefined;
-
-  if (header && header.startsWith('Bearer ')) {
-    token = header.substring(7);
-  } else if (req.cookies && req.cookies.sb_token) {
-    token = req.cookies.sb_token;
-  }
-
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
-
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'dev-secret'
-    ) as AuthUser;
+    let token: string | undefined;
+    const header = req.headers['authorization'];
 
+    if (req.cookies && req.cookies.sb_token) {
+      token = req.cookies.sb_token;
+    }
+
+    if (!token && typeof header === 'string' && header.startsWith('Bearer ')) {
+      const [scheme, value] = header.split(' ');
+      if (scheme === 'Bearer' && value) {
+        token = value;
+      }
+    }
+
+    if (!token && typeof req.headers['sb_token'] === 'string') {
+      token = req.headers['sb_token'] as string;
+    }
+
+
+    if (!token) {
+      return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as AuthUser;
     req.user = decoded;
     return next();
   } catch (err) {

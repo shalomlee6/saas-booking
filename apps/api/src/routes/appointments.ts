@@ -1,11 +1,21 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
+import { getMyAppointmentsForRange, getBusinessAppointmentsForWeek } from '../controllers/appointmentController';
 
 export const appointmentsRouter = Router();
 
+// Apply auth middleware to all routes
+appointmentsRouter.use(auth);
+
+// GET /api/appointments/my?from=2025-01-01&to=2025-01-02
+appointmentsRouter.get('/my', getMyAppointmentsForRange);
+
+// GET /api/appointments/week
+appointmentsRouter.get('/week', getBusinessAppointmentsForWeek);
+
 // GET /api/appointments?from=2025-01-01&to=2025-01-02
-appointmentsRouter.get('/', auth, async (req: AuthRequest, res) => {
+appointmentsRouter.get('/', async (req: AuthRequest, res) => {
   try {
     const businessId = req.user!.businessId!;
     const { from, to } = req.query;
@@ -29,7 +39,7 @@ appointmentsRouter.get('/', auth, async (req: AuthRequest, res) => {
 });
 
 // POST /api/appointments
-appointmentsRouter.post('/', auth, async (req: AuthRequest, res) => {
+appointmentsRouter.post('/', async (req: AuthRequest, res) => {
   try {
     const businessId = req.user!.businessId!;
     const { customerId, serviceId, start, end, notes } = req.body;
@@ -60,7 +70,7 @@ appointmentsRouter.post('/', auth, async (req: AuthRequest, res) => {
 });
 
 // PUT /api/appointments/:id
-appointmentsRouter.put('/:id', auth, async (req: AuthRequest, res) => {
+appointmentsRouter.put('/:id', async (req: AuthRequest, res) => {
   try {
     const businessId = req.user!.businessId!;
     const { id } = req.params;
@@ -84,7 +94,7 @@ appointmentsRouter.put('/:id', auth, async (req: AuthRequest, res) => {
 });
 
 // DELETE /api/appointments/:id (ב-MVP: להפוך ל-cancelled)
-appointmentsRouter.delete('/:id', auth, async (req: AuthRequest, res) => {
+appointmentsRouter.delete('/:id', async (req: AuthRequest, res) => {
   try {
     const businessId = req.user!.businessId!;
     const { id } = req.params;

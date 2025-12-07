@@ -5,6 +5,7 @@ import { User } from '../models/User';
 import { Business } from '../models/Business';
 import { generateSlug } from '../utils/slug';
 import { auth, AuthRequest } from '../middleware/auth';
+import { getMe } from '../controllers/authController';
 
 export const authRouter = Router();
 
@@ -127,37 +128,8 @@ authRouter.post('/login', async (req, res) => {
   }
 });
 
-// get current user
-authRouter.get('/me', auth, async (req: AuthRequest, res) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    let business = null;
-    if (user?.businessId) {
-      business = await Business.findById(user.businessId);
-    }
-
-    return res.json({
-      user: {
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        businessId: user.businessId,
-      },
-      business,
-    });
-  } catch (err) {
-    console.error('Error GET /auth/me:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+// GET /api/auth/me
+authRouter.get('/me', auth, getMe);
 
 // logout
 authRouter.post('/logout', (req, res) => {

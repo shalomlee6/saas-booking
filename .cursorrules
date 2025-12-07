@@ -1,0 +1,27 @@
+# Saas-Booking – Project Rules
+
+You are working inside the **Saas-Booking** monorepo project.
+The technology stack:
+- Backend: Node.js, Express, TypeScript, MongoDB (Mongoose)
+- Frontend: React + TypeScript + Vite
+- Auth: JWT stored in HTTP-only cookies
+- Architecture: Multi-tenant (businessId required on all requests)
+
+## Core domain rules:
+1. Every request must be scoped under **businessId** from the authenticated user.
+2. Never trust businessId coming directly from the client.
+3. Use async/await only (no promises chains).
+4. Keep controllers thin and move logic into services.
+5. Keep a clean folder structure and follow existing patterns when adding new features.
+6. Always validate user role & permissions before executing business-sensitive operations.
+
+## Style:
+- Use TypeScript strict mode.
+- Prefer small, pure functions.
+- On frontend: use components under `src/components`, services under `src/services`, and hooks under `src/hooks`.
+- Never duplicate code: reuse helpers or create new utilities when needed.
+
+## When generating new code:
+- Follow the existing naming conventions.
+- Place new backend files under `src/api/...` or `src/modules/...` according to the existing structure.
+- Place new frontend features under `src/pages/...` or `src/components/...` as appropriate.
