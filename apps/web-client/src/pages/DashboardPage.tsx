@@ -1,14 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
-import type { Customer } from '../types/api-types';
-import { CustomersTable } from '../components/CustomersTable';
+import type { AppointmentDto, Customer } from '../types/api-types';
 import { useNavigate } from 'react-router-dom';
+import { AppointmentsWeekPage } from './AppointmentsWeekPage';
+
+import { CustomersPage } from './CustomersPage';
+import { fetchWeekAppointments } from '../api/appointments';
 
 export const DashboardPage: React.FC = () => {
   const { user, business, loading, logout } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);
+  
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
+  const didFetchLoadAppointmentsRef = useRef(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -28,9 +36,30 @@ export const DashboardPage: React.FC = () => {
         setLoadingCustomers(false);
       }
     };
-
     fetchCustomers();
   }, []);
+
+  useEffect(() => {
+    if (didFetchLoadAppointmentsRef.current) return;
+    const loadAppointments = async () => {
+      try {
+        setLoadingAppointments(true);
+        const data = await fetchWeekAppointments();
+        setAppointments(data);
+       
+      } catch (err) {
+        console.error('Failed to fetch appointments', err);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    };
+
+
+    loadAppointments();
+    didFetchLoadAppointmentsRef.current = true;
+
+  }, [user]);
+
 
   if (loading) return <div>טוען...</div>;
   if (!user) return null;
@@ -65,13 +94,32 @@ export const DashboardPage: React.FC = () => {
       </header>
 
       <main className="max-w-4xl mx-auto p-4">
-        <h1 className="text-xl font-bold mb-2">לקוחות</h1>
-        {loadingCustomers ? (
-          <div>טוען לקוחות...</div>
-        ) : (
-          <CustomersTable customers={customers} />
-        )}
+
+          
+          <div className="flex flex-col gap-4">
+
+            <div className="flex flex-col">
+              <h1 className="text-xl font-bold mb-2">לקוחות</h1>
+              {loadingCustomers ? (
+                <div>טוען לקוחות...</div>
+              ) : (
+                <CustomersPage customersList={customers} />
+              )}
+            </div>
+
+            <div className="flex flex-col">
+              {loadingAppointments ? (
+              <div>טוען תורים השבוע...</div>
+              ) : (
+                <AppointmentsWeekPage showSideBar={false} appointments={appointments} customersList={customers} />
+              )}
+            </div>
+          </div>
+
+          
+          
       </main>
+      
     </div>
   );
 };

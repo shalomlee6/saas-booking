@@ -1,12 +1,5 @@
 import React from 'react';
-
-export interface AppointmentDto {
-  _id: string;
-  start: string | Date;
-  end: string | Date;
-  customerName?: string;
-  treatmentType?: string;
-}
+import type { AppointmentDto } from '../types/api-types';
 
 interface WeeklyCalendarProps {
   appointments: AppointmentDto[];
@@ -24,20 +17,20 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
     days.push(day);
   }
 
-  // Generate hours from 08:00 to 17:00
+  // Generate hours from 08:00 to 20:00
   const hours: number[] = [];
-  for (let h = 8; h <= 17; h++) {
+  for (let h = 8; h < 20; h++) {
     hours.push(h);
   }
 
-  // Helper function to check if a time slot has an appointment
-  const hasAppointment = (day: Date, hour: number): boolean => {
+  // Helper function to find appointments that overlap with a time slot
+  const getAppointmentsForSlot = (day: Date, hour: number): AppointmentDto[] => {
     const slotStart = new Date(day);
     slotStart.setHours(hour, 0, 0, 0);
     const slotEnd = new Date(day);
     slotEnd.setHours(hour + 1, 0, 0, 0);
 
-    return appointments.some((apt) => {
+    return appointments.filter((apt) => {
       const aptStart = new Date(apt.start);
       const aptEnd = new Date(apt.end);
       
@@ -48,11 +41,26 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
 
   // Format day header
   const formatDayHeader = (date: Date): string => {
-    const days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-    const dayName = days[date.getDay()];
+    const dayNames = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const dayName = dayNames[date.getDay()];
     const dayNum = date.getDate();
     const month = date.getMonth() + 1;
     return `${dayName} ${dayNum}/${month}`;
+  };
+
+  // Get background color for appointment
+  const getAppointmentColor = (appointment: AppointmentDto): string => {
+    return appointment.service?.colorHex || '#c084fc'; // Default light purple
+  };
+
+  // Format appointment display text
+  const formatAppointmentText = (appointment: AppointmentDto): string => {
+    const serviceName = appointment.service?.name || '';
+    const customerName = appointment.customer?.name || '';
+    if (serviceName && customerName) {
+      return `${serviceName} • ${customerName}`;
+    }
+    return serviceName || customerName || '';
   };
 
   return (
@@ -75,15 +83,33 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
                 {hour}:00
               </td>
               {days.map((day, dayIdx) => {
-                const isBooked = hasAppointment(day, hour);
-                return (
-                  <td
-                    key={dayIdx}
-                    className={`border border-slate-300 p-2 ${
-                      isBooked ? 'bg-purple-300 slot-booked' : 'bg-white slot-free'
-                    }`}
-                  />
-                );
+                const slotAppointments = getAppointmentsForSlot(day, hour);
+                const hasAppointments = slotAppointments.length > 0;
+                
+                if (hasAppointments) {
+                  // Show the first appointment (or multiple if they overlap)
+                  const firstAppt = slotAppointments[0];
+                  const bgColor = getAppointmentColor(firstAppt);
+                  const displayText = formatAppointmentText(firstAppt);
+                  
+                  return (
+                    <td
+                      key={dayIdx}
+                      className="border border-slate-300 p-2 slot-booked text-right text-xs"
+                      style={{ backgroundColor: bgColor }}
+                      title={displayText}
+                    >
+                      <div className="truncate">{displayText}</div>
+                    </td>
+                  );
+                } else {
+                  return (
+                    <td
+                      key={dayIdx}
+                      className="border border-slate-300 p-2 bg-white slot-free"
+                    />
+                  );
+                }
               })}
             </tr>
           ))}
@@ -92,4 +118,3 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
     </div>
   );
 };
-

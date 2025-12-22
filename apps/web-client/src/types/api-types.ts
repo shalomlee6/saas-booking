@@ -20,3 +20,27 @@ export interface Customer {
   email?: string;
   notes?: string;
 }
+
+export type AppointmentStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+
+export interface ServiceDto {
+  _id: string;
+  name: string;
+  colorHex?: string;
+}
+
+export type CustomerDto = Customer;
+
+export interface AppointmentDto {
+  _id: string;
+  start: string;
+  end: string;
+  status: AppointmentStatus;
+  service?: ServiceDto;
+  customer?: CustomerDto;
+}
+
+export interface AvailableSlotDto {
+  start: string; // ISO string
+  end: string;   // ISO string
+}

@@ -2,8 +2,9 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
+import { BookAppointmentPage } from './pages/BookAppointmentPage';
 import { PublicWelcomePage } from './pages/PublicWelcomePage';
-import { CustomersPage } from './pages/CustomersPage';
+import { DashboardPage } from './pages/DashboardPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -20,7 +21,16 @@ const AppInner: React.FC = () => {
         path="/dashboard"
         element={
           <PrivateRoute>
-             <CustomersPage />
+            <DashboardPage />
+            
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/book-appointment"
+        element={
+          <PrivateRoute>
+            <BookAppointmentPage />
           </PrivateRoute>
         }
       />

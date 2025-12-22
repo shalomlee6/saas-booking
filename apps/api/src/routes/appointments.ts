@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
-import { getMyAppointmentsForRange, getBusinessAppointmentsForWeek } from '../controllers/appointmentController';
+import { getMyAppointmentsForRange, getBusinessAppointmentsForWeek, getAvailableSlots } from '../controllers/appointmentController';
 
 export const appointmentsRouter = Router();
 
@@ -13,6 +13,9 @@ appointmentsRouter.get('/my', getMyAppointmentsForRange);
 
 // GET /api/appointments/week
 appointmentsRouter.get('/week', getBusinessAppointmentsForWeek);
+
+// GET /api/appointments/available-slots?serviceId=...&customerId=...&weekStart=...
+appointmentsRouter.get('/available-slots', getAvailableSlots);
 
 // GET /api/appointments?from=2025-01-01&to=2025-01-02
 appointmentsRouter.get('/', async (req: AuthRequest, res) => {

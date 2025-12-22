@@ -13,12 +13,16 @@ interface NewCustomerForm {
   notes: string;
 }
 
-export const CustomersPage: React.FC = () => {
+interface CustomersProps {
+  customersList?: Customer[]
+}
+
+export const CustomersPage: React.FC<CustomersProps> = ({customersList}) => {
   const { user, business, loading: authLoading, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loading, setLoading] = useState(true);
+  // const [customers, setCustomers] = useState<Customer[]>([]);
+  // const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<NewCustomerForm>({
@@ -36,29 +40,29 @@ export const CustomersPage: React.FC = () => {
     }
   }, [authLoading, user, navigate]);
 
-  const loadCustomers = async (searchQuery?: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const res = await api.get<Customer[]>('/customers', {
-        params: searchQuery ? { search: searchQuery } : {},
-      });
-      setCustomers(res.data);
-    } catch (err: any) {
-      console.error(err);
-      setError('נכשלה טעינת הלקוחות');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // const loadCustomers = async (searchQuery?: string) => {
+  //   try {
+  //     setLoading(true);
+  //     setError(null);
+  //     const res = await api.get<Customer[]>('/customers', {
+  //       params: searchQuery ? { search: searchQuery } : {},
+  //     });
+  //     setCustomers(res.data);
+  //   } catch (err: any) {
+  //     console.error(err);
+  //     setError('נכשלה טעינת הלקוחות');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
+  // useEffect(() => {
+  //   loadCustomers();
+  // }, []);
 
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await loadCustomers(search);
+    // await loadCustomers(search);
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -77,7 +81,7 @@ export const CustomersPage: React.FC = () => {
       // איפוס הטופס
     //   setForm({ name: '', phone: '', email: '', notes: '' });
       // רענון רשימה
-      await loadCustomers(search);
+      // await loadCustomers(search);
     } catch (err: any) {
       console.error(err);
       setError(err?.response?.data?.message || 'יצירת הלקוחה נכשלה');
@@ -95,40 +99,11 @@ export const CustomersPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header עליון */}
-      <header className="bg-white shadow px-6 py-3 flex items-center justify-between">
-        <div>
-          <div className="font-semibold">
-            שלום {user.email}
-          </div>
-          {business && (
-            <div className="text-sm text-slate-600">
-              עסק: {business.name}
-            </div>
-          )}
-        </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => navigate('/public')}
-            className="px-3 py-1 border border-slate-300 rounded text-sm hover:bg-slate-50"
-          >
-            צפייה באתר הלקוחות
-          </button>
-          <button
-            onClick={logout}
-            className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-          >
-            התנתקות
-          </button>
-        </div>
-      </header>
+    <div className=" bg-slate-50">
 
-      {/* תוכן הדשבורד */}
+      {/* תוכן לקוחות */}
       <main className="max-w-5xl mx-auto p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-xl font-bold">לקוחות</h1>
-        </div>
+
 
         {/* אזור חיפוש + הוספת לקוחה */}
         <div className="grid gap-4 md:grid-cols-[2fr,1.5fr]">
@@ -210,11 +185,9 @@ export const CustomersPage: React.FC = () => {
 
         {/* טבלת לקוחות */}
         <section className="mt-6">
-          {loading ? (
-            <div>טוען לקוחות...</div>
-          ) : (
-            <CustomersTable customers={customers} />
-          )}
+
+            <CustomersTable customers={customersList ?? []} />
+          
         </section>
       </main>
     </div>

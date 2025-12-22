@@ -6,6 +6,7 @@ export interface ICustomer extends Document {
   phone: string;
   email?: string;
   notes?: string;
+  defaultTreatmentDurationMinutes?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -22,6 +23,7 @@ const CustomerSchema = new Schema<ICustomer>(
     phone: { type: String, required: true },
     email: String,
     notes: String,
+    defaultTreatmentDurationMinutes: Number,
   },
   { timestamps: true }
 );

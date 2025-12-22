@@ -22,7 +22,7 @@ servicesRouter.get('/', auth, async (req: AuthRequest, res) => {
 servicesRouter.post('/', auth, async (req: AuthRequest, res) => {
   try {
     const businessId = req.user!.businessId!;
-    const { name, description, durationMinutes, price } = req.body;
+    const { name, price, description, durationMinutes, colorHex, textColorHex } = req.body;
 
     if (!name || !durationMinutes || !price) {
       return res
@@ -36,6 +36,8 @@ servicesRouter.post('/', auth, async (req: AuthRequest, res) => {
       description,
       durationMinutes,
       price,
+      colorHex,
+      textColorHex,
     });
 
     res.status(201).json(service);
