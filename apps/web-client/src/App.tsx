@@ -4,7 +4,14 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { BookAppointmentPage } from './pages/BookAppointmentPage';
 import { PublicWelcomePage } from './pages/PublicWelcomePage';
-import { DashboardPage } from './pages/DashboardPage';
+import { DashboardLayout } from './layout/DashboardLayout';
+import { DashboardHomePage } from './pages/DashboardHomePage';
+import { AppointmentsWeekPage } from './pages/AppointmentsWeekPage';
+import { CustomersPageWrapper } from './pages/CustomersPageWrapper';
+import { ServicesPage } from './pages/ServicesPage';
+import { AnnouncementsPage } from './pages/AnnouncementsPage';
+import { ReportsPage } from './pages/ReportsPage';
+import { SettingsPage } from './pages/SettingsPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -21,11 +28,18 @@ const AppInner: React.FC = () => {
         path="/dashboard"
         element={
           <PrivateRoute>
-            <DashboardPage />
-            
+            <DashboardLayout />
           </PrivateRoute>
         }
-      />
+      >
+        <Route index element={<DashboardHomePage />} />
+        <Route path="appointments" element={<AppointmentsWeekPage showSideBar={false} appointments={[]} />} />
+        <Route path="customers" element={<CustomersPageWrapper />} />
+        <Route path="services" element={<ServicesPage />} />
+        <Route path="announcements" element={<AnnouncementsPage />} />
+        <Route path="reports" element={<ReportsPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+      </Route>
       <Route
         path="/book-appointment"
         element={

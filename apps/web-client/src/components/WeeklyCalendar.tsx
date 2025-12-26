@@ -63,14 +63,45 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
     return serviceName || customerName || '';
   };
 
+  // Get theme color for appointment (rotate through theme colors if no service color)
+  const getThemeAppointmentColor = (index: number): string => {
+    // Use actual color values, not CSS variables, for inline styles
+    const colors = [
+      'rgba(243, 82, 113, 0.25)', // appt-pink
+      'rgba(108, 214, 205, 0.30)', // appt-mint
+      'rgba(166, 223, 248, 0.45)', // appt-sky
+      'rgba(255, 157, 188, 0.40)', // appt-hot
+    ];
+    return colors[index % colors.length];
+  };
+
+  // Format appointment time range
+  const formatAppointmentTime = (appointment: AppointmentDto): string => {
+    const start = new Date(appointment.start);
+    const end = new Date(appointment.end);
+    const startHour = start.getHours();
+    const startMin = start.getMinutes();
+    const endHour = end.getHours();
+    const endMin = end.getMinutes();
+    
+    const formatHour = (h: number, m: number): string => {
+      const period = h >= 12 ? 'pm' : 'am';
+      const displayHour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      const minutes = m > 0 ? `:${m.toString().padStart(2, '0')}` : '';
+      return `${displayHour}${minutes} ${period}`;
+    };
+    
+    return `${formatHour(startHour, startMin)} - ${formatHour(endHour, endMin)}`;
+  };
+
   return (
     <div className="w-full overflow-x-auto">
-      <table className="w-full border-collapse border border-slate-300">
+      <table className="weekTable">
         <thead>
           <tr>
-            <th className="border border-slate-300 p-2 bg-slate-100">שעה</th>
+            <th className="weekHeadCell">שעה</th>
             {days.map((day, idx) => (
-              <th key={idx} className="border border-slate-300 p-2 bg-slate-100 text-right">
+              <th key={idx} className="weekHeadCell">
                 {formatDayHeader(day)}
               </th>
             ))}
@@ -79,7 +110,7 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
         <tbody>
           {hours.map((hour) => (
             <tr key={hour}>
-              <td className="border border-slate-300 p-2 bg-slate-50 font-semibold text-right">
+              <td className="timeCell">
                 {hour}:00
               </td>
               {days.map((day, dayIdx) => {
@@ -89,24 +120,28 @@ export const WeeklyCalendar: React.FC<WeeklyCalendarProps> = ({ appointments }) 
                 if (hasAppointments) {
                   // Show the first appointment (or multiple if they overlap)
                   const firstAppt = slotAppointments[0];
-                  const bgColor = getAppointmentColor(firstAppt);
-                  const displayText = formatAppointmentText(firstAppt);
+                  const serviceColor = firstAppt.service?.colorHex;
+                  const bgColor = serviceColor || getThemeAppointmentColor(dayIdx);
+                  const textColor = firstAppt.service?.textColorHex || '#111827';
                   
                   return (
                     <td
                       key={dayIdx}
-                      className="border border-slate-300 p-2 slot-booked text-right text-xs"
-                      style={{ backgroundColor: bgColor }}
-                      title={displayText}
+                      className="slotCell slotCellBusy"
+                      title={formatAppointmentText(firstAppt)}
                     >
-                      <div className="truncate">{displayText}</div>
+                      <div className="apptBlock" style={{ backgroundColor: bgColor, color: textColor }}>
+                        <div className="apptBlock__time">{formatAppointmentTime(firstAppt)}</div>
+                        <div className="apptBlock__customer">{firstAppt.customer?.name || 'לקוחה'}</div>
+                        <div className="apptBlock__service">{firstAppt.service?.name || 'שירות'}</div>
+                      </div>
                     </td>
                   );
                 } else {
                   return (
                     <td
                       key={dayIdx}
-                      className="border border-slate-300 p-2 bg-white slot-free"
+                      className="slotCell slotCellEmpty"
                     />
                   );
                 }

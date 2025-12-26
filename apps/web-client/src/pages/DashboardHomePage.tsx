@@ -1,23 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { api } from '../api/client';
-import type { AppointmentDto, Customer } from '../types/api-types';
 import { useNavigate } from 'react-router-dom';
 import { AppointmentsWeekPage } from './AppointmentsWeekPage';
-import { DashboardLayout } from '../layout/DashboardLayout';
-import { CustomersPage } from './CustomersPage';
 import { fetchWeekAppointments } from '../api/appointments';
+import type { AppointmentDto, Customer } from '../types/api-types';
+import { api } from '../api/client';
 
-export const DashboardPage: React.FC = () => {
-  const { user, business, loading, logout } = useAuth();
+export const DashboardHomePage: React.FC = () => {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(true);
-  
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const didFetchLoadAppointmentsRef = useRef(false);
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,8 +27,6 @@ export const DashboardPage: React.FC = () => {
         setCustomers(res.data);
       } catch (err) {
         console.error('Failed to fetch customers', err);
-      } finally {
-        setLoadingCustomers(false);
       }
     };
     fetchCustomers();
@@ -46,7 +39,6 @@ export const DashboardPage: React.FC = () => {
         setLoadingAppointments(true);
         const data = await fetchWeekAppointments();
         setAppointments(data);
-       
       } catch (err) {
         console.error('Failed to fetch appointments', err);
       } finally {
@@ -54,19 +46,18 @@ export const DashboardPage: React.FC = () => {
       }
     };
 
-
-    loadAppointments();
-    didFetchLoadAppointmentsRef.current = true;
-
+    if (user) {
+      loadAppointments();
+      didFetchLoadAppointmentsRef.current = true;
+    }
   }, [user]);
-
 
   if (loading) return <div>טוען...</div>;
   if (!user) return null;
 
   return (
-    <DashboardLayout>
-      {loadingAppointments ? (
+    <>
+      {/* {loadingAppointments ? (
         <section className="dashContent">
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
             טוען תורים השבוע...
@@ -74,7 +65,9 @@ export const DashboardPage: React.FC = () => {
         </section>
       ) : (
         <AppointmentsWeekPage showSideBar={false} appointments={appointments} customersList={customers} />
-      )}
-    </DashboardLayout>
+      )} */}
+      {/* <h1>shalom</h1> */}
+    </>
   );
 };
+
