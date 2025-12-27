@@ -1,15 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { AppointmentsWeekPage } from './AppointmentsWeekPage';
 import { fetchWeekAppointments } from '../api/appointments';
-import type { AppointmentDto, Customer } from '../types/api-types';
-import { api } from '../api/client';
+import type { AppointmentDto } from '../types/api-types';
+import { DashboardKpiRow } from '../components/dashboard/DashboardKpiRow';
+import { TodayAppointmentsCard } from '../components/dashboard/TodayAppointmentsCard';
+import { AlertsCard } from '../components/dashboard/AlertsCard';
+import { WeekLoadCard } from '../components/dashboard/WeekLoadCard';
 
 export const DashboardHomePage: React.FC = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
   const didFetchLoadAppointmentsRef = useRef(false);
@@ -19,18 +20,6 @@ export const DashboardHomePage: React.FC = () => {
       navigate('/login');
     }
   }, [loading, user, navigate]);
-
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const res = await api.get<Customer[]>('/customers');
-        setCustomers(res.data);
-      } catch (err) {
-        console.error('Failed to fetch customers', err);
-      }
-    };
-    fetchCustomers();
-  }, []);
 
   useEffect(() => {
     if (didFetchLoadAppointmentsRef.current) return;
@@ -55,19 +44,71 @@ export const DashboardHomePage: React.FC = () => {
   if (loading) return <div>טוען...</div>;
   if (!user) return null;
 
-  return (
-    <>
-      {/* {loadingAppointments ? (
-        <section className="dashContent">
+  // Calculate KPIs
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  
+  const todayCount = appointments.filter((apt) => {
+    const aptDate = new Date(apt.start);
+    return aptDate >= today && aptDate < tomorrow;
+  }).length;
+
+  // TODO: Compute monthly revenue from appointments
+  const monthlyRevenue = '₪0';
+  
+  // TODO: Compute top service from appointments
+  const topService = '—';
+
+  if (loadingAppointments) {
+    return (
+      <section className="dashContent">
+        <div className="dashboardHome">
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
-            טוען תורים השבוע...
+            טוען נתונים...
           </div>
-        </section>
-      ) : (
-        <AppointmentsWeekPage showSideBar={false} appointments={appointments} customersList={customers} />
-      )} */}
-      {/* <h1>shalom</h1> */}
-    </>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="dashContent">
+      <div className="dashboardHome">
+        {/* KPI Row */}
+        <DashboardKpiRow
+          todayCount={todayCount}
+          monthlyRevenue={monthlyRevenue}
+          topService={topService}
+        />
+
+        {/* Main Grid */}
+        <div className="mainGrid">
+          <TodayAppointmentsCard appointments={appointments} />
+          <AlertsCard appointments={appointments} />
+        </div>
+
+        {/* Week Overview */}
+        <WeekLoadCard appointments={appointments} />
+
+        {/* Client Site Preview */}
+        <div className="card" style={{ background: 'rgba(166, 223, 248, 0.15)' }}>
+          <div className="cardHeader">
+            <div>
+              <div className="cardTitle">Client Booking Site (Preview)</div>
+              <div className="cardSub">See what your clients see</div>
+            </div>
+          </div>
+          <button
+            className="pill pill--primary"
+            onClick={() => window.open('/public/demo', '_blank')}
+            style={{ marginTop: '12px' }}
+          >
+            Open Client Site
+          </button>
+        </div>
+      </div>
+    </section>
   );
 };
-

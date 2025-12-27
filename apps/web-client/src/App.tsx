@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
+import { ClientAuthProvider } from './public/clientAuth/ClientAuthContext';
 import { LoginPage } from './pages/LoginPage';
 import { BookAppointmentPage } from './pages/BookAppointmentPage';
 import { PublicWelcomePage } from './pages/PublicWelcomePage';
@@ -12,6 +13,12 @@ import { ServicesPage } from './pages/ServicesPage';
 import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { PublicClientLayout } from './layout/PublicClientLayout';
+import { PublicBookingPage } from './pages/public/PublicBookingPage';
+import { ClientOtpAuthPage } from './pages/public/ClientOtpAuthPage';
+import { ClientBookingPage } from './pages/public/ClientBookingPage';
+import { BookingConfirmedPage } from './pages/public/BookingConfirmedPage';
+import { ClientPrivateRoute } from './public/clientAuth/ClientPrivateRoute';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
@@ -50,6 +57,35 @@ const AppInner: React.FC = () => {
       />
       {/* אתר לקוחות – פתוח, כרגע משתמש ב-business של ה-owner לצורך דמו */}
       <Route path="/public" element={<PublicWelcomePage />} />
+
+      {/* Public Client Booking Routes */}
+      <Route
+        path="/public/:businessSlug"
+        element={
+          <ClientAuthProvider>
+            <PublicClientLayout />
+          </ClientAuthProvider>
+        }
+      >
+        <Route index element={<PublicBookingPage />} />
+        <Route path="auth" element={<ClientOtpAuthPage />} />
+        <Route
+          path="book"
+          element={
+            <ClientPrivateRoute>
+              <ClientBookingPage />
+            </ClientPrivateRoute>
+          }
+        />
+        <Route
+          path="confirmed"
+          element={
+            <ClientPrivateRoute>
+              <BookingConfirmedPage />
+            </ClientPrivateRoute>
+          }
+        />
+      </Route>
 
       {/* ברירת מחדל */}
       <Route path="*" element={<Navigate to="/login" replace />} />
