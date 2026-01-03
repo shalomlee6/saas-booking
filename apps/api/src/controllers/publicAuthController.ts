@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 
 // In-memory OTP storage (dev only)
 // In production, use Redis or similar
-const otpStore = new Map<string, { code: string; expiresAt: number }>();
+const otpStore = new Map<string, { code: string; expiresAt: number; firstName?: string; lastName?: string }>();
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const DEV_OTP_CODE = '123456';
 
@@ -42,7 +42,7 @@ function getClientIdentifier(req: Request): string {
 export async function requestOtp(req: Request, res: Response) {
   try {
     const { businessSlug } = req.params;
-    const { phone } = req.body;
+    const { phone, firstName, lastName } = req.body;
 
     if (!phone) {
       return res.status(400).json({ message: 'phone is required' });
@@ -65,7 +65,13 @@ export async function requestOtp(req: Request, res: Response) {
     const otpCode = DEV_OTP_CODE;
     const expiresAt = Date.now() + OTP_EXPIRY_MS;
 
-    otpStore.set(`${businessSlug}:${phone}`, { code: otpCode, expiresAt });
+    // Store OTP with customer info for later use in verify-otp
+    otpStore.set(`${businessSlug}:${phone}`, { 
+      code: otpCode, 
+      expiresAt,
+      firstName: firstName || undefined,
+      lastName: lastName || undefined,
+    });
 
     // Simulate SMS send delay
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -111,6 +117,10 @@ export async function verifyOtp(req: Request, res: Response) {
       return res.status(401).json({ message: 'Invalid or expired code' });
     }
 
+    // Extract customer info from stored OTP data
+    const firstName = stored?.firstName;
+    const lastName = stored?.lastName;
+
     // Clean up OTP
     otpStore.delete(`${businessSlug}:${phone}`);
 
@@ -118,12 +128,30 @@ export async function verifyOtp(req: Request, res: Response) {
     let customer = await Customer.findOne({ phone, businessId: business._id });
 
     if (!customer) {
-      // Create customer with phone only (name can be updated later)
+      // Create customer with provided name or phone as fallback
+      const customerName = firstName && lastName 
+        ? `${firstName} ${lastName}`.trim()
+        : firstName || lastName || phone;
+      
       customer = await Customer.create({
         businessId: business._id,
-        name: phone, // Placeholder name
+        name: customerName,
         phone,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
       });
+    } else {
+      // Update existing customer with new name if provided
+      if (firstName || lastName) {
+        const customerName = firstName && lastName 
+          ? `${firstName} ${lastName}`.trim()
+          : firstName || lastName || customer.name;
+        
+        customer.name = customerName;
+        if (firstName) customer.firstName = firstName;
+        if (lastName) customer.lastName = lastName;
+        await customer.save();
+      }
     }
 
     // Generate JWT token for client

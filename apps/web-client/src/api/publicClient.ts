@@ -95,8 +95,8 @@ export async function createPublicAppointment(
   return res.data;
 }
 
-export async function requestOtp(businessSlug: string, phone: string) {
-  const res = await publicApi.post(`/${businessSlug}/auth/request-otp`, { phone });
+export async function requestOtp(businessSlug: string, phone: string, firstName?: string, lastName?: string) {
+  const res = await publicApi.post(`/${businessSlug}/auth/request-otp`, { phone, firstName, lastName });
   return res.data;
 }
 

@@ -14,7 +14,7 @@ export const HoldToConfirmButton: React.FC<HoldToConfirmButtonProps> = ({
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  const HOLD_DURATION = 2000; // 2 seconds
+  const HOLD_DURATION = 1800; // 1.8 seconds (between 1.5-2s)
 
   useEffect(() => {
     if (isHolding && !disabled) {

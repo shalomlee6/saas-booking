@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useClientAuth } from '../../public/clientAuth/ClientAuthContext';
-import { StepperHeader } from '../../components/public/StepperHeader';
-import { ServicePicker } from '../../components/public/ServicePicker';
+import { SelectedServiceSummary } from '../../components/public/SelectedServiceSummary';
 import { SlotsWeekGrid } from '../../components/public/SlotsWeekGrid';
 import { HoldToConfirmButton } from '../../components/public/HoldToConfirmButton';
 import { getPublicServices, getPublicAvailableSlots, createPublicAppointment } from '../../api/publicClient';
@@ -26,15 +25,27 @@ interface Slot {
 export const ClientBookingPage: React.FC = () => {
   const navigate = useNavigate();
   const { businessSlug } = useParams<{ businessSlug: string }>();
-  const { customerId, businessId } = useClientAuth();
-  const [step, setStep] = useState(1);
-  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null);
+  const location = useLocation();
+  const { customerId, businessId, isClientAuthed } = useClientAuth();
+  
+  // Get serviceId from route state (passed from landing page after OTP)
+  const routeState = location.state as { serviceId?: string } | null;
+  const initialServiceId = routeState?.serviceId || null;
+  
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(initialServiceId);
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
   const [services, setServices] = useState<Service[]>([]);
   const [slots, setSlots] = useState<Slot[]>([]);
   const [loadingServices, setLoadingServices] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isClientAuthed) {
+      navigate(`/public/${businessSlug}/auth`);
+    }
+  }, [isClientAuthed, businessSlug, navigate]);
 
   // Load services on mount
   useEffect(() => {
@@ -59,10 +70,10 @@ export const ClientBookingPage: React.FC = () => {
     loadServices();
   }, [businessSlug]);
 
-  // Load slots when service is selected
+  // Load slots when service is selected AND user is authenticated
   useEffect(() => {
     const loadSlots = async () => {
-      if (!selectedServiceId || !customerId || !businessSlug) return;
+      if (!selectedServiceId || !customerId || !businessSlug || !isClientAuthed) return;
       
       try {
         setLoadingSlots(true);
@@ -97,22 +108,16 @@ export const ClientBookingPage: React.FC = () => {
       }
     };
 
-    if (step === 2 && selectedServiceId) {
+    if (selectedServiceId && isClientAuthed) {
       loadSlots();
     }
-  }, [selectedServiceId, customerId, businessSlug, step]);
+  }, [selectedServiceId, customerId, businessSlug, isClientAuthed]);
 
   const selectedService = services.find((s) => s.id === selectedServiceId);
   const selectedSlot = slots.find((s) => s.id === selectedSlotId);
 
-  const handleServiceSelect = (serviceId: string) => {
-    setSelectedServiceId(serviceId);
-    setStep(2);
-  };
-
   const handleSlotSelect = (slotId: string) => {
     setSelectedSlotId(slotId);
-    setStep(3);
   };
 
   const handleConfirm = async () => {
@@ -139,12 +144,28 @@ export const ClientBookingPage: React.FC = () => {
     }
   };
 
-  const stepLabels = ['שירות', 'תאריך ושעה', 'אישור'];
+  if (!isClientAuthed) {
+    return (
+      <div className="clientBooking">
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
+          טוען...
+        </div>
+      </div>
+    );
+  }
+
+  if (!selectedServiceId) {
+    return (
+      <div className="clientBooking">
+        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
+          שגיאה: שירות לא נבחר
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="clientBooking">
-      <StepperHeader currentStep={step} totalSteps={3} labels={stepLabels} />
-
       <div className="clientBooking__content">
         {error && (
           <div className="otpAuth__error" style={{ marginBottom: '16px' }}>
@@ -152,51 +173,28 @@ export const ClientBookingPage: React.FC = () => {
           </div>
         )}
 
-        {step === 1 && (
-          <>
-            {loadingServices ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
-                טוען שירותים...
-              </div>
-            ) : (
-              <ServicePicker
-                services={services}
-                selectedServiceId={selectedServiceId}
-                onSelect={handleServiceSelect}
-              />
-            )}
-          </>
+        {selectedService && (
+          <SelectedServiceSummary service={selectedService} />
         )}
 
-        {step === 2 && (
-          <div className="clientBooking__slots">
-            <h3 className="servicePicker__title">בחרי תאריך ושעה</h3>
-            {loadingSlots ? (
-              <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
-                טוען זמנים זמינים...
-              </div>
-            ) : slots.length === 0 ? (
-              <div className="emptyState">אין זמנים זמינים. נסי שוב מאוחר יותר.</div>
-            ) : (
-              <SlotsWeekGrid
-                slots={slots}
-                selectedSlotId={selectedSlotId}
-                onSelect={handleSlotSelect}
-              />
-            )}
-            {selectedServiceId && (
-              <button
-                className="pill"
-                onClick={() => setStep(1)}
-                style={{ marginTop: '16px' }}
-              >
-                חזרה לבחירת שירות
-              </button>
-            )}
-          </div>
-        )}
+        <div className="clientBooking__slots">
+          <h3 className="servicePicker__title">בחרי תאריך ושעה</h3>
+          {loadingSlots ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
+              טוען זמנים זמינים...
+            </div>
+          ) : slots.length === 0 ? (
+            <div className="emptyState">אין זמנים זמינים. נסי שוב מאוחר יותר.</div>
+          ) : (
+            <SlotsWeekGrid
+              slots={slots}
+              selectedSlotId={selectedSlotId}
+              onSelect={handleSlotSelect}
+            />
+          )}
+        </div>
 
-        {step === 3 && selectedService && selectedSlot && (
+        {selectedSlot && selectedService && (
           <div className="clientBooking__confirm">
             <h3 className="servicePicker__title">אשרי את התור</h3>
             <div className="confirmSummary">
@@ -225,31 +223,9 @@ export const ClientBookingPage: React.FC = () => {
               </div>
             </div>
             <HoldToConfirmButton onConfirm={handleConfirm} />
-            <button
-              className="pill"
-              onClick={() => setStep(2)}
-              style={{ marginTop: '12px' }}
-            >
-              חזרה
-            </button>
           </div>
         )}
       </div>
-
-      {selectedSlot && selectedService && step !== 3 && (
-        <div className="confirmBar">
-          <div className="confirmBar__info">
-            <span className="confirmBar__service">{selectedService.name}</span>
-            <span className="confirmBar__separator">|</span>
-            <span className="confirmBar__slot">
-              {selectedSlot.date.toLocaleDateString('he-IL', { day: 'numeric', month: 'numeric' })} {selectedSlot.time}
-            </span>
-          </div>
-          <button className="pill pill--primary" onClick={() => setStep(3)}>
-            המשך לאישור
-          </button>
-        </div>
-      )}
     </div>
   );
 };

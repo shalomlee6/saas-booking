@@ -14,6 +14,7 @@ import { AnnouncementsPage } from './pages/AnnouncementsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PublicClientLayout } from './layout/PublicClientLayout';
+import { PublicLandingPage } from './pages/public/PublicLandingPage';
 import { PublicBookingPage } from './pages/public/PublicBookingPage';
 import { ClientOtpAuthPage } from './pages/public/ClientOtpAuthPage';
 import { ClientBookingPage } from './pages/public/ClientBookingPage';
@@ -67,7 +68,7 @@ const AppInner: React.FC = () => {
           </ClientAuthProvider>
         }
       >
-        <Route index element={<PublicBookingPage />} />
+        <Route index element={<PublicLandingPage />} />
         <Route path="auth" element={<ClientOtpAuthPage />} />
         <Route
           path="book"

@@ -3,6 +3,8 @@ import { Schema, model,Types, Document } from 'mongoose';
 export interface ICustomer extends Document {
   businessId: Types.ObjectId;
   name: string;
+  firstName?: string;
+  lastName?: string;
   phone: string;
   email?: string;
   notes?: string;
@@ -20,6 +22,8 @@ const CustomerSchema = new Schema<ICustomer>(
       index: true,
     },
     name: { type: String, required: true },
+    firstName: String,
+    lastName: String,
     phone: { type: String, required: true },
     email: String,
     notes: String,
