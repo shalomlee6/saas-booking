@@ -87,22 +87,14 @@ export const PublicBookingPage: React.FC = () => {
     const loadSlots = async () => {
       if (!selectedServiceId || !businessSlug) return;
 
-      // Backend requires customerId, so if not available, we'll show a message
-      // Slots will load after OTP verification
-      if (!customerId) {
-        setSlots([]);
-        setError(null); // Don't show error, just empty state
-        setLoadingSlots(false);
-        return;
-      }
-
       try {
         setLoadingSlots(true);
         setError(null);
+        // customerId is now optional - API will return estimated slots if not provided
         const availableSlots = await getPublicAvailableSlots(
           businessSlug,
           selectedServiceId,
-          customerId
+          customerId || undefined
         );
 
         const transformedSlots: Slot[] = availableSlots.map((slot: any) => {
@@ -134,43 +126,7 @@ export const PublicBookingPage: React.FC = () => {
     }
   }, [selectedServiceId, businessSlug, customerId]);
 
-  // Reload slots after customer is authenticated
-  useEffect(() => {
-    if (customerId && selectedServiceId && businessSlug) {
-      // Reload slots with real customerId
-      const loadSlots = async () => {
-        try {
-          setLoadingSlots(true);
-          const availableSlots = await getPublicAvailableSlots(
-            businessSlug,
-            selectedServiceId,
-            customerId
-          );
-
-          const transformedSlots: Slot[] = availableSlots.map((slot: any) => {
-            const startDate = new Date(slot.start);
-            const timeStr = `${startDate.getHours().toString().padStart(2, '0')}:${startDate.getMinutes().toString().padStart(2, '0')}`;
-
-            return {
-              id: slot.start,
-              date: startDate,
-              time: timeStr,
-              available: slot.isAvailable !== false,
-              start: slot.start,
-              end: slot.end,
-            };
-          });
-
-          setSlots(transformedSlots);
-        } catch (err) {
-          console.error('Failed to reload slots:', err);
-        } finally {
-          setLoadingSlots(false);
-        }
-      };
-      loadSlots();
-    }
-  }, [customerId]);
+  // Note: Slots will automatically reload when customerId changes due to the dependency in the main useEffect above
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedServiceId(serviceId);
@@ -182,29 +138,6 @@ export const PublicBookingPage: React.FC = () => {
     setIsBookingSheetOpen(true);
   };
 
-  // If no customerId, allow proceeding to booking sheet
-  const handleProceedToBooking = () => {
-    if (!customerId && selectedServiceId) {
-      // Create a temporary slot for the booking sheet
-      // This will be replaced with actual slot after OTP
-      const today = new Date();
-      today.setHours(10, 0, 0, 0);
-      const endTime = new Date(today);
-      endTime.setMinutes(endTime.getMinutes() + (selectedService?.durationMin || 60));
-
-      const tempSlot: Slot = {
-        id: 'temp',
-        date: today,
-        time: '10:00',
-        available: true,
-        start: today.toISOString(),
-        end: endTime.toISOString(),
-      };
-
-      setSelectedSlotId('temp');
-      setIsBookingSheetOpen(true);
-    }
-  };
 
   const handleBookingSuccess = () => {
     setIsBookingSheetOpen(false);
@@ -277,26 +210,18 @@ export const PublicBookingPage: React.FC = () => {
                 ← חזרה
               </button>
             </div>
-            {!customerId ? (
-              <div className="publicBookingPage__authPrompt">
-                <p className="publicBookingPage__authPromptText">
-                  כדי לראות זמנים זמינים, אנא בחרי זמן ואזי תתבקשי להזין מספר טלפון לאימות.
+            <MobileSlots
+              slots={slots}
+              selectedSlotId={selectedSlotId}
+              onSelect={handleSlotSelect}
+              loading={loadingSlots}
+            />
+            {!customerId && slots.length > 0 && (
+              <div className="publicBookingPage__authPrompt" style={{ marginTop: '16px' }}>
+                <p className="publicBookingPage__authPromptSubtext" style={{ fontSize: '13px', margin: 0 }}>
+                  הזמנים המוצגים הם משוערים. לאחר אימות הטלפון, יוצגו הזמנים המדויקים עבורך.
                 </p>
-                <button
-                  className="pill pill--primary"
-                  onClick={handleProceedToBooking}
-                  style={{ marginTop: '16px' }}
-                >
-                  המשך להזנת פרטים
-                </button>
               </div>
-            ) : (
-              <MobileSlots
-                slots={slots}
-                selectedSlotId={selectedSlotId}
-                onSelect={handleSlotSelect}
-                loading={loadingSlots}
-              />
             )}
           </div>
         )}

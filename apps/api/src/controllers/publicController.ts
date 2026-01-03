@@ -65,8 +65,8 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
     const { businessSlug } = req.params;
     const { serviceId, customerId, weekStart } = req.query;
 
-    if (!serviceId || !customerId) {
-      return res.status(400).json({ message: 'serviceId and customerId are required' });
+    if (!serviceId) {
+      return res.status(400).json({ message: 'serviceId is required' });
     }
 
     // Resolve business
@@ -76,23 +76,34 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
     }
     const businessId = business._id;
 
-    // Load customer and service (verify they belong to this business)
-    const customer = await Customer.findOne({ _id: customerId, businessId });
+    // Load service (verify it belongs to this business)
     const service = await Service.findOne({ _id: serviceId, businessId });
-
-    if (!customer) {
-      return res.status(404).json({ message: 'Customer not found' });
-    }
-
     if (!service) {
       return res.status(404).json({ message: 'Service not found' });
     }
 
-    // Determine effective treatment duration
-    const durationMinutes =
-      customer.defaultTreatmentDurationMinutes ??
-      service.durationMinutes ??
-      60;
+    // Determine effective treatment duration and mode
+    let durationMinutes: number;
+    let mode: 'estimated' | 'personalized';
+
+    if (customerId) {
+      // Validate customer belongs to business
+      const customer = await Customer.findOne({ _id: customerId, businessId });
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+
+      // Use customer-specific duration if available
+      durationMinutes =
+        customer.defaultTreatmentDurationMinutes ??
+        service.durationMinutes ??
+        60;
+      mode = 'personalized';
+    } else {
+      // Use service default duration
+      durationMinutes = service.durationMinutes ?? 60;
+      mode = 'estimated';
+    }
 
     // Compute week range
     let startOfWeek: Date;
@@ -180,7 +191,12 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
       }
     }
 
-    return res.json(availableSlots);
+    // Return slots with metadata
+    return res.json({
+      slots: availableSlots,
+      durationMinutes,
+      mode,
+    });
   } catch (err) {
     console.error('Error GET /public/:businessSlug/available-slots:', err);
     return res.status(500).json({ message: 'Internal server error' });

@@ -15,12 +15,12 @@ export async function getMe(req: AuthRequest, res: Response) {
     }
 
     // Verify business exists if businessId is present
-    if (user.businessId) {
-      const business = await Business.findById(user.businessId);
-      if (!business) {
-        return res.status(404).json({ message: 'Business not found' });
-      }
+    
+    const business = await Business.findById(user?.businessId);
+    if (!business) {
+      return res.status(404).json({ message: 'Business not found' });
     }
+
 
     return res.json({
       user: {
@@ -28,8 +28,8 @@ export async function getMe(req: AuthRequest, res: Response) {
         email: user.email,
         role: user.role,
         businessId: user.businessId?.toString(),
+        businessSlug: business.slug?.toString(),
       },
-      businessId: user.businessId?.toString() || null,
       role: user.role,
     });
   } catch (err) {

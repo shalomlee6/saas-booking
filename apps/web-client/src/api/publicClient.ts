@@ -30,17 +30,60 @@ export async function getPublicServices(businessSlug: string) {
 export async function getPublicAvailableSlots(
   businessSlug: string,
   serviceId: string,
-  customerId: string,
+  customerId?: string,
   weekStart?: string
 ) {
   const params = new URLSearchParams({
     serviceId,
-    customerId,
   });
+  if (customerId) {
+    params.append('customerId', customerId);
+  }
   if (weekStart) {
     params.append('weekStart', weekStart);
   }
   const res = await publicApi.get(`/${businessSlug}/available-slots?${params.toString()}`);
+  // Handle new response format with metadata, or fallback to array for backward compatibility
+  if (res.data && Array.isArray(res.data)) {
+    // Old format (array) - return as is for backward compatibility
+    return res.data;
+  }
+  // New format (object with slots, durationMinutes, mode)
+  return res.data.slots || [];
+}
+
+// Type for the full response with metadata
+export interface AvailableSlotsResponse {
+  slots: Array<{ start: string; end: string; isAvailable: boolean }>;
+  durationMinutes: number;
+  mode: 'estimated' | 'personalized';
+}
+
+// Function to get full response with metadata
+export async function getPublicAvailableSlotsWithMetadata(
+  businessSlug: string,
+  serviceId: string,
+  customerId?: string,
+  weekStart?: string
+): Promise<AvailableSlotsResponse> {
+  const params = new URLSearchParams({
+    serviceId,
+  });
+  if (customerId) {
+    params.append('customerId', customerId);
+  }
+  if (weekStart) {
+    params.append('weekStart', weekStart);
+  }
+  const res = await publicApi.get(`/${businessSlug}/available-slots?${params.toString()}`);
+  // If response is array (old format), wrap it
+  if (Array.isArray(res.data)) {
+    return {
+      slots: res.data,
+      durationMinutes: 60, // Default fallback
+      mode: customerId ? 'personalized' : 'estimated',
+    };
+  }
   return res.data;
 }
 

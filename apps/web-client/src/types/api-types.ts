@@ -2,7 +2,8 @@ export interface User {
   id: string;
   email: string;
   role: string;
-  businessId?: string;
+  businessId: string;
+  businessSlug: string;
 }
 
 export interface Business {
