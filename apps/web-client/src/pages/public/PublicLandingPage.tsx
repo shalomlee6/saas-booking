@@ -4,6 +4,7 @@ import { BusinessHero } from '../../components/public/BusinessHero';
 import { ServiceCategoryPicker } from '../../components/public/ServiceCategoryPicker';
 import { OtpModal } from '../../components/public/OtpModal';
 import { getPublicBusiness, getPublicServices } from '../../api/publicClient';
+import { applyTheme } from '../../utils/applyTheme';
 
 interface Service {
   _id: string;
@@ -44,6 +45,11 @@ export const PublicLandingPage: React.FC = () => {
           tagline: businessData.tagline || 'קביעת תור בקלות ובנוחות',
           logo: businessData.logo,
         });
+
+        // Apply theme from settings if available
+        if (businessData.settings?.theme) {
+          applyTheme({ theme: businessData.settings.theme });
+        }
       } catch (err) {
         console.error('Failed to load business:', err);
         setError('שגיאה בטעינת פרטי העסק');

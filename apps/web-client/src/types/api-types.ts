@@ -45,3 +45,39 @@ export interface AvailableSlotDto {
   start: string; // ISO string
   end: string;   // ISO string
 }
+
+export type Plan = 'free' | 'normal' | 'premium';
+
+export interface ThemeDto {
+  colors: {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    text: string;
+  };
+  logoUrl?: string | null;
+  fontFamily?: string;
+}
+
+export interface FeaturesDto {
+  bookingEnabled: boolean;
+  paymentsEnabled: boolean;
+  marketingModule: boolean;
+  chatModule: boolean;
+  waitlistEnabled: boolean;
+}
+
+export interface LocalizationDto {
+  language: 'he' | 'en';
+  timezone: string;
+  currency: string;
+}
+
+export interface BusinessSettingsDto {
+  businessId?: string;
+  plan: Plan;
+  theme: ThemeDto;
+  features: FeaturesDto;
+  localization: LocalizationDto;
+}

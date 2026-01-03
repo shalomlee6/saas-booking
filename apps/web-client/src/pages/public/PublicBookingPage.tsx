@@ -6,6 +6,7 @@ import { MobileSlots } from '../../components/public/MobileSlots';
 import { BookingSheet } from '../../components/public/BookingSheet';
 import { getPublicBusiness, getPublicServices, getPublicAvailableSlots } from '../../api/publicClient';
 import { useClientAuth } from '../../public/clientAuth/ClientAuthContext';
+import { applyTheme } from '../../utils/applyTheme';
 
 interface Service {
   id: string;
@@ -46,6 +47,11 @@ export const PublicBookingPage: React.FC = () => {
         setLoadingBusiness(true);
         const business = await getPublicBusiness(businessSlug);
         setBusinessName(business.name);
+        
+        // Apply theme from settings if available
+        if (business.settings?.theme) {
+          applyTheme({ theme: business.settings.theme });
+        }
       } catch (err) {
         console.error('Failed to load business:', err);
         setError('שגיאה בטעינת פרטי העסק');

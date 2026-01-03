@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Outlet } from 'react-router-dom';
 import { getPublicBusiness } from '../api/publicClient';
+import { applyTheme } from '../utils/applyTheme';
 
 export const PublicClientLayout: React.FC = () => {
   const { businessSlug } = useParams<{ businessSlug: string }>();
@@ -12,6 +13,11 @@ export const PublicClientLayout: React.FC = () => {
       try {
         const business = await getPublicBusiness(businessSlug);
         setBusinessName(business.name);
+        
+        // Apply theme from settings if available
+        if (business.settings?.theme) {
+          applyTheme({ theme: business.settings.theme });
+        }
       } catch (err) {
         console.error('Failed to load business:', err);
       }

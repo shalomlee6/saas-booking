@@ -1,8 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { IBusinessSettings } from '../models/BusinessSettings';
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
+  businessSettings?: IBusinessSettings;
 }
 
 export interface AuthUser {

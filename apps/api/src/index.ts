@@ -8,6 +8,7 @@ import { customersRouter } from './routes/customers';
 import { servicesRouter } from './routes/services';
 import { appointmentsRouter } from './routes/appointments';
 import { publicRouter } from './routes/public';
+import { settingsRouter } from './routes/settings';
 import cookieParser from 'cookie-parser';
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use('/api/customers', customersRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/appointments', appointmentsRouter);
 app.use('/api/public', publicRouter);
+app.use('/api/settings', settingsRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'saas-booking-api' });

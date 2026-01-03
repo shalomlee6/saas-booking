@@ -4,6 +4,7 @@ import { Service } from '../models/Service';
 import { Customer } from '../models/Customer';
 import { Appointment } from '../models/Appointment';
 import jwt from 'jsonwebtoken';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 
 
 // GET /api/public/:businessSlug/business
@@ -17,10 +18,17 @@ export async function getPublicBusiness(req: Request, res: Response) {
       return res.status(404).json({ message: 'Business not found' });
     }
 
+    // Load settings for theme
+    const settings = await ensureBusinessSettings(business._id);
+
     res.json({
       businessId: business._id.toString(),
       name: business.name,
       slug: business.slug,
+      settings: {
+        theme: settings.theme,
+        plan: settings.plan,
+      },
     });
   } catch (err) {
     console.error('Error GET /public/:businessSlug/business:', err);
