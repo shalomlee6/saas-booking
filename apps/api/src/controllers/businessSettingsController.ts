@@ -3,16 +3,18 @@ import { AuthRequest } from '../middleware/auth';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { Business } from '../models/Business';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 import { Types } from 'mongoose';
 
 export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<any> {
   try {
     if (!req.businessSettings) {
       // Should not happen if middleware runs, but handle gracefully
-      if (!req.user?.businessId) {
+      const businessId = resolveBusinessIdFromReq(req);
+      if (!businessId) {
         return res.status(400).json({ message: 'Business ID not found' });
       }
-      const settings = await ensureBusinessSettings(req.user.businessId);
+      const settings = await ensureBusinessSettings(businessId);
       return res.json(settings);
     }
 
@@ -29,14 +31,8 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
 
     if (req.businessSettings) {
       businessId = req.businessSettings.businessId.toString();
-    } else if (req.user?.businessId) {
-      businessId = req.user.businessId;
-    } else if (req.user?.role === 'owner' && req.user?.userId) {
-      // Fallback: try to find business by ownerId
-      const business = await Business.findOne({ ownerId: req.user.userId });
-      if (business) {
-        businessId = business._id.toString();
-      }
+    } else {
+      businessId = resolveBusinessIdFromReq(req);
     }
 
     if (!businessId) {
@@ -44,7 +40,7 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     }
 
     // Ensure settings exist
-    const settings = await ensureBusinessSettings(businessId);
+    await ensureBusinessSettings(businessId);
 
     const businessIdObj = new Types.ObjectId(businessId);
 

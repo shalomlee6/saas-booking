@@ -6,7 +6,10 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('sb_token');
+  // Use impersonation token if available, otherwise use normal token
+  const impersonationToken = localStorage.getItem('sb_impersonation_token');
+  const token = impersonationToken || localStorage.getItem('sb_token');
+  
   if (token) {
     config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;

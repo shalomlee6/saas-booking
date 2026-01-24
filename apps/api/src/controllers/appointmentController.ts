@@ -3,6 +3,7 @@ import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
+import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 
 export async function getMyAppointmentsForRange(req: AuthRequest, res: Response) {
   try {
@@ -87,7 +88,7 @@ export async function getBusinessAppointmentsForWeek(req: AuthRequest, res: Resp
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const businessId = req.user.businessId;
+    const businessId = resolveBusinessIdFromReq(req);
 
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });
@@ -152,8 +153,7 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const user = req.user;
-    const businessId = user.businessId;
+    const businessId = resolveBusinessIdFromReq(req);
 
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });

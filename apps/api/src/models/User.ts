@@ -1,6 +1,6 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-export type UserRole = 'owner' | 'admin';
+export type UserRole = 'super_admin' | 'owner' | 'staff' | 'client';
 
 export interface IUser extends Document {
   email: string;
@@ -15,7 +15,7 @@ const UserSchema = new Schema<IUser>(
   {
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     passwordHash: { type: String, required: true },
-    role: { type: String, enum: ['owner', 'admin'], default: 'owner' },
+    role: { type: String, enum: ['super_admin', 'owner', 'staff', 'client'], default: 'owner' },
     businessId: { type: Schema.Types.ObjectId, ref: 'Business' },
   },
   { timestamps: true }

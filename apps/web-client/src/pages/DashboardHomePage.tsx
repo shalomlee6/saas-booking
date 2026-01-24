@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { fetchWeekAppointments } from '../api/appointments';
-import type { AppointmentDto } from '../types/api-types';
+import type { AppointmentDto, User } from '../types/api-types';
 import { DashboardKpiRow } from '../components/dashboard/DashboardKpiRow';
 import { TodayAppointmentsCard } from '../components/dashboard/TodayAppointmentsCard';
 import { AlertsCard } from '../components/dashboard/AlertsCard';
 import { WeekLoadCard } from '../components/dashboard/WeekLoadCard';
 
 export const DashboardHomePage: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user,loading } = useAuth();
+  
   const navigate = useNavigate();
-  const { businessSlug } = useParams<{ businessSlug: string }>();
+  // const { businessSlug } = useParams<{ businessSlug: string }>();
 
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
@@ -38,6 +39,7 @@ export const DashboardHomePage: React.FC = () => {
     };
 
     if (user) {
+      
       loadAppointments();
       didFetchLoadAppointmentsRef.current = true;
     }
@@ -105,7 +107,7 @@ export const DashboardHomePage: React.FC = () => {
           <h1>{user.role}</h1>
           <button
             className="pill pill--primary"
-            onClick={() => window.open('/public/'+user.businessSlug, '_blank')}
+            onClick={() => window.open('/public/'+user.businessId, '_blank')}
             style={{ marginTop: '12px' }}
           >
             Open Client Site

@@ -10,7 +10,10 @@ export interface AuthRequest extends Request {
 export interface AuthUser {
   userId: string;
   role: string;
+  email?: string;
   businessId?: string;
+  impersonatingBusinessId?: string;
+  impersonating?: boolean;
 }
 
 export function auth(req: AuthRequest, res: Response, next: NextFunction) {

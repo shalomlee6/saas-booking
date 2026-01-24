@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
 import { Business } from '../models/Business';
+import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 
 export async function getMe(req: AuthRequest, res: Response) {
   try {
@@ -14,11 +15,20 @@ export async function getMe(req: AuthRequest, res: Response) {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    // Verify business exists if businessId is present
+    // Resolve business ID (handles impersonation)
+    const businessId = resolveBusinessIdFromReq(req);
     
-    const business = await Business.findById(user?.businessId);
-    if (!business) {
-      return res.status(404).json({ message: 'Business not found' });
+    // For super_admin, businessId might be from impersonation
+    // For regular owners, use user.businessId
+    const effectiveBusinessId = businessId || user.businessId;
+    
+    let business: any = null;
+    if (effectiveBusinessId) {
+      business = await Business.findById(effectiveBusinessId);
+      if (!business && !req.user.impersonating) {
+        // Only return 404 if not impersonating (super admin might not have a business)
+        return res.status(404).json({ message: 'Business not found' });
+      }
     }
 
 
@@ -27,9 +37,14 @@ export async function getMe(req: AuthRequest, res: Response) {
         id: user._id,
         email: user.email,
         role: user.role,
-        businessId: user.businessId?.toString(),
-        businessSlug: business.slug?.toString(),
+        businessId: effectiveBusinessId?.toString() || user.businessId?.toString(),
+        businessSlug: business?.slug?.toString(),
       },
+      business: business ? {
+        _id: business._id.toString(),
+        name: business.name,
+        slug: business.slug,
+      } : null,
       role: user.role,
     });
   } catch (err) {

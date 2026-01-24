@@ -15,16 +15,24 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { PublicClientLayout } from './layout/PublicClientLayout';
 import { PublicLandingPage } from './pages/public/PublicLandingPage';
-import { PublicBookingPage } from './pages/public/PublicBookingPage';
 import { ClientOtpAuthPage } from './pages/public/ClientOtpAuthPage';
 import { ClientBookingPage } from './pages/public/ClientBookingPage';
 import { BookingConfirmedPage } from './pages/public/BookingConfirmedPage';
 import { ClientPrivateRoute } from './public/clientAuth/ClientPrivateRoute';
+import { AdminHomePage } from './pages/admin/AdminHomePage';
+import { AdminBusinessesPage } from './pages/admin/AdminBusinessesPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div>טוען...</div>;
   if (!user) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+};
+
+const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, isSuperAdmin, loading } = useAuth();
+  if (loading) return <div>טוען...</div>;
+  if (!user || !isSuperAdmin) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 
@@ -87,6 +95,24 @@ const AppInner: React.FC = () => {
           }
         />
       </Route>
+
+      {/* Admin Routes */}
+      <Route
+        path="/admin"
+        element={
+          <AdminRoute>
+            <AdminHomePage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/businesses"
+        element={
+          <AdminRoute>
+            <AdminBusinessesPage />
+          </AdminRoute>
+        }
+      />
 
       {/* ברירת מחדל */}
       <Route path="*" element={<Navigate to="/login" replace />} />
