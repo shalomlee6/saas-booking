@@ -4,14 +4,11 @@ import { api } from '../api/client';
 import type { AppointmentDto, Customer } from '../types/api-types';
 import { useNavigate } from 'react-router-dom';
 import { AppointmentsWeekPage } from './AppointmentsWeekPage';
-import { DashboardLayout } from '../layout/DashboardLayout';
-import { CustomersPage } from './CustomersPage';
 import { fetchWeekAppointments } from '../api/appointments';
 
 export const DashboardPage: React.FC = () => {
-  const { user, business, loading, logout } = useAuth();
+  const { user, authLoading } = useAuth();
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [loadingCustomers, setLoadingCustomers] = useState(true);
   
   const [loadingAppointments, setLoadingAppointments] = useState(true);
   const [appointments, setAppointments] = useState<AppointmentDto[]>([]);
@@ -20,10 +17,10 @@ export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate('/login');
     }
-  }, [loading, user, navigate]);
+  }, [authLoading, user, navigate]);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -32,8 +29,6 @@ export const DashboardPage: React.FC = () => {
         setCustomers(res.data);
       } catch (err) {
         console.error('Failed to fetch customers', err);
-      } finally {
-        setLoadingCustomers(false);
       }
     };
     fetchCustomers();
@@ -61,11 +56,11 @@ export const DashboardPage: React.FC = () => {
   }, [user]);
 
 
-  if (loading) return <div>טוען...</div>;
+  if (authLoading) return <div>טוען...</div>;
   if (!user) return null;
 
   return (
-    <DashboardLayout>
+    <>
       {loadingAppointments ? (
         <section className="dashContent">
           <div style={{ padding: '40px', textAlign: 'center', color: 'var(--muted)' }}>
@@ -75,6 +70,6 @@ export const DashboardPage: React.FC = () => {
       ) : (
         <AppointmentsWeekPage showSideBar={false} appointments={appointments} customersList={customers} />
       )}
-    </DashboardLayout>
+    </>
   );
 };

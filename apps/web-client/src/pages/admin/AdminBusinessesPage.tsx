@@ -11,6 +11,7 @@ export const AdminBusinessesPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [newBusinessName, setNewBusinessName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     loadBusinesses();
@@ -19,6 +20,7 @@ export const AdminBusinessesPage: React.FC = () => {
   const loadBusinesses = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await getAdminBusinesses();
       setBusinesses(data);
     } catch (err: any) {
@@ -34,6 +36,7 @@ export const AdminBusinessesPage: React.FC = () => {
 
     try {
       setCreating(true);
+      setError(null);
       await createAdminBusiness(newBusinessName.trim());
       setNewBusinessName('');
       await loadBusinesses();
@@ -46,6 +49,7 @@ export const AdminBusinessesPage: React.FC = () => {
 
   const handleImpersonate = async (businessId: string) => {
     try {
+      setError(null);
       const { token, impersonatingBusinessId } = await adminImpersonate(businessId);
       startImpersonation(token, impersonatingBusinessId);
       navigate('/dashboard');
@@ -58,102 +62,169 @@ export const AdminBusinessesPage: React.FC = () => {
     window.open(`/public/${slug}`, '_blank');
   };
 
+  const filteredBusinesses = businesses.filter((business) =>
+    business.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    business.slug.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
-      <div style={{ padding: '40px', textAlign: 'center' }}>
-        טוען...
+      <div>
+        <div style={{ marginBottom: '32px' }}>
+          <div className="adminSkeleton adminSkeleton--title" style={{ width: '300px', marginBottom: '8px' }} />
+          <div className="adminSkeleton adminSkeleton--text" style={{ width: '200px' }} />
+        </div>
+        <div className="adminCard">
+          <div className="adminSkeleton adminSkeleton--text" style={{ height: '400px' }} />
+        </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1>Manage Businesses</h1>
+    <div>
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#F1F5F9', margin: '0 0 8px 0' }}>
+          Manage Businesses
+        </h1>
+        <p style={{ fontSize: '14px', color: '#94A3B8', margin: 0 }}>
+          View and manage all businesses in the system
+        </p>
+      </div>
 
       {error && (
         <div
+          className="adminCard"
           style={{
-            padding: '12px',
-            background: 'rgba(243, 82, 113, 0.1)',
-            border: '1px solid var(--pink-500)',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            color: 'var(--pink-500)',
+            background: 'rgba(239, 68, 68, 0.15)',
+            borderColor: 'rgba(239, 68, 68, 0.3)',
+            marginBottom: '24px',
+            color: '#FCA5A5',
           }}
         >
           {error}
         </div>
       )}
 
-      <form onSubmit={handleCreateBusiness} style={{ marginBottom: '32px' }}>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <input
-            type="text"
-            value={newBusinessName}
-            onChange={(e) => setNewBusinessName(e.target.value)}
-            placeholder="Business name"
-            style={{
-              flex: 1,
-              padding: '12px',
-              border: '1px solid var(--border)',
-              borderRadius: '8px',
-            }}
-            disabled={creating}
-          />
-          <button
-            type="submit"
-            className="pill pill--primary"
-            disabled={creating || !newBusinessName.trim()}
-          >
-            {creating ? 'Creating...' : 'Create Business'}
-          </button>
-        </div>
-      </form>
+      {/* Create Business Form */}
+      <div className="adminCard" style={{ marginBottom: '24px' }}>
+        <h2 className="adminCard__title" style={{ marginBottom: '16px' }}>Create New Business</h2>
+        <form onSubmit={handleCreateBusiness}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <input
+              type="text"
+              value={newBusinessName}
+              onChange={(e) => setNewBusinessName(e.target.value)}
+              placeholder="Business name"
+              className="adminInput"
+              style={{ flex: 1 }}
+              disabled={creating}
+            />
+            <button
+              type="submit"
+              className="adminBtn adminBtn--primary"
+              disabled={creating || !newBusinessName.trim()}
+            >
+              {creating ? 'Creating...' : 'Create Business'}
+            </button>
+          </div>
+        </form>
+      </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ borderBottom: '2px solid var(--border)' }}>
-              <th style={{ padding: '12px', textAlign: 'right' }}>Name</th>
-              <th style={{ padding: '12px', textAlign: 'right' }}>Slug</th>
-              <th style={{ padding: '12px', textAlign: 'right' }}>Plan</th>
-              <th style={{ padding: '12px', textAlign: 'right' }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {businesses.map((business) => (
-              <tr key={business._id} style={{ borderBottom: '1px solid var(--border)' }}>
-                <td style={{ padding: '12px' }}>{business.name}</td>
-                <td style={{ padding: '12px' }}>{business.slug}</td>
-                <td style={{ padding: '12px' }}>{business.settings.plan}</td>
-                <td style={{ padding: '12px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      className="pill pill--primary"
-                      onClick={() => handleImpersonate(business._id)}
-                      style={{ fontSize: '14px', padding: '6px 12px' }}
-                    >
-                      Enter as Owner
-                    </button>
-                    <button
-                      className="pill"
-                      onClick={() => handleOpenPublic(business.slug)}
-                      style={{ fontSize: '14px', padding: '6px 12px' }}
-                    >
-                      Open Public
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      {/* Search */}
+      <div className="adminCard" style={{ marginBottom: '24px' }}>
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search businesses by name or slug..."
+          className="adminInput"
+          style={{ width: '100%' }}
+        />
+      </div>
+
+      {/* Businesses Table */}
+      <div className="adminCard">
+        <div className="adminCard__header">
+          <div>
+            <h2 className="adminCard__title">All Businesses</h2>
+            <p className="adminCard__subtitle">{filteredBusinesses.length} business{filteredBusinesses.length !== 1 ? 'es' : ''} found</p>
+          </div>
+        </div>
+
+        {filteredBusinesses.length === 0 ? (
+          <div className="adminEmptyState">
+            <div className="adminEmptyState__title">
+              {searchQuery ? 'No businesses found' : 'No businesses yet'}
+            </div>
+            <div className="adminEmptyState__text">
+              {searchQuery
+                ? 'Try adjusting your search query'
+                : 'Create your first business using the form above'}
+            </div>
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table className="adminTable">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Slug</th>
+                  <th>Plan</th>
+                  <th>Status</th>
+                  <th>Created</th>
+                  <th style={{ textAlign: 'center' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBusinesses.map((business) => (
+                  <tr key={business._id}>
+                    <td style={{ fontWeight: 500 }}>{business.name}</td>
+                    <td>
+                      <code style={{ background: 'rgba(148, 163, 184, 0.1)', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
+                        {business.slug}
+                      </code>
+                    </td>
+                    <td>
+                      <span className={`adminBadge--plan adminBadge--plan-${business.settings.plan}`}>
+                        {business.settings.plan}
+                      </span>
+                    </td>
+                    <td>
+                      {business.settings.features.bookingEnabled ? (
+                        <span style={{ color: '#10B981', fontSize: '13px', fontWeight: 500 }}>Active</span>
+                      ) : (
+                        <span style={{ color: '#94A3B8', fontSize: '13px' }}>Inactive</span>
+                      )}
+                    </td>
+                    <td style={{ color: '#94A3B8', fontSize: '13px' }}>
+                      {new Date(business.createdAt).toLocaleDateString()}
+                    </td>
+                    <td>
+                      <div className="adminBtnGroup" style={{ justifyContent: 'flex-end' }}>
+                        <button
+                          className="adminBtn adminBtn--primary"
+                          onClick={() => handleImpersonate(business._id)}
+                          style={{ fontSize: '12px', padding: '6px 12px' }}
+                        >
+                          Enter as Owner
+                        </button>
+                        <button
+                          className="adminBtn adminBtn--ghost"
+                          onClick={() => handleOpenPublic(business.slug)}
+                          style={{ fontSize: '12px', padding: '6px 12px' }}
+                        >
+                          Open Public
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
-
-
-
-

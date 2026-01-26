@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 
 export const LoginPage: React.FC = () => {
-  const { login } = useAuth();
+  const { login,user } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');      // תשנה ל-default אם בא לך
   const [password, setPassword] = useState('');
@@ -15,8 +15,12 @@ export const LoginPage: React.FC = () => {
     setError(null);
     setLoading(true);
     try {
-      await login(email, password);
-      navigate('/dashboard');
+      const { user } = await login(email, password);
+      if( user?.role === 'super_admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error(err);
       setError(err?.response?.data?.message || 'Login failed');

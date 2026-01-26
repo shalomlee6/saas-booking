@@ -19,20 +19,22 @@ import { ClientOtpAuthPage } from './pages/public/ClientOtpAuthPage';
 import { ClientBookingPage } from './pages/public/ClientBookingPage';
 import { BookingConfirmedPage } from './pages/public/BookingConfirmedPage';
 import { ClientPrivateRoute } from './public/clientAuth/ClientPrivateRoute';
+import { AdminLayout } from './layout/AdminLayout';
 import { AdminHomePage } from './pages/admin/AdminHomePage';
 import { AdminBusinessesPage } from './pages/admin/AdminBusinessesPage';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, loading } = useAuth();
-  if (loading) return <div>טוען...</div>;
+  const { user, authLoading, initialized } = useAuth();
+  if (!initialized || authLoading) return <div>טוען...</div>;
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isSuperAdmin, loading } = useAuth();
-  if (loading) return <div>טוען...</div>;
-  if (!user || !isSuperAdmin) return <Navigate to="/dashboard" replace />;
+  const { user, isSuperAdmin, authLoading, initialized } = useAuth();
+  if (!initialized || authLoading) return <div>טוען...</div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if (!isSuperAdmin) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 };
 
@@ -101,18 +103,14 @@ const AppInner: React.FC = () => {
         path="/admin"
         element={
           <AdminRoute>
-            <AdminHomePage />
+            <AdminLayout />
           </AdminRoute>
         }
-      />
-      <Route
-        path="/admin/businesses"
-        element={
-          <AdminRoute>
-            <AdminBusinessesPage />
-          </AdminRoute>
-        }
-      />
+      >
+        <Route index element={<AdminHomePage />} />
+        <Route path="businesses" element={<AdminBusinessesPage />} />
+        <Route path="settings" element={<div className="adminMain"><div className="adminCard"><h2 className="adminCard__title">Admin Settings</h2><p className="adminCard__subtitle">Settings page coming soon</p></div></div>} />
+      </Route>
 
       {/* ברירת מחדל */}
       <Route path="*" element={<Navigate to="/login" replace />} />

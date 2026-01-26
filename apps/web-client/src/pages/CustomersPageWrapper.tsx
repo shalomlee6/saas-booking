@@ -6,7 +6,7 @@ import { api } from '../api/client';
 import type { Customer } from '../types/api-types';
 
 export const CustomersPageWrapper: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, authLoading } = useAuth();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingCustomers, setLoadingCustomers] = useState(true);

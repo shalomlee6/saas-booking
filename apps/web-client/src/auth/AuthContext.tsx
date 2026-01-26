@@ -1,17 +1,20 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { User, Business, BusinessSettingsDto } from '../types/api-types';
 import { api } from '../api/client';
 import { getMySettings } from '../api/settings';
 import { applyTheme } from '../utils/applyTheme';
+import { useLocation } from 'react-router-dom';
 
 interface AuthContextValue {
   user: User | null;
   business: Business | null;
   settings: BusinessSettingsDto | null;
-  loading: boolean;
+  authLoading: boolean;
+  settingsLoading: boolean;
   isSuperAdmin: boolean;
   impersonatingBusinessId: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  initialized: boolean;
+  login: (email: string, password: string) => Promise<{token: string, user: User }>;
   logout: () => Promise<void>;
   startImpersonation: (token: string, businessId: string) => void;
   stopImpersonation: () => void;
@@ -20,93 +23,148 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
+  const [initialized, setInitialized] = useState(false);
   const [business, setBusiness] = useState<Business | null>(null);
   const [settings, setSettings] = useState<BusinessSettingsDto | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
   const [impersonatingBusinessId, setImpersonatingBusinessId] = useState<string | null>(
     localStorage.getItem('sb_impersonating_businessId')
   );
+  const isSuperAdmin = user?.role === 'super_admin';
 
-  // טעינה ראשונית מה-localStorage
+  const loadSettingsIfBusiness = async (user: User | null, business: Business | null) => {
+    if (!user || !business) {
+      setSettings(null);
+      return;
+    }
+
+    setSettingsLoading(true);
+    try {
+      const settingsData = await getMySettings();
+      setSettings(settingsData);
+      applyTheme(settingsData);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   useEffect(() => {
-
-
+    if (user) return; 
+  
     const loadUser = async () => {
+      setAuthLoading(true);
       try {
         const res = await api.get('/auth/me');
-        if(!res) {
-          setUser(null);
-          setBusiness(null);
-          setSettings(null);
-          setLoading(false);
-          return;
-        }
-        setUser(res.data?.user);
-        setBusiness(res.data?.business);
-        
-        // Check if impersonating from localStorage
-        const storedImpersonatingId = localStorage.getItem('sb_impersonating_businessId');
-        if (storedImpersonatingId) {
-          setImpersonatingBusinessId(storedImpersonatingId);
-        }
-
-        // Load settings and apply theme
-        if (res.data?.user) {
-          try {
-            const settingsData = await getMySettings();
-            setSettings(settingsData);
-            applyTheme(settingsData);
-          } catch (err) {
-            console.error('Failed to load settings:', err);
-            // Don't block if settings fail to load
-          }
-        }
+        const u = res.data?.user ?? null;
+        const b = res.data?.business ?? null;
+  
+        setUser(u);
+        setBusiness(b);
+  
+        setImpersonatingBusinessId(localStorage.getItem('sb_impersonating_businessId'));
+  
+        await loadSettingsIfBusiness(u, b);
       } catch {
         setUser(null);
         setBusiness(null);
         setSettings(null);
       } finally {
-        setLoading(false);
+        setAuthLoading(false);
+        setInitialized(true);
       }
-    }
+    };
+  
     loadUser();
-  }, []);
+  }, [location.pathname, user]);
 
-  const login = async (email: string, password: string) => {
-    const res = await api.post<{
-      token: string;
-      user: User;
-      business?: Business;
-    }>('/auth/login', { email, password });
 
-    setUser(res.data?.user);
-    setBusiness(res.data.business ?? null);
 
-    // Load settings and apply theme after login
-    if (res.data?.user) {
-      try {
-        const settingsData = await getMySettings();
-        setSettings(settingsData);
-        applyTheme(settingsData);
-      } catch (err) {
-        console.error('Failed to load settings after login:', err);
-        // Don't block if settings fail to load
-      }
+
+  // // טעינה ראשונית מה-localStorage
+  // useEffect(() => {
+
+
+  //   const loadUser = async () => {
+  //     try {
+  //       const res = await api.get('/auth/me');
+  //       if(!res) {
+  //         setUser(null);
+  //         setBusiness(null);
+  //         setSettings(null);
+  //         setLoading(false);
+  //         return;
+  //       }
+  //       setUser(res.data?.user);
+  //       setBusiness(res.data?.business);
+        
+  //       // Check if impersonating from localStorage
+  //       const storedImpersonatingId = localStorage.getItem('sb_impersonating_businessId');
+  //       if (storedImpersonatingId) {
+  //         setImpersonatingBusinessId(storedImpersonatingId);
+  //       }
+
+  //       // Load settings and apply theme
+  //       if (res.data?.user) {
+  //         try {
+  //           const settingsData = await getMySettings();
+  //           setSettings(settingsData);
+  //           applyTheme(settingsData);
+  //         } catch (err) {
+  //           console.error('Failed to load settings:', err);
+  //           // Don't block if settings fail to load
+  //         }
+  //       }
+  //     } catch {
+  //       setUser(null);
+  //       setBusiness(null);
+  //       setSettings(null);
+  //     } finally {
+  //       setLoading(false);
+  //     }
+  //   }
+  //   loadUser();
+  // }, []);
+
+  const login = async (email: string, password: string): Promise<{ token: string; user: User }> => {
+    setAuthLoading(true);
+    try {
+      const res = await api.post<{token: string;user: User;business?: Business;}>(
+        '/auth/login',
+        { email, password }
+      );
+      if(!res.data?.user) { throw new Error('Failed to login user not found');}
+      const user = res.data.user;
+      const business = res.data?.business ?? null;
+
+      setUser(user);
+      setBusiness(business);
+      await loadSettingsIfBusiness(user, business);
+      return { token: res.data.token, user: user };
+    } catch (error) {
+      throw error;
+    }finally {
+      setAuthLoading(false);
     }
   };
 
   const logout = async () => {
-    await api.post('/auth/logout');
-    setUser(null);
-    setBusiness(null);
-    setSettings(null);
-    setImpersonatingBusinessId(null);
-    localStorage.removeItem('sb_token');
-    localStorage.removeItem('sb_token_original');
-    localStorage.removeItem('sb_impersonation_token');
-    localStorage.removeItem('sb_impersonating_businessId');
-    // Reset theme to defaults (optional - you might want to keep theme until page reload)
+    setAuthLoading(true);
+    try {
+      await api.post('/auth/logout');
+      setUser(null);
+      setBusiness(null);
+      setSettings(null);
+      setImpersonatingBusinessId(null);
+      localStorage.removeItem('sb_token');
+      localStorage.removeItem('sb_token_original');
+      localStorage.removeItem('sb_impersonation_token');
+      localStorage.removeItem('sb_impersonating_businessId');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   const startImpersonation = (token: string, businessId: string) => {
@@ -144,17 +202,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.reload();
   };
 
-  const isSuperAdmin = user?.role === 'super_admin';
-
   return (
     <AuthContext.Provider
       value={{
         user,
         business,
         settings,
-        loading,
+        authLoading,
+        settingsLoading,
         isSuperAdmin,
         impersonatingBusinessId,
+        initialized,
         login,
         logout,
         startImpersonation,

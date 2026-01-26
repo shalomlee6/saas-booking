@@ -9,7 +9,7 @@ import { AlertsCard } from '../components/dashboard/AlertsCard';
 import { WeekLoadCard } from '../components/dashboard/WeekLoadCard';
 
 export const DashboardHomePage: React.FC = () => {
-  const { user,loading } = useAuth();
+  const { user,authLoading } = useAuth();
   
   const navigate = useNavigate();
   // const { businessSlug } = useParams<{ businessSlug: string }>();
@@ -19,10 +19,10 @@ export const DashboardHomePage: React.FC = () => {
   const didFetchLoadAppointmentsRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate('/login');
     }
-  }, [loading, user, navigate]);
+  }, [authLoading, user, navigate]);
 
   useEffect(() => {
     if (didFetchLoadAppointmentsRef.current) return;
@@ -45,7 +45,7 @@ export const DashboardHomePage: React.FC = () => {
     }
   }, [user]);
 
-  if (loading) return <div>טוען...</div>;
+  if (authLoading) return <div>טוען...</div>;
   if (!user) return null;
 
   // Calculate KPIs

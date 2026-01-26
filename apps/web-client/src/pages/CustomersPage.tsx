@@ -18,7 +18,7 @@ interface CustomersProps {
 }
 
 export const CustomersPage: React.FC<CustomersProps> = ({customersList}) => {
-  const { user, business, loading: authLoading, logout } = useAuth();
+  const { user, authLoading } = useAuth();
   const navigate = useNavigate();
 
   // const [customers, setCustomers] = useState<Customer[]>([]);
