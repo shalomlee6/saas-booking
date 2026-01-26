@@ -1,0 +1,23 @@
+# Saas-Booking Project Rules (Do Not Break UI/Logic)
+
+## Non-negotiables
+- Do NOT refactor or rewrite components unless explicitly asked.
+- Keep existing API contracts intact (routes, DTO shapes, status codes). If a change is needed, propose it first.
+- Avoid "big rewrites": prefer minimal diffs and targeted changes.
+- Never remove functionality to "simplify".
+
+## UI / CSS safety
+- Do NOT rename existing CSS classes without updating all usages.
+- Do NOT switch styling system (no Tailwind migration, no UI library swap) unless explicitly requested.
+- If changing layout, keep DOM structure stable as much as possible.
+- Always preserve RTL behavior.
+
+## Data / Backend safety
+- Do NOT change Mongo schemas, indexes, or auth logic without a clear migration plan.
+- Do NOT touch auth cookies/JWT strategy unless explicitly requested.
+
+## Workflow
+- When implementing a feature: 
+  1) Identify the exact files to touch.
+  2) Make smallest change possible.
+  3) Provide a short "how to test" checklist (Postman + UI).

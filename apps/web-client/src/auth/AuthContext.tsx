@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User, Business, BusinessSettingsDto } from '../types/api-types';
 import { api } from '../api/client';
 import { getMySettings } from '../api/settings';
