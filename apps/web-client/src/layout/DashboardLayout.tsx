@@ -10,48 +10,7 @@ export const DashboardLayout: React.FC = () => {
     <div className="flex flex-col">
       <ImpersonationBanner />
       <header className="dashTopbar">
-        {/* Left Group */}
-        <div className="dashTopbar__left">
-          <select className="pill">
-            <option>כל השירותים</option>
-          </select>
-          <select className="pill">
-            <option>כל העובדים</option>
-            <option>עובד 1</option>
-          </select>
-        </div>
 
-        {/* Center Group */}
-
-        {/* Right Group */}
-        <div className="dashTopbar__right">
-          {isSuperAdmin && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              background: 'rgba(129, 140, 248, 0.15)',
-              border: '1px solid rgba(129, 140, 248, 0.3)',
-              color: '#818CF8',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              fontSize: '11px',
-              fontWeight: 700,
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
-            }}>
-              <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" />
-              </svg>
-              <span>SUPER ADMIN</span>
-            </div>
-          )}
-          <select className="pill">
-            <option value="day">יום</option>
-            <option value="week">שבוע</option>
-          </select>
-          <button className="pill pill--primary">+ תור חדש</button>
-        </div>
       </header>
 
       <div className="dashShell">

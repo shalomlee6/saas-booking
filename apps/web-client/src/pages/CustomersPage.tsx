@@ -74,9 +74,8 @@ export const CustomersPage: React.FC<CustomersProps> = ({customersList}) => {
     try {
       setError(null);
       setCreating(true);
-      const userr:any = JSON.parse(localStorage.getItem('sb_user') as string) ;
       
-      const userStat = {user: { ...form, businessId: userr?.businessId || null}  }
+      const userStat = { ...form };
       await api.post('/customers', userStat);
       // איפוס הטופס
     //   setForm({ name: '', phone: '', email: '', notes: '' });

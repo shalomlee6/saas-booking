@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
+import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 import { Customer } from '../models/Customer';
 
 export const customersRouter = Router();
@@ -7,23 +8,20 @@ export const customersRouter = Router();
 // GET /api/customers
 customersRouter.get('/', auth, async (req: AuthRequest, res) => {
   try {
+    const businessId = resolveBusinessIdFromReq(req);
+    const search = (req.query.search as string) || '';
 
-    const businessId  = req.body?.user?.businessId ? req.body.user.businessId : null;
-    const search = (req.params.search as string) || '';
-    // console.table('req: \n' + JSON.stringify(req.user));
-    // console.table('req.body: \n' + JSON.stringify(req.body))
-    console.table('req.user: \n' + JSON.stringify(req.user))
-    const filter: any = businessId ? { businessId } : null;
-    if(businessId) {
-
-      if (search) {
-        filter.$or = [
-          { name: new RegExp(search, 'i') },
-          { phone: new RegExp(search, 'i') },
-        ];
-      }
+    if (!businessId) {
+      return res.status(400).json({ message: 'businessId is required' });
     }
 
+    const filter: Record<string, unknown> = { businessId };
+    if (search) {
+      filter.$or = [
+        { name: new RegExp(search, 'i') },
+        { phone: new RegExp(search, 'i') },
+      ];
+    }
 
     const customers = await Customer.find(filter)
       .sort({ createdAt: -1 })
@@ -39,8 +37,12 @@ customersRouter.get('/', auth, async (req: AuthRequest, res) => {
 // POST /api/customers
 customersRouter.post('/', auth, async (req: AuthRequest, res) => {
   try {
+    const businessId = resolveBusinessIdFromReq(req);
+    const { name, phone, email, notes } = req.body;
 
-    const { name, phone, email, notes, businessId } = req?.body?.user;
+    if (!businessId) {
+      return res.status(400).json({ message: 'businessId is required' });
+    }
 
     if (!name || !phone) {
       return res
@@ -55,7 +57,7 @@ customersRouter.post('/', auth, async (req: AuthRequest, res) => {
       email,
       notes,
     });
-    console.table('customer  \n' + JSON.stringify(customer) + '\n')
+
     res.status(201).json(customer);
   } catch (err) {
     console.error('Error POST /customers:', err);

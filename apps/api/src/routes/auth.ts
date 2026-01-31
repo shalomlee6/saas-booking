@@ -97,15 +97,6 @@ authRouter.post('/login', async (req, res) => {
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
-    console.log('***********************************************************');
-    console.log('***********************************************************');
-    console.log('***********************************************************');
-    console.log('***********************************************************');
-    console.log('***********************************************************');
-    console.log('***********************************************************');
-    console.log('***********************************************************');
-    console.log('password : ', password);
-    console.log('passwordHash : ', user.passwordHash);
 
     const token = jwt.sign(
       { 
