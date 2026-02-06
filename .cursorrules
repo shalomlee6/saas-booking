@@ -1,27 +1,70 @@
 # Saas-Booking – Project Rules
 
 You are working inside the **Saas-Booking** monorepo project.
-The technology stack:
+
+Technology stack:
 - Backend: Node.js, Express, TypeScript, MongoDB (Mongoose)
-- Frontend: React + TypeScript + Vite
-- Auth: JWT stored in HTTP-only cookies
+- Frontend: Angular 20 (Standalone APIs)
+- Auth: JWT via HTTP-only cookies + optional Bearer token
 - Architecture: Multi-tenant (businessId required on all requests)
+- Repo type: Monorepo (apps/api, apps/frontend-web)
 
-## Core domain rules:
-1. Every request must be scoped under **businessId** from the authenticated user.
+==================================================
+CORE DOMAIN RULES
+==================================================
+1. Every backend request must be scoped under **businessId** from the authenticated user.
 2. Never trust businessId coming directly from the client.
-3. Use async/await only (no promises chains).
-4. Keep controllers thin and move logic into services.
-5. Keep a clean folder structure and follow existing patterns when adding new features.
-6. Always validate user role & permissions before executing business-sensitive operations.
+3. Always validate user role & permissions before executing business-sensitive operations.
+4. Controllers must be thin; move logic into services.
+5. Use async/await only (no promise chains).
+6. Keep logic testable and side-effect free when possible.
 
-## Style:
-- Use TypeScript strict mode.
-- Prefer small, pure functions.
-- On frontend: use components under `src/components`, services under `src/services`, and hooks under `src/hooks`.
-- Never duplicate code: reuse helpers or create new utilities when needed.
+==================================================
+FRONTEND (ANGULAR) RULES
+==================================================
+1. Use Angular Standalone Components only.
+2. Use strict lazy-loading by route.
+3. Each domain is a vertical module under:
+   src/app/modules/<domain>/
+   with folders:
+   - pages/
+   - components/
+   - services/
+   - dto/
+   - model/
 
-## When generating new code:
-- Follow the existing naming conventions.
-- Place new backend files under `src/api/...` or `src/modules/...` according to the existing structure.
-- Place new frontend features under `src/pages/...` or `src/components/...` as appropriate.
+4. Shared logic goes under:
+   - src/app/core/ (api, auth, guards, layout)
+   - src/app/shared/ (ui, services, pipes, directives, types)
+
+5. Pages are route-level components only.
+6. Components must NOT call HttpClient directly.
+   All HTTP logic goes through services.
+
+==================================================
+CSS / SCSS CONVENTIONS (MANDATORY)
+==================================================
+- Use **kebab-case class names only**
+- DO NOT use BEM syntax
+- DO NOT use "__" or "--"
+- DO NOT use IDs for styling
+- Avoid deep nesting (max 2 levels)
+
+Examples:
+  ✅ login-page
+  ✅ login-page-background
+  ✅ login-card
+  ✅ login-form-input
+
+  ❌ login-page__background
+  ❌ login-card__title
+  ❌ #loginContainer
+
+==================================================
+WHEN GENERATING NEW CODE
+==================================================
+- Follow the folder structure strictly.
+- Never invent new architectural patterns.
+- Never mix backend and frontend logic.
+- Do not introduce external UI libraries unless explicitly asked.
+- Prefer clarity over cleverness.
