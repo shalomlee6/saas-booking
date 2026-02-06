@@ -1,9 +1,30 @@
-<nav>
-  <a routerLink="/dashboard">Dashboard</a>
-  <a routerLink="/customers">Customers</a>
-  <a routerLink="/admin">Admin</a>
-  <a routerLink="/auth/login">Login</a>
-</nav>
-<main>
-  <router-outlet></router-outlet>
-</main>
+<div class="layout theme-light">
+  <aside class="layout-sidebar">
+    <div class="layout-sidebar-logo">SaaS</div>
+    <nav class="layout-sidebar-nav">
+      <span class="layout-sidebar-label">Main</span>
+      <a routerLink="/dashboard" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Dashboard</a>
+      <a routerLink="/customers" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Customers</a>
+      <a routerLink="/admin" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Admin</a>
+    </nav>
+    <a routerLink="/auth/login" class="layout-sidebar-link layout-sidebar-link-footer">Login</a>
+  </aside>
+
+  <div class="layout-body">
+    <header class="layout-topbar">
+      <h1 class="layout-topbar-title">Page title</h1>
+      <div class="layout-topbar-search-wrap">
+        <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
+      </div>
+      <div class="layout-topbar-actions">
+        <span class="layout-topbar-icon" aria-hidden="true"></span>
+        <span class="layout-topbar-icon" aria-hidden="true"></span>
+        <span class="layout-topbar-user">User</span>
+      </div>
+    </header>
+
+    <main class="layout-main">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
