@@ -1,0 +1,59 @@
+<div class="customers-page">
+  <div class="customers-page-header">
+    <h1 class="customers-page-title">Customers</h1>
+    <div class="customers-page-actions">
+      <input
+        type="text"
+        class="customers-search"
+        placeholder="Search by name, phone, or email..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchInput($event)"
+      />
+      <a routerLink="/customers/new" class="customers-btn customers-btn-primary">New Customer</a>
+    </div>
+  </div>
+
+  <div class="customers-card">
+    @if (error()) {
+      <p class="customers-error">
+        {{ error() }}
+        <button type="button" class="customers-error-retry" (click)="reload()">Retry</button>
+      </p>
+    }
+
+    @if (loading()) {
+      <div class="customers-loading">Loading customers…</div>
+    }
+
+    @if (!loading() && filteredList().length === 0) {
+      <div class="customers-empty">
+        No customers found. <a routerLink="/customers/new">Add your first customer</a>.
+      </div>
+    }
+
+    @if (!loading() && filteredList().length > 0) {
+      <div class="customers-table-wrap">
+        <table class="customers-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (customer of filteredList(); track customer._id) {
+              <tr>
+                <td>{{ customer.name }}</td>
+                <td>{{ customer.phone }}</td>
+                <td>{{ customer.email || '—' }}</td>
+                <td>{{ customer.createdAt | date : 'mediumDate' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

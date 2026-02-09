@@ -1,0 +1,70 @@
+<div class="customer-form-page">
+  <h1 class="customer-form-title">New Customer</h1>
+
+  <div class="customers-card customer-form-card">
+    <form class="customer-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <div class="customer-form-field">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          formControlName="name"
+          class="customer-form-input"
+          [class.customer-form-input-invalid]="name?.invalid && (name?.touched || name?.dirty)"
+        />
+        <p *ngIf="name?.invalid && (name?.touched || name?.dirty)" class="customer-form-error">
+          Name is required.
+        </p>
+      </div>
+
+      <div class="customer-form-field">
+        <label for="phone">Phone</label>
+        <input
+          id="phone"
+          type="text"
+          formControlName="phone"
+          class="customer-form-input"
+          [class.customer-form-input-invalid]="phone?.invalid && (phone?.touched || phone?.dirty)"
+        />
+        <p *ngIf="phone?.invalid && (phone?.touched || phone?.dirty)" class="customer-form-error">
+          Phone is required.
+        </p>
+      </div>
+
+      <div class="customer-form-field">
+        <label for="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          formControlName="email"
+          class="customer-form-input"
+        />
+      </div>
+
+      <div class="customer-form-field">
+        <label for="notes">Notes</label>
+        <textarea
+          id="notes"
+          formControlName="notes"
+          class="customer-form-input customer-form-textarea"
+          rows="3"
+        ></textarea>
+      </div>
+
+      <p *ngIf="serverError()" class="customer-form-error customer-form-error-server">
+        {{ serverError() }}
+      </p>
+
+      <div class="customer-form-actions">
+        <button
+          type="submit"
+          class="customers-btn customers-btn-primary"
+          [disabled]="form.invalid || loading()"
+        >
+          {{ loading() ? 'Saving…' : 'Create Customer' }}
+        </button>
+        <a routerLink="/customers" class="customers-btn customers-btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

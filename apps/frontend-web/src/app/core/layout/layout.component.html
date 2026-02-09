@@ -1,6 +1,33 @@
-<div class="layout theme-light">
-  <aside class="layout-sidebar">
-    <div class="layout-sidebar-logo">SaaS</div>
+<div
+  class="layout"
+  [class.theme-light]="theme() === 'light'"
+  [class.theme-dark]="theme() === 'dark'"
+>
+  <div class="layout-sidebar-header">
+    <span class="layout-sidebar-logo">SaaS</span>
+  </div>
+
+  <header class="layout-topbar">
+    <h1 class="layout-topbar-title">Page title</h1>
+    <div class="layout-topbar-search-wrap">
+      <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
+    </div>
+    <div class="layout-topbar-actions">
+      <button
+        type="button"
+        class="layout-theme-toggle"
+        [attr.aria-label]="theme() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
+        (click)="toggleTheme()"
+      >
+        {{ theme() === 'light' ? 'Dark' : 'Light' }}
+      </button>
+      <span class="layout-topbar-icon" aria-hidden="true"></span>
+      <span class="layout-topbar-icon" aria-hidden="true"></span>
+      <span class="layout-topbar-user">User</span>
+    </div>
+  </header>
+
+  <aside class="layout-sidebar-body">
     <nav class="layout-sidebar-nav">
       <span class="layout-sidebar-label">Main</span>
       <a routerLink="/dashboard" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Dashboard</a>
@@ -10,21 +37,7 @@
     <a routerLink="/auth/login" class="layout-sidebar-link layout-sidebar-link-footer">Login</a>
   </aside>
 
-  <div class="layout-body">
-    <header class="layout-topbar">
-      <h1 class="layout-topbar-title">Page title</h1>
-      <div class="layout-topbar-search-wrap">
-        <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
-      </div>
-      <div class="layout-topbar-actions">
-        <span class="layout-topbar-icon" aria-hidden="true"></span>
-        <span class="layout-topbar-icon" aria-hidden="true"></span>
-        <span class="layout-topbar-user">User</span>
-      </div>
-    </header>
-
-    <main class="layout-main">
-      <router-outlet></router-outlet>
-    </main>
-  </div>
+  <main class="layout-main">
+    <router-outlet></router-outlet>
+  </main>
 </div>

@@ -1,3 +1,5 @@
+$header-height: 64px;
+
 :host {
   display: block;
   min-height: 100vh;
@@ -6,27 +8,121 @@
 .layout {
   min-height: 100vh;
   background: var(--bg-app);
-  display: flex;
   color: var(--text-primary);
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  grid-template-rows: $header-height 1fr;
 }
 
-.layout-sidebar {
-  width: 260px;
-  flex-shrink: 0;
-  background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
+.layout-sidebar-header {
+  grid-row: 1;
+  grid-column: 1;
+  height: $header-height;
+  min-height: $header-height;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
   display: flex;
-  flex-direction: column;
-  padding: 1.25rem 0;
+  align-items: center;
+  padding: 0 1.25rem;
 }
 
 .layout-sidebar-logo {
   font-size: 1.25rem;
   font-weight: 700;
   color: var(--text-primary);
-  padding: 0 1.25rem 1.25rem;
+}
+
+.layout-topbar {
+  grid-row: 1;
+  grid-column: 2;
+  height: $header-height;
+  min-height: $header-height;
+  background: var(--bg-card);
   border-bottom: 1px solid var(--border-color);
-  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.5rem;
+}
+
+.layout-topbar-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.layout-topbar-search-wrap {
+  flex: 1;
+  max-width: 320px;
+}
+
+.layout-topbar-search {
+  width: 100%;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  outline: none;
+}
+
+.layout-topbar-search::placeholder {
+  color: var(--text-muted);
+}
+
+.layout-topbar-search:focus {
+  border-color: var(--color-primary);
+}
+
+.layout-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.layout-theme-toggle {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.layout-theme-toggle:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: rgba(55, 135, 246, 0.06);
+}
+
+.layout-topbar-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--text-muted);
+  opacity: 0.6;
+  border-radius: 4px;
+}
+
+.layout-topbar-user {
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.layout-sidebar-body {
+  grid-row: 2;
+  grid-column: 1;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem 0;
 }
 
 .layout-sidebar-nav {
@@ -78,76 +174,10 @@
   border-top: 1px solid var(--border-color);
 }
 
-.layout-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.layout-topbar {
-  height: 56px;
-  flex-shrink: 0;
-  background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0 1.5rem;
-}
-
-.layout-topbar-title {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--text-primary);
-}
-
-.layout-topbar-search-wrap {
-  flex: 1;
-  max-width: 320px;
-}
-
-.layout-topbar-search {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  background: var(--bg-app);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  outline: none;
-}
-
-.layout-topbar-search::placeholder {
-  color: var(--text-muted);
-}
-
-.layout-topbar-search:focus {
-  border-color: var(--color-primary);
-}
-
-.layout-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.layout-topbar-icon {
-  width: 20px;
-  height: 20px;
-  background: var(--text-muted);
-  opacity: 0.6;
-  border-radius: 4px;
-}
-
-.layout-topbar-user {
-  font-size: 0.875rem;
-  color: var(--text-primary);
-}
-
 .layout-main {
-  flex: 1;
-  padding: 1.5rem;
+  grid-row: 2;
+  grid-column: 2;
+  min-height: 0;
   overflow: auto;
+  padding: 1.5rem;
 }
