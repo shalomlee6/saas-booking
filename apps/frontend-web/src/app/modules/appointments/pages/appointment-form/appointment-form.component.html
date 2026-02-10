@@ -1,0 +1,92 @@
+<div class="appointment-form-page">
+  <h1 class="appointment-form-title">New Appointment</h1>
+
+  <div class="appointment-form-card">
+    <form class="appointment-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <div class="appointment-form-field">
+        <label for="customerId">Customer ID</label>
+        <input
+          id="customerId"
+          type="text"
+          formControlName="customerId"
+          class="appointment-form-input"
+          placeholder="e.g. 507f1f77bcf86cd799439011"
+          [class.appointment-form-input-invalid]="customerId?.invalid && (customerId?.touched || customerId?.dirty)"
+        />
+        @if (customerId?.invalid && (customerId?.touched || customerId?.dirty)) {
+          <p class="appointment-form-error">Customer ID is required.</p>
+        }
+      </div>
+
+      <div class="appointment-form-field">
+        <label for="serviceId">Service ID</label>
+        <input
+          id="serviceId"
+          type="text"
+          formControlName="serviceId"
+          class="appointment-form-input"
+          placeholder="e.g. 507f1f77bcf86cd799439012"
+          [class.appointment-form-input-invalid]="serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)"
+        />
+        @if (serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)) {
+          <p class="appointment-form-error">Service ID is required.</p>
+        }
+      </div>
+
+      <div class="appointment-form-field">
+        <label for="start">Start time</label>
+        <input
+          id="start"
+          type="datetime-local"
+          formControlName="start"
+          class="appointment-form-input"
+          [class.appointment-form-input-invalid]="start?.invalid && (start?.touched || start?.dirty)"
+        />
+        @if (start?.invalid && (start?.touched || start?.dirty)) {
+          <p class="appointment-form-error">Start time is required.</p>
+        }
+      </div>
+
+      <div class="appointment-form-field">
+        <label for="end">End time</label>
+        <input
+          id="end"
+          type="datetime-local"
+          formControlName="end"
+          class="appointment-form-input"
+          [class.appointment-form-input-invalid]="end?.invalid && (end?.touched || end?.dirty)"
+        />
+        @if (end?.invalid && (end?.touched || end?.dirty)) {
+          <p class="appointment-form-error">End time is required.</p>
+        }
+      </div>
+
+      <div class="appointment-form-field">
+        <label for="notes">Notes</label>
+        <textarea
+          id="notes"
+          formControlName="notes"
+          class="appointment-form-input appointment-form-textarea"
+          rows="3"
+        ></textarea>
+      </div>
+
+      @if (serverError()) {
+        <p class="appointment-form-error appointment-form-error-server">
+          {{ serverError() }}
+        </p>
+      }
+
+      <div class="appointment-form-actions">
+        <button
+          type="submit"
+          class="appointment-form-btn appointment-form-btn-primary"
+          [disabled]="form.invalid || loading()"
+        >
+          {{ loading() ? 'Creating…' : 'Create Appointment' }}
+        </button>
+        <a routerLink="/appointments" class="appointment-form-btn appointment-form-btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
