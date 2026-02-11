@@ -1,13 +1,19 @@
-import { Component, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Component, inject } from '@angular/core';
+import { Store } from '@ngrx/store';
+import { RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormGroup,
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { AppointmentsStore } from '../../services/appointments.store';
+import { toSignal } from '@angular/core/rxjs-interop';
 import type { CreateAppointmentDto } from '../../dto/create-appointment.dto';
+import * as AppointmentsActions from '../../state/appointments.actions';
+import {
+  selectError,
+  selectCreating,
+} from '../../state/appointments.selectors';
 
 @Component({
   selector: 'app-appointment-form',
@@ -18,11 +24,14 @@ import type { CreateAppointmentDto } from '../../dto/create-appointment.dto';
 })
 export class AppointmentFormComponent {
   private readonly fb = inject(FormBuilder);
-  private readonly store = inject(AppointmentsStore);
-  private readonly router = inject(Router);
+  private readonly store = inject(Store);
 
-  readonly loading = signal(false);
-  readonly serverError = signal<string | null>(null);
+  readonly creating = toSignal(this.store.select(selectCreating), {
+    initialValue: false,
+  });
+  readonly serverError = toSignal(this.store.select(selectError), {
+    initialValue: null as string | null,
+  });
 
   readonly form: FormGroup;
 
@@ -49,20 +58,16 @@ export class AppointmentFormComponent {
     return this.form.get('end');
   }
 
-  /** Convert datetime-local value to ISO string */
   private toISO(value: string): string {
     if (!value) return '';
     return new Date(value).toISOString();
   }
 
   onSubmit(): void {
-    if (this.form.invalid || this.loading()) {
+    if (this.form.invalid || this.creating()) {
       this.form.markAllAsTouched();
       return;
     }
-
-    this.loading.set(true);
-    this.serverError.set(null);
 
     const dto: CreateAppointmentDto = {
       customerId: this.form.get('customerId')?.value?.trim(),
@@ -72,16 +77,6 @@ export class AppointmentFormComponent {
       notes: this.form.get('notes')?.value?.trim() || undefined,
     };
 
-    this.store.create(dto).subscribe({
-      next: () => {
-        this.router.navigate(['/appointments']);
-      },
-      error: () => {
-        this.loading.set(false);
-        this.serverError.set(
-          this.store.error() || 'Failed to create appointment. Please try again.'
-        );
-      },
-    });
+    this.store.dispatch(AppointmentsActions.create({ dto }));
   }
 }

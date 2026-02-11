@@ -81,9 +81,9 @@
         <button
           type="submit"
           class="appointment-form-btn appointment-form-btn-primary"
-          [disabled]="form.invalid || loading()"
+          [disabled]="form.invalid || creating()"
         >
-          {{ loading() ? 'Creating…' : 'Create Appointment' }}
+          {{ creating() ? 'Creating…' : 'Create Appointment' }}
         </button>
         <a routerLink="/appointments" class="appointment-form-btn appointment-form-btn-ghost">Cancel</a>
       </div>

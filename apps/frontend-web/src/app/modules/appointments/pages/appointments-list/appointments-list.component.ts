@@ -1,10 +1,20 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Store } from '@ngrx/store';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AppointmentsStore } from '../../services/appointments.store';
+import { toSignal } from '@angular/core/rxjs-interop';
 import type { Appointment } from '../../model/appointment';
-import type { AppointmentCustomer, AppointmentService } from '../../model/appointment';
+import type {
+  AppointmentCustomer,
+  AppointmentService,
+} from '../../model/appointment';
+import * as AppointmentsActions from '../../state/appointments.actions';
+import {
+  selectItems,
+  selectLoading,
+  selectError,
+} from '../../state/appointments.selectors';
 
 type DateRangeFilter = 'today' | 'week' | 'all';
 
@@ -35,13 +45,15 @@ function getListParams(filter: DateRangeFilter): { from: string; to: string } {
 
 function customerDisplay(apt: Appointment): string {
   const c = apt.customerId;
-  if (c && typeof c === 'object' && 'name' in c) return (c as AppointmentCustomer).name;
+  if (c && typeof c === 'object' && 'name' in c)
+    return (c as AppointmentCustomer).name;
   return typeof c === 'string' ? c : '—';
 }
 
 function serviceDisplay(apt: Appointment): string {
   const s = apt.serviceId;
-  if (s && typeof s === 'object' && 'name' in s) return (s as AppointmentService).name;
+  if (s && typeof s === 'object' && 'name' in s)
+    return (s as AppointmentService).name;
   return typeof s === 'string' ? s : '—';
 }
 
@@ -53,13 +65,18 @@ function serviceDisplay(apt: Appointment): string {
   styleUrl: './appointments-list.component.scss',
 })
 export class AppointmentsListComponent implements OnInit {
-  private readonly store = inject(AppointmentsStore);
+  private readonly store = inject(Store);
 
   readonly searchQuery = signal('');
   readonly dateRangeFilter = signal<DateRangeFilter>('week');
-  readonly items = this.store.items;
-  readonly loading = this.store.loading;
-  readonly error = this.store.error;
+
+  readonly items = toSignal(this.store.select(selectItems), { initialValue: [] });
+  readonly loading = toSignal(this.store.select(selectLoading), {
+    initialValue: false,
+  });
+  readonly error = toSignal(this.store.select(selectError), {
+    initialValue: null as string | null,
+  });
 
   readonly filteredList = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -77,12 +94,16 @@ export class AppointmentsListComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.store.load(getListParams(this.dateRangeFilter()));
+    this.store.dispatch(
+      AppointmentsActions.load({ params: getListParams(this.dateRangeFilter()) })
+    );
   }
 
   setFilter(filter: DateRangeFilter): void {
     this.dateRangeFilter.set(filter);
-    this.store.load(getListParams(filter));
+    this.store.dispatch(
+      AppointmentsActions.load({ params: getListParams(filter) })
+    );
   }
 
   onSearchInput(value: string): void {
@@ -90,7 +111,11 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   reload(): void {
-    this.store.load(getListParams(this.dateRangeFilter()));
+    this.store.dispatch(
+      AppointmentsActions.load({
+        params: getListParams(this.dateRangeFilter()),
+      })
+    );
   }
 
   customerDisplay(apt: Appointment): string {
