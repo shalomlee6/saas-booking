@@ -40,6 +40,14 @@
       <a routerLink="/dashboard" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Dashboard</a>
       <a routerLink="/appointments" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: false }" class="layout-sidebar-link">Appointments</a>
       <a
+        [routerLink]="servicesNavLink()"
+        routerLinkActive="layout-sidebar-link-active"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="layout-sidebar-link"
+      >
+        Services
+      </a>
+      <a
         [routerLink]="customersNavLink()"
         routerLinkActive="layout-sidebar-link-active"
         [routerLinkActiveOptions]="customersNavLink() === '/admin/business-customers' ? { exact: true } : { exact: false }"

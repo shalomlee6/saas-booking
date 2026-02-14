@@ -26,6 +26,10 @@ export class LayoutComponent {
   readonly isSuperAdmin = () => this.auth.isSuperAdmin();
   readonly isImpersonating = () => isImpersonating();
 
+  /** Sidebar: Services only when impersonating or business owner; super_admin not impersonating -> /admin/business-customers */
+  readonly servicesNavLink = (): string =>
+    this.auth.isSuperAdmin() && !isImpersonating() ? '/admin/business-customers' : '/services';
+
   /** Sidebar: "Businesses" + /admin/business-customers when super_admin and not impersonating; else "Customers" + /customers */
   readonly customersNavLabel = (): string =>
     this.auth.isSuperAdmin() && !isImpersonating() ? 'Businesses' : 'Customers';

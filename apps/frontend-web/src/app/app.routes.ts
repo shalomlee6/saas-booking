@@ -29,6 +29,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'services',
+        loadChildren: () =>
+          import('./modules/services/services.routes').then(
+            (m) => m.SERVICES_ROUTES
+          ),
+      },
+      {
         path: 'customers',
         loadChildren: () =>
           import('./modules/customers/customers.routes').then(

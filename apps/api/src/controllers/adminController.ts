@@ -145,7 +145,7 @@ export async function adminStopImpersonate(req: AuthRequest, res: Response): Pro
 }
 
 // PATCH /api/admin/businesses/:id/ui – super admin updates any business UI
-export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Promise<void> {
+export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Promise<any> {
   try {
     const businessId = req.params.id;
     const result = validateBusinessUiBody(req.body);

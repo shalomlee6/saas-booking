@@ -1,0 +1,84 @@
+<div class="service-form-page">
+  <h1 class="service-form-title">{{ isEdit() ? 'Edit Service' : 'New Service' }}</h1>
+
+  <div class="services-card service-form-card">
+    @if (loading() && isEdit() && !form.dirty) {
+      <div class="services-loading">Loading service…</div>
+    } @else {
+      <form class="service-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+        <div class="service-form-field">
+          <label for="name">Name</label>
+          <input
+            id="name"
+            type="text"
+            formControlName="name"
+            class="service-form-input"
+            [class.service-form-input-invalid]="name?.invalid && (name?.touched || name?.dirty)"
+          />
+          @if (name?.invalid && (name?.touched || name?.dirty)) {
+            <p class="service-form-error">Name is required.</p>
+          }
+        </div>
+
+        <div class="service-form-field">
+          <label for="durationMinutes">Duration (minutes)</label>
+          <input
+            id="durationMinutes"
+            type="number"
+            formControlName="durationMinutes"
+            class="service-form-input"
+            min="5"
+            [class.service-form-input-invalid]="durationMinutes?.invalid && (durationMinutes?.touched || durationMinutes?.dirty)"
+          />
+          @if (durationMinutes?.invalid && (durationMinutes?.touched || durationMinutes?.dirty)) {
+            <p class="service-form-error">Duration is required and must be at least 5 minutes.</p>
+          }
+        </div>
+
+        <div class="service-form-field">
+          <label for="price">Price (optional)</label>
+          <input
+            id="price"
+            type="number"
+            formControlName="price"
+            class="service-form-input"
+            min="0"
+            step="0.01"
+          />
+        </div>
+
+        <div class="service-form-field">
+          <label for="description">Description (optional)</label>
+          <textarea
+            id="description"
+            formControlName="description"
+            class="service-form-input service-form-textarea"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <div class="service-form-field service-form-field-row">
+          <label>
+            <input type="checkbox" formControlName="isActive" />
+            Active
+          </label>
+        </div>
+
+        @if (serverError()) {
+          <p class="service-form-error service-form-error-server">{{ serverError() }}</p>
+        }
+
+        <div class="service-form-actions">
+          <button
+            type="submit"
+            class="services-btn services-btn-primary"
+            [disabled]="form.invalid || loading()"
+          >
+            {{ loading() ? 'Saving…' : (isEdit() ? 'Save' : 'Create Service') }}
+          </button>
+          <a routerLink="/services" class="services-btn services-btn-ghost">Cancel</a>
+        </div>
+      </form>
+    }
+  </div>
+</div>

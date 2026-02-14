@@ -1,0 +1,17 @@
+[
+  {"_id":"64s100000000000000000001","name":"Haircut","durationMinutes":45,"price":35,"description":"Standard haircut and styling","isActive":true,"createdAt":"2025-01-01T10:00:00.000Z"},
+  {"_id":"64s100000000000000000002","name":"Beard Trim","durationMinutes":30,"price":20,"description":"Beard trim and shape","isActive":true,"createdAt":"2025-01-01T10:00:00.000Z"},
+  {"_id":"64s100000000000000000003","name":"Coloring","durationMinutes":90,"price":85,"description":"Full color or touch-up","isActive":true,"createdAt":"2025-01-01T10:00:00.000Z"},
+  {"_id":"64s100000000000000000004","name":"Highlights","durationMinutes":120,"price":120,"description":"Partial or full highlights","isActive":true,"createdAt":"2025-01-01T10:00:00.000Z"},
+  {"_id":"64s100000000000000000005","name":"Kids Cut","durationMinutes":30,"price":25,"description":"Haircut for children 12 and under","isActive":true,"createdAt":"2025-01-02T09:00:00.000Z"},
+  {"_id":"64s100000000000000000006","name":"Blow Dry","durationMinutes":30,"price":25,"description":"Wash and blow dry","isActive":true,"createdAt":"2025-01-02T09:00:00.000Z"},
+  {"_id":"64s100000000000000000007","name":"Deep Conditioning","durationMinutes":45,"price":40,"description":"Treatment and style","isActive":true,"createdAt":"2025-01-02T09:00:00.000Z"},
+  {"_id":"64s100000000000000000008","name":"Consultation","durationMinutes":15,"price":0,"description":"Free consultation","isActive":true,"createdAt":"2025-01-03T10:00:00.000Z"},
+  {"_id":"64s100000000000000000009","name":"Hair & Beard Combo","durationMinutes":60,"price":50,"description":"Haircut plus beard trim","isActive":true,"createdAt":"2025-01-03T10:00:00.000Z"},
+  {"_id":"64s10000000000000000000a","name":"Balayage","durationMinutes":150,"price":180,"description":"Hand-painted highlights","isActive":true,"createdAt":"2025-01-04T10:00:00.000Z"},
+  {"_id":"64s10000000000000000000b","name":"Keratin Treatment","durationMinutes":120,"price":200,"description":"Smoothing treatment","isActive":true,"createdAt":"2025-01-04T10:00:00.000Z"},
+  {"_id":"64s10000000000000000000c","name":"Updo","durationMinutes":60,"price":75,"description":"Formal updo for events","isActive":true,"createdAt":"2025-01-05T10:00:00.000Z"},
+  {"_id":"64s10000000000000000000d","name":"Bang Trim","durationMinutes":15,"price":10,"description":"Quick bang trim","isActive":true,"createdAt":"2025-01-05T10:00:00.000Z"},
+  {"_id":"64s10000000000000000000e","name":"Senior Cut","durationMinutes":30,"price":28,"description":"Haircut for seniors 65+","isActive":true,"createdAt":"2025-01-06T10:00:00.000Z"},
+  {"_id":"64s10000000000000000000f","name":"Bridal Package","durationMinutes":180,"price":350,"description":"Trial and day-of styling","isActive":false,"createdAt":"2025-01-06T10:00:00.000Z"}
+]
