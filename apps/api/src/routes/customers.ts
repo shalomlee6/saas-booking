@@ -8,7 +8,7 @@ export const customersRouter = Router();
 // GET /api/customers
 customersRouter.get('/', auth, async (req: AuthRequest, res) => {
   try {
-    const businessId = resolveBusinessIdFromReq(req);
+    const businessId = resolveBusinessIdFromReq(req) || req.user!.businessId!;
     const search = (req.query.search as string) || '';
 
     if (!businessId) {

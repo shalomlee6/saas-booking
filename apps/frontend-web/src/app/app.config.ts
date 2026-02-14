@@ -15,6 +15,8 @@ import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { authInterceptor } from './core/api/http.config';
+import { mockApiInterceptor } from './core/api/mock-api.interceptor';
+import { environment } from '../environments/environment';
 import {
   appointmentsFeatureKey,
   appointmentsReducer,
@@ -46,7 +48,11 @@ export const appConfig: ApplicationConfig = {
       : []),
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(
+      withInterceptors(
+        environment.useMocks ? [mockApiInterceptor, authInterceptor] : [authInterceptor]
+      )
+    ),
     provideRouter(routes),
     provideAppInitializer(() => {
       const auth = inject(AuthService);
