@@ -25,6 +25,16 @@ export interface BusinessSettingsTheme {
   fontFamily?: string;
 }
 
+/** One day in weekly working hours. start/end in HH:mm. */
+export interface WorkingHoursDay {
+  enabled: boolean;
+  start: string;
+  end: string;
+}
+
+/** Keys: mon, tue, wed, thu, fri, sat, sun */
+export type WorkingHours = Record<string, WorkingHoursDay>;
+
 export interface AuthMeBusiness {
   _id: string;
   name: string;
@@ -36,7 +46,10 @@ export interface AuthMeBusiness {
 export interface AuthMeResponse {
   user: User;
   business?: AuthMeBusiness | null;
-  businessSettings?: { theme: BusinessSettingsTheme | null } | null;
+  businessSettings?: {
+    theme: BusinessSettingsTheme | null;
+    workingHours?: WorkingHours | null;
+  } | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -90,5 +103,13 @@ export class AuthService {
   /** Active business name (own business or impersonated). */
   activeBusinessName(): string | null {
     return this.business()?.name ?? null;
+  }
+
+  /** Update businessSettings locally (e.g. after PATCH business/settings). */
+  updateBusinessSettings(partial: Partial<NonNullable<AuthMeResponse['businessSettings']>>): void {
+    const current = this.businessSettings();
+    if (current) {
+      this.businessSettings.set({ ...current, ...partial });
+    }
   }
 }

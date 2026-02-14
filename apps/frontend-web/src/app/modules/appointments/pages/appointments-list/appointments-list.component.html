@@ -9,37 +9,29 @@
         [ngModel]="searchQuery()"
         (ngModelChange)="onSearchInput($event)"
       />
-      <div class="appointments-quick-filters">
+      <div class="appointments-view-toggle">
         <button
           type="button"
-          class="appointments-filter-btn"
-          [class.appointments-filter-btn-active]="dateRangeFilter() === 'today'"
-          (click)="setFilter('today')"
+          class="appointments-toggle-btn"
+          [class.appointments-toggle-btn-active]="viewMode() === 'day'"
+          (click)="setViewMode('day')"
         >
-          Today
+          Day
         </button>
         <button
           type="button"
-          class="appointments-filter-btn"
-          [class.appointments-filter-btn-active]="dateRangeFilter() === 'week'"
-          (click)="setFilter('week')"
+          class="appointments-toggle-btn"
+          [class.appointments-toggle-btn-active]="viewMode() === 'week'"
+          (click)="setViewMode('week')"
         >
-          This week
-        </button>
-        <button
-          type="button"
-          class="appointments-filter-btn"
-          [class.appointments-filter-btn-active]="dateRangeFilter() === 'all'"
-          (click)="setFilter('all')"
-        >
-          All
+          Week
         </button>
       </div>
       <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary">New Appointment</a>
     </div>
   </div>
 
-  <div class="appointments-card">
+  <div class="appointments-card appointments-calendar-card">
     @if (error()) {
       <p class="appointments-error">
         {{ error() }}
@@ -51,37 +43,70 @@
       <div class="appointments-loading">Loading appointments…</div>
     }
 
-    @if (!loading() && filteredList().length === 0) {
-      <div class="appointments-empty">
-        No appointments found.
-        <a routerLink="/appointments/new">Create an appointment</a>.
-      </div>
-    }
-
-    @if (!loading() && filteredList().length > 0) {
-      <div class="appointments-table-wrap">
-        <table class="appointments-table">
-          <thead>
-            <tr>
-              <th>Customer</th>
-              <th>Service</th>
-              <th>Start time</th>
-              <th>End time</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (apt of filteredList(); track apt._id) {
-              <tr>
-                <td>{{ customerDisplay(apt) }}</td>
-                <td>{{ serviceDisplay(apt) }}</td>
-                <td>{{ apt.start | date : 'medium' }}</td>
-                <td>{{ apt.end | date : 'medium' }}</td>
-                <td>{{ apt.status }}</td>
-              </tr>
-            }
-          </tbody>
-        </table>
+    @if (!loading()) {
+      <div class="calendar-shell">
+        <div
+          class="calendar-header"
+          [style.--day-count]="viewMode() === 'day' ? 1 : 7"
+        >
+          <div class="calendar-header-time"></div>
+          @for (day of weekDays(); track toDateKey(day)) {
+            <div class="calendar-header-day">
+              <span class="calendar-header-day-name">{{ dayName(day) }}</span>
+              <span class="calendar-header-day-date">{{ dateStr(day) }}</span>
+            </div>
+          }
+        </div>
+        <div
+          class="calendar-scroll"
+          [style.--grid-body-height]="gridBodyHeightPx + 'px'"
+          [style.--slot-height]="slotHeightPx + 'px'"
+          [style.--day-count]="viewMode() === 'day' ? 1 : 7"
+        >
+          <div class="calendar-body">
+            <div class="calendar-time-col">
+              @for (label of hourLabels(); track label) {
+                <div class="calendar-time-slot">{{ label }}</div>
+              }
+            </div>
+            <div class="calendar-days">
+              @for (day of weekDays(); track toDateKey(day)) {
+                <div
+                  class="calendar-day-col"
+                  (click)="onDayCellClick($event, day)"
+                  [attr.title]="getDayWorkingTitle(day)"
+                  role="button"
+                  tabindex="0"
+                  aria-label="Add appointment"
+                >
+                  @for (range of getDisabledRanges(day); track range.key) {
+                    <div
+                      class="calendar-day-disabled"
+                      [style.top.px]="range.topPx"
+                      [style.height.px]="range.heightPx"
+                    ></div>
+                  }
+                  @for (block of getBlocksForDay(day); track block.appointment._id) {
+                    <div
+                      class="calendar-block"
+                      [class]="blockStatusClass(block)"
+                      [style.top.px]="block.topPx"
+                      [style.height.px]="block.heightPx"
+                      [style.--block-bg]="block.bgColor"
+                      [style.--block-text]="block.textColor"
+                      [style.--block-border]="block.borderColor"
+                      (click)="$event.stopPropagation()"
+                    >
+                      <span class="calendar-block-customer">{{ block.customerName }}</span>
+                      <span class="calendar-block-service">{{ block.serviceName }}</span>
+                      <span class="calendar-block-time">{{ block.timeLabel }}</span>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </div>
       </div>
     }
   </div>

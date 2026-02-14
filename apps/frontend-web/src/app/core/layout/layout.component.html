@@ -59,7 +59,8 @@
         <a routerLink="/admin" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Admin</a>
       } -->
       @if (!isSuperAdmin() && user()?.businessId) {
-        <a routerLink="/settings/theme" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Settings</a>
+        <a routerLink="/settings/theme" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Theme</a>
+        <a routerLink="/settings/working-hours" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Working hours</a>
       }
     </nav>
     @if (isImpersonating()) {

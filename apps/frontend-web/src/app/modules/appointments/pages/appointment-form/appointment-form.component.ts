@@ -1,6 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormGroup,
@@ -14,6 +14,9 @@ import {
   selectError,
   selectCreating,
 } from '../../state/appointments.selectors';
+import {
+  DEFAULT_APPOINTMENT_DURATION_MINUTES,
+} from '../../utils/calendar.utils';
 
 @Component({
   selector: 'app-appointment-form',
@@ -22,9 +25,10 @@ import {
   templateUrl: './appointment-form.component.html',
   styleUrl: './appointment-form.component.scss',
 })
-export class AppointmentFormComponent {
+export class AppointmentFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
+  private readonly route = inject(ActivatedRoute);
 
   readonly creating = toSignal(this.store.select(selectCreating), {
     initialValue: false,
@@ -43,6 +47,34 @@ export class AppointmentFormComponent {
       end: ['', [Validators.required]],
       notes: [''],
     });
+  }
+
+  ngOnInit(): void {
+    const params = this.route.snapshot.queryParamMap;
+    const date = params.get('date');
+    const time = params.get('time');
+    if (date && time) {
+      const startStr = `${date}T${time}`;
+      const startDate = new Date(startStr);
+      if (!isNaN(startDate.getTime())) {
+        const endDate = new Date(startDate.getTime() + DEFAULT_APPOINTMENT_DURATION_MINUTES * 60 * 1000);
+        const endStr = this.toDatetimeLocal(endDate);
+        this.form.patchValue({
+          start: startStr,
+          end: endStr,
+        });
+      }
+    }
+  }
+
+  /** Format for datetime-local input: YYYY-MM-DDTHH:mm */
+  private toDatetimeLocal(d: Date): string {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${y}-${m}-${day}T${h}:${min}`;
   }
 
   get customerId() {

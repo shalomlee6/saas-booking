@@ -1,74 +1,81 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  inject,
+  signal,
+  computed,
+} from '@angular/core';
 import { Store } from '@ngrx/store';
-import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { Appointment } from '../../model/appointment';
-import type {
-  AppointmentCustomer,
-  AppointmentService,
-} from '../../model/appointment';
 import * as AppointmentsActions from '../../state/appointments.actions';
 import {
   selectItems,
   selectLoading,
   selectError,
 } from '../../state/appointments.selectors';
+import {
+  CALENDAR_PIXELS_PER_MINUTE,
+  GRID_START_MINUTES,
+  GRID_BODY_HEIGHT_PX,
+  CALENDAR_SLOT_HEIGHT_PX,
+  getWeekStart,
+  getWeekEnd,
+  getWeekDays,
+  getHourLabels,
+  groupAppointmentsByDay,
+  getAppointmentBlockLayout,
+  buildNewAppointmentQueryParams,
+  toDateKey,
+  getDisabledRangesForDay,
+  getWorkingMinutesForDay,
+  isSlotInWorkingHours,
+} from '../../utils/calendar.utils';
+import type { AppointmentBlockLayout } from '../../utils/calendar.utils';
+import { AuthService } from '../../../../core/auth/auth.service';
 
-type DateRangeFilter = 'today' | 'week' | 'all';
+type ViewMode = 'day' | 'week';
 
-function toISO(date: Date): string {
-  return date.toISOString();
+function getListParamsForWeek(anchor: Date): { from: string; to: string } {
+  const start = getWeekStart(anchor);
+  const end = getWeekEnd(anchor);
+  return {
+    from: start.toISOString(),
+    to: end.toISOString(),
+  };
 }
 
-function getListParams(filter: DateRangeFilter): { from: string; to: string } {
-  const now = new Date();
-  const start = new Date(now);
+function getListParamsForDay(anchor: Date): { from: string; to: string } {
+  const start = new Date(anchor);
   start.setHours(0, 0, 0, 0);
   const end = new Date(start);
-
-  switch (filter) {
-    case 'today':
-      end.setDate(start.getDate() + 1);
-      return { from: toISO(start), to: toISO(end) };
-    case 'week':
-      end.setDate(start.getDate() + 7);
-      return { from: toISO(start), to: toISO(end) };
-    case 'all':
-    default:
-      const yearStart = new Date(start.getFullYear(), 0, 1);
-      const yearEnd = new Date(start.getFullYear() + 1, 0, 1);
-      return { from: toISO(yearStart), to: toISO(yearEnd) };
-  }
-}
-
-function customerDisplay(apt: Appointment): string {
-  const c = apt.customerId;
-  if (c && typeof c === 'object' && 'name' in c)
-    return (c as AppointmentCustomer).name;
-  return typeof c === 'string' ? c : '—';
-}
-
-function serviceDisplay(apt: Appointment): string {
-  const s = apt.serviceId;
-  if (s && typeof s === 'object' && 'name' in s)
-    return (s as AppointmentService).name;
-  return typeof s === 'string' ? s : '—';
+  end.setDate(end.getDate() + 1);
+  return {
+    from: start.toISOString(),
+    to: end.toISOString(),
+  };
 }
 
 @Component({
   selector: 'app-appointments-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe],
+  imports: [RouterLink, FormsModule],
   templateUrl: './appointments-list.component.html',
   styleUrl: './appointments-list.component.scss',
 })
 export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
-
+  private readonly router = inject(Router);
+  private readonly auth = inject(AuthService);
+  toDateKey = toDateKey;
+  readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
-  readonly dateRangeFilter = signal<DateRangeFilter>('week');
+  readonly today = new Date();
+
+  readonly workingHours = () =>
+    this.auth.businessSettings()?.workingHours ?? null;
 
   readonly items = toSignal(this.store.select(selectItems), { initialValue: [] });
   readonly loading = toSignal(this.store.select(selectLoading), {
@@ -78,32 +85,60 @@ export class AppointmentsListComponent implements OnInit {
     initialValue: null as string | null,
   });
 
-  readonly filteredList = computed(() => {
+  readonly weekDays = computed(() => {
+    const mode = this.viewMode();
+    const anchor = this.today;
+    if (mode === 'day') {
+      return [new Date(anchor)];
+    }
+    return getWeekDays(anchor);
+  });
+
+  readonly hourLabels = computed(() => getHourLabels());
+
+  readonly filteredItems = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
     const list = this.items();
     if (!q) return list;
     return list.filter((apt) => {
-      const cust = customerDisplay(apt);
-      const svc = serviceDisplay(apt);
+      const cust = this.customerDisplay(apt);
+      const svc = this.serviceDisplay(apt);
       return (
         cust.toLowerCase().includes(q) ||
         svc.toLowerCase().includes(q) ||
-        (apt.status && apt.status.toLowerCase().includes(q))
+        (apt.status ?? '').toLowerCase().includes(q)
       );
     });
   });
 
+  readonly byDay = computed(() => {
+    const list = this.filteredItems();
+    const days = this.weekDays();
+    if (days.length === 0) return new Map<string, Appointment[]>();
+    const weekStart = getWeekStart(this.today);
+    const weekEnd = getWeekEnd(this.today);
+    return groupAppointmentsByDay(list, weekStart, weekEnd);
+  });
+
+  readonly gridBodyHeightPx = GRID_BODY_HEIGHT_PX;
+  readonly slotHeightPx = CALENDAR_SLOT_HEIGHT_PX;
+
   ngOnInit(): void {
-    this.store.dispatch(
-      AppointmentsActions.load({ params: getListParams(this.dateRangeFilter()) })
-    );
+    this.loadForCurrentView();
   }
 
-  setFilter(filter: DateRangeFilter): void {
-    this.dateRangeFilter.set(filter);
-    this.store.dispatch(
-      AppointmentsActions.load({ params: getListParams(filter) })
-    );
+  setViewMode(mode: ViewMode): void {
+    this.viewMode.set(mode);
+    this.loadForCurrentView();
+  }
+
+  private loadForCurrentView(): void {
+    const mode = this.viewMode();
+    const params =
+      mode === 'day'
+        ? getListParamsForDay(this.today)
+        : getListParamsForWeek(this.today);
+    this.store.dispatch(AppointmentsActions.load({ params }));
   }
 
   onSearchInput(value: string): void {
@@ -111,18 +146,83 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   reload(): void {
-    this.store.dispatch(
-      AppointmentsActions.load({
-        params: getListParams(this.dateRangeFilter()),
-      })
-    );
+    this.loadForCurrentView();
+  }
+
+  getBlocksForDay(day: Date): AppointmentBlockLayout[] {
+    const key = toDateKey(day);
+    const list = this.byDay().get(key) ?? [];
+    const layouts: AppointmentBlockLayout[] = [];
+    const dayStart = new Date(day);
+    dayStart.setHours(0, 0, 0, 0);
+    for (const apt of list) {
+      const layout = getAppointmentBlockLayout(apt, dayStart);
+      if (layout) layouts.push(layout);
+    }
+    layouts.sort((a, b) => a.topPx - b.topPx);
+    return layouts;
+  }
+
+  dayName(d: Date): string {
+    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return names[d.getDay() === 0 ? 6 : d.getDay() - 1];
+  }
+
+  dateStr(d: Date): string {
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${m}/${day}`;
+  }
+
+  blockStatusClass(block: AppointmentBlockLayout): string {
+    const s = (block.status || '').toLowerCase();
+    if (s === 'confirmed') return 'calendar-block--confirmed';
+    if (s === 'pending') return 'calendar-block--pending';
+    if (s === 'completed' || s === 'done') return 'calendar-block--completed';
+    if (s === 'cancelled' || s === 'canceled') return 'calendar-block--cancelled';
+    return 'calendar-block--neutral';
+  }
+
+  getDisabledRanges(day: Date): { key: string; topPx: number; heightPx: number }[] {
+    return getDisabledRangesForDay(day, this.workingHours());
+  }
+
+  getDayWorkingTitle(day: Date): string {
+    const wh = this.workingHours();
+    const work = getWorkingMinutesForDay(day.getDay(), wh);
+    if (!wh) return 'Working hours not set';
+    if (!work) return 'Closed';
+    const fmt = (m: number) =>
+      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+    return `Open ${fmt(work.startMinutes)}–${fmt(work.endMinutes)}`;
+  }
+
+  onDayCellClick(event: MouseEvent, day: Date): void {
+    const target = event.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    const offsetY = event.clientY - rect.top;
+    const minutesFromGridStart = offsetY / CALENDAR_PIXELS_PER_MINUTE;
+    const slotMinutesFromMidnight =
+      GRID_START_MINUTES +
+      Math.floor(minutesFromGridStart / 30) * 30;
+    if (!isSlotInWorkingHours(day, slotMinutesFromMidnight, this.workingHours())) {
+      return;
+    }
+    const params = buildNewAppointmentQueryParams(day, slotMinutesFromMidnight);
+    this.router.navigate(['/appointments/new'], {
+      queryParams: { date: params.date, time: params.time },
+    });
   }
 
   customerDisplay(apt: Appointment): string {
-    return customerDisplay(apt);
+    const c = apt.customerId;
+    if (c && typeof c === 'object' && 'name' in c) return (c as { name: string }).name;
+    return typeof c === 'string' ? c : '—';
   }
 
   serviceDisplay(apt: Appointment): string {
-    return serviceDisplay(apt);
+    const s = apt.serviceId;
+    if (s && typeof s === 'object' && 'name' in s) return (s as { name: string }).name;
+    return typeof s === 'string' ? s : '—';
   }
 }

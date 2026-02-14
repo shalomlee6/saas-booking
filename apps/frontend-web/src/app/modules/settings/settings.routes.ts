@@ -8,4 +8,11 @@ export const SETTINGS_ROUTES: Routes = [
         (m) => m.BusinessThemeSettingsComponent
       ),
   },
+  {
+    path: 'working-hours',
+    loadComponent: () =>
+      import('./pages/working-hours-settings/working-hours-settings.component').then(
+        (m) => m.WorkingHoursSettingsComponent
+      ),
+  },
 ];

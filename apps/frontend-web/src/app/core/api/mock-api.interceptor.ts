@@ -50,6 +50,10 @@ function isAuthMeGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && req.url.includes('/api/auth/me');
 }
 
+function isBusinessSettingsPatch(req: HttpRequest<unknown>): boolean {
+  return req.method === 'PATCH' && req.url.includes('/api/business/settings');
+}
+
 function loadInitialAppointments(): Promise<Record<string, unknown>[]> {
   if (initialAppointments !== null) {
     return Promise.resolve(initialAppointments);
@@ -92,6 +96,21 @@ function createMockId(): string {
     .join('');
 }
 
+const DEFAULT_WORKING_HOURS = {
+  sun: { enabled: true, start: '09:00', end: '18:00' },
+  mon: { enabled: true, start: '09:00', end: '18:00' },
+  tue: { enabled: true, start: '09:00', end: '18:00' },
+  wed: { enabled: true, start: '09:00', end: '18:00' },
+  thu: { enabled: true, start: '09:00', end: '18:00' },
+  fri: { enabled: true, start: '09:00', end: '14:00' },
+  sat: { enabled: false, start: '09:00', end: '13:00' },
+};
+
+let mockBusinessSettings: AuthMeResponse['businessSettings'] = {
+  theme: null,
+  workingHours: { ...DEFAULT_WORKING_HOURS },
+};
+
 /** Mock auth/me: business owner so /services and layout work without backend. */
 function mockAuthMeResponse(): AuthMeResponse {
   return {
@@ -109,14 +128,23 @@ function mockAuthMeResponse(): AuthMeResponse {
       ownerEmail: 'owner@example.com',
       ui: { themeMode: 'light' },
     },
-    businessSettings: { theme: null },
+    businessSettings: {
+      ...mockBusinessSettings,
+      theme: mockBusinessSettings?.theme ?? null,
+      workingHours: mockBusinessSettings?.workingHours
+        ? { ...mockBusinessSettings.workingHours }
+        : { ...DEFAULT_WORKING_HOURS },
+    },
   };
 }
 
 interface AuthMeResponse {
   user: { id: string; email: string; role: string; businessId?: string; businessSlug?: string };
   business?: { _id: string; name: string; slug: string; ownerEmail?: string | null; ui?: { themeMode?: string } } | null;
-  businessSettings?: { theme: unknown } | null;
+  businessSettings?: {
+    theme: unknown;
+    workingHours?: Record<string, { enabled: boolean; start: string; end: string }>;
+  } | null;
 }
 
 export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
@@ -223,6 +251,25 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   // ——— Auth (mock so app loads without backend) ———
   if (isAuthMeGet(req)) {
     return from([new HttpResponse({ status: 200, body: mockAuthMeResponse() })]);
+  }
+
+  // ——— Business settings (working hours) ———
+  if (isBusinessSettingsPatch(req)) {
+    const body = req.body as Record<string, unknown>;
+    const wh = body['workingHours'] as Record<string, { enabled: boolean; start: string; end: string }> | undefined;
+    if (wh) {
+      mockBusinessSettings = {
+        ...mockBusinessSettings,
+        theme: mockBusinessSettings?.theme ?? null,
+        workingHours: { ...wh },
+      };
+    }
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: { workingHours: mockBusinessSettings?.workingHours ?? DEFAULT_WORKING_HOURS },
+      }),
+    ]);
   }
 
   return next(req);

@@ -1,0 +1,61 @@
+<div class="working-hours-settings-page">
+  <h1 class="working-hours-settings-title">Working hours</h1>
+  <p class="working-hours-settings-subtitle">Set when your business is open. The calendar will only allow new appointments during these times.</p>
+
+  <div class="working-hours-settings-card">
+    <form [formGroup]="form" (ngSubmit)="save()" class="working-hours-settings-form">
+      <div class="working-hours-settings-table-wrap">
+        <table class="working-hours-settings-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Open</th>
+              <th>Start</th>
+              <th>End</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (key of dayKeys; track key) {
+              <tr [formGroupName]="key">
+                <td class="working-hours-settings-day-label">{{ dayLabels[key] }}</td>
+                <td>
+                  <input type="checkbox" formControlName="enabled" id="enabled-{{ key }}" />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    formControlName="start"
+                    class="working-hours-settings-input working-hours-settings-time"
+                    placeholder="09:00"
+                    maxlength="5"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    formControlName="end"
+                    class="working-hours-settings-input working-hours-settings-time"
+                    placeholder="18:00"
+                    maxlength="5"
+                  />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      @if (form.errors?.['startBeforeEnd']) {
+        <p class="working-hours-settings-error">Start time must be before end time for each day.</p>
+      }
+      @if (error()) {
+        <p class="working-hours-settings-error">{{ error() }}</p>
+      }
+      <div class="working-hours-settings-actions">
+        <button type="submit" class="working-hours-settings-btn working-hours-settings-btn-primary" [disabled]="form.invalid || saving()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+        <a routerLink="/dashboard" class="working-hours-settings-btn working-hours-settings-btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
