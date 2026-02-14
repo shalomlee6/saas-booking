@@ -1,0 +1,33 @@
+<div class="business-ui-editor-page">
+  <h1 class="business-ui-editor-title">Edit Business UI</h1>
+  <p class="business-ui-editor-subtitle">{{ businessName() }}</p>
+
+  <div class="business-ui-editor-card">
+    <form [formGroup]="form" (ngSubmit)="save()" class="business-ui-editor-form">
+      <div class="business-ui-editor-field">
+        <label for="themeMode">Theme</label>
+        <select id="themeMode" formControlName="themeMode" class="business-ui-editor-input">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <div class="business-ui-editor-field">
+        <label for="primaryColor">Primary color</label>
+        <input id="primaryColor" type="text" formControlName="primaryColor" class="business-ui-editor-input" placeholder="#3787F6" />
+      </div>
+      <div class="business-ui-editor-field">
+        <label for="sidebarColor">Sidebar color</label>
+        <input id="sidebarColor" type="text" formControlName="sidebarColor" class="business-ui-editor-input" placeholder="#0F172A" />
+      </div>
+      @if (error()) {
+        <p class="business-ui-editor-error">{{ error() }}</p>
+      }
+      <div class="business-ui-editor-actions">
+        <button type="submit" class="business-ui-editor-btn business-ui-editor-btn-primary" [disabled]="saving()">
+          {{ saving() ? 'Saving…' : 'Save' }}
+        </button>
+        <a routerLink="/admin/business-customers" class="business-ui-editor-btn business-ui-editor-btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>

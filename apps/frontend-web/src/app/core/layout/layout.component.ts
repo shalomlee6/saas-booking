@@ -1,8 +1,12 @@
-import { Component, signal, OnInit } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-
-const STORAGE_KEY = 'sb_theme';
-const DEFAULT_THEME = 'light';
+import { Component, inject } from '@angular/core';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { ThemeService } from '../config/theme.service';
+import { AuthService } from '../auth/auth.service';
+import {
+  isImpersonating,
+  clearImpersonationToken,
+  AdminApiService,
+} from '../../modules/admin/services/admin-api.service';
 
 @Component({
   selector: 'app-layout',
@@ -11,19 +15,45 @@ const DEFAULT_THEME = 'light';
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
-export class LayoutComponent implements OnInit {
-  readonly theme = signal<'light' | 'dark'>(DEFAULT_THEME);
+export class LayoutComponent {
+  readonly themeService = inject(ThemeService);
+  readonly auth = inject(AuthService);
+  private readonly adminApi = inject(AdminApiService);
+  private readonly router = inject(Router);
 
-  ngOnInit(): void {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark') {
-      this.theme.set(stored);
-    }
-  }
+  readonly user = this.auth.user;
+  readonly business = this.auth.business;
+  readonly isSuperAdmin = () => this.auth.isSuperAdmin();
+  readonly isImpersonating = () => isImpersonating();
+
+  /** Sidebar: "Businesses" + /admin/business-customers when super_admin and not impersonating; else "Customers" + /customers */
+  readonly customersNavLabel = (): string =>
+    this.auth.isSuperAdmin() && !isImpersonating() ? 'Businesses' : 'Customers';
+
+  readonly customersNavLink = (): string =>
+    this.auth.isSuperAdmin() && !isImpersonating() ? '/admin/business-customers' : '/customers';
 
   toggleTheme(): void {
-    const next = this.theme() === 'light' ? 'dark' : 'light';
-    this.theme.set(next);
-    localStorage.setItem(STORAGE_KEY, next);
+    const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';
+    this.themeService.setModeAndReapply(next);
+  }
+
+  exitImpersonation(): void {
+    const auth = this.auth;
+    const router = this.router;
+    this.adminApi.stopImpersonation().subscribe({
+      next: () => {
+        clearImpersonationToken();
+        auth.init().subscribe(() => {
+          router.navigate([auth.isSuperAdmin() ? '/admin/business-customers' : '/dashboard']);
+        });
+      },
+      error: () => {
+        clearImpersonationToken();
+        auth.init().subscribe(() => {
+          router.navigate([auth.isSuperAdmin() ? '/admin/business-customers' : '/dashboard']);
+        });
+      },
+    });
   }
 }

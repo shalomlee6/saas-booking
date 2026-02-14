@@ -3,6 +3,8 @@ import { AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
 import { Business } from '../models/Business';
 import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { normalizeBusinessUi } from '../utils/businessUi';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 
 export async function getMe(req: AuthRequest, res: Response) {
   try {
@@ -15,22 +17,39 @@ export async function getMe(req: AuthRequest, res: Response) {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    // Resolve business ID (handles impersonation)
-    const businessId = resolveBusinessIdFromReq(req);
-    
-    // For super_admin, businessId might be from impersonation
-    // For regular owners, use user.businessId
-    const effectiveBusinessId = businessId || user.businessId;
-    
+    // When impersonating, use impersonatingBusinessId; else use user's businessId
+    const effectiveBusinessId = resolveBusinessIdFromReq(req) ?? user.businessId?.toString();
+
     let business: any = null;
+    let businessSettings: any = null;
+
     if (effectiveBusinessId) {
-      business = await Business.findById(effectiveBusinessId);
-      if (!business && !req.user.impersonating) {
-        // Only return 404 if not impersonating (super admin might not have a business)
+      const businessDoc = await Business.findById(effectiveBusinessId);
+      if (!businessDoc && !req.user.impersonating) {
         return res.status(404).json({ message: 'Business not found' });
       }
+      // When impersonating, we must return the impersonated business and its settings
+      if (businessDoc) {
+        const settingsDoc = await ensureBusinessSettings(effectiveBusinessId);
+        const owner = await User.findById(businessDoc.ownerId).lean();
+        business = {
+          _id: businessDoc._id.toString(),
+          name: businessDoc.name,
+          slug: businessDoc.slug,
+          ui: normalizeBusinessUi(businessDoc.ui),
+          ownerEmail: owner?.email ?? null,
+        };
+        businessSettings = {
+          theme: settingsDoc.theme
+            ? {
+                colors: settingsDoc.theme.colors,
+                logoUrl: settingsDoc.theme.logoUrl,
+                fontFamily: settingsDoc.theme.fontFamily,
+              }
+            : null,
+        };
+      }
     }
-
 
     return res.json({
       user: {
@@ -40,11 +59,8 @@ export async function getMe(req: AuthRequest, res: Response) {
         businessId: effectiveBusinessId?.toString() || user.businessId?.toString(),
         businessSlug: business?.slug?.toString(),
       },
-      business: business ? {
-        _id: business._id.toString(),
-        name: business.name,
-        slug: business.slug,
-      } : null,
+      business: business || null,
+      businessSettings: businessSettings || null,
       role: user.role,
     });
   } catch (err) {

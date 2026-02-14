@@ -41,6 +41,11 @@ export const routes: Routes = [
         loadChildren: () =>
           import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
       },
+      {
+        path: 'settings',
+        loadChildren: () =>
+          import('./modules/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
+      },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
   },

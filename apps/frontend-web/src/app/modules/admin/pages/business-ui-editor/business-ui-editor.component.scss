@@ -1,0 +1,95 @@
+.business-ui-editor-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.business-ui-editor-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.business-ui-editor-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.business-ui-editor-card {
+  max-width: 400px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.business-ui-editor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.business-ui-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.business-ui-editor-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.business-ui-editor-input {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  outline: none;
+}
+
+.business-ui-editor-input:focus {
+  border-color: var(--color-primary);
+}
+
+.business-ui-editor-error {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #dc2626;
+}
+
+.business-ui-editor-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.business-ui-editor-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.business-ui-editor-btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.business-ui-editor-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.business-ui-editor-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
