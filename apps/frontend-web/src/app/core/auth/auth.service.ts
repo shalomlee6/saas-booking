@@ -25,14 +25,15 @@ export interface BusinessSettingsTheme {
   fontFamily?: string;
 }
 
-/** One day in weekly working hours. start/end in HH:mm. */
+/** One day: 48 slots (30-min each, 00:00..23:30). true = available. */
 export interface WorkingHoursDay {
   enabled: boolean;
   start: string;
   end: string;
+  slots: boolean[];
 }
 
-/** Keys: mon, tue, wed, thu, fri, sat, sun */
+/** Keys: sun, mon, tue, wed, thu, fri, sat (Sunday first). */
 export type WorkingHours = Record<string, WorkingHoursDay>;
 
 export interface AuthMeBusiness {

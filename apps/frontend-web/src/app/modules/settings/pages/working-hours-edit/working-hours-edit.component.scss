@@ -1,0 +1,159 @@
+.working-hours-edit-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.working-hours-edit-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.working-hours-edit-subtitle {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.working-hours-edit-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 1.25rem;
+  max-width: 560px;
+}
+
+.working-hours-edit-open {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.working-hours-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.working-hours-edit-quick {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.working-hours-edit-quick:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
+.working-hours-edit-copy {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.working-hours-edit-copy-label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+.working-hours-edit-select {
+  padding: 0.4rem 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.working-hours-edit-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.working-hours-edit-slot {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 4rem;
+}
+
+.working-hours-edit-slot:hover {
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.working-hours-edit-slot--available {
+  color: #166534;
+  background: color-mix(in srgb, var(--color-success, #22c55e) 18%, transparent);
+  border-color: color-mix(in srgb, var(--color-success, #22c55e) 50%, transparent);
+}
+
+.working-hours-edit-slot--available:hover {
+  background: color-mix(in srgb, var(--color-success, #22c55e) 25%, transparent);
+}
+
+.working-hours-edit-error {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #dc2626;
+}
+
+.working-hours-edit-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.working-hours-edit-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.working-hours-edit-btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+  border-color: var(--color-primary);
+}
+
+.working-hours-edit-btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.working-hours-edit-btn-ghost {
+  background: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.working-hours-edit-btn-ghost:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}

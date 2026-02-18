@@ -11,8 +11,15 @@ export const SETTINGS_ROUTES: Routes = [
   {
     path: 'working-hours',
     loadComponent: () =>
-      import('./pages/working-hours-settings/working-hours-settings.component').then(
-        (m) => m.WorkingHoursSettingsComponent
+      import('./pages/working-hours-list/working-hours-list.component').then(
+        (m) => m.WorkingHoursListComponent
+      ),
+  },
+  {
+    path: 'working-hours/:dayKey',
+    loadComponent: () =>
+      import('./pages/working-hours-edit/working-hours-edit.component').then(
+        (m) => m.WorkingHoursEditComponent
       ),
   },
 ];

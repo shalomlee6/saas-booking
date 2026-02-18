@@ -30,7 +30,7 @@ import {
   buildNewAppointmentQueryParams,
   toDateKey,
   getDisabledRangesForDay,
-  getWorkingMinutesForDay,
+  getWorkingHoursSummary,
   isSlotInWorkingHours,
 } from '../../utils/calendar.utils';
 import type { AppointmentBlockLayout } from '../../utils/calendar.utils';
@@ -69,10 +69,10 @@ export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
-  toDateKey = toDateKey;
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
   readonly today = new Date();
+  toDateKey = toDateKey;
 
   readonly workingHours = () =>
     this.auth.businessSettings()?.workingHours ?? null;
@@ -164,8 +164,8 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   dayName(d: Date): string {
-    const names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return names[d.getDay() === 0 ? 6 : d.getDay() - 1];
+    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    return names[d.getDay()];
   }
 
   dateStr(d: Date): string {
@@ -189,12 +189,8 @@ export class AppointmentsListComponent implements OnInit {
 
   getDayWorkingTitle(day: Date): string {
     const wh = this.workingHours();
-    const work = getWorkingMinutesForDay(day.getDay(), wh);
     if (!wh) return 'Working hours not set';
-    if (!work) return 'Closed';
-    const fmt = (m: number) =>
-      `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
-    return `Open ${fmt(work.startMinutes)}–${fmt(work.endMinutes)}`;
+    return getWorkingHoursSummary(day.getDay(), wh);
   }
 
   onDayCellClick(event: MouseEvent, day: Date): void {

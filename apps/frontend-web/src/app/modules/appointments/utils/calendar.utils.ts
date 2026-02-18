@@ -32,19 +32,18 @@ export const CALENDAR_SLOT_HEIGHT_PX =
   CALENDAR_SLOT_MINUTES * CALENDAR_PIXELS_PER_MINUTE;
 
 /**
- * Returns Monday 00:00:00 of the week containing the given date (week = Mon–Sun).
+ * Returns Sunday 00:00:00 of the week containing the given date (week = Sun–Sat).
  */
 export function getWeekStart(anchor: Date): Date {
   const d = new Date(anchor);
   const day = d.getDay();
-  const daysFromMonday = day === 0 ? 6 : day - 1;
-  d.setDate(d.getDate() - daysFromMonday);
+  d.setDate(d.getDate() - day);
   d.setHours(0, 0, 0, 0);
   return d;
 }
 
 /**
- * Returns the next Monday 00:00:00 after the week containing the given date.
+ * Returns the next Sunday 00:00:00 after the week containing the given date.
  */
 export function getWeekEnd(anchor: Date): Date {
   const start = getWeekStart(anchor);
@@ -54,7 +53,7 @@ export function getWeekEnd(anchor: Date): Date {
 }
 
 /**
- * Returns an array of 7 dates (Mon–Sun) for the week containing the given date.
+ * Returns an array of 7 dates (Sun, Mon, …, Sat) for the week containing the given date.
  */
 export function getWeekDays(anchor: Date): Date[] {
   const start = getWeekStart(anchor);
@@ -243,83 +242,81 @@ export function buildNewAppointmentQueryParams(date: Date, slotMinutesFromMidnig
   };
 }
 
-// ——— Working hours (businessSettings.workingHours) ———
-const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+// ——— Working hours (businessSettings.workingHours: slots format) ———
+import {
+  WORKING_HOURS_DAY_KEYS,
+  normalizeDayToSlots,
+  minutesToSlotIndex,
+  getDaySummary,
+  type WorkingHoursDaySlots,
+} from '../../../core/working-hours/working-hours.util';
 
-export interface WorkingHoursDay {
-  enabled: boolean;
-  start: string;
-  end: string;
-}
+const GRID_FIRST_SLOT_INDEX = (CALENDAR_HOUR_START * 60) / 30;
+const GRID_LAST_SLOT_INDEX = (CALENDAR_HOUR_END * 60) / 30 - 1;
 
-export type WorkingHours = Record<string, WorkingHoursDay>;
-
-function parseHHmm(s: string): number {
-  const [h, m] = (s || '00:00').split(':').map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
-}
-
-/** getDay() 0=Sun..6=Sat -> working start/end minutes from midnight, or null if disabled. */
-export function getWorkingMinutesForDay(
+function getNormalizedDay(
   dayOfWeek: number,
-  workingHours: WorkingHours | null | undefined
-): { startMinutes: number; endMinutes: number } | null {
-  if (!workingHours) return null;
-  const key = DAY_KEYS[dayOfWeek];
-  const day = workingHours[key];
-  if (!day || !day.enabled) return null;
-  const startMinutes = parseHHmm(day.start);
-  const endMinutes = parseHHmm(day.end);
-  if (startMinutes >= endMinutes) return null;
-  return { startMinutes, endMinutes };
+  workingHours: Record<string, unknown> | null | undefined
+): WorkingHoursDaySlots {
+  const key = WORKING_HOURS_DAY_KEYS[dayOfWeek];
+  return normalizeDayToSlots(workingHours?.[key] as Record<string, unknown>, key);
 }
 
-/** Disabled ranges for one day column: topPx/heightPx relative to grid (0 = 08:00). */
+/** Disabled ranges for one day column: topPx/heightPx relative to grid (0 = 08:00). Uses slots. */
 export function getDisabledRangesForDay(
   day: Date,
-  workingHours: WorkingHours | null | undefined
+  workingHours: Record<string, unknown> | null | undefined
 ): { key: string; topPx: number; heightPx: number }[] {
-  const ranges: { key: string; topPx: number; heightPx: number }[] = [];
+  const result: { key: string; topPx: number; heightPx: number }[] = [];
   const dayOfWeek = day.getDay();
-  const work = getWorkingMinutesForDay(dayOfWeek, workingHours);
+  const { enabled, slots } = getNormalizedDay(dayOfWeek, workingHours);
+  const slotHeightPx = CALENDAR_SLOT_MINUTES * CALENDAR_PIXELS_PER_MINUTE;
 
-  if (!work) {
-    ranges.push({
-      key: 'all',
-      topPx: 0,
-      heightPx: GRID_BODY_HEIGHT_PX,
-    });
-    return ranges;
+  if (!enabled) {
+    result.push({ key: 'all', topPx: 0, heightPx: GRID_BODY_HEIGHT_PX });
+    return result;
   }
 
-  const gridStart = GRID_START_MINUTES;
-  const gridEnd = GRID_END_MINUTES;
-  const pxPerMin = CALENDAR_PIXELS_PER_MINUTE;
-
-  if (work.startMinutes > gridStart) {
-    ranges.push({
-      key: 'before',
-      topPx: 0,
-      heightPx: (work.startMinutes - gridStart) * pxPerMin,
-    });
+  let runStart: number | null = null;
+  for (let idx = GRID_FIRST_SLOT_INDEX; idx <= GRID_LAST_SLOT_INDEX; idx++) {
+    const available = slots[idx] === true;
+    if (!available) {
+      if (runStart === null) runStart = idx;
+    } else {
+      if (runStart !== null) {
+        const topPx = (runStart - GRID_FIRST_SLOT_INDEX) * slotHeightPx;
+        const heightPx = (idx - runStart) * slotHeightPx;
+        result.push({ key: `gap-${runStart}`, topPx, heightPx });
+        runStart = null;
+      }
+    }
   }
-  if (work.endMinutes < gridEnd) {
-    const top = (work.endMinutes - gridStart) * pxPerMin;
-    const height = (gridEnd - work.endMinutes) * pxPerMin;
-    ranges.push({ key: 'after', topPx: top, heightPx: height });
+  if (runStart !== null) {
+    const topPx = (runStart - GRID_FIRST_SLOT_INDEX) * slotHeightPx;
+    const heightPx = (GRID_LAST_SLOT_INDEX - runStart + 1) * slotHeightPx;
+    result.push({ key: `gap-${runStart}`, topPx, heightPx });
   }
-  return ranges;
+  return result;
 }
 
 export function isSlotInWorkingHours(
   day: Date,
   slotMinutesFromMidnight: number,
-  workingHours: WorkingHours | null | undefined
+  workingHours: Record<string, unknown> | null | undefined
 ): boolean {
-  const work = getWorkingMinutesForDay(day.getDay(), workingHours);
-  if (!work) return false;
-  const slotEnd = slotMinutesFromMidnight + CALENDAR_SLOT_MINUTES;
-  return slotMinutesFromMidnight >= work.startMinutes && slotEnd <= work.endMinutes;
+  const { enabled, slots } = getNormalizedDay(day.getDay(), workingHours);
+  if (!enabled) return false;
+  const idx = minutesToSlotIndex(slotMinutesFromMidnight);
+  return slots[idx] === true;
+}
+
+/** Human-readable summary for a day (e.g. calendar tooltip). */
+export function getWorkingHoursSummary(
+  dayOfWeek: number,
+  workingHours: Record<string, unknown> | null | undefined
+): string {
+  const day = getNormalizedDay(dayOfWeek, workingHours);
+  return getDaySummary(day);
 }
 
 // ——— Deterministic block colors (customerId / appointmentId) ———

@@ -147,7 +147,7 @@ $header-height: 64px;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
-  padding: 1rem 0;
+  padding-top: 1rem;
 }
 
 .layout-sidebar-nav {
@@ -194,8 +194,9 @@ $header-height: 64px;
 }
 
 .layout-sidebar-link-footer {
+  // background: var(--color-primary);
   margin-top: auto;
-  // padding-top: 1rem;
+  padding: 1.25rem 1.25rem;
   border-top: 1px solid var(--border-color);
 }
 

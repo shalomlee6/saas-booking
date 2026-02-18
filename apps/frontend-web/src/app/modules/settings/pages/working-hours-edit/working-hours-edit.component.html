@@ -1,0 +1,59 @@
+<div class="working-hours-edit-page">
+  <h1 class="working-hours-edit-title">Working hours – {{ dayLabel() }}</h1>
+  <p class="working-hours-edit-subtitle">Tap to toggle availability. Changes apply weekly.</p>
+
+  <div class="working-hours-edit-card">
+    <label class="working-hours-edit-open">
+      <input type="checkbox" [checked]="enabled()" (change)="enabled.set($any($event.target).checked)" />
+      Open this day
+    </label>
+    <div class="working-hours-edit-actions">
+      <button type="button" class="working-hours-edit-quick" (click)="selectAll()">Select all</button>
+      <button type="button" class="working-hours-edit-quick" (click)="clear()">Clear</button>
+      <button type="button" class="working-hours-edit-quick" (click)="set0800to1800()">Set 08:00–18:00</button>
+      <div class="working-hours-edit-copy">
+        <span class="working-hours-edit-copy-label">Copy from:</span>
+        <select
+          class="working-hours-edit-select"
+          (change)="copyFrom($any($event.target).value)"
+        >
+          <option value="">—</option>
+          @for (k of otherDays(); track k) {
+            <option [value]="k">{{ k.charAt(0).toUpperCase() + k.slice(1) }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="working-hours-edit-slots">
+      @for (item of displaySlots(); track item.index) {
+        <button
+          type="button"
+          class="working-hours-edit-slot"
+          [class.working-hours-edit-slot--available]="item.available"
+          (click)="toggleSlot(item.index)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </div>
+
+    @if (error()) {
+      <p class="working-hours-edit-error">{{ error() }}</p>
+    }
+
+    <div class="working-hours-edit-footer">
+      <button
+        type="button"
+        class="working-hours-edit-btn working-hours-edit-btn-primary"
+        [disabled]="saving()"
+        (click)="save()"
+      >
+        {{ saving() ? 'Saving…' : 'Save' }}
+      </button>
+      <button type="button" class="working-hours-edit-btn working-hours-edit-btn-ghost" (click)="cancel()">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>

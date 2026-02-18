@@ -87,6 +87,7 @@ export class WorkingHoursSettingsComponent {
     const workingHours: WorkingHours = {};
     for (const key of DAY_KEYS) {
       workingHours[key] = {
+        slots: [],
         enabled: !!value[key]?.enabled,
         start: (value[key]?.start ?? '09:00').trim(),
         end: (value[key]?.end ?? '18:00').trim(),

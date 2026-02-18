@@ -246,7 +246,23 @@
   left: 0;
   right: 0;
   pointer-events: none;
-  background: color-mix(in srgb, var(--text-muted) 12%, transparent);
+  background: color-mix(in srgb, var(--text-muted) 10%, transparent);
+  z-index: 0;
+}
+
+.calendar-day-col::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent calc(var(--slot-height) - 1px),
+    var(--border-color) calc(var(--slot-height) - 1px),
+    var(--border-color) var(--slot-height)
+  );
 }
 
 .calendar-block {
@@ -265,6 +281,7 @@
   background: var(--block-bg, var(--bg-card));
   color: var(--block-text, var(--text-primary));
   border-left: 3px solid var(--block-border, var(--border-color));
+  z-index: 2;
 }
 
 .calendar-block-customer {

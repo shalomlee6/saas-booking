@@ -5,6 +5,10 @@ import {
 } from '@angular/common/http';
 import { from, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import {
+  WORKING_HOURS_DAY_KEYS,
+  createDefaultSlots,
+} from '../working-hours/working-hours.util';
 
 /** In-memory session store for appointments created during mock mode. */
 const sessionCreatedAppointments: Record<string, unknown>[] = [];
@@ -96,23 +100,44 @@ function createMockId(): string {
     .join('');
 }
 
-const DEFAULT_WORKING_HOURS = {
-  sun: { enabled: true, start: '09:00', end: '18:00' },
-  mon: { enabled: true, start: '09:00', end: '18:00' },
-  tue: { enabled: true, start: '09:00', end: '18:00' },
-  wed: { enabled: true, start: '09:00', end: '18:00' },
-  thu: { enabled: true, start: '09:00', end: '18:00' },
-  fri: { enabled: true, start: '09:00', end: '14:00' },
-  sat: { enabled: false, start: '09:00', end: '13:00' },
-};
+function buildDefaultWorkingHours(): Record<string, { enabled: boolean; slots: boolean[] }> {
+  const out: Record<string, { enabled: boolean; slots: boolean[] }> = {};
+  for (const key of WORKING_HOURS_DAY_KEYS) {
+    out[key] = {
+      enabled: key !== 'sun',
+      slots: createDefaultSlots(key),
+    };
+  }
+  return out;
+}
+
+const DEFAULT_WORKING_HOURS = buildDefaultWorkingHours();
 
 let mockBusinessSettings: AuthMeResponse['businessSettings'] = {
   theme: null,
-  workingHours: { ...DEFAULT_WORKING_HOURS },
+  workingHours: (() => {
+    const wh: Record<string, { enabled: boolean; slots: boolean[] }> = {};
+    for (const k of WORKING_HOURS_DAY_KEYS) {
+      wh[k] = { enabled: DEFAULT_WORKING_HOURS[k].enabled, slots: [...DEFAULT_WORKING_HOURS[k].slots] };
+    }
+    return wh;
+  })(),
 };
 
 /** Mock auth/me: business owner so /services and layout work without backend. */
 function mockAuthMeResponse(): AuthMeResponse {
+  const wh = mockBusinessSettings?.workingHours;
+  const workingHours =
+    wh && typeof wh === 'object'
+      ? Object.fromEntries(
+          Object.entries(wh).map(([k, v]) => [
+            k,
+            v && Array.isArray((v as { slots?: unknown }).slots)
+              ? { enabled: (v as { enabled: boolean }).enabled, slots: [...(v as { slots: boolean[] }).slots] }
+              : v,
+          ])
+        )
+      : buildDefaultWorkingHours();
   return {
     user: {
       id: 'mock-user-1',
@@ -129,11 +154,8 @@ function mockAuthMeResponse(): AuthMeResponse {
       ui: { themeMode: 'light' },
     },
     businessSettings: {
-      ...mockBusinessSettings,
       theme: mockBusinessSettings?.theme ?? null,
-      workingHours: mockBusinessSettings?.workingHours
-        ? { ...mockBusinessSettings.workingHours }
-        : { ...DEFAULT_WORKING_HOURS },
+      workingHours,
     },
   };
 }
@@ -143,7 +165,7 @@ interface AuthMeResponse {
   business?: { _id: string; name: string; slug: string; ownerEmail?: string | null; ui?: { themeMode?: string } } | null;
   businessSettings?: {
     theme: unknown;
-    workingHours?: Record<string, { enabled: boolean; start: string; end: string }>;
+    workingHours?: Record<string, { enabled: boolean; slots: boolean[] }>;
   } | null;
 }
 
@@ -253,21 +275,30 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     return from([new HttpResponse({ status: 200, body: mockAuthMeResponse() })]);
   }
 
-  // ——— Business settings (working hours) ———
+  // ——— Business settings (working hours: slots format) ———
   if (isBusinessSettingsPatch(req)) {
     const body = req.body as Record<string, unknown>;
-    const wh = body['workingHours'] as Record<string, { enabled: boolean; start: string; end: string }> | undefined;
+    const wh = body['workingHours'] as Record<string, { enabled: boolean; slots: boolean[] }> | undefined;
     if (wh) {
+      const next: Record<string, { enabled: boolean; slots: boolean[] }> = {};
+      for (const k of WORKING_HOURS_DAY_KEYS) {
+        const v = wh[k];
+        if (v && Array.isArray(v.slots)) {
+          next[k] = { enabled: !!v.enabled, slots: [...v.slots] };
+        } else {
+          next[k] = { enabled: DEFAULT_WORKING_HOURS[k].enabled, slots: [...DEFAULT_WORKING_HOURS[k].slots] };
+        }
+      }
       mockBusinessSettings = {
         ...mockBusinessSettings,
         theme: mockBusinessSettings?.theme ?? null,
-        workingHours: { ...wh },
+        workingHours: next,
       };
     }
     return from([
       new HttpResponse({
         status: 200,
-        body: { workingHours: mockBusinessSettings?.workingHours ?? DEFAULT_WORKING_HOURS },
+        body: { workingHours: mockBusinessSettings?.workingHours ?? buildDefaultWorkingHours() },
       }),
     ]);
   }
