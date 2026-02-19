@@ -54,6 +54,10 @@ function isAuthMeGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && req.url.includes('/api/auth/me');
 }
 
+function isAuthLoginPost(req: HttpRequest<unknown>): boolean {
+  return req.method === 'POST' && req.url.includes('/api/auth/login');
+}
+
 function isBusinessSettingsPatch(req: HttpRequest<unknown>): boolean {
   return req.method === 'PATCH' && req.url.includes('/api/business/settings');
 }
@@ -270,7 +274,23 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
 
-  // ——— Auth (mock so app loads without backend) ———
+  // ——— Auth (cookie-based; no token stored; init() then calls auth/me) ———
+  if (isAuthLoginPost(req)) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          user: {
+            id: 'mock-user-1',
+            email: 'owner@example.com',
+            role: 'owner',
+            businessId: 'mock-business-1',
+          },
+        },
+      }),
+    ]);
+  }
+
   if (isAuthMeGet(req)) {
     return from([new HttpResponse({ status: 200, body: mockAuthMeResponse() })]);
   }

@@ -59,21 +59,20 @@ export class LoginComponent {
 
     this.api
       .post<{
-        token: string;
+        token?: string;
         user: { id: string; email: string; role: string; businessId?: string };
       }>('auth/login', payload)
       .subscribe({
-        next: (res) => {
-          if (res.token) {
-            localStorage.setItem('sb_token', res.token);
-          }
-          this.auth.user.set({
-            id: res.user.id,
-            email: res.user.email,
-            role: res.user.role,
-            businessId: res.user.businessId,
+        next: () => {
+          this.auth.init().subscribe({
+            next: () => {
+              this.router.navigate(['/dashboard']);
+            },
+            error: () => {
+              this.loading.set(false);
+              this.errorMessage.set('Session could not be loaded. Please try again.');
+            },
           });
-          this.router.navigate(['/dashboard']);
         },
         error: (err) => {
           this.loading.set(false);

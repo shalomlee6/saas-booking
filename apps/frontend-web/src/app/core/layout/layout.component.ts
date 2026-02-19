@@ -3,7 +3,6 @@ import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/rou
 import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
 import {
-  isImpersonating,
   clearImpersonationToken,
   AdminApiService,
 } from '../../modules/admin/services/admin-api.service';
@@ -24,18 +23,18 @@ export class LayoutComponent {
   readonly user = this.auth.user;
   readonly business = this.auth.business;
   readonly isSuperAdmin = () => this.auth.isSuperAdmin();
-  readonly isImpersonating = () => isImpersonating();
+  readonly isImpersonating = () => this.auth.isImpersonating();
 
   /** Sidebar: Services only when impersonating or business owner; super_admin not impersonating -> /admin/business-customers */
   readonly servicesNavLink = (): string =>
-    this.auth.isSuperAdmin() && !isImpersonating() ? '/admin/business-customers' : '/services';
+    this.auth.isSuperAdmin() && !this.auth.isImpersonating() ? '/admin/business-customers' : '/services';
 
   /** Sidebar: "Businesses" + /admin/business-customers when super_admin and not impersonating; else "Customers" + /customers */
   readonly customersNavLabel = (): string =>
-    this.auth.isSuperAdmin() && !isImpersonating() ? 'Businesses' : 'Customers';
+    this.auth.isSuperAdmin() && !this.auth.isImpersonating() ? 'Businesses' : 'Customers';
 
   readonly customersNavLink = (): string =>
-    this.auth.isSuperAdmin() && !isImpersonating() ? '/admin/business-customers' : '/customers';
+    this.auth.isSuperAdmin() && !this.auth.isImpersonating() ? '/admin/business-customers' : '/customers';
 
   toggleTheme(): void {
     const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';

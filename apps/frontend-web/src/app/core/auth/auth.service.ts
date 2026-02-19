@@ -101,6 +101,16 @@ export class AuthService {
     return this.user()?.role === 'super_admin';
   }
 
+  /** True when super-admin is impersonating a business (Bearer token in use). */
+  isImpersonating(): boolean {
+    return typeof localStorage !== 'undefined' && !!localStorage.getItem('sb_impersonation_token');
+  }
+
+  /** When impersonating, the business id being impersonated; otherwise null. */
+  impersonatingBusinessId(): string | null {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('sb_impersonation_business_id') : null;
+  }
+
   /** Active business name (own business or impersonated). */
   activeBusinessName(): string | null {
     return this.business()?.name ?? null;

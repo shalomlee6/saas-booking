@@ -19,7 +19,8 @@ export interface ImpersonateResponse {
   impersonatingBusinessId: string;
 }
 
-const IMPERSONATION_KEY = 'sb_impersonation_token';
+const IMPERSONATION_TOKEN_KEY = 'sb_impersonation_token';
+const IMPERSONATION_BUSINESS_ID_KEY = 'sb_impersonation_business_id';
 
 @Injectable({ providedIn: 'root' })
 export class AdminApiService {
@@ -43,17 +44,24 @@ export class AdminApiService {
 }
 
 export function getImpersonationToken(): string | null {
-  return localStorage.getItem(IMPERSONATION_KEY);
+  return localStorage.getItem(IMPERSONATION_TOKEN_KEY);
 }
 
-export function setImpersonationToken(token: string): void {
-  localStorage.setItem(IMPERSONATION_KEY, token);
+/** Store impersonation token and optional business id (for AuthService.impersonatingBusinessId()). */
+export function setImpersonationToken(token: string, impersonatingBusinessId?: string): void {
+  localStorage.setItem(IMPERSONATION_TOKEN_KEY, token);
+  if (impersonatingBusinessId != null) {
+    localStorage.setItem(IMPERSONATION_BUSINESS_ID_KEY, impersonatingBusinessId);
+  }
 }
 
+/** Clear impersonation token and business id; call AuthService.init() after. */
 export function clearImpersonationToken(): void {
-  localStorage.removeItem(IMPERSONATION_KEY);
+  localStorage.removeItem(IMPERSONATION_TOKEN_KEY);
+  localStorage.removeItem(IMPERSONATION_BUSINESS_ID_KEY);
 }
 
+/** Prefer AuthService.isImpersonating() for app code. */
 export function isImpersonating(): boolean {
-  return !!localStorage.getItem(IMPERSONATION_KEY);
+  return !!localStorage.getItem(IMPERSONATION_TOKEN_KEY);
 }
