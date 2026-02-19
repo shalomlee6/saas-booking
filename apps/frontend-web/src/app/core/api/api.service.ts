@@ -30,7 +30,7 @@ export class ApiService {
     return this.http.patch<T>(url, body, { withCredentials: true });
   }
 
-  delete<T>(path: string, body: unknown): Observable<T> {
+  delete<T>(path: string): Observable<T> {
     const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
     return this.http.delete<T>(url, { withCredentials: true });
   }
