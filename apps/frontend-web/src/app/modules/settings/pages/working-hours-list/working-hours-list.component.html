@@ -1,0 +1,16 @@
+<div class="working-hours-list-page">
+  <h1 class="working-hours-list-title">Working hours</h1>
+  <p class="working-hours-list-subtitle">Set when you're available each day. Tap Edit to change 30-minute slots for that day.</p>
+
+  <div class="working-hours-list-card">
+    <ul class="working-hours-list">
+      @for (key of dayKeys; track key) {
+        <li class="working-hours-list-row">
+          <span class="working-hours-list-day">{{ dayLabels[key] }}</span>
+          <span class="working-hours-list-summary">{{ getSummary(key) }}</span>
+          <a [routerLink]="['/settings/working-hours', key]" class="working-hours-list-edit">Edit</a>
+        </li>
+      }
+    </ul>
+  </div>
+</div>

@@ -1,0 +1,71 @@
+<div class="business-customers-page">
+  <div class="business-customers-page-header">
+    <h1 class="business-customers-page-title">Customers (Businesses)</h1>
+    <div class="business-customers-page-actions">
+      <input
+        type="text"
+        class="business-customers-search"
+        placeholder="Search by business name, owner email..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchInput($event)"
+      />
+    </div>
+  </div>
+
+  <div class="business-customers-card">
+    @if (error()) {
+      <p class="business-customers-error">
+        {{ error() }}
+        <button type="button" class="business-customers-error-retry" (click)="load()">Retry</button>
+      </p>
+    }
+
+    @if (loading()) {
+      <div class="business-customers-loading">Loading businesses…</div>
+    }
+
+    @if (!loading() && filteredList().length === 0) {
+      <div class="business-customers-empty">No businesses found.</div>
+    }
+
+    @if (!loading() && filteredList().length > 0) {
+      <div class="business-customers-table-wrap">
+        <table class="business-customers-table">
+          <thead>
+            <tr>
+              <th>Business name</th>
+              <th>Owner email</th>
+              <th>Created</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (b of filteredList(); track b._id) {
+              <tr>
+                <td>{{ b.name }}</td>
+                <td>{{ b.ownerEmail || '—' }}</td>
+                <td>{{ b.createdAt | date : 'mediumDate' }}</td>
+                <td class="business-customers-actions-cell">
+                  <a
+                    [routerLink]="['/admin/businesses', b._id, 'ui']"
+                    class="business-customers-btn business-customers-btn-ghost"
+                  >
+                    Edit UI
+                  </a>
+                  <button
+                    type="button"
+                    class="business-customers-btn business-customers-btn-primary"
+                    [disabled]="impersonating()"
+                    (click)="impersonate(b)"
+                  >
+                    {{ impersonating() ? '…' : 'Impersonate' }}
+                  </button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

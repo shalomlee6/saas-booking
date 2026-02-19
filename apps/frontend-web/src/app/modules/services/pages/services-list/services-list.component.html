@@ -1,0 +1,63 @@
+<div class="services-page">
+  <div class="services-page-header">
+    <h1 class="services-page-title">Services</h1>
+    <div class="services-page-actions">
+      <input
+        type="text"
+        class="services-search"
+        placeholder="Search by name or description..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchInput($event)"
+      />
+      <a routerLink="/services/new" class="services-btn services-btn-primary">New Service</a>
+    </div>
+  </div>
+
+  <div class="services-card">
+    @if (error()) {
+      <p class="services-error">
+        {{ error() }}
+        <button type="button" class="services-error-retry" (click)="reload()">Retry</button>
+      </p>
+    }
+
+    @if (loading()) {
+      <div class="services-loading">Loading services…</div>
+    }
+
+    @if (!loading() && filteredItems().length === 0) {
+      <div class="services-empty">
+        No services found. <a routerLink="/services/new">Add your first service</a>.
+      </div>
+    }
+
+    @if (!loading() && filteredItems().length > 0) {
+      <div class="services-table-wrap">
+        <table class="services-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Duration</th>
+              <th>Price</th>
+              <th>Active</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (service of filteredItems(); track service._id) {
+              <tr>
+                <td>{{ service.name }}</td>
+                <td>{{ service.durationMinutes }} min</td>
+                <td>{{ service.price != null ? (service.price | number : '1.2-2') : '—' }}</td>
+                <td>{{ service.isActive ? 'Yes' : 'No' }}</td>
+                <td>
+                  <a [routerLink]="['/services', service._id, 'edit']" class="services-btn services-btn-ghost services-btn-sm">Edit</a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,90 @@
+<div class="layout" [class.layout--impersonating]="isImpersonating()">
+  <div class="layout-sidebar-header">
+    <span class="layout-sidebar-logo">SaaS</span>
+  </div>
+
+  <header class="layout-topbar">
+    <h1 class="layout-topbar-title">Page title</h1>
+    <div class="layout-topbar-search-wrap">
+      <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
+    </div>
+    <div class="layout-topbar-actions">
+      @if (isImpersonating()) {
+        <span class="layout-topbar-impersonation-badge">Impersonating</span>
+      }
+      @if (isSuperAdmin()) {
+        <button
+          type="button"
+          class="layout-theme-toggle"
+          [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
+          (click)="toggleTheme()"
+        >
+          {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
+        </button>
+      }
+      <span class="layout-topbar-icon" aria-hidden="true"></span>
+      <span class="layout-topbar-icon" aria-hidden="true"></span>
+      <span class="layout-topbar-user">
+        @if (auth.activeBusinessName(); as bizName) {
+          <span class="layout-topbar-business-name">{{ bizName }}</span>
+          <span class="layout-topbar-user-sep">·</span>
+        }
+        {{ user()?.email ?? 'User' }}
+      </span>
+    </div>
+  </header>
+
+  <aside class="layout-sidebar-body">
+    <nav class="layout-sidebar-nav">
+      <span class="layout-sidebar-label">Main</span>
+      <a routerLink="/dashboard" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Dashboard</a>
+      <a routerLink="/appointments" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: false }" class="layout-sidebar-link">Appointments</a>
+      <a
+        [routerLink]="servicesNavLink()"
+        routerLinkActive="layout-sidebar-link-active"
+        [routerLinkActiveOptions]="{ exact: false }"
+        class="layout-sidebar-link"
+      >
+        Services
+      </a>
+      <a
+        [routerLink]="customersNavLink()"
+        routerLinkActive="layout-sidebar-link-active"
+        [routerLinkActiveOptions]="customersNavLink() === '/admin/business-customers' ? { exact: true } : { exact: false }"
+        class="layout-sidebar-link"
+      >
+        {{ customersNavLabel() }}
+      </a>
+      <!-- @if (isSuperAdmin()) {
+        <a routerLink="/admin" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Admin</a>
+      } -->
+      @if (!isSuperAdmin() && user()?.businessId) {
+        <a routerLink="/settings/theme" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Theme</a>
+        <a routerLink="/settings/working-hours" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Working hours</a>
+      }
+    </nav>
+    @if (isImpersonating()) {
+      <div class="layout-sidebar-impersonation-badge">
+        Viewing as: {{ business()?.name ?? '—' }}
+      </div>
+    }
+    <a routerLink="/auth/login" class="layout-sidebar-link layout-sidebar-link-footer">Login</a>
+  </aside>
+
+  <main class="layout-main">
+    @if (isImpersonating()) {
+      <div class="layout-impersonation-banner">
+        <span class="layout-impersonation-banner-text">
+          Impersonating: {{ business()?.name ?? 'Business' }}
+          @if (business()?.ownerEmail) {
+            ({{ business()?.ownerEmail }})
+          }
+        </span>
+        <button type="button" class="layout-impersonation-banner-btn" (click)="exitImpersonation()">
+          Exit impersonation
+        </button>
+      </div>
+    }
+    <router-outlet></router-outlet>
+  </main>
+</div>

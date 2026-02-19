@@ -6,6 +6,7 @@ import {
   createAdminBusiness,
   adminImpersonate,
   adminStopImpersonate,
+  adminUpdateBusinessUi,
 } from '../controllers/adminController';
 
 export const adminRouter = Router();
@@ -18,6 +19,7 @@ adminRouter.get('/businesses', getAdminBusinesses);
 adminRouter.post('/businesses', createAdminBusiness);
 adminRouter.post('/impersonate', adminImpersonate);
 adminRouter.post('/stop-impersonate', adminStopImpersonate);
+adminRouter.patch('/businesses/:id/ui', adminUpdateBusinessUi);
 
 
 
