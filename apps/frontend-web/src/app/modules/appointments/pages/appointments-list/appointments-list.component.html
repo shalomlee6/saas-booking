@@ -43,6 +43,15 @@
       <div class="appointments-loading">Loading appointments…</div>
     }
 
+    @if (overlayOpen(); as overlay) {
+      <app-appointment-create-overlay
+        [open]="true"
+        [date]="overlay.date"
+        [time]="overlay.time"
+        (closed)="closeOverlay()"
+        (created)="onAppointmentCreated()"
+      />
+    }
     @if (!loading()) {
       <div class="calendar-shell">
         <div
@@ -65,19 +74,20 @@
         >
           <div class="calendar-body">
             <div class="calendar-time-col">
-              @for (label of hourLabels(); track label) {
-                <div class="calendar-time-slot">{{ label }}</div>
+              @for (row of hourLabelsWithStyle(); track $index) {
+                <div
+                  class="calendar-time-slot"
+                  [class.calendar-time-slot--half-hour]="!row.isFullHour"
+                >
+                  {{ row.label }}
+                </div>
               }
             </div>
             <div class="calendar-days">
               @for (day of weekDays(); track toDateKey(day)) {
                 <div
                   class="calendar-day-col"
-                  (click)="onDayCellClick($event, day)"
                   [attr.title]="getDayWorkingTitle(day)"
-                  role="button"
-                  tabindex="0"
-                  aria-label="Add appointment"
                 >
                   @for (range of getDisabledRanges(day); track range.key) {
                     <div
@@ -86,6 +96,17 @@
                       [style.height.px]="range.heightPx"
                     ></div>
                   }
+                  <div class="calendar-slot-layer">
+                    @for (slot of getSlotsForDay(day); track slot.minutesFromMidnight) {
+                      <div
+                        class="calendar-slot"
+                        [class.calendar-slot--disabled]="slot.disabled"
+                        [attr.data-time]="slot.time"
+                        [attr.aria-label]="slot.disabled ? null : 'Add appointment at ' + slot.time"
+                        (click)="onSlotClick(day, slot)"
+                      ></div>
+                    }
+                  </div>
                   @for (block of getBlocksForDay(day); track block.appointment._id) {
                     <div
                       class="calendar-block"

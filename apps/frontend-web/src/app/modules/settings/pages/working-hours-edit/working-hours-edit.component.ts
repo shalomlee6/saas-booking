@@ -121,7 +121,6 @@ export class WorkingHoursEditComponent implements OnInit {
   }
 
   save(): void {
-    debugger
     this.saving.set(true);
     this.error.set(null);
     const key = this.dayKey();

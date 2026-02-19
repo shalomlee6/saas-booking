@@ -1,0 +1,95 @@
+@if (openSignal()) {
+  <div
+    class="appointment-create-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="overlay-title"
+  >
+    <div class="overlay-backdrop" (click)="close()"></div>
+    <div class="overlay-content">
+      <div class="overlay-header">
+        <h2 id="overlay-title" class="overlay-title">New Appointment</h2>
+        <button
+          type="button"
+          class="overlay-close"
+          aria-label="Close"
+          (click)="close()"
+        >
+          ×
+        </button>
+      </div>
+      <p class="overlay-slot-label">{{ startLabel() }}</p>
+      <form
+        class="overlay-form"
+        [formGroup]="form"
+        (ngSubmit)="onSubmit()"
+        novalidate
+      >
+        @if (loadingOptions()) {
+          <p class="overlay-loading">Loading options…</p>
+        }
+        @if (optionsError()) {
+          <p class="overlay-error">{{ optionsError() }}</p>
+        }
+        <div class="overlay-field">
+          <label for="overlay-customer">Customer</label>
+          <select
+            id="overlay-customer"
+            formControlName="customerId"
+            class="overlay-input"
+            [class.overlay-input-invalid]="customerId?.invalid && (customerId?.touched || customerId?.dirty)"
+          >
+            <option value="">Select customer</option>
+            @for (c of customers(); track c._id) {
+              <option [value]="c._id">{{ c.name ?? c._id }}</option>
+            }
+          </select>
+          @if (customerId?.invalid && (customerId?.touched || customerId?.dirty)) {
+            <span class="overlay-field-error">Required.</span>
+          }
+        </div>
+        <div class="overlay-field">
+          <label for="overlay-service">Service</label>
+          <select
+            id="overlay-service"
+            formControlName="serviceId"
+            class="overlay-input"
+            [class.overlay-input-invalid]="serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)"
+          >
+            <option value="">Select service</option>
+            @for (s of services(); track s._id) {
+              <option [value]="s._id">{{ s.name ?? s._id }}</option>
+            }
+          </select>
+          @if (serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)) {
+            <span class="overlay-field-error">Required.</span>
+          }
+        </div>
+        <div class="overlay-field">
+          <label for="overlay-notes">Notes</label>
+          <textarea
+            id="overlay-notes"
+            formControlName="notes"
+            class="overlay-input overlay-textarea"
+            rows="2"
+          ></textarea>
+        </div>
+        @if (serverError()) {
+          <p class="overlay-error overlay-error-server">{{ serverError() }}</p>
+        }
+        <div class="overlay-actions">
+          <button
+            type="submit"
+            class="overlay-btn overlay-btn-primary"
+            [disabled]="form.invalid || creating() || loadingOptions()"
+          >
+            {{ creating() ? 'Creating…' : 'Create' }}
+          </button>
+          <button type="button" class="overlay-btn overlay-btn-ghost" (click)="close()">
+            Cancel
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}

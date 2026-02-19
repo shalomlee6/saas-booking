@@ -225,6 +225,40 @@ export function getHourLabels(): string[] {
 }
 
 /**
+ * One entry per 30-min slot (24 rows). Full-hour rows get a label (08:00, 09:00, …);
+ * :30 rows get "" so labels align to 60-minute ticks while grid stays 30-min.
+ */
+export function getHourSlotRows(): string[] {
+  const rows: string[] = [];
+  for (let h = CALENDAR_HOUR_START; h < CALENDAR_HOUR_END; h++) {
+    rows.push(`${String(h).padStart(2, '0')}:00`);
+    if (CALENDAR_SLOT_MINUTES === 30) {
+      rows.push('');
+    }
+  }
+  return rows;
+}
+
+/** Labels for time column: 08:00, 08:30, … with isFullHour for styling. */
+export function getHourLabelsWithStyle(): { label: string; isFullHour: boolean }[] {
+  const labels = getHourLabels();
+  return labels.map((label, i) => ({ label, isFullHour: i % 2 === 0 }));
+}
+
+/** One slot per 30 min for a day: time (HH:mm), minutesFromMidnight, disabled (outside working hours). */
+export function getSlotsForDay(
+  day: Date,
+  workingHours: Record<string, unknown> | null | undefined
+): { time: string; minutesFromMidnight: number; disabled: boolean }[] {
+  const labels = getHourLabels();
+  return labels.map((time, i) => {
+    const minutesFromMidnight = GRID_START_MINUTES + i * CALENDAR_SLOT_MINUTES;
+    const disabled = !isSlotInWorkingHours(day, minutesFromMidnight, workingHours);
+    return { time, minutesFromMidnight, disabled };
+  });
+}
+
+/**
  * Build query params for /appointments/new from a slot click (date = YYYY-MM-DD, time = HH:mm).
  */
 export function buildNewAppointmentQueryParams(date: Date, slotMinutesFromMidnight: number): {

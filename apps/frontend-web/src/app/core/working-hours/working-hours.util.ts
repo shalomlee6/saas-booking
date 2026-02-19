@@ -38,11 +38,11 @@ function parseHHmm(s: string): number {
 /** Default: Mon–Fri 08:00–18:00, Sat 08:00–13:00, Sun closed. */
 export function createDefaultSlots(dayKey: string): boolean[] {
   const slots = new Array<boolean>(SLOTS_PER_DAY).fill(false);
-  if (dayKey === 'sun') return slots;
+  // if (dayKey === 'sun') return slots;
   const startIdx = minutesToSlotIndex(8 * 60);
   const endIdx =
-    dayKey === 'sat'
-      ? minutesToSlotIndex(13 * 60)
+    dayKey === 'fri'
+      ? minutesToSlotIndex(14.5 * 60)
       : minutesToSlotIndex(18 * 60);
   for (let i = startIdx; i < endIdx; i++) slots[i] = true;
   return slots;
@@ -55,7 +55,7 @@ export function normalizeDayToSlots(
 ): WorkingHoursDaySlots {
   const defaultSlots = createDefaultSlots(dayKey);
   if (!raw || typeof raw !== 'object') {
-    return { enabled: dayKey !== 'sun' && dayKey !== 'sat', slots: defaultSlots };
+    return { enabled: dayKey !== 'sat', slots: defaultSlots };
   }
   const arr = (raw as { slots?: boolean[] }).slots;
   if (Array.isArray(arr) && arr.length === SLOTS_PER_DAY) {

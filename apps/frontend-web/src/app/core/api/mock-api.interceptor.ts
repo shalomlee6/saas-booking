@@ -104,7 +104,7 @@ function buildDefaultWorkingHours(): Record<string, { enabled: boolean; slots: b
   const out: Record<string, { enabled: boolean; slots: boolean[] }> = {};
   for (const key of WORKING_HOURS_DAY_KEYS) {
     out[key] = {
-      enabled: key !== 'sun',
+      enabled: key !== 'sat',
       slots: createDefaultSlots(key),
     };
   }

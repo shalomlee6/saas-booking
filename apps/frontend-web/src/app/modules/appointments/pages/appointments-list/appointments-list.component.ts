@@ -6,7 +6,7 @@ import {
   computed,
 } from '@angular/core';
 import { Store } from '@ngrx/store';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { Appointment } from '../../model/appointment';
@@ -17,24 +17,22 @@ import {
   selectError,
 } from '../../state/appointments.selectors';
 import {
-  CALENDAR_PIXELS_PER_MINUTE,
-  GRID_START_MINUTES,
   GRID_BODY_HEIGHT_PX,
   CALENDAR_SLOT_HEIGHT_PX,
   getWeekStart,
   getWeekEnd,
   getWeekDays,
-  getHourLabels,
+  getHourLabelsWithStyle,
+  getSlotsForDay,
   groupAppointmentsByDay,
   getAppointmentBlockLayout,
-  buildNewAppointmentQueryParams,
   toDateKey,
   getDisabledRangesForDay,
   getWorkingHoursSummary,
-  isSlotInWorkingHours,
 } from '../../utils/calendar.utils';
 import type { AppointmentBlockLayout } from '../../utils/calendar.utils';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { AppointmentCreateOverlayComponent } from '../../../../core/ui/overlay/appointment-create-overlay.component';
 
 type ViewMode = 'day' | 'week';
 
@@ -61,13 +59,12 @@ function getListParamsForDay(anchor: Date): { from: string; to: string } {
 @Component({
   selector: 'app-appointments-list',
   standalone: true,
-  imports: [RouterLink, FormsModule],
+  imports: [RouterLink, FormsModule, AppointmentCreateOverlayComponent],
   templateUrl: './appointments-list.component.html',
   styleUrl: './appointments-list.component.scss',
 })
 export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
-  private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
@@ -94,7 +91,7 @@ export class AppointmentsListComponent implements OnInit {
     return getWeekDays(anchor);
   });
 
-  readonly hourLabels = computed(() => getHourLabels());
+  readonly hourLabelsWithStyle = computed(() => getHourLabelsWithStyle());
 
   readonly filteredItems = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -193,21 +190,29 @@ export class AppointmentsListComponent implements OnInit {
     return getWorkingHoursSummary(day.getDay(), wh);
   }
 
-  onDayCellClick(event: MouseEvent, day: Date): void {
-    const target = event.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    const offsetY = event.clientY - rect.top;
-    const minutesFromGridStart = offsetY / CALENDAR_PIXELS_PER_MINUTE;
-    const slotMinutesFromMidnight =
-      GRID_START_MINUTES +
-      Math.floor(minutesFromGridStart / 30) * 30;
-    if (!isSlotInWorkingHours(day, slotMinutesFromMidnight, this.workingHours())) {
-      return;
-    }
-    const params = buildNewAppointmentQueryParams(day, slotMinutesFromMidnight);
-    this.router.navigate(['/appointments/new'], {
-      queryParams: { date: params.date, time: params.time },
-    });
+  getSlotsForDay(day: Date): { time: string; minutesFromMidnight: number; disabled: boolean }[] {
+    return getSlotsForDay(day, this.workingHours());
+  }
+
+  readonly overlayOpen = signal<{ date: string; time: string } | null>(null);
+
+  openOverlay(date: string, time: string): void {
+    this.overlayOpen.set({ date, time });
+  }
+
+  closeOverlay(): void {
+    this.overlayOpen.set(null);
+  }
+
+  onSlotClick(day: Date, slot: { time: string; minutesFromMidnight: number; disabled: boolean }): void {
+    if (slot.disabled) return;
+    const date = toDateKey(day);
+    this.openOverlay(date, slot.time);
+  }
+
+  onAppointmentCreated(): void {
+    this.closeOverlay();
+    this.loadForCurrentView();
   }
 
   customerDisplay(apt: Appointment): string {
