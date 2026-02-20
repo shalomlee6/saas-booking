@@ -1,0 +1,13 @@
+<div class="public-layout" [class.public-layout--loading]="loading">
+  @if (loading && !businessData) {
+    <div class="public-layout-loading">Loading…</div>
+  }
+  @if (error && !businessData) {
+    <div class="public-layout-error">{{ error }}</div>
+  }
+  @if (businessData) {
+    <main class="public-layout-main">
+      <router-outlet />
+    </main>
+  }
+</div>

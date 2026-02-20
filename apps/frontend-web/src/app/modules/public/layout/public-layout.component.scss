@@ -1,0 +1,28 @@
+.public-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-app, #f6f8fb);
+}
+
+.public-layout-loading,
+.public-layout-error {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: var(--text-muted, #64748b);
+  font-size: 1rem;
+}
+
+.public-layout-error {
+  color: #dc2626;
+}
+
+.public-layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+}

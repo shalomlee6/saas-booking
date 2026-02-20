@@ -9,6 +9,11 @@ export const routes: Routes = [
       import('./modules/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
   {
+    path: 'b/:slug',
+    loadChildren: () =>
+      import('./modules/public/public.routes').then((m) => m.PUBLIC_ROUTES),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -52,6 +57,13 @@ export const routes: Routes = [
         path: 'settings',
         loadChildren: () =>
           import('./modules/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
+      },
+      {
+        path: 'preview/customer-site',
+        loadComponent: () =>
+          import('./modules/public/pages/customer-site-preview/customer-site-preview.component').then(
+            (m) => m.CustomerSitePreviewComponent
+          ),
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],

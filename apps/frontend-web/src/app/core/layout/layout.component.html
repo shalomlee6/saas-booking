@@ -1,14 +1,148 @@
-<div class="layout" [class.layout--impersonating]="isImpersonating()">
-  <div class="layout-sidebar-header">
-    <span class="layout-sidebar-logo">SaaS</span>
+<div
+  class="layout"
+  [class.layout--impersonating]="isImpersonating()"
+  [class.layout--sidebar-collapsed]="!isMobile() && isSidebarCollapsed()"
+  [class.layout--mobile-drawer-open]="isMobile() && isMobileMenuOpen()"
+>
+  <div class="layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
+  <div class="layout-sidebar">
+    <div class="layout-sidebar-header">
+      <span class="layout-sidebar-logo" [title]="isSidebarCollapsed() ? 'SaaS' : null">
+        {{ isSidebarCollapsed() ? 'S' : 'SaaS' }}
+      </span>
+    </div>
+
+    <aside class="layout-sidebar-body">
+      <nav class="layout-sidebar-nav">
+        <span class="layout-sidebar-label">Main</span>
+        <a
+          routerLink="/dashboard"
+          routerLinkActive="layout-sidebar-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="layout-sidebar-link"
+          title="Dashboard"
+          (click)="closeMobileMenu()"
+        >
+          <span class="layout-sidebar-link-icon">D</span>
+          <span class="layout-sidebar-link-text">Dashboard</span>
+        </a>
+        <a
+          routerLink="/appointments"
+          routerLinkActive="layout-sidebar-link-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="layout-sidebar-link"
+          title="Appointments"
+          (click)="closeMobileMenu()"
+        >
+          <span class="layout-sidebar-link-icon">A</span>
+          <span class="layout-sidebar-link-text">Appointments</span>
+        </a>
+        <a
+          [routerLink]="servicesNavLink()"
+          routerLinkActive="layout-sidebar-link-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="layout-sidebar-link"
+          [title]="'Services'"
+          (click)="closeMobileMenu()"
+        >
+          <span class="layout-sidebar-link-icon">S</span>
+          <span class="layout-sidebar-link-text">Services</span>
+        </a>
+        <a
+          [routerLink]="customersNavLink()"
+          routerLinkActive="layout-sidebar-link-active"
+          [routerLinkActiveOptions]="customersNavLink() === '/admin/business-customers' ? { exact: true } : { exact: false }"
+          class="layout-sidebar-link"
+          [title]="customersNavLabel()"
+          (click)="closeMobileMenu()"
+        >
+          <span class="layout-sidebar-link-icon">{{ customersNavLabel()[0] }}</span>
+          <span class="layout-sidebar-link-text">{{ customersNavLabel() }}</span>
+        </a>
+        @if (!isSuperAdmin() && user()?.businessId) {
+          <a
+            routerLink="/settings/theme"
+            routerLinkActive="layout-sidebar-link-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="layout-sidebar-link"
+            title="Theme"
+            (click)="closeMobileMenu()"
+          >
+            <span class="layout-sidebar-link-icon">T</span>
+            <span class="layout-sidebar-link-text">Theme</span>
+          </a>
+          <a
+            routerLink="/settings/working-hours"
+            routerLinkActive="layout-sidebar-link-active"
+            class="layout-sidebar-link"
+            title="Working hours"
+            (click)="closeMobileMenu()"
+          >
+            <span class="layout-sidebar-link-icon">W</span>
+            <span class="layout-sidebar-link-text">Working hours</span>
+          </a>
+          @if (business()?.slug) {
+            <a
+              routerLink="/preview/customer-site"
+              routerLinkActive="layout-sidebar-link-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              class="layout-sidebar-link"
+              title="Preview customer site"
+              (click)="closeMobileMenu()"
+            >
+              <span class="layout-sidebar-link-icon">P</span>
+              <span class="layout-sidebar-link-text">Preview customer site</span>
+            </a>
+          }
+        }
+      </nav>
+      @if (isImpersonating()) {
+        <div class="layout-sidebar-impersonation-badge">
+          Viewing as: {{ business()?.name ?? '—' }}
+        </div>
+      }
+      <a
+        routerLink="/auth/login"
+        class="layout-sidebar-link layout-sidebar-link-footer"
+        title="Login"
+        (click)="closeMobileMenu()"
+      >
+        <span class="layout-sidebar-link-icon">L</span>
+        <span class="layout-sidebar-link-text">Login</span>
+      </a>
+    </aside>
   </div>
 
   <header class="layout-topbar">
+    <button
+      type="button"
+      class="layout-topbar-menu-btn"
+      [attr.aria-label]="menuAriaLabel"
+      [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
+      (click)="toggleSidebar()"
+    >
+      <span class="layout-topbar-menu-btn-icon" aria-hidden="true"></span>
+    </button>
     <h1 class="layout-topbar-title">Page title</h1>
     <div class="layout-topbar-search-wrap">
       <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
     </div>
     <div class="layout-topbar-actions">
+      @if (business()?.slug) {
+        <a
+          [href]="customerSiteUrl()"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="layout-topbar-customer-site"
+          title="לאתר הלקוחות"
+        >
+          Customer Site
+        </a>
+      } @else if (business() && !isSuperAdmin()) {
+        <span class="layout-topbar-customer-site-warning" title="Add a slug in settings to enable the customer site">
+          Customer Site (no slug)
+        </span>
+      }
       @if (isImpersonating()) {
         <span class="layout-topbar-impersonation-badge">Impersonating</span>
       }
@@ -33,43 +167,6 @@
       </span>
     </div>
   </header>
-
-  <aside class="layout-sidebar-body">
-    <nav class="layout-sidebar-nav">
-      <span class="layout-sidebar-label">Main</span>
-      <a routerLink="/dashboard" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Dashboard</a>
-      <a routerLink="/appointments" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: false }" class="layout-sidebar-link">Appointments</a>
-      <a
-        [routerLink]="servicesNavLink()"
-        routerLinkActive="layout-sidebar-link-active"
-        [routerLinkActiveOptions]="{ exact: false }"
-        class="layout-sidebar-link"
-      >
-        Services
-      </a>
-      <a
-        [routerLink]="customersNavLink()"
-        routerLinkActive="layout-sidebar-link-active"
-        [routerLinkActiveOptions]="customersNavLink() === '/admin/business-customers' ? { exact: true } : { exact: false }"
-        class="layout-sidebar-link"
-      >
-        {{ customersNavLabel() }}
-      </a>
-      <!-- @if (isSuperAdmin()) {
-        <a routerLink="/admin" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Admin</a>
-      } -->
-      @if (!isSuperAdmin() && user()?.businessId) {
-        <a routerLink="/settings/theme" routerLinkActive="layout-sidebar-link-active" [routerLinkActiveOptions]="{ exact: true }" class="layout-sidebar-link">Theme</a>
-        <a routerLink="/settings/working-hours" routerLinkActive="layout-sidebar-link-active" class="layout-sidebar-link">Working hours</a>
-      }
-    </nav>
-    @if (isImpersonating()) {
-      <div class="layout-sidebar-impersonation-badge">
-        Viewing as: {{ business()?.name ?? '—' }}
-      </div>
-    }
-    <a routerLink="/auth/login" class="layout-sidebar-link layout-sidebar-link-footer">Login</a>
-  </aside>
 
   <main class="layout-main">
     @if (isImpersonating()) {

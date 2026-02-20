@@ -1,0 +1,53 @@
+import { Injectable, signal, computed } from '@angular/core';
+
+const STORAGE_KEY_TOKEN = 'public_client_token';
+const STORAGE_KEY_SLUG = 'public_client_business_slug';
+
+@Injectable({ providedIn: 'root' })
+export class PublicSessionService {
+  private readonly tokenSignal = signal<string | null>(this.readToken());
+  private readonly slugSignal = signal<string | null>(this.readSlug());
+
+  readonly token = this.tokenSignal.asReadonly();
+  readonly businessSlug = this.slugSignal.asReadonly();
+  readonly hasSession = computed(() => !!this.tokenSignal() && !!this.slugSignal());
+
+  private readToken(): string | null {
+    if (typeof sessionStorage === 'undefined') return null;
+    return sessionStorage.getItem(STORAGE_KEY_TOKEN);
+  }
+
+  private readSlug(): string | null {
+    if (typeof sessionStorage === 'undefined') return null;
+    return sessionStorage.getItem(STORAGE_KEY_SLUG);
+  }
+
+  setSession(token: string, businessSlug: string): void {
+    sessionStorage.setItem(STORAGE_KEY_TOKEN, token);
+    sessionStorage.setItem(STORAGE_KEY_SLUG, businessSlug);
+    this.tokenSignal.set(token);
+    this.slugSignal.set(businessSlug);
+  }
+
+  getToken(): string | null {
+    return this.tokenSignal();
+  }
+
+  getBusinessSlug(): string | null {
+    return this.slugSignal();
+  }
+
+  clearSession(): void {
+    sessionStorage.removeItem(STORAGE_KEY_TOKEN);
+    sessionStorage.removeItem(STORAGE_KEY_SLUG);
+    this.tokenSignal.set(null);
+    this.slugSignal.set(null);
+  }
+
+  /** True when we have a token for the given slug (same business). */
+  hasSessionFor(slug: string): boolean {
+    const t = this.tokenSignal();
+    const s = this.slugSignal();
+    return !!t && !!s && s === slug;
+  }
+}

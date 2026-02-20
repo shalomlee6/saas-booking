@@ -1,0 +1,21 @@
+<div class="customer-site-preview">
+  <div class="customer-site-preview-header">
+    <h1 class="customer-site-preview-title">Preview customer site</h1>
+    <p class="customer-site-preview-subtitle">
+      This is how your customers see the login page. To open it in a new tab, use “Customer Site” in the top bar.
+    </p>
+  </div>
+  @if (iframeSrc(); as src) {
+    <div class="customer-site-preview-frame-wrap">
+      <iframe
+        [src]="src"
+        class="customer-site-preview-iframe"
+        title="Customer site preview"
+      ></iframe>
+    </div>
+  } @else {
+    <div class="customer-site-preview-warning">
+      <p>No business slug is set. Add a slug in settings so the customer site and this preview are available.</p>
+    </div>
+  }
+</div>

@@ -1,0 +1,129 @@
+.customer-login {
+  padding: 1.5rem;
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100%;
+}
+
+.customer-login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.customer-login-logo {
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+  margin-bottom: 0.75rem;
+}
+
+.customer-login-business-name {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary, #0f172a);
+}
+
+.customer-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.customer-login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.customer-login-field label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary, #0f172a);
+}
+
+.customer-login-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 1rem 1rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--text-primary, #0f172a);
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 12px;
+  outline: none;
+  min-height: 52px;
+}
+
+.customer-login-input:focus {
+  border-color: var(--color-primary, #3787f6);
+  box-shadow: 0 0 0 3px rgba(55, 135, 246, 0.15);
+}
+
+.customer-login-input[aria-invalid="true"] {
+  border-color: #dc2626;
+}
+
+.customer-login-input--code {
+  font-size: 1.25rem;
+  letter-spacing: 0.25em;
+  text-align: center;
+}
+
+.customer-login-error {
+  font-size: 0.8125rem;
+  color: #dc2626;
+}
+
+.customer-login-hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+}
+
+.customer-login-message {
+  margin: 0;
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.customer-login-message--error {
+  color: #dc2626;
+}
+
+.customer-login-cta {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--color-primary, #3787f6);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  min-height: 52px;
+}
+
+.customer-login-cta:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.customer-login-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.customer-login-back {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.customer-login-back:hover {
+  color: var(--text-primary, #0f172a);
+}

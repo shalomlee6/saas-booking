@@ -1,0 +1,92 @@
+<div class="customer-login">
+  <div class="customer-login-header">
+    @if (business(); as b) {
+      @if (b.settings?.theme?.logoUrl) {
+        <img [src]="b.settings?.theme?.logoUrl ?? ''" [alt]="b.name" class="customer-login-logo" />
+      }
+      <h1 class="customer-login-business-name">{{ b.name }}</h1>
+    } @else {
+      <h1 class="customer-login-business-name">Book with us</h1>
+    }
+  </div>
+
+  @if (step() === 1) {
+    <form class="customer-login-form" [formGroup]="formStep1" (ngSubmit)="continue()">
+      <div class="customer-login-field">
+        <label for="name">Name</label>
+        <input
+          id="name"
+          type="text"
+          formControlName="name"
+          class="customer-login-input"
+          placeholder="Your name"
+          autocomplete="name"
+          [attr.aria-invalid]="name?.invalid && (name?.touched || name?.dirty) ? true : null"
+        />
+        @if (name?.invalid && (name?.touched || name?.dirty)) {
+          <span class="customer-login-error">At least 2 characters</span>
+        }
+      </div>
+      <div class="customer-login-field">
+        <label for="phone">Phone</label>
+        <input
+          id="phone"
+          type="tel"
+          formControlName="phone"
+          class="customer-login-input"
+          placeholder="+972 50 123 4567"
+          autocomplete="tel"
+          [attr.aria-invalid]="phone?.invalid && (phone?.touched || phone?.dirty) ? true : null"
+        />
+        @if (phone?.invalid && (phone?.touched || phone?.dirty)) {
+          <span class="customer-login-error">Valid phone (digits, +, spaces)</span>
+        }
+      </div>
+      @if (error()) {
+        <p class="customer-login-message customer-login-message--error">{{ error() }}</p>
+      }
+      <button
+        type="submit"
+        class="customer-login-cta"
+        [disabled]="formStep1.invalid || loading()"
+      >
+        {{ loading() ? 'Sending…' : 'Continue' }}
+      </button>
+    </form>
+  }
+
+  @if (step() === 2) {
+    <form class="customer-login-form" [formGroup]="formStep2" (ngSubmit)="verify()">
+      <p class="customer-login-hint">Check your phone for a code.</p>
+      <div class="customer-login-field">
+        <label for="code">Code</label>
+        <input
+          id="code"
+          type="text"
+          formControlName="code"
+          class="customer-login-input customer-login-input--code"
+          placeholder="123456"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          [attr.aria-invalid]="code?.invalid && (code?.touched || code?.dirty) ? true : null"
+        />
+        @if (code?.invalid && (code?.touched || code?.dirty)) {
+          <span class="customer-login-error">Enter the code we sent</span>
+        }
+      </div>
+      @if (error()) {
+        <p class="customer-login-message customer-login-message--error">{{ error() }}</p>
+      }
+      <button
+        type="submit"
+        class="customer-login-cta"
+        [disabled]="formStep2.invalid || loading()"
+      >
+        {{ loading() ? 'Verifying…' : 'Verify' }}
+      </button>
+      <button type="button" class="customer-login-back" (click)="back()">
+        Back
+      </button>
+    </form>
+  }
+</div>

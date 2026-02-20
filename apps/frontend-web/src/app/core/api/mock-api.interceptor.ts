@@ -74,6 +74,23 @@ function isAdminStopImpersonatePost(req: HttpRequest<unknown>): boolean {
   return req.method === 'POST' && req.url.includes('/api/admin/stop-impersonate');
 }
 
+function isPublicBusinessGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/public\/[^/]+\/business\/?(\?|$)/.test(req.url);
+}
+
+function isPublicRequestOtpPost(req: HttpRequest<unknown>): boolean {
+  return req.method === 'POST' && /\/api\/public\/[^/]+\/auth\/request-otp/.test(req.url);
+}
+
+function isPublicVerifyOtpPost(req: HttpRequest<unknown>): boolean {
+  return req.method === 'POST' && /\/api\/public\/[^/]+\/auth\/verify-otp/.test(req.url);
+}
+
+function getPublicSlugFromUrl(url: string): string | null {
+  const m = url.match(/\/api\/public\/([^/]+)\//);
+  return m ? m[1] : null;
+}
+
 /** Mock impersonation token = base64(JSON.stringify({ impersonatingBusinessId })). */
 function getImpersonationFromRequest(req: HttpRequest<unknown>): { impersonatingBusinessId: string } | null {
   const auth = req.headers.get('Authorization');
@@ -460,6 +477,51 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isAdminStopImpersonatePost(req)) {
     return from([new HttpResponse({ status: 200, body: { ok: true } })]);
+  }
+
+  // ——— Public (customer booking: business by slug, request-otp, verify-otp) ———
+  if (isPublicBusinessGet(req)) {
+    const slug = getPublicSlugFromUrl(req.url);
+    if (!slug) return next(req);
+    const known = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug) as Record<string, unknown> | undefined;
+    const businessId = known ? String(known['_id']) : 'mock-business-1';
+    const name = known ? String(known['name']) : (slug === 'demo-salon' ? 'Demo Salon' : slug);
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          businessId,
+          name,
+          slug,
+          settings: {
+            theme: { colors: { primary: '#3787f6' }, logoUrl: null },
+            plan: 'free',
+          },
+        },
+      }),
+    ]);
+  }
+
+  if (isPublicRequestOtpPost(req)) {
+    const slug = getPublicSlugFromUrl(req.url);
+    if (!slug) return next(req);
+    return from([new HttpResponse({ status: 200, body: { ok: true } })]);
+  }
+
+  if (isPublicVerifyOtpPost(req)) {
+    const slug = getPublicSlugFromUrl(req.url);
+    if (!slug) return next(req);
+    const body = req.body as Record<string, unknown>;
+    const phone = String(body['phone'] ?? '');
+    const mockCustomerId = 'mock-public-customer-' + (phone || createMockId()).slice(-6);
+    const businessId = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug)?.['_id'] ?? 'mock-business-1';
+    const token = btoa(JSON.stringify({ customerId: mockCustomerId, businessId, role: 'client' }));
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: { token, customerId: mockCustomerId, businessId: String(businessId) },
+      }),
+    ]);
   }
 
   // ——— Business settings (working hours: slots format) ———
