@@ -118,7 +118,7 @@ export class CustomerLoginComponent implements OnInit {
       next: (res) => {
         this.session.setSession(res.token, slug);
         this.loading.set(false);
-        this.router.navigate(['/b', slug, 'book']);
+        this.router.navigate(['/b', slug]);
       },
       error: (err) => {
         this.loading.set(false);
