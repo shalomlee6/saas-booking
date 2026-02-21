@@ -1,0 +1,39 @@
+<div class="public-page" dir="rtl">
+  <section class="public-page-media">
+    <p-carousel
+      [value]="carouselImages"
+      [showIndicators]="true"
+      [showNavigators]="false"
+      [numVisible]="1"
+      [numScroll]="1"
+      [autoplayInterval]="5000"
+      [circular]="true"
+      styleClass="landing-carousel"
+    >
+      <ng-template let-src pTemplate="item">
+        <div class="landing-carousel-item">
+          <img [src]="src" alt="" class="landing-carousel-img" />
+        </div>
+      </ng-template>
+    </p-carousel>
+  </section>
+
+  <section class="public-page-card-wrapper p-3">
+    <div class="public-page-card p-4">
+      <h1 class="public-page-greeting mb-2">
+        שלום {{ customerName }}, ברוכים הבאים
+      </h1>
+      <p class="public-page-subtitle mb-4">
+        בואי נקבע תור בקלות ובמהירות
+      </p>
+      <p-button
+        label="לחצי לקביעת תור"
+        styleClass="p-button-lg landing-cta w-full mb-3"
+        (onClick)="goToBook()"
+      />
+      <p class="public-page-notice mb-0">
+        יש להודיע מראש על ביטול התור
+      </p>
+    </div>
+  </section>
+</div>

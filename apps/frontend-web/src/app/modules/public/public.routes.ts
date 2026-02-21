@@ -7,6 +7,13 @@ export const PUBLIC_ROUTES: Routes = [
       import('./layout/public-layout.component').then((m) => m.PublicLayoutComponent),
     children: [
       {
+        path: '',
+        loadComponent: () =>
+          import('./booking/public-landing.component').then(
+            (m) => m.PublicLandingComponent
+          ),
+      },
+      {
         path: 'login',
         loadChildren: () =>
           import('./pages/customer-login/customer-login.routes').then(
@@ -20,7 +27,6 @@ export const PUBLIC_ROUTES: Routes = [
             (m) => m.CUSTOMER_BOOK_ROUTES
           ),
       },
-      { path: '', redirectTo: 'login', pathMatch: 'full' },
     ],
   },
 ];

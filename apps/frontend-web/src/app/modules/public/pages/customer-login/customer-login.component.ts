@@ -6,13 +6,9 @@ import {
   computed,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import {
-  FormBuilder,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-} from '@angular/forms';
-import { PublicApiService, type PublicBusiness } from '../../services/public-api.service';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import type { PublicBusiness } from '../../services/public-api.service';
+import { PublicApiService } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 
 @Component({
