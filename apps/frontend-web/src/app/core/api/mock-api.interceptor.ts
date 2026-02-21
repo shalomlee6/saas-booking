@@ -91,6 +91,27 @@ function getPublicSlugFromUrl(url: string): string | null {
   return m ? m[1] : null;
 }
 
+function isPublicBusinessesGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/public\/businesses\/[^/]+\/?(\?|$)/.test(req.url);
+}
+
+function isPublicBusinessesServicesGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/public\/businesses\/[^/]+\/services\/?(\?|$)/.test(req.url);
+}
+
+function isPublicBusinessesAvailabilityGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/public\/businesses\/[^/]+\/availability/.test(req.url);
+}
+
+function isPublicAppointmentsPost(req: HttpRequest<unknown>): boolean {
+  return req.method === 'POST' && /\/api\/public\/appointments\/?(\?|$)/.test(req.url);
+}
+
+function getPublicBusinessesSlugFromUrl(url: string): string | null {
+  const m = url.match(/\/api\/public\/businesses\/([^/]+)/);
+  return m ? decodeURIComponent(m[1]) : null;
+}
+
 /** Mock impersonation token = base64(JSON.stringify({ impersonatingBusinessId })). */
 function getImpersonationFromRequest(req: HttpRequest<unknown>): { impersonatingBusinessId: string } | null {
   const auth = req.headers.get('Authorization');
@@ -520,6 +541,81 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       new HttpResponse({
         status: 200,
         body: { token, customerId: mockCustomerId, businessId: String(businessId) },
+      }),
+    ]);
+  }
+
+  // ——— Public booking: GET business (full), GET services, GET availability, POST appointments ———
+  if (isPublicBusinessesGet(req) && !req.url.includes('/services') && !req.url.includes('/availability')) {
+    const slug = getPublicBusinessesSlugFromUrl(req.url);
+    if (!slug) return next(req);
+    const known = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug) as Record<string, unknown> | undefined;
+    const id = known ? String(known['_id']) : 'mock-business-1';
+    const name = known ? String(known['name']) : slug;
+    const openingHours: Record<string, { open: string; close: string } | null> = {
+      sun: { open: '09:00', close: '18:00' },
+      mon: { open: '09:00', close: '18:00' },
+      tue: { open: '09:00', close: '18:00' },
+      wed: { open: '09:00', close: '18:00' },
+      thu: { open: '09:00', close: '18:00' },
+      fri: { open: '09:00', close: '14:00' },
+      sat: null,
+    };
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          id,
+          name,
+          openingHours,
+          media: {
+            photos: [
+              'https://picsum.photos/800/400?random=1',
+              'https://picsum.photos/800/400?random=2',
+              'https://picsum.photos/800/400?random=3',
+            ],
+            videoUrl: undefined,
+          },
+          cancellationNoticeHe: 'יש להודיע מראש על ביטול התור. ביטול פחות מ-24 שעות מראש עשוי לחייב בתשלום.',
+        },
+      }),
+    ]);
+  }
+
+  if (isPublicBusinessesServicesGet(req)) {
+    const slug = getPublicBusinessesSlugFromUrl(req.url);
+    if (!slug) return next(req);
+    return from(loadInitialServices()).pipe(
+      map((list) => {
+        const active = list.filter((s) => s['isActive'] !== false);
+        const body = active.map((s) => ({
+          id: String(s['_id']),
+          nameHe: String(s['name'] ?? s['nameHe'] ?? 'שירות'),
+          durationMinutes: Number(s['durationMinutes'] ?? 30),
+          price: s['price'] != null ? Number(s['price']) : undefined,
+        }));
+        return new HttpResponse({ status: 200, body });
+      })
+    );
+  }
+
+  if (isPublicBusinessesAvailabilityGet(req)) {
+    const slug = getPublicBusinessesSlugFromUrl(req.url);
+    const url = new URL(req.url, 'http://localhost');
+    const serviceId = url.searchParams.get('serviceId') ?? '';
+    const dateStr = url.searchParams.get('date') ?? '';
+    if (!slug || !serviceId || !dateStr) return next(req);
+    const slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
+    return from([new HttpResponse({ status: 200, body: { date: dateStr, slots } })]);
+  }
+
+  if (isPublicAppointmentsPost(req)) {
+    const body = req.body as Record<string, unknown>;
+    const id = createMockId();
+    return from([
+      new HttpResponse({
+        status: 201,
+        body: { id, status: 'confirmed' },
       }),
     ]);
   }

@@ -29,10 +29,12 @@ import {
 } from './modules/appointments/state/appointments.effects';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
+import { MessageService } from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
 
 export const appConfig: ApplicationConfig = {
   providers: [
+    MessageService,
     provideStore(),
     provideState(appointmentsFeatureKey, appointmentsReducer),
     provideEffects({

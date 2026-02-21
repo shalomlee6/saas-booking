@@ -1,0 +1,39 @@
+<div
+  class="hold-btn"
+  [class.hold-btn--disabled]="disabled()"
+  [class.hold-btn--success]="success()"
+  [class.hold-btn--confirmed]="confirmed()"
+>
+  <div class="hold-btn-ring">
+    <svg viewBox="0 0 100 100" class="hold-btn-svg" aria-hidden="true">
+      <circle
+        class="hold-btn-track"
+        cx="50"
+        cy="50"
+        r="45"
+        fill="none"
+        stroke-width="4"
+      />
+      <circle
+        class="hold-btn-fill"
+        cx="50"
+        cy="50"
+        r="45"
+        fill="none"
+        stroke-width="4"
+        [attr.stroke-dasharray]="283"
+        [attr.stroke-dashoffset]="283 - progress() * 283"
+      />
+    </svg>
+    <div class="hold-btn-inner">
+    @if (success()) {
+      <span class="hold-btn-check" aria-hidden="true">✓</span>
+    } @else {
+      <span class="hold-btn-label">לחצי לאישור התור</span>
+    }
+    </div>
+  </div>
+  @if (!success()) {
+    <p class="hold-btn-sub">יש ללחוץ לפחות שתי שניות לאישור</p>
+  }
+</div>

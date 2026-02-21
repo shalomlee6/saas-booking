@@ -4,6 +4,8 @@ export const CUSTOMER_BOOK_ROUTES: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./customer-book.component').then((m) => m.CustomerBookComponent),
+      import('./customer-book-page.component').then(
+        (m) => m.CustomerBookPageComponent
+      ),
   },
 ];

@@ -1,0 +1,120 @@
+<div class="book-page" dir="rtl">
+  <!-- Header -->
+  <header class="book-page-header">
+    <h1 class="book-page-title">{{ business()?.name ?? 'קביעת תור' }}</h1>
+  </header>
+
+  <div class="book-page-body">
+    <!-- Step 1: Business loading / Services -->
+    @if (loadingBusiness()) {
+      <div class="book-page-section">
+        <p-skeleton width="100%" height="2rem" class="mb-2" />
+        <p-skeleton width="80%" height="4rem" class="mb-2" />
+        <p-skeleton width="90%" height="4rem" />
+      </div>
+    } @else if (business(); as b) {
+      @if (b.cancellationNoticeHe) {
+        <p class="book-page-notice">{{ b.cancellationNoticeHe }}</p>
+      }
+
+      <!-- Services -->
+      <section class="book-page-section">
+        <h2 class="book-page-section-title">בחירת שירות</h2>
+        @if (loadingServices()) {
+          <div class="book-page-service-list">
+            @for (i of [1,2,3]; track i) {
+              <p-skeleton width="100%" height="4rem" class="book-page-service-skeleton" />
+            }
+          </div>
+        } @else {
+          <div class="book-page-service-list">
+            @for (svc of services(); track svc.id) {
+              <button
+                type="button"
+                class="book-page-service-card"
+                [class.selected]="selectedService()?.id === svc.id"
+                (click)="openCalendarDrawer(svc)"
+              >
+                <span class="book-page-service-name">{{ svc.nameHe }}</span>
+                <span class="book-page-service-meta">
+                  {{ svc.durationMinutes }} דק׳
+                  @if (svc.price != null && svc.price > 0) {
+                    · {{ svc.price }} ₪
+                  }
+                </span>
+              </button>
+            }
+          </div>
+        }
+      </section>
+
+      <!-- Step 2: Slots for selected date -->
+      @if (canShowSlots()) {
+        <section class="book-page-section">
+          <h2 class="book-page-section-title">בחירת שעה</h2>
+          @if (loadingSlots()) {
+            <p-skeleton width="100%" height="3rem" class="mb-2" />
+            <p-skeleton width="100%" height="3rem" class="mb-2" />
+            <p-skeleton width="100%" height="3rem" />
+          } @else {
+            <div class="book-page-slots">
+              @for (slot of slots(); track slot) {
+                <button
+                  type="button"
+                  class="book-page-slot-btn"
+                  [class.selected]="selectedSlot() === slot"
+                  (click)="selectSlot(slot)"
+                >
+                  {{ slot }}
+                </button>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- Step 3: Hold to confirm -->
+      @if (canShowHoldButton() && !appointmentSuccess()) {
+        <section class="book-page-section book-page-hold-section">
+          <app-hold-to-confirm-button
+            [disabled]="submitting()"
+            [durationMs]="2000"
+            [successState]="appointmentSuccess()"
+            (confirm)="onHoldConfirm()"
+          />
+        </section>
+      }
+
+      <!-- Success state -->
+      @if (appointmentSuccess()) {
+        <section class="book-page-section book-page-success">
+          <div class="book-page-success-icon">✓</div>
+          <p class="book-page-success-msg">התור אושר</p>
+          <p-button label="חזרה" (onClick)="goBack()" styleClass="p-button-outlined" />
+        </section>
+      }
+    }
+  </div>
+
+  <!-- Drawer: Calendar -->
+  <p-drawer
+    [visible]="drawerVisible()"
+    (visibleChange)="drawerVisible.set($event)"
+    position="bottom"
+    header="בחירת תאריך"
+    [style]="{ height: 'auto' }"
+    (onHide)="closeDrawer()"
+    styleClass="book-page-drawer"
+  >
+    <div class="book-page-drawer-content">
+      <p-datePicker
+        [(ngModel)]="selectedDateValue"
+        [inline]="true"
+        [minDate]="minDate()"
+        [showIcon]="false"
+        (onSelect)="onDateSelect()"
+        dateFormat="dd/mm/yy"
+      />
+    </div>
+  </p-drawer>
+</div>

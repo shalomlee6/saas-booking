@@ -1,0 +1,71 @@
+.hold-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  touch-action: none;
+  user-select: none;
+
+  &--disabled {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  &--success .hold-btn-inner {
+    background: var(--p-green-500, #22c55e);
+    color: #fff;
+  }
+}
+
+.hold-btn-ring {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.hold-btn-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.hold-btn-track {
+  stroke: rgba(0, 0, 0, 0.1);
+}
+
+.hold-btn-fill {
+  stroke: var(--p-primary-color, var(--color-primary, #3787f6));
+  transition: stroke-dashoffset 0.05s linear;
+}
+
+.hold-btn-inner {
+  position: absolute;
+  inset: 12px;
+  border-radius: 50%;
+  background: var(--p-primary-color, var(--color-primary, #3787f6));
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.875rem;
+  text-align: center;
+  padding: 0.5rem;
+  box-sizing: border-box;
+}
+
+.hold-btn-label {
+  line-height: 1.2;
+}
+
+.hold-btn-check {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.hold-btn-sub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+}

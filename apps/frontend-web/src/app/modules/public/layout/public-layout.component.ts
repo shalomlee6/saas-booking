@@ -3,11 +3,12 @@ import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
 import { ThemeService } from '../../../core/config/theme.service';
+import { ToastModule } from 'primeng/toast';
 
 @Component({
   selector: 'app-public-layout',
   standalone: true,
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ToastModule],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.scss',
 })
