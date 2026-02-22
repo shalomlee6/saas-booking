@@ -2,6 +2,23 @@ import { Schema, model, Types, Document } from 'mongoose';
 
 export type Plan = 'free' | 'normal' | 'premium';
 
+/** Day of week 0 = Sunday, 6 = Saturday */
+export interface IOpeningHoursRange {
+  start: string; // "HH:mm"
+  end: string;   // "HH:mm"
+}
+
+export interface IOpeningHoursDay {
+  day: number;   // 0-6
+  isOpen: boolean;
+  ranges: IOpeningHoursRange[];
+}
+
+export interface IOpeningHours {
+  slotStepMinutes: number;
+  days: IOpeningHoursDay[];
+}
+
 export interface IBusinessSettings extends Document {
   businessId: Types.ObjectId;
   plan: Plan;
@@ -28,9 +45,24 @@ export interface IBusinessSettings extends Document {
     timezone: string;
     currency: string;
   };
+  openingHours?: IOpeningHours;
   createdAt: Date;
   updatedAt: Date;
 }
+
+/** Default: Sun–Thu 08:00–18:00, Fri 08:00–14:00, Sat closed */
+export const defaultOpeningHours: IOpeningHours = {
+  slotStepMinutes: 30,
+  days: [
+    { day: 0, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
+    { day: 1, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
+    { day: 2, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
+    { day: 3, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
+    { day: 4, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
+    { day: 5, isOpen: true, ranges: [{ start: '08:00', end: '14:00' }] },
+    { day: 6, isOpen: false, ranges: [] },
+  ],
+};
 
 const BusinessSettingsSchema = new Schema<IBusinessSettings>(
   {
@@ -69,9 +101,30 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       timezone: { type: String, default: 'Asia/Jerusalem' },
       currency: { type: String, default: 'ILS' },
     },
+    openingHours: {
+      slotStepMinutes: { type: Number, default: 30 },
+      days: [
+        {
+          day: Number,
+          isOpen: Boolean,
+          ranges: [{ start: String, end: String }],
+        },
+      ],
+    },
   },
   { timestamps: true }
 );
+
+BusinessSettingsSchema.pre('save', function (next) {
+  if (!this.openingHours || !this.openingHours.days || this.openingHours.days.length === 0) {
+    this.openingHours = defaultOpeningHours;
+  }
+  if (!this.localization?.timezone) {
+    if (!this.localization) (this as any).localization = {};
+    (this as any).localization.timezone = 'Asia/Jerusalem';
+  }
+  next();
+});
 
 export const BusinessSettings = model<IBusinessSettings>('BusinessSettings', BusinessSettingsSchema);
 

@@ -2,6 +2,12 @@ import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
 import { Business } from '../models/Business';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
+import { patchOpeningHours } from '../controllers/openingHoursController';
+import {
+  getOverrides,
+  postOverride,
+  deleteOverride,
+} from '../controllers/availabilityOverridesController';
 
 export const businessRouter = Router();
 
@@ -48,3 +54,11 @@ businessRouter.patch('/ui', auth, async (req: AuthRequest, res) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+// PATCH /api/business/settings/opening-hours – default weekly schedule
+businessRouter.patch('/settings/opening-hours', auth, patchOpeningHours);
+
+// Availability overrides (date-specific exceptions)
+businessRouter.get('/overrides', auth, getOverrides);
+businessRouter.post('/overrides', auth, postOverride);
+businessRouter.delete('/overrides/:id', auth, deleteOverride);

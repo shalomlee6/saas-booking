@@ -14,13 +14,14 @@ import {
   AdminApiService,
 } from '../../modules/admin/services/admin-api.service';
 import { DOCUMENT } from '@angular/common';
+import { ToastModule } from 'primeng/toast';
 
 const BREAKPOINT_PX = 1024;
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })

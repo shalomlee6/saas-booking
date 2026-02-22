@@ -1,70 +1,137 @@
-.working-hours-list-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.wh-page {
+  min-height: 100%;
+  background: #f5f6f8;
+  padding: 1rem 1.25rem;
+  padding-bottom: 2rem;
 }
 
-.working-hours-list-title {
-  margin: 0;
+.wh-page-title {
+  margin: 0 0 1rem;
   font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
+  font-weight: 700;
+  color: #1a1a1a;
 }
 
-.working-hours-list-subtitle {
-  margin: 0;
-  font-size: 0.875rem;
-  color: var(--text-muted);
+.wh-tabs {
+  ::ng-deep .p-tablist {
+    background: #fff;
+    border-radius: 16px;
+    padding: 0.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+  ::ng-deep .p-tab {
+    border-radius: 12px;
+  }
+  ::ng-deep .p-tabpanel-active .p-tabpanels-content {
+    padding: 0;
+  }
 }
 
-.working-hours-list-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 12px;
+.wh-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  margin-bottom: 1rem;
+}
+
+.wh-card-days {
   padding: 0;
-  max-width: 520px;
+  overflow: hidden;
 }
 
-.working-hours-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.working-hours-list-row {
+.wh-day-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-primary);
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
 }
 
-.working-hours-list-row:last-child {
+.wh-day-row:last-child {
   border-bottom: none;
 }
 
-.working-hours-list-day {
+.wh-day-name {
   font-weight: 600;
-  min-width: 100px;
+  min-width: 4.5rem;
+  color: #1a1a1a;
 }
 
-.working-hours-list-summary {
+.wh-day-summary {
   flex: 1;
-  font-size: 0.875rem;
-  color: var(--text-muted);
+  font-size: 0.9375rem;
+  color: #64748b;
 }
 
-.working-hours-list-edit {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-primary);
-  text-decoration: none;
-  padding: 0.35rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid var(--color-primary);
+.wh-card-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.working-hours-list-edit:hover {
-  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+.wh-calendar {
+  ::ng-deep .p-datepicker {
+    border: none;
+    background: transparent;
+  }
+  ::ng-deep .p-datepicker-calendar {
+    width: 100%;
+  }
 }
+
+.wh-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  font-size: 0.8125rem;
+  color: #64748b;
+}
+
+.wh-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.wh-legend-closed .pi {
+  color: #dc2626;
+}
+
+.wh-legend-custom .pi {
+  color: #ea580c;
+}
+
+.wh-drawer {
+  ::ng-deep .p-drawer-content {
+    padding: 1.25rem;
+  }
+}
+
+.wh-drawer-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.wh-range-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.wh-time-input {
+  padding: 0.5rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.mb-1 { margin-bottom: 0.25rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.mb-3 { margin-bottom: 1rem; }
+
+.block { display: block; }
+.w-full { width: 100%; }

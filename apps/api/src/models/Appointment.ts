@@ -7,9 +7,11 @@ export type AppointmentStatus =
   | 'cancelled';
 
 export interface IAppointment extends Document {
-  businessId:  Types.ObjectId;
-  customerId: Types.ObjectId;
+  businessId: Types.ObjectId;
   serviceId: Types.ObjectId;
+  customerId?: Types.ObjectId;
+  customerName?: string;
+  customerPhone?: string;
   start: Date;
   end: Date;
   status: AppointmentStatus;
@@ -30,8 +32,10 @@ const AppointmentSchema = new Schema<IAppointment>(
     customerId: {
       type: Schema.Types.ObjectId,
       ref: 'Customer',
-      required: true,
+      required: false,
     },
+    customerName: String,
+    customerPhone: String,
     serviceId: {
       type: Schema.Types.ObjectId,
       ref: 'Service',
@@ -54,5 +58,7 @@ const AppointmentSchema = new Schema<IAppointment>(
   },
   { timestamps: true }
 );
+
+AppointmentSchema.index({ businessId: 1, start: 1 });
 
 export const Appointment = model<IAppointment>('Appointment', AppointmentSchema);
