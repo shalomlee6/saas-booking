@@ -13,9 +13,9 @@
       </span>
     </div>
 
-    <aside class="layout-sidebar-body">
+    <aside class="layout-sidebar-body" dir="rtl">
       <nav class="layout-sidebar-nav">
-        <span class="layout-sidebar-label">Main</span>
+        <span class="layout-sidebar-label">תפריט</span>
         <a
           routerLink="/dashboard"
           routerLinkActive="layout-sidebar-link-active"
@@ -24,7 +24,7 @@
           title="Dashboard"
           (click)="closeMobileMenu()"
         >
-          <span class="layout-sidebar-link-icon">D</span>
+          <i class="layout-sidebar-link-icon pi pi-home" aria-hidden="true"></i>
           <span class="layout-sidebar-link-text">Dashboard</span>
         </a>
         <a
@@ -35,7 +35,7 @@
           title="Appointments"
           (click)="closeMobileMenu()"
         >
-          <span class="layout-sidebar-link-icon">A</span>
+          <i class="layout-sidebar-link-icon pi pi-calendar" aria-hidden="true"></i>
           <span class="layout-sidebar-link-text">Appointments</span>
         </a>
         <a
@@ -46,7 +46,7 @@
           [title]="'Services'"
           (click)="closeMobileMenu()"
         >
-          <span class="layout-sidebar-link-icon">S</span>
+          <i class="layout-sidebar-link-icon pi pi-briefcase" aria-hidden="true"></i>
           <span class="layout-sidebar-link-text">Services</span>
         </a>
         <a
@@ -57,7 +57,7 @@
           [title]="customersNavLabel()"
           (click)="closeMobileMenu()"
         >
-          <span class="layout-sidebar-link-icon">{{ customersNavLabel()[0] }}</span>
+          <i class="layout-sidebar-link-icon pi pi-users" aria-hidden="true"></i>
           <span class="layout-sidebar-link-text">{{ customersNavLabel() }}</span>
         </a>
         @if (!isSuperAdmin() && user()?.businessId) {
@@ -69,7 +69,7 @@
             title="Theme"
             (click)="closeMobileMenu()"
           >
-            <span class="layout-sidebar-link-icon">T</span>
+            <i class="layout-sidebar-link-icon pi pi-palette" aria-hidden="true"></i>
             <span class="layout-sidebar-link-text">Theme</span>
           </a>
           <a
@@ -79,7 +79,7 @@
             title="Working hours"
             (click)="closeMobileMenu()"
           >
-            <span class="layout-sidebar-link-icon">W</span>
+            <i class="layout-sidebar-link-icon pi pi-clock" aria-hidden="true"></i>
             <span class="layout-sidebar-link-text">Working hours</span>
           </a>
           @if (business()?.slug) {
@@ -91,7 +91,7 @@
               title="Preview customer site"
               (click)="closeMobileMenu()"
             >
-              <span class="layout-sidebar-link-icon">P</span>
+              <i class="layout-sidebar-link-icon pi pi-eye" aria-hidden="true"></i>
               <span class="layout-sidebar-link-text">Preview customer site</span>
             </a>
           }
@@ -105,25 +105,26 @@
       <a
         routerLink="/auth/login"
         class="layout-sidebar-link layout-sidebar-link-footer"
-        title="Login"
+        title="Logout"
         (click)="closeMobileMenu()"
       >
-        <span class="layout-sidebar-link-icon">L</span>
-        <span class="layout-sidebar-link-text">Login</span>
+        <i class="layout-sidebar-link-icon pi pi-sign-out" aria-hidden="true"></i>
+        <span class="layout-sidebar-link-text">Logout</span>
       </a>
     </aside>
   </div>
 
   <header class="layout-topbar">
-    <button
-      type="button"
-      class="layout-topbar-menu-btn"
+    <p-button
+      [icon]="menuToggleIcon()"
+      [rounded]="true"
+      [text]="true"
+      severity="secondary"
       [attr.aria-label]="menuAriaLabel"
       [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
-      (click)="toggleSidebar()"
-    >
-      <span class="layout-topbar-menu-btn-icon" aria-hidden="true"></span>
-    </button>
+      (onClick)="toggleSidebar()"
+      styleClass="layout-topbar-menu-btn layout-topbar-menu-btn-p"
+    />
     <h1 class="layout-topbar-title">Page title</h1>
     <div class="layout-topbar-search-wrap">
       <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
@@ -170,19 +171,21 @@
   </header>
 
   <main class="layout-main">
-    @if (isImpersonating()) {
-      <div class="layout-impersonation-banner">
-        <span class="layout-impersonation-banner-text">
-          Impersonating: {{ business()?.name ?? 'Business' }}
-          @if (business()?.ownerEmail) {
-            ({{ business()?.ownerEmail }})
-          }
-        </span>
-        <button type="button" class="layout-impersonation-banner-btn" (click)="exitImpersonation()">
-          Exit impersonation
-        </button>
-      </div>
-    }
-    <router-outlet></router-outlet>
+    <div class="layout-section">
+      @if (isImpersonating()) {
+        <div class="layout-impersonation-banner">
+          <span class="layout-impersonation-banner-text">
+            Impersonating: {{ business()?.name ?? 'Business' }}
+            @if (business()?.ownerEmail) {
+              ({{ business()?.ownerEmail }})
+            }
+          </span>
+          <button type="button" class="layout-impersonation-banner-btn" (click)="exitImpersonation()">
+            Exit impersonation
+          </button>
+        </div>
+      }
+      <router-outlet></router-outlet>
+    </div>
   </main>
 </div>

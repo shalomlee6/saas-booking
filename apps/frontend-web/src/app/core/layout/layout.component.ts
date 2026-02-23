@@ -15,13 +15,14 @@ import {
 } from '../../modules/admin/services/admin-api.service';
 import { DOCUMENT } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
+import { ButtonModule } from 'primeng/button';
 
 const BREAKPOINT_PX = 1024;
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
@@ -90,6 +91,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
       return this.isMobileMenuOpen() ? 'Close menu' : 'Open menu';
     }
     return this.isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar';
+  }
+
+  /** Icon for menu toggle: pi-bars when sidebar closed, pi-times when open */
+  menuToggleIcon(): string {
+    const open = this.isMobile() ? this.isMobileMenuOpen() : !this.isSidebarCollapsed();
+    return open ? 'pi pi-times' : 'pi pi-bars';
   }
 
   /** Sidebar: Services only when impersonating or business owner; super_admin not impersonating -> /admin/business-customers */

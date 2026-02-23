@@ -3,13 +3,17 @@
   background: #f5f6f8;
   padding: 1rem 1.25rem;
   padding-bottom: 2rem;
+  max-width: 900px;
+  margin-inline: auto;
+  box-sizing: border-box;
 }
 
 .wh-page-title {
-  margin: 0 0 1rem;
+  margin: 0 0 1.25rem;
   font-size: 1.5rem;
   font-weight: 700;
   color: #1a1a1a;
+  text-align: start;
 }
 
 .wh-tabs {
@@ -19,9 +23,16 @@
     padding: 0.25rem;
     margin-bottom: 1rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    border: none;
   }
   ::ng-deep .p-tab {
     border-radius: 12px;
+  }
+  ::ng-deep .p-tab[data-p-active="true"],
+  ::ng-deep .p-tab.p-highlight {
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 12%, transparent);
+    color: var(--color-primary, #3787f6);
+    font-weight: 600;
   }
   ::ng-deep .p-tabpanel-active .p-tabpanels-content {
     padding: 0;
@@ -48,6 +59,7 @@
   padding: 1rem 1.25rem;
   border-bottom: 1px solid #eee;
   flex-wrap: wrap;
+  text-align: start;
 }
 
 .wh-day-row:last-child {
@@ -88,6 +100,8 @@
   margin-top: 1rem;
   font-size: 0.8125rem;
   color: #64748b;
+  flex-direction: row;
+  justify-content: center;
 }
 
 .wh-legend-item {
