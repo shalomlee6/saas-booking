@@ -68,12 +68,33 @@ function validateOpeningHoursPayload(body: unknown): { valid: boolean; message?:
       if (typeof end !== 'string' || !HHMM_REGEX.test(end)) {
         return { valid: false, message: `openingHours.days[${i}].ranges[${j}].end must be HH:mm` };
       }
-      const startM = parseInt(start.slice(0, 2), 10) * 60 + parseInt(start.slice(3), 10);
-      const endM = parseInt(end.slice(0, 2), 10) * 60 + parseInt(end.slice(3), 10);
+      const startH = parseInt(start.slice(0, 2), 10);
+      const startM = startH * 60 + parseInt(start.slice(3), 10);
+      const endH = parseInt(end.slice(0, 2), 10);
+      const endM = endH * 60 + parseInt(end.slice(3), 10);
       if (startM >= endM) {
         return { valid: false, message: `openingHours.days[${i}].ranges[${j}]: start must be before end` };
       }
+      if (startH < 6) {
+        return { valid: false, message: 'Invalid working hours range' };
+      }
+      if (endH > 23) {
+        return { valid: false, message: 'Invalid working hours range' };
+      }
       outRanges.push({ start: start as string, end: end as string });
+    }
+    // Prevent overlapping ranges per day: sort by start, then check end <= next start
+    outRanges.sort((a, b) => {
+      const aM = parseInt(a.start.slice(0, 2), 10) * 60 + parseInt(a.start.slice(3), 10);
+      const bM = parseInt(b.start.slice(0, 2), 10) * 60 + parseInt(b.start.slice(3), 10);
+      return aM - bM;
+    });
+    for (let k = 0; k < outRanges.length - 1; k++) {
+      const currEnd = parseInt(outRanges[k].end.slice(0, 2), 10) * 60 + parseInt(outRanges[k].end.slice(3), 10);
+      const nextStart = parseInt(outRanges[k + 1].start.slice(0, 2), 10) * 60 + parseInt(outRanges[k + 1].start.slice(3), 10);
+      if (currEnd > nextStart) {
+        return { valid: false, message: 'Invalid working hours range' };
+      }
     }
     outDays.push({ day: day as number, isOpen: isOpen as boolean, ranges: outRanges });
   }

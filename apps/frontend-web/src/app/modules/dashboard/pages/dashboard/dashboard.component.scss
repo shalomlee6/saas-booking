@@ -106,6 +106,25 @@
   background: var(--bg-app);
 }
 
+.dashboard-empty {
+  margin: 0;
+  padding: 1rem 0;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.dashboard-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.dashboard-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 900px) {
   .dashboard-stats {
     grid-template-columns: repeat(2, 1fr);

@@ -8,6 +8,7 @@ import {
   postOverride,
   deleteOverride,
 } from '../controllers/availabilityOverridesController';
+import { getBusinessInsights } from '../controllers/insightsController';
 
 export const businessRouter = Router();
 
@@ -57,6 +58,9 @@ businessRouter.patch('/ui', auth, async (req: AuthRequest, res) => {
 
 // PATCH /api/business/settings/opening-hours – default weekly schedule
 businessRouter.patch('/settings/opening-hours', auth, patchOpeningHours);
+
+// Growth insights (revenue, top customers, etc.)
+businessRouter.get('/insights', auth, getBusinessInsights);
 
 // Availability overrides (date-specific exceptions)
 businessRouter.get('/overrides', auth, getOverrides);

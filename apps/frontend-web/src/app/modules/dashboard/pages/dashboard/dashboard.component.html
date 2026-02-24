@@ -1,6 +1,6 @@
 <div class="dashboard-page">
   <h1 class="dashboard-page-title">Dashboard</h1>
-  <p-button label="בדיקה" icon="pi pi-check"></p-button>
+
   <section class="dashboard-stats">
     <div class="dashboard-card dashboard-stat-card">
       <span class="dashboard-stat-label">Total revenue</span>
@@ -11,8 +11,8 @@
       <span class="dashboard-stat-value">—</span>
     </div>
     <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Orders</span>
-      <span class="dashboard-stat-value">—</span>
+      <span class="dashboard-stat-label">Appointments</span>
+      <span class="dashboard-stat-value">{{ (appointments$ | async)?.length ?? 0 }}</span>
     </div>
     <div class="dashboard-card dashboard-stat-card">
       <span class="dashboard-stat-label">Growth</span>
@@ -33,22 +33,37 @@
 
   <section class="dashboard-table-section">
     <div class="dashboard-card dashboard-table-card">
-      <h2 class="dashboard-card-title">Top items / Customers</h2>
+      <h2 class="dashboard-card-title">תורים (עדכון אוטומטי)</h2>
       <div class="dashboard-table-placeholder">
-        <table class="dashboard-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Value</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>—</td><td>—</td><td>—</td></tr>
-            <tr><td>—</td><td>—</td><td>—</td></tr>
-            <tr><td>—</td><td>—</td><td>—</td></tr>
-          </tbody>
-        </table>
+        @if (appointments$ | async; as list) {
+          @if (list.length === 0) {
+            <p class="dashboard-empty">אין תורים בטווח הנוכחי.</p>
+          } @else {
+            <table class="dashboard-table">
+              <thead>
+                <tr>
+                  <th>שעה</th>
+                  <th>לקוח</th>
+                  <th>שירות</th>
+                  <th>סטטוס</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of list.slice(0, 10); track a._id) {
+                  <tr>
+                    <td>{{ a.start | date:'HH:mm' }} – {{ a.end | date:'HH:mm' }}</td>
+                    <td>{{ a.customerName }}</td>
+                    <td>{{ a.serviceName }}</td>
+                    <td><p-tag [value]="a.status" /></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+          <a routerLink="/appointments" class="dashboard-link">לכל התורים</a>
+        } @else {
+          <p class="dashboard-empty">טוען…</p>
+        }
       </div>
     </div>
   </section>

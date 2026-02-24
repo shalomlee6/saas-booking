@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
+import { Service } from '../models/Service';
+import {
+  getAppointmentsList,
+  getMyAppointmentsForRange,
+  getBusinessAppointmentsForWeek,
+  getAvailableSlots,
+} from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
-import { getMyAppointmentsForRange, getBusinessAppointmentsForWeek, getAvailableSlots } from '../controllers/appointmentController';
 
 export const appointmentsRouter = Router();
 
@@ -18,28 +24,7 @@ appointmentsRouter.get('/week', getBusinessAppointmentsForWeek);
 appointmentsRouter.get('/available-slots', getAvailableSlots);
 
 // GET /api/appointments?from=2025-01-01&to=2025-01-02
-appointmentsRouter.get('/', async (req: AuthRequest, res) => {
-  try {
-    const businessId = req.user!.businessId!;
-    const { from, to } = req.query;
-
-    const start = from ? new Date(String(from)) : new Date();
-    const end = to ? new Date(String(to)) : new Date(start.getTime() + 24 * 60 * 60 * 1000);
-
-    const appointments = await Appointment.find({
-      businessId,
-      start: { $gte: start, $lt: end },
-    })
-      .populate('customerId')
-      .populate('serviceId')
-      .sort({ start: 1 });
-
-    res.json(appointments);
-  } catch (err) {
-    console.error('Error GET /appointments:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+appointmentsRouter.get('/', getAppointmentsList);
 
 // POST /api/appointments
 appointmentsRouter.post('/', async (req: AuthRequest, res) => {
@@ -53,13 +38,19 @@ appointmentsRouter.post('/', async (req: AuthRequest, res) => {
       });
     }
 
-    // בעתיד: לבדוק שאין התנגשות תורים
+    const service = await Service.findOne({ _id: serviceId, businessId });
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+
     const appointment = await Appointment.create({
       businessId,
       customerId,
       serviceId,
-      start,
-      end,
+      price: service.price,
+      durationMinutes: service.durationMinutes,
+      start: new Date(start),
+      end: new Date(end),
       status: 'confirmed',
       source: 'owner',
       notes,

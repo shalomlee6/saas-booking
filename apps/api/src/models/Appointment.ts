@@ -12,6 +12,10 @@ export interface IAppointment extends Document {
   customerId?: Types.ObjectId;
   customerName?: string;
   customerPhone?: string;
+  /** Snapshot from service at creation time */
+  price?: number;
+  /** Snapshot from service at creation time (minutes) */
+  durationMinutes?: number;
   start: Date;
   end: Date;
   status: AppointmentStatus;
@@ -41,6 +45,8 @@ const AppointmentSchema = new Schema<IAppointment>(
       ref: 'Service',
       required: true,
     },
+    price: Number,
+    durationMinutes: Number,
     start: { type: Date, required: true, index: true },
     end: { type: Date, required: true },
     status: {

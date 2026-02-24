@@ -1,4 +1,4 @@
-/** Populated refs from GET /api/appointments (customerId/serviceId can be objects) */
+/** Populated refs (when not using list DTO) */
 export interface AppointmentCustomer {
   _id: string;
   name: string;
@@ -11,15 +11,35 @@ export interface AppointmentService {
   colorHex?: string;
 }
 
+/** Flattened list DTO from GET /api/appointments */
+export interface AppointmentListItem {
+  appointmentId: string;
+  start: string;
+  end: string;
+  status: string;
+  price?: number;
+  durationMinutes?: number;
+  serviceName: string;
+  customerName: string;
+  customerPhone: string | null;
+}
+
+/** Full or list appointment (list has _id set from appointmentId in effect) */
 export interface Appointment {
   _id: string;
-  customerId: string | AppointmentCustomer;
-  serviceId: string | AppointmentService;
+  appointmentId?: string;
+  customerId?: string | AppointmentCustomer;
+  serviceId?: string | AppointmentService;
+  customerName?: string;
+  customerPhone?: string | null;
+  serviceName?: string;
+  price?: number;
+  durationMinutes?: number;
   start: string;
   end: string;
   status: string;
   source?: string;
   notes?: string;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

@@ -70,7 +70,7 @@ export function getWeekDays(anchor: Date): Date[] {
  * Minutes from midnight (00:00) for the given date.
  */
 export function minutesFromMidnight(d: Date): number {
-  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  return d.getUTCHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
 }
 
 /**
@@ -189,9 +189,9 @@ export function getAppointmentBlockLayout(
 }
 
 function formatTimeRange(start: Date, end: Date): string {
-  const sh = start.getHours();
+  const sh = start.getUTCHours();
   const sm = start.getMinutes();
-  const eh = end.getHours();
+  const eh = end.getUTCHours();
   const em = end.getMinutes();
   const fmt = (h: number, m: number) =>
     `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
@@ -199,12 +199,14 @@ function formatTimeRange(start: Date, end: Date): string {
 }
 
 function getCustomerDisplay(apt: Appointment): string {
+  if ((apt as { customerName?: string }).customerName) return (apt as { customerName: string }).customerName;
   const c = apt.customerId;
   if (c && typeof c === 'object' && 'name' in c) return (c as AppointmentCustomer).name;
   return typeof c === 'string' ? c : '—';
 }
 
 function getServiceDisplay(apt: Appointment): string {
+  if ((apt as { serviceName?: string }).serviceName) return (apt as { serviceName: string }).serviceName;
   const s = apt.serviceId;
   if (s && typeof s === 'object' && 'name' in s) return (s as AppointmentService).name;
   return typeof s === 'string' ? s : '—';

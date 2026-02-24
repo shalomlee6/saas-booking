@@ -4,7 +4,9 @@ import {
   inject,
   signal,
   computed,
+  afterNextRender,
 } from '@angular/core';
+import { DOCUMENT, DatePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -33,6 +35,11 @@ import {
 import type { AppointmentBlockLayout } from '../../utils/calendar.utils';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AppointmentCreateOverlayComponent } from '../../../../core/ui/overlay/appointment-create-overlay.component';
+import { AppointmentsApiService } from '../../services/appointments-api.service';
+import { DialogModule } from 'primeng/dialog';
+import { DrawerModule } from 'primeng/drawer';
+import { TagModule } from 'primeng/tag';
+import { ButtonModule } from 'primeng/button';
 
 type ViewMode = 'day' | 'week';
 
@@ -56,20 +63,36 @@ function getListParamsForDay(anchor: Date): { from: string; to: string } {
   };
 }
 
+const DETAIL_BREAKPOINT_PX = 768;
+
 @Component({
   selector: 'app-appointments-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, AppointmentCreateOverlayComponent],
+  imports: [
+    RouterLink,
+    FormsModule,
+    AppointmentCreateOverlayComponent,
+    DialogModule,
+    DrawerModule,
+    TagModule,
+    ButtonModule,
+    DatePipe,
+  ],
   templateUrl: './appointments-list.component.html',
   styleUrl: './appointments-list.component.scss',
 })
 export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
   private readonly auth = inject(AuthService);
+  private readonly appointmentsApi = inject(AppointmentsApiService);
+  private readonly doc = inject(DOCUMENT);
+
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
   readonly today = new Date();
   toDateKey = toDateKey;
+  readonly isMobile = signal(false);
+  readonly selectedAppointment = signal<Appointment | null>(null);
 
   readonly workingHours = () =>
     this.auth.businessSettings()?.workingHours ?? null;
@@ -119,6 +142,16 @@ export class AppointmentsListComponent implements OnInit {
 
   readonly gridBodyHeightPx = GRID_BODY_HEIGHT_PX;
   readonly slotHeightPx = CALENDAR_SLOT_HEIGHT_PX;
+
+  constructor() {
+    afterNextRender(() => {
+      const win = this.doc.defaultView;
+      if (!win) return;
+      const update = () => this.isMobile.set(win.innerWidth < DETAIL_BREAKPOINT_PX);
+      update();
+      win.addEventListener('resize', update);
+    });
+  }
 
   ngOnInit(): void {
     this.loadForCurrentView();
@@ -213,17 +246,66 @@ export class AppointmentsListComponent implements OnInit {
   onAppointmentCreated(): void {
     this.closeOverlay();
     this.loadForCurrentView();
+    this.appointmentsApi.refresh();
+  }
+
+  openAppointment(apt: Appointment): void {
+    this.selectedAppointment.set(apt);
+  }
+
+  closeDetail(): void {
+    this.selectedAppointment.set(null);
+  }
+
+  onDetailVisibleChange(visible: boolean): void {
+    if (!visible) this.closeDetail();
+  }
+
+  onDetailCancel(): void {
+    const apt = this.selectedAppointment();
+    if (!apt) return;
+    this.appointmentsApi.cancel(apt._id).subscribe({
+      next: () => {
+        this.closeDetail();
+        this.loadForCurrentView();
+        this.appointmentsApi.refresh();
+      },
+      error: () => {},
+    });
   }
 
   customerDisplay(apt: Appointment): string {
+    if (apt.customerName) return apt.customerName;
     const c = apt.customerId;
     if (c && typeof c === 'object' && 'name' in c) return (c as { name: string }).name;
     return typeof c === 'string' ? c : '—';
   }
 
   serviceDisplay(apt: Appointment): string {
+    if (apt.serviceName) return apt.serviceName;
     const s = apt.serviceId;
     if (s && typeof s === 'object' && 'name' in s) return (s as { name: string }).name;
     return typeof s === 'string' ? s : '—';
+  }
+
+  priceDisplay(apt: Appointment): string {
+    if (apt.price != null) return `${apt.price} ₪`;
+    return '—';
+  }
+
+  customerPhoneDisplay(apt: Appointment): string {
+    if (apt.customerPhone != null && apt.customerPhone !== '') return apt.customerPhone;
+    const c = apt.customerId;
+    if (c && typeof c === 'object' && 'phone' in c) return (c as { phone?: string }).phone ?? '—';
+    return '—';
+  }
+
+  statusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    const s = (status || '').toLowerCase();
+    if (s === 'confirmed') return 'success';
+    if (s === 'pending') return 'warn';
+    if (s === 'completed') return 'info';
+    if (s === 'cancelled' || s === 'canceled') return 'danger';
+    return 'secondary';
   }
 }

@@ -109,14 +109,14 @@
                   </div>
                   @for (block of getBlocksForDay(day); track block.appointment._id) {
                     <div
-                      class="calendar-block"
+                      class="calendar-block calendar-block-clickable"
                       [class]="blockStatusClass(block)"
                       [style.top.px]="block.topPx"
                       [style.height.px]="block.heightPx"
                       [style.--block-bg]="block.bgColor"
                       [style.--block-text]="block.textColor"
                       [style.--block-border]="block.borderColor"
-                      (click)="$event.stopPropagation()"
+                      (click)="$event.stopPropagation(); openAppointment(block.appointment)"
                     >
                       <span class="calendar-block-customer">{{ block.customerName }}</span>
                       <span class="calendar-block-service">{{ block.serviceName }}</span>
@@ -130,5 +130,98 @@
         </div>
       </div>
     }
+
+    <!-- Appointment cards list -->
+    @if (!loading() && filteredItems().length > 0) {
+      <section class="appointments-cards-section">
+        <h2 class="appointments-cards-title">תורים</h2>
+        <div class="appointments-cards-list">
+          @for (a of filteredItems(); track a._id) {
+            <div
+              class="appointment-card"
+              (click)="openAppointment(a)"
+            >
+              <div class="appointment-card-time">{{ a.start | date:'HH:mm' }} – {{ a.end | date:'HH:mm' }}</div>
+              <div class="appointment-card-customer">{{ customerDisplay(a) }}</div>
+              <div class="appointment-card-service">{{ serviceDisplay(a) }}</div>
+              <p-tag [value]="a.status" [severity]="statusSeverity(a.status)" />
+            </div>
+          }
+        </div>
+      </section>
+    }
   </div>
+
+  <!-- Detail: Dialog (desktop) or Drawer (mobile) -->
+  @if (selectedAppointment(); as apt) {
+    @if (!isMobile()) {
+      <p-dialog
+        header="פרטי תור"
+        [visible]="true"
+        [modal]="true"
+        [closable]="true"
+        [style]="{ width: '400px' }"
+        (visibleChange)="onDetailVisibleChange($event)"
+        styleClass="appointments-detail-dialog"
+      >
+        <div class="appointments-detail">
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">לקוח</span>
+            <span class="appointments-detail-value">{{ customerDisplay(apt) }}</span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">שירות</span>
+            <span class="appointments-detail-value">{{ serviceDisplay(apt) }}</span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">מחיר</span>
+            <span class="appointments-detail-value">{{ priceDisplay(apt) }}</span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">סטטוס</span>
+            <span class="appointments-detail-value"><p-tag [value]="apt.status" [severity]="statusSeverity(apt.status)" /></span>
+          </div>
+        </div>
+        <ng-template pTemplate="footer">
+          <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" />
+          <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" />
+        </ng-template>
+      </p-dialog>
+    }
+    @if (isMobile()) {
+      <p-drawer
+        [visible]="true"
+        position="right"
+        [style]="{ width: 'min(100%, 360px)' }"
+        (visibleChange)="onDetailVisibleChange($event)"
+        styleClass="appointments-detail-drawer"
+      >
+        <ng-template pTemplate="header">
+          <span>פרטי תור</span>
+        </ng-template>
+        <div class="appointments-detail">
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">לקוח</span>
+            <span class="appointments-detail-value">{{ customerDisplay(apt) }}</span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">שירות</span>
+            <span class="appointments-detail-value">{{ serviceDisplay(apt) }}</span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">מחיר</span>
+            <span class="appointments-detail-value">{{ priceDisplay(apt) }}</span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">סטטוס</span>
+            <span class="appointments-detail-value"><p-tag [value]="apt.status" [severity]="statusSeverity(apt.status)" /></span>
+          </div>
+        </div>
+        <div class="appointments-detail-actions">
+          <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" />
+          <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" />
+        </div>
+      </p-drawer>
+    }
+  }
 </div>

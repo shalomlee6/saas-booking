@@ -251,6 +251,8 @@ export async function createPublicAppointment(req: Request, res: Response) {
       customerId: undefined,
       customerName: body.customerName,
       customerPhone: body.customerPhone,
+      price: service.price,
+      durationMinutes: service.durationMinutes ?? 30,
       start: startAt,
       end: endAt,
       status: 'confirmed',

@@ -5,6 +5,52 @@ import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 
+/** GET /api/appointments - list for owner dashboard; flattened DTO, sort start ASC */
+export async function getAppointmentsList(req: AuthRequest, res: Response) {
+  try {
+    const businessId = resolveBusinessIdFromReq(req);
+    if (!businessId) {
+      return res.status(400).json({ message: 'businessId is required' });
+    }
+    const start = req.query.from ? new Date(String(req.query.from)) : new Date();
+    const end = req.query.to
+      ? new Date(String(req.query.to))
+      : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+
+    const appointments = await Appointment.find({
+      businessId,
+      start: { $gte: start, $lt: end },
+    })
+      .populate('customerId', 'name phone')
+      .populate('serviceId', 'name durationMinutes price')
+      .sort({ start: 1 })
+      .lean();
+
+    const dtoArray = appointments.map((apt: any) => {
+      const customer = apt.customerId;
+      const service = apt.serviceId;
+      const price = apt.price ?? service?.price ?? undefined;
+      const durationMinutes = apt.durationMinutes ?? service?.durationMinutes ?? undefined;
+      return {
+        appointmentId: apt._id.toString(),
+        start: apt.start,
+        end: apt.end,
+        status: apt.status,
+        price,
+        durationMinutes,
+        serviceName: service?.name ?? '',
+        customerName: customer?.name ?? apt.customerName ?? 'לקוחה',
+        customerPhone: customer?.phone ?? apt.customerPhone ?? null,
+      };
+    });
+
+    res.json(dtoArray);
+  } catch (err) {
+    console.error('Error GET /appointments:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 export async function getMyAppointmentsForRange(req: AuthRequest, res: Response) {
   try {
     if (!req.user) {
