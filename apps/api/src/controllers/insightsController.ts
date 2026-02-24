@@ -28,6 +28,9 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       Appointment.aggregate([
         { $match: { businessId: businessIdObj, status: { $ne: 'cancelled' } } },
         { $group: { _id: '$serviceId', total: { $sum: { $ifNull: ['$price', 0] } } } },
+        { $lookup: { from: 'services', localField: '_id', foreignField: '_id', as: 'svc' } },
+        { $unwind: { path: '$svc', preserveNullAndEmptyArrays: true } },
+        { $project: { total: 1, serviceName: { $ifNull: ['$svc.name', ''] } } },
       ]),
       Appointment.aggregate([
         { $match: { businessId: businessIdObj, status: { $ne: 'cancelled' } } },
@@ -43,8 +46,8 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     ]);
 
     const totalRevenue = revenueResult[0]?.total ?? 0;
-    const revenueByService = revenueByServiceResult.map((r: { _id: mongoose.Types.ObjectId; total: number }) => ({
-      serviceId: r._id?.toString(),
+    const revenueByService = revenueByServiceResult.map((r: { serviceName?: string; total: number }) => ({
+      serviceName: r.serviceName ?? '',
       total: r.total,
     }));
     const revenueByWeekday = revenueByWeekdayResult.map((r: { _id: number; total: number }) => ({
@@ -61,9 +64,12 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       { $group: { _id: '$customerId', total: { $sum: { $ifNull: ['$price', 0] } } } },
       { $sort: { total: -1 } },
       { $limit: 5 },
+      { $lookup: { from: 'customers', localField: '_id', foreignField: '_id', as: 'cust' } },
+      { $unwind: { path: '$cust', preserveNullAndEmptyArrays: true } },
+      { $project: { total: 1, name: { $ifNull: ['$cust.name', ''] } } },
     ]);
-    const topCustomers = topCustomersAgg.map((r: { _id: mongoose.Types.ObjectId; total: number }) => ({
-      customerId: r._id?.toString(),
+    const topCustomers = topCustomersAgg.map((r: { name?: string; total: number }) => ({
+      name: r.name ?? '',
       total: r.total,
     }));
 

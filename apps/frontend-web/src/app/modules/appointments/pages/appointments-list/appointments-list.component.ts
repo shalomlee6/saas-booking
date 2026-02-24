@@ -36,6 +36,7 @@ import type { AppointmentBlockLayout } from '../../utils/calendar.utils';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { AppointmentCreateOverlayComponent } from '../../../../core/ui/overlay/appointment-create-overlay.component';
 import { AppointmentsApiService } from '../../services/appointments-api.service';
+import { GrowthBrainService } from '../../../dashboard/services/growth-brain.service';
 import { DialogModule } from 'primeng/dialog';
 import { DrawerModule } from 'primeng/drawer';
 import { TagModule } from 'primeng/tag';
@@ -85,6 +86,7 @@ export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
   private readonly auth = inject(AuthService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
+  private readonly growthBrain = inject(GrowthBrainService);
   private readonly doc = inject(DOCUMENT);
 
   readonly viewMode = signal<ViewMode>('week');
@@ -247,6 +249,7 @@ export class AppointmentsListComponent implements OnInit {
     this.closeOverlay();
     this.loadForCurrentView();
     this.appointmentsApi.refresh();
+    this.growthBrain.refresh();
   }
 
   openAppointment(apt: Appointment): void {
@@ -269,6 +272,7 @@ export class AppointmentsListComponent implements OnInit {
         this.closeDetail();
         this.loadForCurrentView();
         this.appointmentsApi.refresh();
+        this.growthBrain.refresh();
       },
       error: () => {},
     });

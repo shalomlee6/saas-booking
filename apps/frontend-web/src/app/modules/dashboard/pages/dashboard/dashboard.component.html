@@ -4,30 +4,75 @@
   <section class="dashboard-stats">
     <div class="dashboard-card dashboard-stat-card">
       <span class="dashboard-stat-label">Total revenue</span>
-      <span class="dashboard-stat-value">—</span>
+      <span class="dashboard-stat-value">{{ (insights$ | async)?.totalRevenue | currency:'ILS' }}</span>
     </div>
     <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Customers</span>
-      <span class="dashboard-stat-value">—</span>
+      <span class="dashboard-stat-label">Inactive customers (60d)</span>
+      <span class="dashboard-stat-value">{{ (insights$ | async)?.inactiveCustomersCount ?? 0 }}</span>
     </div>
     <div class="dashboard-card dashboard-stat-card">
       <span class="dashboard-stat-label">Appointments</span>
       <span class="dashboard-stat-value">{{ (appointments$ | async)?.length ?? 0 }}</span>
     </div>
     <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Growth</span>
-      <span class="dashboard-stat-value">—</span>
+      <span class="dashboard-stat-label">Top customers</span>
+      <span class="dashboard-stat-value">{{ (insights$ | async)?.topCustomers?.length ?? 0 }}</span>
     </div>
   </section>
 
   <section class="dashboard-charts">
     <div class="dashboard-card dashboard-chart-card">
-      <h2 class="dashboard-card-title">Chart placeholder</h2>
-      <div class="dashboard-chart-placeholder"></div>
+      <h2 class="dashboard-card-title">Revenue by weekday</h2>
+      @if (revenueByWeekdayChart$ | async; as chartData) {
+        <p-chart type="bar" [data]="chartData" [responsive]="true" />
+      } @else {
+        <p class="dashboard-empty">טוען…</p>
+      }
     </div>
     <div class="dashboard-card dashboard-chart-card">
-      <h2 class="dashboard-card-title">Chart placeholder</h2>
-      <div class="dashboard-chart-placeholder"></div>
+      <h2 class="dashboard-card-title">Revenue by service</h2>
+      @if (revenueByServiceChart$ | async; as chartData) {
+        <p-chart type="bar" [data]="chartData" [responsive]="true" />
+      } @else {
+        <p class="dashboard-empty">טוען…</p>
+      }
+    </div>
+  </section>
+
+  <section class="dashboard-table-section">
+    <div class="dashboard-card dashboard-table-card">
+      <h2 class="dashboard-card-title">Top customers</h2>
+      @if (insights$ | async; as insights) {
+        <p-table [value]="insights.topCustomers" [tableStyle]="{ 'min-width': '50rem' }">
+          <ng-template pTemplate="header">
+            <tr>
+              <th>Name</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="body" let-customer>
+            <tr>
+              <td>{{ customer.name || '—' }}</td>
+              <td>{{ customer.total | currency:'ILS' }}</td>
+              <td>
+                @if (customer.total >= vipThreshold) {
+                  <p-tag value="VIP" severity="success" />
+                } @else {
+                  <span class="dashboard-status-regular">—</span>
+                }
+              </td>
+            </tr>
+          </ng-template>
+          <ng-template pTemplate="emptymessage">
+            <tr>
+              <td colspan="3">No data yet.</td>
+            </tr>
+          </ng-template>
+        </p-table>
+      } @else {
+        <p class="dashboard-empty">טוען…</p>
+      }
     </div>
   </section>
 
