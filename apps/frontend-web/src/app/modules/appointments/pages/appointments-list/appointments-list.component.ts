@@ -21,9 +21,6 @@ import {
 import {
   GRID_BODY_HEIGHT_PX,
   CALENDAR_SLOT_HEIGHT_PX,
-  getWeekStart,
-  getWeekEnd,
-  getWeekDays,
   getHourLabelsWithStyle,
   getSlotsForDay,
   groupAppointmentsByDay,
@@ -44,20 +41,19 @@ import { ButtonModule } from 'primeng/button';
 
 type ViewMode = 'day' | 'week';
 
-function getListParamsForWeek(anchor: Date): { from: string; to: string } {
-  const start = getWeekStart(anchor);
-  const end = getWeekEnd(anchor);
-  return {
-    from: start.toISOString(),
-    to: end.toISOString(),
-  };
+function startOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
 }
 
-function getListParamsForDay(anchor: Date): { from: string; to: string } {
-  const start = new Date(anchor);
-  start.setHours(0, 0, 0, 0);
+function getListParamsForVisibleRange(
+  visibleStart: Date,
+  dayCount: number
+): { from: string; to: string } {
+  const start = startOfDay(new Date(visibleStart));
   const end = new Date(start);
-  end.setDate(end.getDate() + 1);
+  end.setDate(end.getDate() + dayCount);
   return {
     from: start.toISOString(),
     to: end.toISOString(),
@@ -96,6 +92,11 @@ export class AppointmentsListComponent implements OnInit {
   readonly isMobile = signal(false);
   readonly selectedAppointment = signal<Appointment | null>(null);
 
+  /** First day of the visible range (normalized to 00:00). Initial load = today. */
+  readonly visibleStartDate = signal<Date>(startOfDay(new Date()));
+  /** Number of days to show: desktop 7, mobile 3, day view 1. */
+  readonly visibleDaysCount = signal(7);
+
   readonly workingHours = () =>
     this.auth.businessSettings()?.workingHours ?? null;
 
@@ -107,14 +108,31 @@ export class AppointmentsListComponent implements OnInit {
     initialValue: null as string | null,
   });
 
-  readonly weekDays = computed(() => {
-    const mode = this.viewMode();
-    const anchor = this.today;
-    if (mode === 'day') {
-      return [new Date(anchor)];
+  /** Visible days for the calendar (used for header and columns). */
+  getVisibleDays(): Date[] {
+    const start = this.visibleStartDate();
+    const count = this.visibleDaysCount();
+    const days: Date[] = [];
+    for (let i = 0; i < count; i++) {
+      const d = new Date(start);
+      d.setDate(d.getDate() + i);
+      d.setHours(0, 0, 0, 0);
+      days.push(d);
     }
-    return getWeekDays(anchor);
-  });
+    return days;
+  }
+
+  /** True when the visible range starts at today (disable prev arrow). */
+  isAtToday(): boolean {
+    const a = startOfDay(this.visibleStartDate());
+    const b = startOfDay(this.today);
+    return a.getTime() === b.getTime();
+  }
+
+  /** True when the given day is today (for highlighting column). */
+  isToday(day: Date): boolean {
+    return toDateKey(day) === toDateKey(this.today);
+  }
 
   readonly hourLabelsWithStyle = computed(() => getHourLabelsWithStyle());
 
@@ -135,11 +153,12 @@ export class AppointmentsListComponent implements OnInit {
 
   readonly byDay = computed(() => {
     const list = this.filteredItems();
-    const days = this.weekDays();
-    if (days.length === 0) return new Map<string, Appointment[]>();
-    const weekStart = getWeekStart(this.today);
-    const weekEnd = getWeekEnd(this.today);
-    return groupAppointmentsByDay(list, weekStart, weekEnd);
+    const start = this.visibleStartDate();
+    const count = this.visibleDaysCount();
+    const rangeStart = startOfDay(new Date(start));
+    const rangeEnd = new Date(rangeStart);
+    rangeEnd.setDate(rangeEnd.getDate() + count);
+    return groupAppointmentsByDay(list, rangeStart, rangeEnd);
   });
 
   readonly gridBodyHeightPx = GRID_BODY_HEIGHT_PX;
@@ -149,27 +168,55 @@ export class AppointmentsListComponent implements OnInit {
     afterNextRender(() => {
       const win = this.doc.defaultView;
       if (!win) return;
-      const update = () => this.isMobile.set(win.innerWidth < DETAIL_BREAKPOINT_PX);
+      const update = () => {
+        this.isMobile.set(win.innerWidth < DETAIL_BREAKPOINT_PX);
+        this.updateVisibleDaysCount();
+      };
       update();
       win.addEventListener('resize', update);
     });
   }
 
   ngOnInit(): void {
+    this.updateVisibleDaysCount();
     this.loadForCurrentView();
+  }
+
+  private updateVisibleDaysCount(): void {
+    const mode = this.viewMode();
+    if (mode === 'day') {
+      this.visibleDaysCount.set(1);
+      return;
+    }
+    this.visibleDaysCount.set(this.isMobile() ? 3 : 7);
   }
 
   setViewMode(mode: ViewMode): void {
     this.viewMode.set(mode);
+    this.updateVisibleDaysCount();
+    this.loadForCurrentView();
+  }
+
+  nextRange(): void {
+    const start = new Date(this.visibleStartDate());
+    start.setDate(start.getDate() + this.visibleDaysCount());
+    this.visibleStartDate.set(startOfDay(start));
+    this.loadForCurrentView();
+  }
+
+  prevRange(): void {
+    const start = new Date(this.visibleStartDate());
+    start.setDate(start.getDate() - this.visibleDaysCount());
+    this.visibleStartDate.set(startOfDay(start));
     this.loadForCurrentView();
   }
 
   private loadForCurrentView(): void {
-    const mode = this.viewMode();
-    const params =
-      mode === 'day'
-        ? getListParamsForDay(this.today)
-        : getListParamsForWeek(this.today);
+    const count = this.visibleDaysCount();
+    const params = getListParamsForVisibleRange(
+      this.visibleStartDate(),
+      count
+    );
     this.store.dispatch(AppointmentsActions.load({ params }));
   }
 

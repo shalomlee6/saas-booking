@@ -145,7 +145,7 @@
   font-size: 0.875rem;
 }
 
-// ——— Calendar shell: header fixed, only grid scrolls ———
+// ——— Calendar shell: header with nav, only grid scrolls ———
 .calendar-shell {
   display: flex;
   flex-direction: column;
@@ -154,13 +154,48 @@
   --calendar-time-col-width: 56px;
 }
 
+.appointments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 1;
+}
+
+.appointments-nav-btn {
+  flex-shrink: 0;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.appointments-days {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
 .calendar-header {
   display: grid;
   grid-template-columns: var(--calendar-time-col-width, 56px) repeat(var(--day-count, 7), minmax(0, 1fr));
   flex-shrink: 0;
   background: var(--bg-card);
-  border-bottom: 1px solid var(--border-color);
   z-index: 1;
+  &.appointments-days {
+    border-bottom: none;
+  }
+}
+
+.calendar-header-day--today {
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 12%, transparent);
+  font-weight: 600;
+  .calendar-header-day-date {
+    color: var(--color-primary, #6366f1);
+  }
 }
 
 .calendar-scroll {
@@ -278,6 +313,23 @@
   position: relative;
   border-left: 1px solid var(--border-color);
   background: var(--bg-card);
+
+  &.calendar-day-col--today {
+    background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, var(--bg-card));
+  }
+}
+
+@media (max-width: 767px) {
+  .appointments-days {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .calendar-header.appointments-days {
+    grid-template-columns: var(--calendar-time-col-width, 56px) repeat(var(--day-count), minmax(min(100%, 120px), 1fr));
+  }
+  .calendar-days {
+    grid-template-columns: repeat(var(--day-count), minmax(min(100%, 120px), 1fr));
+  }
 }
 
 .calendar-day-disabled {

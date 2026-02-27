@@ -54,23 +54,45 @@
     }
     @if (!loading()) {
       <div class="calendar-shell">
-        <div
-          class="calendar-header"
-          [style.--day-count]="viewMode() === 'day' ? 1 : 7"
-        >
-          <div class="calendar-header-time"></div>
-          @for (day of weekDays(); track toDateKey(day)) {
-            <div class="calendar-header-day">
-              <span class="calendar-header-day-name">{{ dayName(day) }}</span>
-              <span class="calendar-header-day-date">{{ day | date:'dd/MM' }}</span>
-            </div>
-          }
+        <div class="appointments-header">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-left"
+            class="p-button-text appointments-nav-btn"
+            [disabled]="isAtToday()"
+            (click)="prevRange()"
+            aria-label="Previous range"
+          ></button>
+          <div
+            class="calendar-header appointments-days"
+            [style.--day-count]="visibleDaysCount()"
+          >
+            <div class="calendar-header-time"></div>
+            @for (day of getVisibleDays(); track toDateKey(day)) {
+              <div
+                class="calendar-header-day"
+                [class.calendar-header-day--today]="isToday(day)"
+              >
+                <span class="calendar-header-day-name">{{ dayName(day) }}</span>
+                <span class="calendar-header-day-date">{{ day | date:'dd/MM' }}</span>
+              </div>
+            }
+          </div>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-right"
+            class="p-button-text appointments-nav-btn"
+            (click)="nextRange()"
+            aria-label="Next range"
+          ></button>
         </div>
         <div
           class="calendar-scroll"
           [style.--grid-body-height]="gridBodyHeightPx + 'px'"
           [style.--slot-height]="slotHeightPx + 'px'"
-          [style.--day-count]="viewMode() === 'day' ? 1 : 7"
+          [style.--day-count]="visibleDaysCount()"
         >
           <div class="calendar-body">
             <div class="calendar-time-col">
@@ -84,9 +106,10 @@
               }
             </div>
             <div class="calendar-days">
-              @for (day of weekDays(); track toDateKey(day)) {
+              @for (day of getVisibleDays(); track toDateKey(day)) {
                 <div
                   class="calendar-day-col"
+                  [class.calendar-day-col--today]="isToday(day)"
                   [attr.title]="getDayWorkingTitle(day)"
                 >
                   @for (range of getDisabledRanges(day); track range.key) {

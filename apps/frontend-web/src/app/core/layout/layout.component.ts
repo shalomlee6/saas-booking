@@ -17,7 +17,7 @@ import { DOCUMENT } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
 
-const BREAKPOINT_PX = 1024;
+const BREAKPOINT_PX = 768;
 
 @Component({
   selector: 'app-layout',
