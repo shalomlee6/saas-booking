@@ -94,6 +94,16 @@
   margin-top: 0.25rem;
 }
 
+.book-page-slots-empty {
+  margin: 0;
+  padding: 1rem;
+  font-size: 1rem;
+  color: #64748b;
+  text-align: center;
+  background: #f8fafc;
+  border-radius: 12px;
+}
+
 .book-page-slots {
   display: flex;
   flex-direction: column;

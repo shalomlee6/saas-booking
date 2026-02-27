@@ -157,11 +157,14 @@ export class AppointmentCreateOverlayComponent {
       startDate.getTime() +
         DEFAULT_APPOINTMENT_DURATION_MINUTES * 60 * 1000
     );
+
     const dto: CreateAppointmentDto = {
       customerId: this.form.get('customerId')?.value?.trim() ?? '',
       serviceId: this.form.get('serviceId')?.value?.trim() ?? '',
       start: startDate.toISOString(),
       end: endDate.toISOString(),
+      time: t,
+      date: d,
       notes: this.form.get('notes')?.value?.trim() || undefined,
     };
     this.store.dispatch(AppointmentsActions.create({ dto }));

@@ -9,6 +9,7 @@ import {
   getPublicBusinessBySlug,
   getPublicServices as getPublicServicesBooking,
   getAvailability,
+  getPublicAvailability,
   createPublicAppointment as createPublicAppointmentBooking,
 } from '../controllers/publicBookingController';
 import { requestOtp, verifyOtp } from '../controllers/publicAuthController';
@@ -16,6 +17,8 @@ import { requestOtp, verifyOtp } from '../controllers/publicAuthController';
 export const publicRouter = Router();
 
 // --- Public booking API (used by customer UI at /b/:slug/book)
+// GET /api/public/availability?businessId=...&serviceId=...&date=YYYY-MM-DD (real availability)
+publicRouter.get('/availability', getPublicAvailability);
 // GET /api/public/businesses/:slug
 publicRouter.get('/businesses/:slug', getPublicBusinessBySlug);
 // GET /api/public/businesses/:slug/services

@@ -65,6 +65,6 @@ const AppointmentSchema = new Schema<IAppointment>(
   { timestamps: true }
 );
 
-AppointmentSchema.index({ businessId: 1, start: 1 });
+AppointmentSchema.index({ businessId: 1, status: 1, start: 1, end: 1 });
 
 export const Appointment = model<IAppointment>('Appointment', AppointmentSchema);

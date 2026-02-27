@@ -4,5 +4,7 @@ export interface CreateAppointmentDto {
   serviceId: string;
   start: string;
   end: string;
+  time?: string;
+  date?: string;
   notes?: string;
 }
