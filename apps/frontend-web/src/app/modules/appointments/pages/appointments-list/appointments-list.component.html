@@ -62,7 +62,7 @@
           @for (day of weekDays(); track toDateKey(day)) {
             <div class="calendar-header-day">
               <span class="calendar-header-day-name">{{ dayName(day) }}</span>
-              <span class="calendar-header-day-date">{{ dateStr(day) }}</span>
+              <span class="calendar-header-day-date">{{ day | date:'dd/MM' }}</span>
             </div>
           }
         </div>

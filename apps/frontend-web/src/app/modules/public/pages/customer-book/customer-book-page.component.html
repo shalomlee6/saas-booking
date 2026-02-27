@@ -56,6 +56,8 @@
             <p-skeleton width="100%" height="3rem" class="mb-2" />
             <p-skeleton width="100%" height="3rem" class="mb-2" />
             <p-skeleton width="100%" height="3rem" />
+          } @else if (slots().length === 0) {
+            <p class="book-page-slots-empty">אין שעות פנויות ביום זה</p>
           } @else {
             <div class="book-page-slots">
               @for (slot of slots(); track slot) {

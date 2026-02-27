@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
-import { Service } from '../models/Service';
+import { DateTime } from 'luxon';
 import {
   getAppointmentsList,
   getMyAppointmentsForRange,
@@ -8,6 +8,11 @@ import {
   getAvailableSlots,
 } from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
+import {
+  createAppointmentAtomic,
+  AppointmentError,
+  assertNoOverlap,
+} from '../services/createAppointmentAtomic';
 
 export const appointmentsRouter = Router();
 
@@ -26,6 +31,10 @@ appointmentsRouter.get('/available-slots', getAvailableSlots);
 // GET /api/appointments?from=2025-01-01&to=2025-01-02
 appointmentsRouter.get('/', getAppointmentsList);
 
+function hasTimezoneOffset(iso: string): boolean {
+  return /Z$|[+-]\d{2}:\d{2}$/.test(iso);
+}
+
 // POST /api/appointments
 appointmentsRouter.post('/', async (req: AuthRequest, res) => {
   try {
@@ -38,28 +47,48 @@ appointmentsRouter.post('/', async (req: AuthRequest, res) => {
       });
     }
 
-    const service = await Service.findOne({ _id: serviceId, businessId });
-    if (!service) {
-      return res.status(404).json({ message: 'Service not found' });
+    // Enforce explicit timezone offset on start/end
+    if (typeof start !== 'string' || !hasTimezoneOffset(start)) {
+      return res.status(400).json({
+        message:
+          'start must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T13:00:00+02:00 or 2026-02-26T11:00:00Z)',
+      });
+    }
+    if (typeof end !== 'string' || !hasTimezoneOffset(end)) {
+      return res.status(400).json({
+        message:
+          'end must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T14:00:00+02:00 or 2026-02-26T12:00:00Z)',
+      });
     }
 
-    const appointment = await Appointment.create({
-      businessId,
-      customerId,
-      serviceId,
-      price: service.price,
-      durationMinutes: service.durationMinutes,
-      start: new Date(start),
-      end: new Date(end),
-      status: 'confirmed',
-      source: 'owner',
-      notes,
-    });
+    const startDate = new Date(start);
+    const endDate = new Date(end);
 
-    res.status(201).json(appointment);
+    try {
+      const appointment = await createAppointmentAtomic(
+        {
+          businessId,
+          serviceId,
+          customerId,
+          start: startDate,
+          end: endDate,
+          source: 'owner',
+          notes,
+        } as any
+      );
+
+      return res.status(201).json(appointment);
+    } catch (err: any) {
+      if (err instanceof AppointmentError) {
+        const body: any = { message: err.message };
+        if (err.code) body.code = err.code;
+        return res.status(err.status).json(body);
+      }
+      throw err;
+    }
   } catch (err) {
     console.error('Error POST /appointments:', err);
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -70,9 +99,69 @@ appointmentsRouter.put('/:id', async (req: AuthRequest, res) => {
     const { id } = req.params;
     const { start, end, status, notes } = req.body;
 
+    // Validate timezone offsets if new start/end provided
+    if (start !== undefined) {
+      if (typeof start !== 'string' || !hasTimezoneOffset(start)) {
+        return res.status(400).json({
+          message:
+            'start must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T13:00:00+02:00 or 2026-02-26T11:00:00Z)',
+        });
+      }
+    }
+    if (end !== undefined) {
+      if (typeof end !== 'string' || !hasTimezoneOffset(end)) {
+        return res.status(400).json({
+          message:
+            'end must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T14:00:00+02:00 or 2026-02-26T12:00:00Z)',
+        });
+      }
+    }
+
+    const existing = await Appointment.findOne({ _id: id, businessId });
+    if (!existing) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    let newStart = existing.start;
+    let newEnd = existing.end;
+
+    if (start !== undefined) {
+      newStart = new Date(start);
+    }
+    if (end !== undefined) {
+      newEnd = new Date(end);
+    }
+
+    const timesChanged = start !== undefined || end !== undefined;
+
+    if (timesChanged) {
+      try {
+        await assertNoOverlap(businessId as any, newStart, newEnd, id);
+      } catch (err: any) {
+        if (err instanceof AppointmentError) {
+          const body: any = { message: err.message };
+          if (err.code) body.code = err.code;
+          return res.status(err.status).json(body);
+        }
+        throw err;
+      }
+    }
+
+    const update: any = {};
+    if (timesChanged) {
+      update.start = newStart;
+      update.end = newEnd;
+    }
+    if (typeof status === 'string') {
+      update.status = status;
+    }
+    if (notes !== undefined) {
+      update.notes = notes;
+    }
+
     const appointment = await Appointment.findOneAndUpdate(
       { _id: id, businessId },
-      { start, end, status, notes },
+      update,
       { new: true }
     );
 
@@ -109,3 +198,21 @@ appointmentsRouter.delete('/:id', async (req: AuthRequest, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+
+/** Parse dateStr (YYYY-MM-DD) + timeStr (HH:mm) in business timezone and return UTC Date */
+function toUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
+  const [h, m] = timeStr.split(':').map((s) => Number(s));
+  const local = DateTime.fromISO(dateStr, { zone: timezone }).set({
+    hour: h,
+    minute: m,
+    second: 0,
+    millisecond: 0,
+  });
+
+  if (!local.isValid) {
+    throw new Error(`Invalid date/time: ${dateStr} ${timeStr} (${timezone})`);
+  }
+
+  return local.toUTC().toJSDate();
+}

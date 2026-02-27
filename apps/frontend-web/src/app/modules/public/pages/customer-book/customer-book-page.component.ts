@@ -147,24 +147,12 @@ export class CustomerBookPageComponent implements OnInit {
   }
 
   onDateSelect(): void {
-    const slug = this.slug();
+    const b = this.business();
     const service = this.selectedService();
     const date = this.selectedDate();
-    if (!slug || !service || !date) return;
+    if (!b || !service || !date) return;
     const dateStr = this.selectedDateStr();
-    this.loadingSlots.set(true);
-    this.publicApi.getAvailability(slug, service.id, dateStr).subscribe({
-      next: (res) => {
-        this.slots.set(res.slots);
-        this.selectedSlot.set(null);
-        this.loadingSlots.set(false);
-        this.closeDrawer();
-      },
-      error: (err) => {
-        this.loadingSlots.set(false);
-        this.showError(err?.error?.message ?? 'שגיאה בטעינת השעות');
-      },
-    });
+    this.loadSlots(b.id, service.id, dateStr, { closeDrawerOnSuccess: true });
   }
 
   selectSlot(slot: string): void {
@@ -191,7 +179,45 @@ export class CustomerBookPageComponent implements OnInit {
       },
       error: (err) => {
         this.submitting.set(false);
-        this.showError(err?.error?.message ?? 'שגיאה באישור התור');
+        if (err?.status === 409 && err?.error?.code === 'SLOT_TAKEN') {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'תפוס',
+            detail: 'התור נתפס, בחרי שעה אחרת',
+            life: 5000,
+          });
+          const b = this.business();
+          const service = this.selectedService();
+          const dateStr = this.selectedDateStr();
+          if (b && service && dateStr) {
+            this.loadSlots(b.id, service.id, dateStr, { closeDrawerOnSuccess: false });
+          }
+        } else {
+          this.showError(err?.error?.message ?? 'שגיאה באישור התור');
+        }
+      },
+    });
+  }
+
+  private loadSlots(
+    businessId: string,
+    serviceId: string,
+    dateStr: string,
+    opts: { closeDrawerOnSuccess: boolean }
+  ): void {
+    this.loadingSlots.set(true);
+    this.publicApi.getAvailabilityByBusinessId(businessId, serviceId, dateStr).subscribe({
+      next: (res) => {
+        this.slots.set(res.slots);
+        this.selectedSlot.set(null);
+        this.loadingSlots.set(false);
+        if (opts.closeDrawerOnSuccess) {
+          this.closeDrawer();
+        }
+      },
+      error: (err) => {
+        this.loadingSlots.set(false);
+        this.showError(err?.error?.message ?? 'שגיאה בטעינת השעות');
       },
     });
   }

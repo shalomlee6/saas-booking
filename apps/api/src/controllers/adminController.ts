@@ -3,7 +3,6 @@ import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../middleware/auth';
 import { Business } from '../models/Business';
 import { User } from '../models/User';
-import { BusinessSettings } from '../models/BusinessSettings';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { generateSlug } from '../utils/slug';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
@@ -169,4 +168,3 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
     res.status(500).json({ message: 'Internal server error' });
   }
 }
-
