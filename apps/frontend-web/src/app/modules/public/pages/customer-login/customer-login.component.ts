@@ -49,13 +49,13 @@ export class CustomerLoginComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const slug = this.slug();
-    if (slug) {
-      this.publicApi.getBusiness(slug).subscribe({
-        next: (b) => this.business.set(b),
-        error: () => {},
-      });
-    }
+    // const slug = this.slug();
+    // if (slug) {
+    //   this.publicApi.getBusiness(slug).subscribe({
+    //     next: (b) => this.business.set(b),
+    //     error: () => {},
+    //   });
+    // }
   }
 
   get name() {
@@ -116,7 +116,7 @@ export class CustomerLoginComponent implements OnInit {
 
     this.publicApi.verifyOtp(slug, { phone: phoneVal, code: codeVal }).subscribe({
       next: (res) => {
-        this.session.setSession(res.token, slug);
+        this.session.setSession(res.token, slug, res.customerId);
         this.loading.set(false);
         this.router.navigate(['/b', slug]);
       },

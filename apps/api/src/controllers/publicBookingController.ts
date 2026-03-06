@@ -3,8 +3,10 @@ import { Types } from 'mongoose';
 import { DateTime } from 'luxon';
 import { Business } from '../models/Business';
 import { BusinessSettings, defaultOpeningHours, IOpeningHours } from '../models/BusinessSettings';
+import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
+import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { isOverlapping } from '../utils/timeOverlap';
 import { createAppointmentAtomic, AppointmentError } from '../services/createAppointmentAtomic';
@@ -336,6 +338,43 @@ export async function createPublicAppointment(req: Request, res: Response) {
     }
     const businessId = business._id;
 
+    const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+    let customerId: Types.ObjectId | undefined;
+    let resolvedCustomerName: string;
+    let resolvedCustomerPhone: string | undefined;
+
+    if (publicCustomer) {
+      if (publicCustomer.businessId !== businessId.toString()) {
+        return res.status(403).json({ message: 'Business mismatch' });
+      }
+      const customer = await Customer.findOne({
+        _id: publicCustomer.customerId,
+        businessId,
+      });
+      if (!customer) {
+        return res.status(404).json({ message: 'Customer not found' });
+      }
+      customerId = customer._id as Types.ObjectId;
+      resolvedCustomerName = customer.name ?? '';
+      resolvedCustomerPhone = customer.phone ?? undefined;
+    } else {
+      const rawName = body.customerName;
+      const customerName = typeof rawName === 'string' ? rawName.trim() : '';
+      if (!customerName) {
+        return res.status(400).json({
+          message: 'customerName is required and cannot be blank',
+        });
+      }
+      if (customerName.length > 200) {
+        return res.status(400).json({
+          message: 'customerName must be at most 200 characters',
+        });
+      }
+      resolvedCustomerName = customerName;
+      resolvedCustomerPhone =
+        typeof body.customerPhone === 'string' ? body.customerPhone.trim() || undefined : undefined;
+    }
+
     const settings = await ensureBusinessSettings(businessId);
     if (!settings.features?.bookingEnabled) {
       return res.status(403).json({ message: 'Booking is disabled for this business' });
@@ -360,8 +399,9 @@ export async function createPublicAppointment(req: Request, res: Response) {
           start: startAt,
           end: endAt,
           source: 'client-online',
-          customerName: body.customerName,
-          customerPhone: body.customerPhone,
+          customerId,
+          customerName: resolvedCustomerName,
+          customerPhone: resolvedCustomerPhone,
         },
         { requireCustomerId: false }
       );

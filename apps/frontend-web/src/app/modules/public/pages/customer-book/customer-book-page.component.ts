@@ -19,6 +19,7 @@ import {
   type PublicService,
   type CreateAppointmentBody,
 } from '../../services/public-api.service';
+import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
 
 @Component({
@@ -40,6 +41,7 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly publicApi = inject(PublicApiService);
   private readonly messageService = inject(MessageService);
+  private readonly session = inject(PublicSessionService);
 
   readonly business = signal<PublicBusinessForBooking | null>(null);
   readonly services = signal<PublicService[]>([]);
@@ -47,6 +49,8 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDate = signal<Date | null>(null);
   readonly slots = signal<string[]>([]);
   readonly selectedSlot = signal<string | null>(null);
+  readonly customerName = signal('');
+  readonly customerPhone = signal('');
   readonly loadingBusiness = signal(true);
   readonly loadingServices = signal(true);
   readonly loadingSlots = signal(false);
@@ -64,12 +68,15 @@ export class CustomerBookPageComponent implements OnInit {
     return this.selectedDate() !== null && this.selectedService() !== null;
   });
 
+  readonly isLoggedIn = computed(() => this.session.hasSessionFor(this.slug()));
+
   readonly canShowHoldButton = computed(() => {
-    return (
+    const hasSlots =
       this.selectedService() !== null &&
       this.selectedDate() !== null &&
-      this.selectedSlot() !== null
-    );
+      this.selectedSlot() !== null;
+    if (this.isLoggedIn()) return hasSlots;
+    return hasSlots && this.customerName().trim().length > 0;
   });
 
   readonly selectedDateStr = computed(() => {
@@ -164,7 +171,10 @@ export class CustomerBookPageComponent implements OnInit {
     const service = this.selectedService();
     const dateStr = this.selectedDateStr();
     const time = this.selectedSlot();
+    const loggedIn = this.isLoggedIn();
+    const name = this.customerName().trim();
     if (!b || !service || !dateStr || !time) return;
+    if (!loggedIn && !name) return;
     this.submitting.set(true);
     const body: CreateAppointmentBody = {
       businessId: b.id,
@@ -172,6 +182,10 @@ export class CustomerBookPageComponent implements OnInit {
       date: dateStr,
       time,
     };
+    if (!loggedIn) {
+      body.customerName = name;
+      body.customerPhone = this.customerPhone().trim() || undefined;
+    }
     this.publicApi.createAppointment(body).subscribe({
       next: () => {
         this.submitting.set(false);

@@ -24,7 +24,7 @@ export interface AppointmentListItem {
   customerPhone: string | null;
 }
 
-/** Full or list appointment (list has _id set from appointmentId in effect) */
+/** Full or list appointment (list has _id set from appointmentId in effect). start/end as Date for calendar layout. */
 export interface Appointment {
   _id: string;
   appointmentId?: string;
@@ -35,8 +35,8 @@ export interface Appointment {
   serviceName?: string;
   price?: number;
   durationMinutes?: number;
-  start: string;
-  end: string;
+  start: Date;
+  end: Date;
   status: string;
   source?: string;
   notes?: string;

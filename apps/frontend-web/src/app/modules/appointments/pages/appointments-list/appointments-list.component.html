@@ -2,32 +2,58 @@
   <div class="appointments-page-header">
     <h1 class="appointments-page-title">Appointments</h1>
     <div class="appointments-page-actions">
-      <input
-        type="text"
-        class="appointments-search"
-        placeholder="Search by customer, service, or status..."
-        [ngModel]="searchQuery()"
-        (ngModelChange)="onSearchInput($event)"
-      />
-      <div class="appointments-view-toggle">
-        <button
-          type="button"
-          class="appointments-toggle-btn"
-          [class.appointments-toggle-btn-active]="viewMode() === 'day'"
-          (click)="setViewMode('day')"
-        >
-          Day
-        </button>
-        <button
-          type="button"
-          class="appointments-toggle-btn"
-          [class.appointments-toggle-btn-active]="viewMode() === 'week'"
-          (click)="setViewMode('week')"
-        >
-          Week
-        </button>
+      <div class="appointments-page-actions-top-panel">
+
+        <input
+          type="text"
+          class="appointments-search"
+          placeholder="Search by customer, service, or status..."
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchInput($event)"
+        />
+        <div class="appointments-view-toggle">
+          <button
+            type="button"
+            class="appointments-toggle-btn"
+            [class.appointments-toggle-btn-active]="viewMode() === 'day'"
+            (click)="setViewMode('day')"
+          >
+            Day
+          </button>
+          <button
+            type="button"
+            class="appointments-toggle-btn"
+            [class.appointments-toggle-btn-active]="viewMode() === 'week'"
+            (click)="setViewMode('week')"
+          >
+            Week
+          </button>
+        </div>
       </div>
-      <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary">New Appointment</a>
+      <div class="appointments-page-actions-bottom-panel">
+        
+        <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary">New Appointment</a>
+        <div class="appointments-page-actions-bottom-panel-navigation-btn">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-left"
+            class="p-button-text appointments-nav-btn"
+            [disabled]="isAtToday()"
+            (click)="prevRange()"
+            aria-label="Previous range"
+          ></button>
+    
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-right"
+            class="p-button-text appointments-nav-btn"
+            (click)="nextRange()"
+            aria-label="Next range"
+          ></button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -55,15 +81,7 @@
     @if (!loading()) {
       <div class="calendar-shell">
         <div class="appointments-header">
-          <button
-            pButton
-            type="button"
-            icon="pi pi-chevron-left"
-            class="p-button-text appointments-nav-btn"
-            [disabled]="isAtToday()"
-            (click)="prevRange()"
-            aria-label="Previous range"
-          ></button>
+
           <div
             class="calendar-header appointments-days"
             [style.--day-count]="visibleDaysCount()"
@@ -79,14 +97,7 @@
               </div>
             }
           </div>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-chevron-right"
-            class="p-button-text appointments-nav-btn"
-            (click)="nextRange()"
-            aria-label="Next range"
-          ></button>
+
         </div>
         <div
           class="calendar-scroll"
@@ -180,6 +191,8 @@
     @if (!isMobile()) {
       <p-dialog
         header="פרטי תור"
+        [draggable]="false"
+        [resizable]="false"
         [visible]="true"
         [modal]="true"
         [closable]="true"

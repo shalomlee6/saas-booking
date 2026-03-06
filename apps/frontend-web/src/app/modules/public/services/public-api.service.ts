@@ -40,6 +40,9 @@ export interface CreateAppointmentBody {
   serviceId: string;
   date: string;
   time: string;
+  /** Required for guest booking; omitted when logged in (server uses JWT customer). */
+  customerName?: string;
+  customerPhone?: string;
 }
 
 export interface CreateAppointmentResponse {
@@ -62,6 +65,8 @@ export interface VerifyOtpResponse {
   token: string;
   customerId: string;
   businessId: string;
+  customerName?: string;
+  customerPhone?: string;
 }
 
 @Injectable({ providedIn: 'root' })

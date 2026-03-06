@@ -13,6 +13,7 @@ import {
   createPublicAppointment as createPublicAppointmentBooking,
 } from '../controllers/publicBookingController';
 import { requestOtp, verifyOtp } from '../controllers/publicAuthController';
+import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
 
 export const publicRouter = Router();
 
@@ -25,8 +26,8 @@ publicRouter.get('/businesses/:slug', getPublicBusinessBySlug);
 publicRouter.get('/businesses/:slug/services', getPublicServicesBooking);
 // GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD
 publicRouter.get('/businesses/:slug/availability', getAvailability);
-// POST /api/public/appointments (body: slug or businessId, serviceId, date, time, customerName?, customerPhone?)
-publicRouter.post('/appointments', createPublicAppointmentBooking);
+// POST /api/public/appointments (optional Bearer = customer; else guest with customerName required)
+publicRouter.post('/appointments', optionalPublicCustomer, createPublicAppointmentBooking);
 
 // --- Legacy public routes (dashboard / auth)
 publicRouter.get('/:businessSlug/business', getPublicBusiness);

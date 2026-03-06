@@ -48,6 +48,43 @@
   color: #334155;
 }
 
+.book-page-details-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.book-page-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #334155;
+  display: block;
+}
+
+.book-page-required {
+  color: #dc2626;
+}
+
+.book-page-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #1a1a1a;
+  box-sizing: border-box;
+}
+
+.book-page-input:focus {
+  outline: none;
+  border-color: var(--p-primary-color, var(--color-primary, #3787f6));
+}
+
+.book-page-input::placeholder {
+  color: #94a3b8;
+}
+
 .book-page-service-list {
   display: flex;
   flex-direction: column;

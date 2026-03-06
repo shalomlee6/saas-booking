@@ -16,6 +16,7 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { authInterceptor } from './core/api/http.config';
 import { mockApiInterceptor } from './core/api/mock-api.interceptor';
+import { publicCustomerAuthInterceptor } from './modules/public/interceptors/public-customer-auth.interceptor';
 import { environment } from '../environments/environment';
 import {
   appointmentsFeatureKey,
@@ -55,7 +56,9 @@ export const appConfig: ApplicationConfig = {
     provideZoneChangeDetection({ eventCoalescing: true }),
     provideHttpClient(
       withInterceptors(
-        environment.useMocks ? [mockApiInterceptor, authInterceptor] : [authInterceptor]
+        environment.useMocks
+          ? [mockApiInterceptor, publicCustomerAuthInterceptor, authInterceptor]
+          : [publicCustomerAuthInterceptor, authInterceptor]
       )
     ),
     provideRouter(routes),

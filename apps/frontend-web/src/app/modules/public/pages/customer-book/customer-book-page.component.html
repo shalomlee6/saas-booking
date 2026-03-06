@@ -75,6 +75,34 @@
         </section>
       }
 
+      <!-- Step 2.5: Your details (guest only; logged-in customer uses JWT identity) -->
+      @if (selectedService() && selectedDate() && selectedSlot() && !appointmentSuccess() && !isLoggedIn()) {
+        <section class="book-page-section">
+          <h2 class="book-page-section-title">פרטיך</h2>
+          <div class="book-page-details-fields">
+            <label class="book-page-label" for="customerName">שם מלא <span class="book-page-required">*</span></label>
+            <input
+              id="customerName"
+              type="text"
+              class="book-page-input"
+              placeholder="הכנסי את שמך"
+              [ngModel]="customerName()"
+              (ngModelChange)="customerName.set($event)"
+              maxlength="200"
+            />
+            <label class="book-page-label" for="customerPhone">טלפון</label>
+            <input
+              id="customerPhone"
+              type="tel"
+              class="book-page-input"
+              placeholder="מספר טלפון (אופציונלי)"
+              [ngModel]="customerPhone()"
+              (ngModelChange)="customerPhone.set($event)"
+            />
+          </div>
+        </section>
+      }
+
       <!-- Step 3: Hold to confirm -->
       @if (canShowHoldButton() && !appointmentSuccess()) {
         <section class="book-page-section book-page-hold-section">

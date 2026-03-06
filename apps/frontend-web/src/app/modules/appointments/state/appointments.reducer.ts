@@ -41,12 +41,20 @@ export const appointmentsReducer = createReducer(
     creating: true,
     error: null,
   })),
-  on(AppointmentsActions.createSuccess, (state, { item }) => ({
-    ...state,
-    items: [item, ...state.items],
-    creating: false,
-    error: null,
-  })),
+  on(AppointmentsActions.createSuccess, (state, { item }) => {
+    const raw = item as { start?: string | Date; end?: string | Date };
+    const normalized: Appointment = {
+      ...item,
+      start: new Date(raw.start as string | number | Date),
+      end: new Date(raw.end as string | number | Date),
+    };
+    return {
+      ...state,
+      items: [normalized, ...state.items],
+      creating: false,
+      error: null,
+    };
+  }),
   on(AppointmentsActions.createFailure, (state, { error }) => ({
     ...state,
     creating: false,

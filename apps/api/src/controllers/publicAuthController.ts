@@ -154,12 +154,14 @@ export async function verifyOtp(req: Request, res: Response) {
       }
     }
 
-    // Generate JWT token for client
+    // Generate JWT token for client (role: 'customer' for public booking)
     const token = jwt.sign(
       {
+        sub: customer._id.toString(),
         customerId: customer._id.toString(),
         businessId,
-        role: 'client',
+        slug: businessSlug,
+        role: 'customer',
       },
       process.env.JWT_SECRET || 'dev-secret',
       { expiresIn: '30d' }
@@ -169,6 +171,8 @@ export async function verifyOtp(req: Request, res: Response) {
       token,
       customerId: customer._id.toString(),
       businessId,
+      customerName: customer.name ?? undefined,
+      customerPhone: customer.phone ?? undefined,
     });
   } catch (err) {
     console.error('Error POST /public/:businessSlug/auth/verify-otp:', err);

@@ -32,6 +32,18 @@ export const CALENDAR_SLOT_HEIGHT_PX =
   CALENDAR_SLOT_MINUTES * CALENDAR_PIXELS_PER_MINUTE;
 
 /**
+ * Normalizes any value into a valid Date or null (supports Date or ISO/string).
+ */
+export function asDate(v: unknown): Date | null {
+  if (!v) return null;
+  if (v instanceof Date) {
+    return isNaN(v.getTime()) ? null : v;
+  }
+  const d = new Date(v as any);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
  * Returns Sunday 00:00:00 of the week containing the given date (week = Sun–Sat).
  */
 export function getWeekStart(anchor: Date): Date {
@@ -70,7 +82,7 @@ export function getWeekDays(anchor: Date): Date[] {
  * Minutes from midnight (00:00) for the given date.
  */
 export function minutesFromMidnight(d: Date): number {
-  return d.getUTCHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
+  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
 }
 
 /**
@@ -103,9 +115,9 @@ export function groupAppointmentsByDay(
   const endKey = toDateKey(new Date(weekEnd.getTime() - 1));
 
   for (const apt of appointments) {
-    const startStr = (apt as { start?: string; startTime?: string }).start ?? (apt as { startTime?: string }).startTime;
-    if (!startStr) continue;
-    const startDate = new Date(startStr);
+    const startVal = (apt as any).start ?? (apt as any).startTime;
+    const startDate = asDate(startVal);
+    if (!startDate) continue;
     const key = toDateKey(startDate);
     if (key < startKey || key > endKey) continue;
     const list = map.get(key) ?? [];
@@ -137,11 +149,17 @@ export function getAppointmentBlockLayout(
   appointment: Appointment,
   dayStart: Date
 ): AppointmentBlockLayout | null {
-  const startStr = (appointment as { start?: string }).start;
-  const endStr = (appointment as { end?: string }).end;
-  if (!startStr || !endStr) return null;
-  const start = new Date(startStr);
-  const end = new Date(endStr);
+  const start = asDate((appointment as any).start ?? (appointment as any).startTime);
+  const end = asDate((appointment as any).end ?? (appointment as any).endTime);
+  if (!start || !end) {
+    // Temporary debug log to confirm no appointments are skipped due to invalid dates.
+    // Remove or downgrade to debug once verified.
+    // eslint-disable-next-line no-console
+    console.warn('[calendar] invalid appointment start/end, skipping block', {
+      appointment,
+    });
+    return null;
+  }
 
   const startMinutes = minutesFromMidnight(start);
   const dur = durationMinutes(start, end);
@@ -189,9 +207,9 @@ export function getAppointmentBlockLayout(
 }
 
 function formatTimeRange(start: Date, end: Date): string {
-  const sh = start.getUTCHours();
+  const sh = start.getHours();
   const sm = start.getMinutes();
-  const eh = end.getUTCHours();
+  const eh = end.getHours();
   const em = end.getMinutes();
   const fmt = (h: number, m: number) =>
     `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
