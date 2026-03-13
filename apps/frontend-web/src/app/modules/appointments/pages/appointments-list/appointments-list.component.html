@@ -1,9 +1,8 @@
 <div class="appointments-page">
-  <div class="appointments-page-header">
-    <h1 class="appointments-page-title">Appointments</h1>
-    <div class="appointments-page-actions">
-      <div class="appointments-page-actions-top-panel">
-
+  <header class="appointments-toolbar">
+    <div class="appointments-toolbar-row appointments-toolbar-row-1">
+      <h1 class="appointments-toolbar-title">Appointments</h1>
+      <div class="appointments-toolbar-desktop">
         <input
           type="text"
           class="appointments-search"
@@ -29,11 +28,12 @@
             Week
           </button>
         </div>
+        <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary appointments-btn-new">
+          New Appointment
+        </a>
       </div>
-      <div class="appointments-page-actions-bottom-panel">
-        
-        <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary">New Appointment</a>
-        <div class="appointments-page-actions-bottom-panel-navigation-btn">
+      <div class="appointments-toolbar-mobile-nav">
+        <div class="appointments-calendar-nav">
           <button
             pButton
             type="button"
@@ -43,7 +43,6 @@
             (click)="prevRange()"
             aria-label="Previous range"
           ></button>
-    
           <button
             pButton
             type="button"
@@ -55,7 +54,61 @@
         </div>
       </div>
     </div>
-  </div>
+    <div class="appointments-toolbar-row appointments-toolbar-row-2">
+      <div class="appointments-toolbar-nav-range">
+        <div class="appointments-calendar-nav appointments-toolbar-desktop-nav">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-left"
+            class="p-button-text appointments-nav-btn"
+            [disabled]="isAtToday()"
+            (click)="prevRange()"
+            aria-label="Previous range"
+          ></button>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-right"
+            class="p-button-text appointments-nav-btn"
+            (click)="nextRange()"
+            aria-label="Next range"
+          ></button>
+        </div>
+        <span class="appointments-toolbar-date-range">{{ visibleDateRangeLabel() }}</span>
+      </div>
+      <input
+        type="text"
+        class="appointments-search appointments-toolbar-mobile-search"
+        placeholder="Search..."
+        [ngModel]="searchQuery()"
+        (ngModelChange)="onSearchInput($event)"
+      />
+    </div>
+    <div class="appointments-toolbar-row appointments-toolbar-row-3">
+      <div class="appointments-view-toggle">
+        <button
+          type="button"
+          class="appointments-toggle-btn"
+          [class.appointments-toggle-btn-active]="viewMode() === 'day'"
+          (click)="setViewMode('day')"
+        >
+          Day
+        </button>
+        <button
+          type="button"
+          class="appointments-toggle-btn"
+          [class.appointments-toggle-btn-active]="viewMode() === 'week'"
+          (click)="setViewMode('week')"
+        >
+          Week
+        </button>
+      </div>
+      <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary appointments-btn-new">
+        New Appointment
+      </a>
+    </div>
+  </header>
 
   <div class="appointments-card appointments-calendar-card">
     @if (error()) {
@@ -152,8 +205,8 @@
                       [style.--block-border]="block.borderColor"
                       (click)="$event.stopPropagation(); openAppointment(block.appointment)"
                     >
+                      <strong class="calendar-block-service">{{ block.serviceName }}</strong>
                       <span class="calendar-block-customer">{{ block.customerName }}</span>
-                      <span class="calendar-block-service">{{ block.serviceName }}</span>
                       <span class="calendar-block-time">{{ block.timeLabel }}</span>
                     </div>
                   }
@@ -219,8 +272,10 @@
           </div>
         </div>
         <ng-template pTemplate="footer">
-          <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" />
-          <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" />
+          <div class="appointments-detail-footer">
+            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" />
+            <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" />
+          </div>
         </ng-template>
       </p-dialog>
     }
@@ -235,7 +290,7 @@
         <ng-template pTemplate="header">
           <span>פרטי תור</span>
         </ng-template>
-        <div class="appointments-detail">
+        <div class="appointments-detail appointments-detail-drawer-body">
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">לקוח</span>
             <span class="appointments-detail-value">{{ customerDisplay(apt) }}</span>
@@ -252,10 +307,10 @@
             <span class="appointments-detail-label">סטטוס</span>
             <span class="appointments-detail-value"><p-tag [value]="apt.status" [severity]="statusSeverity(apt.status)" /></span>
           </div>
-        </div>
-        <div class="appointments-detail-actions">
-          <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" />
-          <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" />
+          <div class="appointments-detail-actions">
+            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" styleClass="appointments-detail-btn" />
+            <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" styleClass="appointments-detail-btn" />
+          </div>
         </div>
       </p-drawer>
     }

@@ -7,32 +7,42 @@
       <p-tab [value]="1">חריגים</p-tab>
     </p-tablist>
     <p-tabpanels>
-      <!-- Tab 1: שעות קבועות -->
       <p-tabpanel [value]="0">
-        <div class="wh-card wh-card-days">
+        <div class="wh-days-container">
           @if (loadingOpeningHours()) {
             @for (i of [1,2,3,4,5,6,7]; track i) {
-              <p-skeleton width="100%" height="3.5rem" class="mb-2" />
+              <p-skeleton width="100%" height="88px" class="wh-skeleton-card" />
             }
           } @else {
             @for (item of daysWithSummary(); track item.day) {
-              <div class="wh-day-row">
-                <span class="wh-day-name">{{ item.name }}</span>
-                <span class="wh-day-summary">{{ item.summary }}</span>
-                <p-button
-                  label="עריכה"
-                  icon="pi pi-pencil"
-                  [outlined]="true"
-                  styleClass="p-button-sm"
-                  (onClick)="openDayDrawer(item.day)"
-                />
+              <div class="wh-day-card">
+                <div class="wh-day-card-main">
+                  <span class="wh-day-card-name">{{ item.name }}</span>
+                  <p-toggleSwitch
+                    [ngModel]="openingHours().days[item.day]?.isOpen ?? false"
+                    (ngModelChange)="setDayOpen(item.day, $event)"
+                    [disabled]="savingHours()"
+                    ariaLabel="פתוח/סגור"
+                    class="wh-day-toggle"
+                  />
+                </div>
+                <div class="wh-day-card-summary">{{ item.summary }}</div>
+                <div class="wh-day-card-actions">
+                  <p-button
+                    label="עריכה"
+                    icon="pi pi-pencil"
+                    [outlined]="true"
+                    styleClass="p-button-sm wh-edit-btn"
+                    (onClick)="openDayDrawer(item.day)"
+                    ariaLabel="עריכת יום"
+                  />
+                </div>
               </div>
             }
           }
         </div>
       </p-tabpanel>
 
-      <!-- Tab 2: חריגים -->
       <p-tabpanel [value]="1">
         <div class="wh-card wh-card-calendar">
           @if (loadingOverrides()) {
@@ -59,86 +69,326 @@
     </p-tabpanels>
   </p-tabs>
 
-  <!-- Drawer: Edit day (Tab 1) -->
   <p-drawer
     [visible]="dayDrawerVisible()"
     (visibleChange)="dayDrawerVisible.set($event)"
     position="bottom"
-    header="עריכת יום"
-    [style]="{ height: 'auto' }"
+    [header]="editDayHeader()"
+    [style]="{ height: '85vh', maxHeight: '600px' }"
     (onHide)="closeDayDrawer()"
-    styleClass="wh-drawer"
+    styleClass="wh-drawer wh-drawer-day"
   >
-    <div class="wh-drawer-body">
-      <div class="flex align-items-center gap-2 mb-3">
-        <p-toggleSwitch [ngModel]="editDayIsOpen()" (ngModelChange)="editDayIsOpen.set($event)" />
-        <label>פתוח היום</label>
-      </div>
-      @if (editDayIsOpen()) {
-        @for (range of editDayRanges(); track $index) {
-          <div class="wh-range-row mb-2">
-            <input type="time" [(ngModel)]="range.start" class="wh-time-input" />
-            <span>–</span>
-            <input type="time" [(ngModel)]="range.end" class="wh-time-input" />
-            @if (editDayRanges().length > 1) {
-              <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (onClick)="removeEditRange($index)" />
-            }
-          </div>
-        }
-        <p-button label="הוסף טווח" icon="pi pi-plus" [text]="true" severity="secondary" (onClick)="addEditRange()" class="mb-3" />
-      }
-      <div class="flex gap-2">
-        <p-button label="שמירה" icon="pi pi-check" [loading]="savingHours()" (onClick)="saveDay()" />
-        <p-button label="ביטול" [outlined]="true" severity="secondary" (onClick)="closeDayDrawer()" />
-      </div>
-    </div>
+    <ng-container *ngTemplateOutlet="dayEditorContent"></ng-container>
   </p-drawer>
 
-  <!-- Drawer: Override (Tab 2) -->
+  <p-dialog
+    [visible]="dayDialogVisible()"
+    (visibleChange)="dayDialogVisible.set($event)"
+    [header]="editDayHeader()"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'min(100vw - 2rem, 420px)' }"
+    (onHide)="closeDayDrawer()"
+    styleClass="wh-dialog-day"
+  >
+    <ng-container *ngTemplateOutlet="dayEditorContent"></ng-container>
+  </p-dialog>
+
+  <ng-template #dayEditorContent>
+    <div class="wh-editor-body">
+      <div class="wh-editor-row wh-editor-open-row">
+        <p-toggleSwitch
+          [ngModel]="editDayIsOpen()"
+          (ngModelChange)="editDayIsOpen.set($event)"
+          ariaLabel="פתוח היום"
+        />
+        <label class="wh-editor-label">פתוח היום</label>
+      </div>
+
+      @if (editDayIsOpen()) {
+        <div class="wh-editor-ranges">
+          <span class="wh-editor-ranges-title">טווחי שעות (24 שעות)</span>
+          @if (editDayGeneralError(); as genErr) {
+            <div class="wh-inline-message wh-inline-message-warn">{{ genErr }}</div>
+          }
+          @for (vm of editDayRangeVms(); track $index) {
+            <div class="wh-range-block">
+              <div class="wh-range-row wh-range-row-selects">
+                <div class="wh-range-group">
+                  <span class="wh-range-label">התחלה</span>
+                  <div class="wh-time-select-wrap">
+                    <p-select
+                      class="wh-pselect wh-pselect-hour"
+                      [options]="hourOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.startHour"
+                      (ngModelChange)="touchEditDayVms()"
+                      [appendTo]="'body'"
+                      placeholder="שעה"
+                    />
+                    <p-select
+                      class="wh-pselect wh-pselect-min"
+                      [options]="minuteOptionsList()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.startMinute"
+                      (ngModelChange)="touchEditDayVms()"
+                      [appendTo]="'body'"
+                      placeholder="דק'"
+                    />
+                  </div>
+                </div>
+                <span class="wh-range-sep">–</span>
+                <div class="wh-range-group">
+                  <span class="wh-range-label">סיום</span>
+                  <div class="wh-time-select-wrap">
+                    <p-select
+                      class="wh-pselect wh-pselect-hour"
+                      [options]="hourOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.endHour"
+                      (ngModelChange)="touchEditDayVms()"
+                      [appendTo]="'body'"
+                      placeholder="שעה"
+                    />
+                    <p-select
+                      class="wh-pselect wh-pselect-min"
+                      [options]="minuteOptionsList()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.endMinute"
+                      (ngModelChange)="touchEditDayVms()"
+                      [appendTo]="'body'"
+                      placeholder="דק'"
+                    />
+                  </div>
+                </div>
+                @if (editDayRangeVms().length > 1) {
+                  <p-button
+                    icon="pi pi-times"
+                    [text]="true"
+                    [rounded]="true"
+                    severity="secondary"
+                    (onClick)="removeEditRange($index)"
+                    ariaLabel="הסר טווח"
+                    styleClass="wh-range-remove"
+                  />
+                }
+              </div>
+              @if (editDayErrorsByIndex()[$index]; as rowErr) {
+                <div class="wh-inline-message wh-range-error">{{ rowErr }}</div>
+              }
+            </div>
+          }
+          <p-button
+            label="הוסף טווח"
+            icon="pi pi-plus"
+            [text]="true"
+            severity="secondary"
+            (onClick)="addEditRange()"
+            styleClass="wh-add-range-btn"
+          />
+        </div>
+      }
+
+      <div class="wh-editor-actions">
+        <p-button
+          label="שמירה"
+          icon="pi pi-check"
+          [loading]="savingHours()"
+          (onClick)="saveDay()"
+          [disabled]="editDayIsOpen() && hasEditDayErrorsSignal()"
+        />
+        <p-button
+          label="ביטול"
+          [outlined]="true"
+          severity="secondary"
+          (onClick)="closeDayDrawer()"
+        />
+      </div>
+    </div>
+  </ng-template>
+
   <p-drawer
     [visible]="overrideDrawerVisible()"
     (visibleChange)="overrideDrawerVisible.set($event)"
     position="bottom"
-    [header]="overrideDate() ? formatDateHe(overrideDate()!) : 'חריג'"
-    [style]="{ height: 'auto' }"
+    [header]="overrideHeader()"
+    [style]="{ height: 'auto', maxHeight: '90vh' }"
     (onHide)="closeOverrideDrawer()"
     styleClass="wh-drawer"
   >
+    <ng-container *ngTemplateOutlet="overrideEditorContent"></ng-container>
+  </p-drawer>
+
+  <p-dialog
+    [visible]="overrideDialogVisible()"
+    (visibleChange)="overrideDialogVisible.set($event)"
+    [header]="overrideHeader()"
+    [modal]="true"
+    [closable]="true"
+    [draggable]="false"
+    [resizable]="false"
+    [style]="{ width: 'min(100vw - 2rem, 440px)' }"
+    (onHide)="closeOverrideDrawer()"
+    styleClass="wh-dialog-override"
+  >
+    <ng-container *ngTemplateOutlet="overrideEditorContent"></ng-container>
+  </p-dialog>
+
+  <ng-template #overrideEditorContent>
     <div class="wh-drawer-body">
-      <div class="flex flex-column gap-2 mb-3">
+      <div class="wh-editor-row flex-column gap-2 mb-3">
         <div class="flex align-items-center gap-2">
-          <p-radioButton name="overrideType" value="closed" [ngModel]="overrideType()" (ngModelChange)="overrideType.set($event)" inputId="rClosed" />
+          <p-radioButton
+            name="overrideType"
+            value="closed"
+            [ngModel]="overrideType()"
+            (ngModelChange)="overrideType.set($event); checkOverrideConflicts()"
+            inputId="rClosed"
+          />
           <label for="rClosed">סגור כל היום</label>
         </div>
         <div class="flex align-items-center gap-2">
-          <p-radioButton name="overrideType" value="custom" [ngModel]="overrideType()" (ngModelChange)="overrideType.set($event)" inputId="rCustom" />
+          <p-radioButton
+            name="overrideType"
+            value="custom"
+            [ngModel]="overrideType()"
+            (ngModelChange)="overrideType.set($event); checkOverrideConflicts()"
+            inputId="rCustom"
+          />
           <label for="rCustom">שעות מיוחדות</label>
         </div>
       </div>
       @if (overrideType() === 'custom') {
-        @for (range of overrideRanges(); track $index) {
-          <div class="wh-range-row mb-2">
-            <input type="time" [(ngModel)]="range.start" class="wh-time-input" />
-            <span>–</span>
-            <input type="time" [(ngModel)]="range.end" class="wh-time-input" />
-            @if (overrideRanges().length > 1) {
-              <p-button icon="pi pi-times" [text]="true" [rounded]="true" severity="secondary" (onClick)="removeOverrideRange($index)" />
-            }
-          </div>
-        }
-        <p-button label="הוסף טווח" icon="pi pi-plus" [text]="true" severity="secondary" (onClick)="addOverrideRange()" class="mb-2" />
+        <div class="wh-editor-ranges">
+          <span class="wh-editor-ranges-title">טווחי שעות (24 שעות)</span>
+          @if (overrideGeneralError(); as oGen) {
+            <div class="wh-inline-message wh-inline-message-warn">{{ oGen }}</div>
+          }
+          @for (vm of overrideRangeVms(); track $index) {
+            <div class="wh-range-block">
+              <div class="wh-range-row wh-range-row-selects">
+                <div class="wh-range-group">
+                  <span class="wh-range-label">התחלה</span>
+                  <div class="wh-time-select-wrap">
+                    <p-select
+                      class="wh-pselect wh-pselect-hour"
+                      [options]="hourOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.startHour"
+                      (ngModelChange)="touchOverrideVms()"
+                      [appendTo]="'body'"
+                    />
+                    <p-select
+                      class="wh-pselect wh-pselect-min"
+                      [options]="minuteOptionsList()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.startMinute"
+                      (ngModelChange)="touchOverrideVms()"
+                      [appendTo]="'body'"
+                    />
+                  </div>
+                </div>
+                <span class="wh-range-sep">–</span>
+                <div class="wh-range-group">
+                  <span class="wh-range-label">סיום</span>
+                  <div class="wh-time-select-wrap">
+                    <p-select
+                      class="wh-pselect wh-pselect-hour"
+                      [options]="hourOptions"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.endHour"
+                      (ngModelChange)="touchOverrideVms()"
+                      [appendTo]="'body'"
+                    />
+                    <p-select
+                      class="wh-pselect wh-pselect-min"
+                      [options]="minuteOptionsList()"
+                      optionLabel="label"
+                      optionValue="value"
+                      [(ngModel)]="vm.endMinute"
+                      (ngModelChange)="touchOverrideVms()"
+                      [appendTo]="'body'"
+                    />
+                  </div>
+                </div>
+                @if (overrideRangeVms().length > 1) {
+                  <p-button
+                    icon="pi pi-times"
+                    [text]="true"
+                    [rounded]="true"
+                    severity="secondary"
+                    (onClick)="removeOverrideRange($index)"
+                    styleClass="wh-range-remove"
+                  />
+                }
+              </div>
+              @if (overrideErrorsByIndex()[$index]; as oRowErr) {
+                <div class="wh-inline-message wh-range-error">{{ oRowErr }}</div>
+              }
+            </div>
+          }
+          <p-button
+            label="הוסף טווח"
+            icon="pi pi-plus"
+            [text]="true"
+            severity="secondary"
+            (onClick)="addOverrideRange()"
+            styleClass="wh-add-range-btn"
+          />
+        </div>
+      }
+      @if (loadingOverrideConflicts()) {
+        <p class="wh-conflict-loading">בודק תורים…</p>
+      }
+      @if (overrideConflictWarningText(); as cmsg) {
+        <div class="wh-inline-message wh-conflict-warn" role="alert">
+          <i class="pi pi-exclamation-triangle"></i> {{ cmsg }}
+        </div>
       }
       <div class="mb-3">
         <label class="block mb-1">הערה</label>
-        <input pInputText [ngModel]="overrideNote()" (ngModelChange)="overrideNote.set($event)" placeholder="למשל: רופא שיניים" class="w-full" />
+        <input
+          pInputText
+          [ngModel]="overrideNote()"
+          (ngModelChange)="overrideNote.set($event)"
+          placeholder="למשל: רופא שיניים"
+          class="w-full"
+        />
       </div>
-      <div class="flex flex-wrap gap-2">
-        <p-button label="שמירה" icon="pi pi-check" [loading]="savingOverride()" (onClick)="saveOverride()" />
+      <div class="wh-editor-actions flex-wrap">
+        <p-button
+          label="שמירה"
+          icon="pi pi-check"
+          [loading]="savingOverride()"
+          (onClick)="saveOverride()"
+          [disabled]="overrideType() === 'custom' && hasOverrideErrorsSignal()"
+        />
         @if (selectedOverrideId()) {
-          <p-button label="מחיקה" icon="pi pi-trash" severity="danger" [outlined]="true" [loading]="deletingOverride()" (onClick)="deleteOverride()" />
+          <p-button
+            label="מחיקה"
+            icon="pi pi-trash"
+            severity="danger"
+            [outlined]="true"
+            [loading]="deletingOverride()"
+            (onClick)="deleteOverride()"
+          />
         }
-        <p-button label="סגור" [outlined]="true" severity="secondary" (onClick)="closeOverrideDrawer()" />
+        <p-button
+          label="סגור"
+          [outlined]="true"
+          severity="secondary"
+          (onClick)="closeOverrideDrawer()"
+        />
       </div>
     </div>
-  </p-drawer>
+  </ng-template>
 </div>

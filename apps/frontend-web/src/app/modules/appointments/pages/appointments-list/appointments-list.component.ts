@@ -253,6 +253,18 @@ export class AppointmentsListComponent implements OnInit {
     return `${m}/${day}`;
   }
 
+  /** Visible date range label for toolbar (e.g. "Mar 3 – Mar 9"). */
+  visibleDateRangeLabel(): string {
+    const days = this.getVisibleDays();
+    if (days.length === 0) return '';
+    if (days.length === 1) {
+      return days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+    const start = days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const end = days[days.length - 1].toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${start} – ${end}`;
+  }
+
   blockStatusClass(block: AppointmentBlockLayout): string {
     const s = (block.status || '').toLowerCase();
     if (s === 'confirmed') return 'calendar-block--confirmed';

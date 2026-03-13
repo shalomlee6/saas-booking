@@ -127,6 +127,10 @@ export class ThemeService {
         '--bg-app',
         t.backgroundColor && validHex(t.backgroundColor) ? t.backgroundColor : DEFAULTS.backgroundColor
       );
+      root.style.setProperty(
+        'color-scheme',
+        opts.mode
+      );
     }
   }
 

@@ -5,7 +5,7 @@
 
 /* Theme variables – apply .theme-light or .theme-dark to a root ancestor (e.g. layout wrapper or body) */
 
-.theme-light {
+body.theme-light {
   --bg-app: #f6f8fb;
   --bg-card: #ffffff;
   --bg-sidebar: #ffffff;
@@ -14,9 +14,10 @@
   --text-primary: #0f172a;
   --text-muted: #64748b;
   --border-color: #e5e7eb;
+  --p-tabs-tabpanel-background: white;
 }
 
-.theme-dark {
+body.theme-dark {
   --bg-app: #0f172a;
   --bg-card: #1e293b;
   --bg-sidebar: #1e293b;
@@ -34,4 +35,43 @@ body {
 
 body.layout-drawer-open {
   overflow: hidden;
+}
+
+.p-dialog {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.p-dialog .p-dialog-header,
+.p-dialog .p-dialog-content,
+.p-dialog .p-dialog-footer {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.p-dialog .p-dialog-header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.p-dialog .p-dialog-footer {
+  border-top: 1px solid var(--border-color);
+}
+
+.p-dialog-mask {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.p-drawer {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-left: 1px solid var(--border-color);
+}
+
+.p-drawer .p-drawer-header,
+.p-drawer .p-drawer-content,
+.p-drawer .p-drawer-footer {
+  background: var(--bg-card);
+  color: var(--text-primary);
 }

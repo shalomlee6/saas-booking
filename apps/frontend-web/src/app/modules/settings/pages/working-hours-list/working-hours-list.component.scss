@@ -1,37 +1,47 @@
+// Page
 .wh-page {
   min-height: 100%;
-  background: #f5f6f8;
+  background: var(--bg-app, #f5f6f8);
   padding: 1rem 1.25rem;
   padding-bottom: 2rem;
-  max-width: 900px;
+  max-width: 720px;
   margin-inline: auto;
   box-sizing: border-box;
 }
 
 .wh-page-title {
-  margin: 0 0 1.25rem;
+  margin: 0 0 1.5rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--text-primary, #1a1a1a);
   text-align: start;
 }
 
+// Tabs – premium segmented control, strong contrast on hover and active
 .wh-tabs {
   ::ng-deep .p-tablist {
-    background: #fff;
-    border-radius: 16px;
+    background: var(--bg-card, #fff);
+    border-radius: 12px;
     padding: 0.25rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.25rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-    border: none;
+    border: 1px solid var(--border-color, #e5e7eb);
   }
   ::ng-deep .p-tab {
-    border-radius: 12px;
+    border-radius: 10px;
+    padding: 0.625rem 1.25rem;
+    font-weight: 500;
+    color: var(--text-primary, #0f172a);
+    transition: background 0.15s, color 0.15s;
+    &:hover {
+      background: color-mix(in srgb, var(--color-primary, #3787f6) 8%, transparent);
+      color: var(--text-primary, #0f172a);
+    }
   }
   ::ng-deep .p-tab[data-p-active="true"],
   ::ng-deep .p-tab.p-highlight {
-    background: color-mix(in srgb, var(--color-primary, #3787f6) 12%, transparent);
-    color: var(--color-primary, #3787f6);
+    background: var(--color-primary, #3787f6);
+    color: #fff;
     font-weight: 600;
   }
   ::ng-deep .p-tabpanel-active .p-tabpanels-content {
@@ -39,43 +49,76 @@
   }
 }
 
+// Day cards list (Tab 1)
+.wh-days-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wh-skeleton-card {
+  border-radius: 12px;
+}
+
+.wh-day-card {
+  background: var(--bg-card, #fff);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color, #eee);
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  text-align: start;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.wh-day-card:hover {
+  border-color: var(--border-color);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.wh-day-card-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.wh-day-card-name {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.wh-day-toggle {
+  flex-shrink: 0;
+}
+
+.wh-day-card-summary {
+  font-size: 0.9375rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.4;
+}
+
+.wh-day-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+}
+
+.wh-edit-btn {
+  min-height: 36px;
+}
+
+// Card for calendar (Tab 2)
 .wh-card {
-  background: #fff;
-  border-radius: 20px;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
   padding: 1rem 1.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   margin-bottom: 1rem;
-}
-
-.wh-card-days {
-  padding: 0;
-  overflow: hidden;
-}
-
-.wh-day-row {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid #eee;
-  flex-wrap: wrap;
-  text-align: start;
-}
-
-.wh-day-row:last-child {
-  border-bottom: none;
-}
-
-.wh-day-name {
-  font-weight: 600;
-  min-width: 4.5rem;
-  color: #1a1a1a;
-}
-
-.wh-day-summary {
-  flex: 1;
-  font-size: 0.9375rem;
-  color: #64748b;
+  border: 1px solid var(--border-color, #eee);
 }
 
 .wh-card-calendar {
@@ -99,7 +142,7 @@
   gap: 1rem;
   margin-top: 1rem;
   font-size: 0.8125rem;
-  color: #64748b;
+  color: var(--text-muted, #64748b);
   flex-direction: row;
   justify-content: center;
 }
@@ -118,15 +161,45 @@
   color: #ea580c;
 }
 
-.wh-drawer {
-  ::ng-deep .p-drawer-content {
-    padding: 1.25rem;
-  }
-}
-
-.wh-drawer-body {
+// Day editor (drawer / dialog content)
+.wh-editor-body {
   display: flex;
   flex-direction: column;
+  gap: 1.25rem;
+}
+
+.wh-editor-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.wh-editor-open-row {
+  margin-bottom: 0.25rem;
+}
+
+.wh-editor-label {
+  font-weight: 500;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.wh-editor-ranges {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.wh-editor-ranges-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wh-range-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .wh-range-row {
@@ -136,16 +209,338 @@
   flex-wrap: wrap;
 }
 
-.wh-time-input {
-  padding: 0.5rem;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 1rem;
+// p-select range row: start / end groups with consistent widths
+.wh-range-row-selects {
+  
+  gap: 0.75rem 1rem;
 }
 
+.wh-range-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 0 1 auto;
+}
+
+.wh-time-select-wrap {
+  display: flex;
+  justify-content: center;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 1.35rem;
+  flex-wrap: wrap;
+}
+
+.p-select {
+  width: 60px;
+  background: white;
+  min-height: 40px;
+}
+
+.wh-pselect {
+  display: block;
+  ::ng-deep .p-select {
+    width: 100%;
+    background: white;
+    min-height: 40px;
+  }
+  ::ng-deep .p-select-label {
+    font-size: 0.9375rem;
+    text-align: center;
+    width: 100%;
+    color: black;
+    font-weight: 500;
+  }
+  ::ng-deep .p-select-dropdown {
+    width: 100%;
+    color: black;
+    font-weight: 500;
+    background: white;
+  }
+}
+
+.wh-pselect-hour {
+  min-width: 4rem;
+  ::ng-deep .p-select {
+    min-width: 4rem;
+  }
+}
+
+.wh-pselect-min {
+  min-width: 4rem;
+  ::ng-deep .p-select {
+    min-width: 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .p-select {
+    width: 100px;
+    background: white;
+    min-height: 60px;
+  }
+  .wh-range-row-selects {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .wh-range-sep {
+    display: none;
+  }
+  .wh-range-group {
+    width: 100%;
+  }
+  .wh-time-select-wrap {
+    flex-direction: row;
+  }
+}
+
+.wh-range-start {
+  display: flex;
+  flex-direction: column;
+}
+
+.wh-range-end {
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 480px) {
+  .wh-range-row {
+    gap: 0.35rem;
+  }
+  .wh-range-label {
+    flex: 0 0 100%;
+  }
+  .wh-time-select {
+    min-width: 3.5rem;
+  }
+}
+
+.wh-range-sep {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.wh-time-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  font-size: 1rem;
+  min-width: 0;
+  flex: 1 1 100px;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.wh-time-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.wh-range-label {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.wh-time-select {
+  padding: 0.5rem 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.wh-time-select-hour {
+  min-width: 3.25rem;
+  width: 3.25rem;
+}
+
+.wh-time-select-min {
+  min-width: 3.25rem;
+  width: 3.25rem;
+}
+
+.wh-range-remove {
+  flex-shrink: 0;
+  min-width: 40px;
+  min-height: 40px;
+}
+
+.wh-inline-message {
+  font-size: 0.8125rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+}
+
+.wh-inline-message-warn {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.wh-range-error {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.wh-conflict-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.wh-conflict-loading {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.wh-add-range-btn {
+  align-self: flex-start;
+  min-height: 40px;
+}
+
+.wh-editor-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+// Drawer – theme-aware
+.wh-drawer {
+  ::ng-deep .p-drawer-header {
+    background: var(--p-drawer-header-background, var(--bg-card));
+    color: var(--p-drawer-header-color, var(--text-primary));
+    border-bottom: 1px solid var(--border-color);
+  }
+  ::ng-deep .p-drawer-content {
+    padding: 1.25rem 1.5rem;
+    padding-bottom: env(safe-area-inset-bottom, 1.25rem);
+    background: var(--p-drawer-content-background, var(--bg-card));
+    color: var(--p-drawer-content-color, var(--text-primary));
+  }
+}
+
+.wh-drawer-day {
+  ::ng-deep .p-drawer-header {
+    padding: 1rem 1.5rem;
+  }
+  ::ng-deep .p-drawer-content {
+    overflow-y: auto;
+  }
+}
+
+.wh-drawer-body {
+  display: flex;
+  flex-direction: column;
+}
+
+// Dialog – theme-aware (light/dark from PrimeNG or layout)
+::ng-deep .wh-dialog-day.p-dialog,
+::ng-deep .wh-dialog-override.p-dialog {
+  background: var(--p-dialog-background, var(--bg-card, #fff));
+  border: 1px solid var(--p-dialog-border-color, var(--border-color));
+  border-radius: var(--p-dialog-border-radius, 12px);
+  box-shadow: var(--p-dialog-shadow);
+  color: var(--p-dialog-color, var(--text-primary));
+}
+
+::ng-deep .wh-dialog-day .p-dialog-header,
+::ng-deep .wh-dialog-override .p-dialog-header {
+  background: var(--p-dialog-header-background, var(--bg-card));
+  color: var(--p-dialog-header-color, var(--text-primary));
+  border-bottom: 1px solid var(--border-color);
+}
+
+::ng-deep .wh-dialog-day .p-dialog-content,
+::ng-deep .wh-dialog-override .p-dialog-content {
+  padding: 1rem 1.5rem;
+  background: var(--p-dialog-content-background, var(--bg-card));
+  color: var(--p-dialog-content-color, var(--text-primary));
+}
+
+::ng-deep .wh-dialog-day .p-dialog-footer,
+::ng-deep .wh-dialog-override .p-dialog-footer {
+  background: var(--p-dialog-footer-background, var(--bg-card));
+  border-top: 1px solid var(--border-color);
+}
+
+// Utility
 .mb-1 { margin-bottom: 0.25rem; }
 .mb-2 { margin-bottom: 0.5rem; }
 .mb-3 { margin-bottom: 1rem; }
-
 .block { display: block; }
 .w-full { width: 100%; }
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-column { flex-direction: column; }
+.align-items-center { align-items: center; }
+.gap-2 { gap: 0.5rem; }
+
+// Mobile: full-width cards, larger touch targets
+@media (max-width: 768px) {
+  .wh-page {
+    padding: 0.75rem 1rem;
+    max-width: 100%;
+  }
+
+  .wh-page-title {
+    font-size: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .wh-day-card {
+    padding: 1rem 1.25rem;
+    border-radius: 12px;
+  }
+
+  .wh-day-toggle {
+    // PrimeNG toggle is already touch-friendly; ensure minimum tap area
+    ::ng-deep .p-toggleswitch {
+      min-width: 48px;
+      min-height: 28px;
+    }
+  }
+
+  .wh-edit-btn {
+    min-height: 44px;
+    padding-inline: 1rem;
+  }
+
+  .wh-time-input {
+    padding: 0.625rem 0.75rem;
+    font-size: 16px; // avoids zoom on focus on iOS
+    min-height: 44px;
+  }
+
+  .wh-range-remove {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .wh-add-range-btn {
+    min-height: 44px;
+  }
+
+  .wh-editor-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-card);
+    padding: 1rem 0 0;
+    margin: 0 -1.5rem -1.25rem;
+    padding: 1rem 1.5rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  .wh-editor-actions p-button {
+    flex: 1;
+    min-width: 120px;
+  }
+}
