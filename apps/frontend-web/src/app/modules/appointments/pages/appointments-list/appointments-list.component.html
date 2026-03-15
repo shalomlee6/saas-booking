@@ -131,27 +131,27 @@
         (created)="onAppointmentCreated()"
       />
     }
+
     @if (!loading()) {
       <div class="calendar-shell">
         <div class="appointments-header">
-
           <div
             class="calendar-header appointments-days"
             [style.--day-count]="visibleDaysCount()"
           >
             <div class="calendar-header-time"></div>
-            @for (day of getVisibleDays(); track toDateKey(day)) {
+            @for (day of visibleDays(); track day.key) {
               <div
                 class="calendar-header-day"
-                [class.calendar-header-day--today]="isToday(day)"
+                [class.calendar-header-day--today]="day.isToday"
               >
-                <span class="calendar-header-day-name">{{ dayName(day) }}</span>
-                <span class="calendar-header-day-date">{{ day | date:'dd/MM' }}</span>
+                <span class="calendar-header-day-name">{{ day.dayName }}</span>
+                <span class="calendar-header-day-date">{{ day.date | date:'dd/MM' }}</span>
               </div>
             }
           </div>
-
         </div>
+
         <div
           class="calendar-scroll"
           [style.--grid-body-height]="gridBodyHeightPx + 'px'"
@@ -170,13 +170,13 @@
               }
             </div>
             <div class="calendar-days">
-              @for (day of getVisibleDays(); track toDateKey(day)) {
+              @for (day of visibleDays(); track day.key) {
                 <div
                   class="calendar-day-col"
-                  [class.calendar-day-col--today]="isToday(day)"
-                  [attr.title]="getDayWorkingTitle(day)"
+                  [class.calendar-day-col--today]="day.isToday"
+                  [attr.title]="day.workingTitle"
                 >
-                  @for (range of getDisabledRanges(day); track range.key) {
+                  @for (range of day.disabledRanges; track range.key) {
                     <div
                       class="calendar-day-disabled"
                       [style.top.px]="range.topPx"
@@ -184,7 +184,7 @@
                     ></div>
                   }
                   <div class="calendar-slot-layer">
-                    @for (slot of getSlotsForDay(day); track slot.minutesFromMidnight) {
+                    @for (slot of day.slots; track slot.minutesFromMidnight) {
                       <div
                         class="calendar-slot"
                         [class.calendar-slot--disabled]="slot.disabled"
@@ -194,10 +194,10 @@
                       ></div>
                     }
                   </div>
-                  @for (block of getBlocksForDay(day); track block.appointment._id) {
+                  @for (block of day.blocks; track block.appointment._id) {
                     <div
                       class="calendar-block calendar-block-clickable"
-                      [class]="blockStatusClass(block)"
+                      [class]="block.statusClass"
                       [style.top.px]="block.topPx"
                       [style.height.px]="block.heightPx"
                       [style.--block-bg]="block.bgColor"
@@ -218,20 +218,16 @@
       </div>
     }
 
-    <!-- Appointment cards list -->
-    @if (!loading() && filteredItems().length > 0) {
+    @if (!loading() && appointmentCards().length > 0) {
       <section class="appointments-cards-section">
         <h2 class="appointments-cards-title">תורים</h2>
         <div class="appointments-cards-list">
-          @for (a of filteredItems(); track a._id) {
-            <div
-              class="appointment-card"
-              (click)="openAppointment(a)"
-            >
-              <div class="appointment-card-time">{{ a.start | date:'HH:mm' }} – {{ a.end | date:'HH:mm' }}</div>
-              <div class="appointment-card-customer">{{ customerDisplay(a) }}</div>
-              <div class="appointment-card-service">{{ serviceDisplay(a) }}</div>
-              <p-tag [value]="a.status" [severity]="statusSeverity(a.status)" />
+          @for (vm of appointmentCards(); track vm.apt._id) {
+            <div class="appointment-card" (click)="openAppointment(vm.apt)">
+              <div class="appointment-card-time">{{ vm.apt.start | date:'HH:mm' }} – {{ vm.apt.end | date:'HH:mm' }}</div>
+              <div class="appointment-card-customer">{{ vm.customerDisplay }}</div>
+              <div class="appointment-card-service">{{ vm.serviceDisplay }}</div>
+              <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
             </div>
           }
         </div>
@@ -239,8 +235,7 @@
     }
   </div>
 
-  <!-- Detail: Dialog (desktop) or Drawer (mobile) -->
-  @if (selectedAppointment(); as apt) {
+  @if (selectedAptVm(); as vm) {
     @if (!isMobile()) {
       <p-dialog
         header="פרטי תור"
@@ -256,19 +251,21 @@
         <div class="appointments-detail">
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">לקוח</span>
-            <span class="appointments-detail-value">{{ customerDisplay(apt) }}</span>
+            <span class="appointments-detail-value">{{ vm.customerDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">שירות</span>
-            <span class="appointments-detail-value">{{ serviceDisplay(apt) }}</span>
+            <span class="appointments-detail-value">{{ vm.serviceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">מחיר</span>
-            <span class="appointments-detail-value">{{ priceDisplay(apt) }}</span>
+            <span class="appointments-detail-value">{{ vm.priceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">סטטוס</span>
-            <span class="appointments-detail-value"><p-tag [value]="apt.status" [severity]="statusSeverity(apt.status)" /></span>
+            <span class="appointments-detail-value">
+              <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
+            </span>
           </div>
         </div>
         <ng-template pTemplate="footer">
@@ -293,19 +290,21 @@
         <div class="appointments-detail appointments-detail-drawer-body">
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">לקוח</span>
-            <span class="appointments-detail-value">{{ customerDisplay(apt) }}</span>
+            <span class="appointments-detail-value">{{ vm.customerDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">שירות</span>
-            <span class="appointments-detail-value">{{ serviceDisplay(apt) }}</span>
+            <span class="appointments-detail-value">{{ vm.serviceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">מחיר</span>
-            <span class="appointments-detail-value">{{ priceDisplay(apt) }}</span>
+            <span class="appointments-detail-value">{{ vm.priceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
             <span class="appointments-detail-label">סטטוס</span>
-            <span class="appointments-detail-value"><p-tag [value]="apt.status" [severity]="statusSeverity(apt.status)" /></span>
+            <span class="appointments-detail-value">
+              <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
+            </span>
           </div>
           <div class="appointments-detail-actions">
             <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" styleClass="appointments-detail-btn" />

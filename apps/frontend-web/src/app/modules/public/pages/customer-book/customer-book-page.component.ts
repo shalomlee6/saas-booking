@@ -4,7 +4,6 @@ import {
   OnInit,
   computed,
   signal,
-  WritableSignal,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -58,10 +57,9 @@ export class CustomerBookPageComponent implements OnInit {
   readonly submitting = signal(false);
   readonly appointmentSuccess = signal(false);
 
-  readonly slug = computed(() => {
-    // return this.router.url.split('/')[2] ?? '';
-    return   this.route.parent?.parent?.snapshot.paramMap.get('slug') ?? '';
-  });
+  readonly slug = computed(() =>
+    this.route.parent?.parent?.snapshot.paramMap.get('slug') ?? ''
+  );
   readonly minDate = computed(() => new Date());
 
   readonly canShowSlots = computed(() => {

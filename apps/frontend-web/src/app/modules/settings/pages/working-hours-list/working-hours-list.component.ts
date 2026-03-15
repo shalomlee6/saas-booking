@@ -569,9 +569,6 @@ export class WorkingHoursListComponent implements OnInit {
     });
   }
 
-  getOverrideForDate(dateStr: string): Override | undefined {
-    return this.overridesByDate().get(dateStr);
-  }
 }
 
 function formatDateForApi(d: Date): string {

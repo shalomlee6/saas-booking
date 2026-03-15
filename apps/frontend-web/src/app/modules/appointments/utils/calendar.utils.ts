@@ -152,12 +152,6 @@ export function getAppointmentBlockLayout(
   const start = asDate((appointment as any).start ?? (appointment as any).startTime);
   const end = asDate((appointment as any).end ?? (appointment as any).endTime);
   if (!start || !end) {
-    // Temporary debug log to confirm no appointments are skipped due to invalid dates.
-    // Remove or downgrade to debug once verified.
-    // eslint-disable-next-line no-console
-    console.warn('[calendar] invalid appointment start/end, skipping block', {
-      appointment,
-    });
     return null;
   }
 

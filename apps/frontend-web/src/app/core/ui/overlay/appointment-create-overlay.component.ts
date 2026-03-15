@@ -142,8 +142,10 @@ export class AppointmentCreateOverlayComponent {
     this.closed.emit();
   }
 
+  private pendingCreate = false;
+
   onSubmit(): void {
-    if (this.form.invalid || this.creating()) {
+    if (this.form.invalid || this.creating() || this.pendingCreate) {
       this.form.markAllAsTouched();
       return;
     }
@@ -154,8 +156,7 @@ export class AppointmentCreateOverlayComponent {
     const startDate = new Date(startStr);
     if (isNaN(startDate.getTime())) return;
     const endDate = new Date(
-      startDate.getTime() +
-        DEFAULT_APPOINTMENT_DURATION_MINUTES * 60 * 1000
+      startDate.getTime() + DEFAULT_APPOINTMENT_DURATION_MINUTES * 60 * 1000
     );
 
     const dto: CreateAppointmentDto = {
@@ -167,16 +168,20 @@ export class AppointmentCreateOverlayComponent {
       date: d,
       notes: this.form.get('notes')?.value?.trim() || undefined,
     };
+    this.pendingCreate = true;
     this.store.dispatch(AppointmentsActions.create({ dto }));
     this.actions
       .pipe(
-        ofType(AppointmentsActions.createSuccess),
+        ofType(AppointmentsActions.createSuccess, AppointmentsActions.createFailure),
         take(1),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => {
-        this.created.emit();
-        this.close();
+      .subscribe((action) => {
+        this.pendingCreate = false;
+        if (action.type === AppointmentsActions.createSuccess.type) {
+          this.created.emit();
+          this.close();
+        }
       });
   }
 

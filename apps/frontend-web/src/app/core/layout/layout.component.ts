@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   OnInit,
   OnDestroy,
   HostListener,
@@ -35,8 +36,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   readonly user = this.auth.user;
   readonly business = this.auth.business;
-  readonly isSuperAdmin = () => this.auth.isSuperAdmin();
-  readonly isImpersonating = () => this.auth.isImpersonating();
+  readonly isSuperAdmin = computed(() => this.auth.isSuperAdmin());
+  readonly isImpersonating = computed(() => this.auth.isImpersonating());
+  readonly activeBusinessName = computed(() => this.auth.activeBusinessName());
 
   /** Mobile: drawer open/close. Desktop: unused. */
   readonly isMobileMenuOpen = signal(false);
@@ -86,35 +88,39 @@ export class LayoutComponent implements OnInit, OnDestroy {
     }
   }
 
-  get menuAriaLabel(): string {
+  readonly menuAriaLabel = computed<string>(() => {
     if (this.isMobile()) {
       return this.isMobileMenuOpen() ? 'Close menu' : 'Open menu';
     }
     return this.isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar';
-  }
+  });
 
-  /** Icon for menu toggle: pi-bars when sidebar closed, pi-times when open */
-  menuToggleIcon(): string {
+  /** Icon for menu toggle: pi-bars when sidebar closed, pi-times when open. */
+  readonly menuToggleIcon = computed<string>(() => {
     const open = this.isMobile() ? this.isMobileMenuOpen() : !this.isSidebarCollapsed();
     return open ? 'pi pi-times' : 'pi pi-bars';
-  }
+  });
 
-  /** Sidebar: Services only when impersonating or business owner; super_admin not impersonating -> /admin/business-customers */
-  readonly servicesNavLink = (): string =>
-    this.auth.isSuperAdmin() && !this.auth.isImpersonating() ? '/admin/business-customers' : '/services';
+  /** Sidebar: Services nav link. */
+  readonly servicesNavLink = computed<string>(() =>
+    this.isSuperAdmin() && !this.isImpersonating() ? '/admin/business-customers' : '/services'
+  );
 
-  /** Sidebar: "Businesses" + /admin/business-customers when super_admin and not impersonating; else "Customers" + /customers */
-  readonly customersNavLabel = (): string =>
-    this.auth.isSuperAdmin() && !this.auth.isImpersonating() ? 'Businesses' : 'Customers';
+  /** Sidebar: Customers label. */
+  readonly customersNavLabel = computed<string>(() =>
+    this.isSuperAdmin() && !this.isImpersonating() ? 'Businesses' : 'Customers'
+  );
 
-  readonly customersNavLink = (): string =>
-    this.auth.isSuperAdmin() && !this.auth.isImpersonating() ? '/admin/business-customers' : '/customers';
+  /** Sidebar: Customers nav link. */
+  readonly customersNavLink = computed<string>(() =>
+    this.isSuperAdmin() && !this.isImpersonating() ? '/admin/business-customers' : '/customers'
+  );
 
-  /** URL for the public customer site (open in new tab). Uses current business slug. */
-  readonly customerSiteUrl = (): string => {
+  /** URL for the public customer site (open in new tab). */
+  readonly customerSiteUrl = computed<string>(() => {
     const slug = this.auth.business()?.slug;
     return slug ? `/b/${encodeURIComponent(slug)}/login` : '#';
-  };
+  });
 
   toggleTheme(): void {
     const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';

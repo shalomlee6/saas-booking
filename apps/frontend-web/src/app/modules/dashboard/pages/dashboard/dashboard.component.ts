@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { map } from 'rxjs';
+import { map, shareReplay } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
@@ -33,7 +33,11 @@ export class DashboardComponent {
   readonly growthBrain = inject(GrowthBrainService);
 
   readonly appointments$ = this.appointmentsApi.appointments$;
-  readonly insights$ = this.growthBrain.getInsights();
+  readonly topAppointments$ = this.appointments$.pipe(
+    map((list) => list.slice(0, 10)),
+    shareReplay(1)
+  );
+  readonly insights$ = this.growthBrain.insights$;
 
   /** Chart data: revenue by weekday (Mongo $dayOfWeek 1=Sun .. 7=Sat) */
   readonly revenueByWeekdayChart$ = this.insights$.pipe(

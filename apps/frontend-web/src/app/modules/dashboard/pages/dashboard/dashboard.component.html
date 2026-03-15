@@ -80,7 +80,7 @@
     <div class="dashboard-card dashboard-table-card">
       <h2 class="dashboard-card-title">תורים (עדכון אוטומטי)</h2>
       <div class="dashboard-table-placeholder">
-        @if (appointments$ | async; as list) {
+        @if (topAppointments$ | async; as list) {
           @if (list.length === 0) {
             <p class="dashboard-empty">אין תורים בטווח הנוכחי.</p>
           } @else {
@@ -94,7 +94,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (a of list.slice(0, 10); track a._id) {
+                @for (a of list; track a._id) {
                   <tr>
                     <td>{{ a.start | date:'HH:mm' }} – {{ a.end | date:'HH:mm' }}</td>
                     <td>{{ a.customerName }}</td>

@@ -18,8 +18,8 @@
           (change)="copyFrom($any($event.target).value)"
         >
           <option value="">—</option>
-          @for (k of otherDays(); track k) {
-            <option [value]="k">{{ k.charAt(0).toUpperCase() + k.slice(1) }}</option>
+          @for (item of otherDaysWithLabels(); track item.key) {
+            <option [value]="item.key">{{ item.label }}</option>
           }
         </select>
       </div>

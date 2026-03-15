@@ -30,28 +30,26 @@ export class GrowthBrainService {
    * Use async pipe in templates; do not manually subscribe.
    * shareReplay(1) so multiple async pipes share one subscription.
    */
-  getInsights(): Observable<Insights> {
-    return this.refresh$.pipe(
-      switchMap(() =>
-        this.api.get<InsightsApiResponse>('business/insights').pipe(
-          map((res) => ({
-            totalRevenue: res.totalRevenue ?? 0,
-            revenueByService: (res.revenueByService ?? []).map((r) => ({
-              serviceName: r.serviceName ?? '',
-              total: r.total ?? 0,
-            })),
-            revenueByWeekday: res.revenueByWeekday ?? [],
-            inactiveCustomersCount: res.inactiveCustomersCount ?? 0,
-            topCustomers: (res.topCustomers ?? []).map((c) => ({
-              name: c.name ?? '',
-              total: c.total ?? 0,
-            })),
-          }))
-        )
-      ),
-      shareReplay(1)
-    );
-  }
+  readonly insights$: Observable<Insights> = this.refresh$.pipe(
+    switchMap(() =>
+      this.api.get<InsightsApiResponse>('business/insights').pipe(
+        map((res) => ({
+          totalRevenue: res.totalRevenue ?? 0,
+          revenueByService: (res.revenueByService ?? []).map((r) => ({
+            serviceName: r.serviceName ?? '',
+            total: r.total ?? 0,
+          })),
+          revenueByWeekday: res.revenueByWeekday ?? [],
+          inactiveCustomersCount: res.inactiveCustomersCount ?? 0,
+          topCustomers: (res.topCustomers ?? []).map((c) => ({
+            name: c.name ?? '',
+            total: c.total ?? 0,
+          })),
+        }))
+      )
+    ),
+    shareReplay(1)
+  );
 
   refresh(): void {
     this.refresh$.next();

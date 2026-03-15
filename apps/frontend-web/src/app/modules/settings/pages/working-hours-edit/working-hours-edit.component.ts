@@ -62,8 +62,10 @@ export class WorkingHoursEditComponent implements OnInit {
     return list;
   });
 
-  readonly otherDays = computed(() =>
-    WORKING_HOURS_DAY_KEYS.filter((k) => k !== this.dayKey())
+  readonly otherDaysWithLabels = computed(() =>
+    WORKING_HOURS_DAY_KEYS
+      .filter((k) => k !== this.dayKey())
+      .map((k) => ({ key: k, label: DAY_LABELS[k] ?? (k.charAt(0).toUpperCase() + k.slice(1)) }))
   );
 
   ngOnInit(): void {

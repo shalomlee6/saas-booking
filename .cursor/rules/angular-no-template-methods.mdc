@@ -1,0 +1,46 @@
+---
+description: Do not call component methods/functions from Angular templates (performance)
+globs: "**/*.component.html"
+alwaysApply: false
+---
+
+# No Component Function Calls in Angular Templates
+
+Do **not** call component methods or non-signal functions directly from Angular templates unless there is explicit justification and approval.
+
+## Why
+
+Methods invoked in templates run on every change detection cycle and can run repeatedly inside `@for`/`*ngFor`, causing performance issues.
+
+## Forbidden in templates
+
+- `{{ someMethod(item) }}` — interpolation
+- `[value]="computeValue(item)"` — property bindings
+- `[class.x]="isActive(item)"` — class/style bindings
+- `@if (hasSomething()) { ... }` — control flow (when `hasSomething` is a method)
+- `@for (x of getItems(); track ...)` — when `getItems` is a component method
+
+## Allowed
+
+- **Signal reads**: `someSignal()`, `someComputed()` — these are the recommended Angular pattern.
+- **Pipes**: `value | myPipe` (prefer pure pipes for formatting).
+- **Event handlers**: `(click)="onSave()"` — user-triggered, not re-evaluated on every CD.
+
+## Preferred alternatives
+
+- **Computed signals** for derived data: `readonly items = computed(() => ...)`
+- **Precomputed view-models** (e.g. arrays of `{ label, value }`) built in component.
+- **Pure pipes** for formatting only, when reused in many templates.
+- **Readonly properties** for static or one-time data.
+
+## Example
+
+```html
+<!-- Bad: method called every CD and possibly inside loop -->
+<span>{{ dayName(day) }}</span>
+@for (a of getItems(); track a.id) { ... }
+
+<!-- Good: bind to precomputed or signal -->
+<span>{{ dayNames()[day.index] }}</span>
+@for (a of items(); track a.id) { ... }
+```

@@ -1,7 +1,6 @@
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, mergeMap, of, tap } from 'rxjs';
+import { catchError, map, mergeMap, of } from 'rxjs';
 import { AppointmentsApiService } from '../services/appointments-api.service';
 import * as AppointmentsActions from './appointments.actions';
 
@@ -45,20 +44,6 @@ export const createAppointment$ = createEffect(
   { functional: true }
 );
 
-export const createSuccessReload$ = createEffect(
-  (actions$ = inject(Actions)) =>
-    actions$.pipe(
-      ofType(AppointmentsActions.createSuccess),
-      map(() => AppointmentsActions.load({}))
-    ),
-  { functional: true }
-);
-
-export const createSuccessNavigate$ = createEffect(
-  (actions$ = inject(Actions), router = inject(Router)) =>
-    actions$.pipe(
-      ofType(AppointmentsActions.createSuccess),
-      tap(() => router.navigate(['/appointments']))
-    ),
-  { functional: true, dispatch: false }
-);
+// createSuccessReload$ was removed: the component's onAppointmentCreated() already calls
+// loadForCurrentView() with the correct date params. The old effect dispatched load({})
+// with no params, causing a redundant second API call that could overwrite the ranged results.

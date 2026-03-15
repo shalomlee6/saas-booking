@@ -41,6 +41,45 @@ import { ButtonModule } from 'primeng/button';
 
 type ViewMode = 'day' | 'week';
 
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+const STATUS_SEVERITY_MAP: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
+  confirmed: 'success',
+  pending: 'warn',
+  completed: 'info',
+  cancelled: 'danger',
+  canceled: 'danger',
+};
+
+const STATUS_CLASS_MAP: Record<string, string> = {
+  confirmed: 'calendar-block--confirmed',
+  pending: 'calendar-block--pending',
+  completed: 'calendar-block--completed',
+  done: 'calendar-block--completed',
+  cancelled: 'calendar-block--cancelled',
+  canceled: 'calendar-block--cancelled',
+};
+
+export interface DayViewModel {
+  date: Date;
+  key: string;
+  dayName: string;
+  dateLabel: string;
+  isToday: boolean;
+  workingTitle: string;
+  disabledRanges: { key: string; topPx: number; heightPx: number }[];
+  slots: { time: string; minutesFromMidnight: number; disabled: boolean }[];
+  blocks: (AppointmentBlockLayout & { statusClass: string })[];
+}
+
+export interface AppointmentCardVm {
+  apt: Appointment;
+  customerDisplay: string;
+  serviceDisplay: string;
+  priceDisplay: string;
+  severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
+}
+
 function startOfDay(d: Date): Date {
   const out = new Date(d);
   out.setHours(0, 0, 0, 0);
@@ -54,10 +93,33 @@ function getListParamsForVisibleRange(
   const start = startOfDay(new Date(visibleStart));
   const end = new Date(start);
   end.setDate(end.getDate() + dayCount);
-  return {
-    from: start.toISOString(),
-    to: end.toISOString(),
-  };
+  return { from: start.toISOString(), to: end.toISOString() };
+}
+
+function getCustomerDisplay(apt: Appointment): string {
+  if (apt.customerName) return apt.customerName;
+  const c = apt.customerId;
+  if (c && typeof c === 'object' && 'name' in c) return (c as { name: string }).name;
+  return typeof c === 'string' ? c : '—';
+}
+
+function getServiceDisplay(apt: Appointment): string {
+  if (apt.serviceName) return apt.serviceName;
+  const s = apt.serviceId;
+  if (s && typeof s === 'object' && 'name' in s) return (s as { name: string }).name;
+  return typeof s === 'string' ? s : '—';
+}
+
+function getPriceDisplay(apt: Appointment): string {
+  return apt.price != null ? `${apt.price} ₪` : '—';
+}
+
+function getStatusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+  return STATUS_SEVERITY_MAP[(status || '').toLowerCase()] ?? 'secondary';
+}
+
+function getStatusClass(status: string): string {
+  return STATUS_CLASS_MAP[(status || '').toLowerCase()] ?? 'calendar-block--neutral';
 }
 
 const DETAIL_BREAKPOINT_PX = 768;
@@ -88,51 +150,22 @@ export class AppointmentsListComponent implements OnInit {
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
   readonly today = new Date();
-  toDateKey = toDateKey;
   readonly isMobile = signal(false);
   readonly selectedAppointment = signal<Appointment | null>(null);
 
-  /** First day of the visible range (normalized to 00:00). Initial load = today. */
   readonly visibleStartDate = signal<Date>(startOfDay(new Date()));
-  /** Number of days to show: desktop 7, mobile 3, day view 1. */
   readonly visibleDaysCount = signal(7);
 
-  readonly workingHours = () =>
-    this.auth.businessSettings()?.workingHours ?? null;
+  /** Reactive: re-reads auth signal each time it changes. */
+  private readonly workingHours = computed(
+    () => this.auth.businessSettings()?.workingHours ?? null
+  );
 
   readonly items = toSignal(this.store.select(selectItems), { initialValue: [] });
-  readonly loading = toSignal(this.store.select(selectLoading), {
-    initialValue: false,
-  });
+  readonly loading = toSignal(this.store.select(selectLoading), { initialValue: false });
   readonly error = toSignal(this.store.select(selectError), {
     initialValue: null as string | null,
   });
-
-  /** Visible days for the calendar (used for header and columns). */
-  getVisibleDays(): Date[] {
-    const start = this.visibleStartDate();
-    const count = this.visibleDaysCount();
-    const days: Date[] = [];
-    for (let i = 0; i < count; i++) {
-      const d = new Date(start);
-      d.setDate(d.getDate() + i);
-      d.setHours(0, 0, 0, 0);
-      days.push(d);
-    }
-    return days;
-  }
-
-  /** True when the visible range starts at today (disable prev arrow). */
-  isAtToday(): boolean {
-    const a = startOfDay(this.visibleStartDate());
-    const b = startOfDay(this.today);
-    return a.getTime() === b.getTime();
-  }
-
-  /** True when the given day is today (for highlighting column). */
-  isToday(day: Date): boolean {
-    return toDateKey(day) === toDateKey(this.today);
-  }
 
   readonly hourLabelsWithStyle = computed(() => getHourLabelsWithStyle());
 
@@ -141,8 +174,8 @@ export class AppointmentsListComponent implements OnInit {
     const list = this.items();
     if (!q) return list;
     return list.filter((apt) => {
-      const cust = this.customerDisplay(apt);
-      const svc = this.serviceDisplay(apt);
+      const cust = getCustomerDisplay(apt);
+      const svc = getServiceDisplay(apt);
       return (
         cust.toLowerCase().includes(q) ||
         svc.toLowerCase().includes(q) ||
@@ -151,7 +184,18 @@ export class AppointmentsListComponent implements OnInit {
     });
   });
 
-  readonly byDay = computed(() => {
+  /** Precomputed card view-models for the list below the calendar. */
+  readonly appointmentCards = computed<AppointmentCardVm[]>(() =>
+    this.filteredItems().map((apt) => ({
+      apt,
+      customerDisplay: getCustomerDisplay(apt),
+      serviceDisplay: getServiceDisplay(apt),
+      priceDisplay: getPriceDisplay(apt),
+      severity: getStatusSeverity(apt.status ?? ''),
+    }))
+  );
+
+  private readonly byDay = computed(() => {
     const list = this.filteredItems();
     const start = this.visibleStartDate();
     const count = this.visibleDaysCount();
@@ -161,8 +205,94 @@ export class AppointmentsListComponent implements OnInit {
     return groupAppointmentsByDay(list, rangeStart, rangeEnd);
   });
 
+  /** Full precomputed day view-models — used in both calendar header and body. */
+  readonly visibleDays = computed<DayViewModel[]>(() => {
+    const start = this.visibleStartDate();
+    const count = this.visibleDaysCount();
+    const todayKey = toDateKey(this.today);
+    const wh = this.workingHours();
+    const byDay = this.byDay();
+
+    const days: DayViewModel[] = [];
+    for (let i = 0; i < count; i++) {
+      const date = new Date(start);
+      date.setDate(date.getDate() + i);
+      date.setHours(0, 0, 0, 0);
+      const key = toDateKey(date);
+
+      const dayBlockList = byDay.get(key) ?? [];
+      const blocks: (AppointmentBlockLayout & { statusClass: string })[] = [];
+      const dayStart = new Date(date);
+      for (const apt of dayBlockList) {
+        const layout = getAppointmentBlockLayout(apt, dayStart);
+        if (layout) {
+          blocks.push({ ...layout, statusClass: getStatusClass(layout.status) });
+        }
+      }
+      blocks.sort((a, b) => a.topPx - b.topPx);
+
+      days.push({
+        date,
+        key,
+        dayName: DAY_NAMES[date.getDay()],
+        dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+        isToday: key === todayKey,
+        workingTitle: wh ? getWorkingHoursSummary(date.getDay(), wh) : 'Working hours not set',
+        disabledRanges: getDisabledRangesForDay(date, wh),
+        slots: getSlotsForDay(date, wh),
+        blocks,
+      });
+    }
+    return days;
+  });
+
+  /** Toolbar date range label. */
+  readonly visibleDateRangeLabel = computed<string>(() => {
+    const days = this.visibleDays();
+    if (days.length === 0) return '';
+    if (days.length === 1) {
+      return days[0].date.toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      });
+    }
+    const start = days[0].date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+    });
+    const end = days[days.length - 1].date.toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    return `${start} – ${end}`;
+  });
+
+  /** True when the visible range starts at today (prev arrow disabled). */
+  readonly isAtToday = computed<boolean>(() => {
+    const a = startOfDay(this.visibleStartDate());
+    const b = startOfDay(this.today);
+    return a.getTime() === b.getTime();
+  });
+
+  /** Selected appointment detail view-model. */
+  readonly selectedAptVm = computed<AppointmentCardVm | null>(() => {
+    const apt = this.selectedAppointment();
+    if (!apt) return null;
+    return {
+      apt,
+      customerDisplay: getCustomerDisplay(apt),
+      serviceDisplay: getServiceDisplay(apt),
+      priceDisplay: getPriceDisplay(apt),
+      severity: getStatusSeverity(apt.status ?? ''),
+    };
+  });
+
   readonly gridBodyHeightPx = GRID_BODY_HEIGHT_PX;
   readonly slotHeightPx = CALENDAR_SLOT_HEIGHT_PX;
+
+  readonly overlayOpen = signal<{ date: string; time: string } | null>(null);
 
   constructor() {
     afterNextRender(() => {
@@ -213,10 +343,7 @@ export class AppointmentsListComponent implements OnInit {
 
   private loadForCurrentView(): void {
     const count = this.visibleDaysCount();
-    const params = getListParamsForVisibleRange(
-      this.visibleStartDate(),
-      count
-    );
+    const params = getListParamsForVisibleRange(this.visibleStartDate(), count);
     this.store.dispatch(AppointmentsActions.load({ params }));
   }
 
@@ -228,68 +355,6 @@ export class AppointmentsListComponent implements OnInit {
     this.loadForCurrentView();
   }
 
-  getBlocksForDay(day: Date): AppointmentBlockLayout[] {
-    const key = toDateKey(day);
-    const list = this.byDay().get(key) ?? [];
-    const layouts: AppointmentBlockLayout[] = [];
-    const dayStart = new Date(day);
-    dayStart.setHours(0, 0, 0, 0);
-    for (const apt of list) {
-      const layout = getAppointmentBlockLayout(apt, dayStart);
-      if (layout) layouts.push(layout);
-    }
-    layouts.sort((a, b) => a.topPx - b.topPx);
-    return layouts;
-  }
-
-  dayName(d: Date): string {
-    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return names[d.getDay()];
-  }
-
-  dateStr(d: Date): string {
-    const m = d.getMonth() + 1;
-    const day = d.getDate();
-    return `${m}/${day}`;
-  }
-
-  /** Visible date range label for toolbar (e.g. "Mar 3 – Mar 9"). */
-  visibleDateRangeLabel(): string {
-    const days = this.getVisibleDays();
-    if (days.length === 0) return '';
-    if (days.length === 1) {
-      return days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    }
-    const start = days[0].toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const end = days[days.length - 1].toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    return `${start} – ${end}`;
-  }
-
-  blockStatusClass(block: AppointmentBlockLayout): string {
-    const s = (block.status || '').toLowerCase();
-    if (s === 'confirmed') return 'calendar-block--confirmed';
-    if (s === 'pending') return 'calendar-block--pending';
-    if (s === 'completed' || s === 'done') return 'calendar-block--completed';
-    if (s === 'cancelled' || s === 'canceled') return 'calendar-block--cancelled';
-    return 'calendar-block--neutral';
-  }
-
-  getDisabledRanges(day: Date): { key: string; topPx: number; heightPx: number }[] {
-    return getDisabledRangesForDay(day, this.workingHours());
-  }
-
-  getDayWorkingTitle(day: Date): string {
-    const wh = this.workingHours();
-    if (!wh) return 'Working hours not set';
-    return getWorkingHoursSummary(day.getDay(), wh);
-  }
-
-  getSlotsForDay(day: Date): { time: string; minutesFromMidnight: number; disabled: boolean }[] {
-    return getSlotsForDay(day, this.workingHours());
-  }
-
-  readonly overlayOpen = signal<{ date: string; time: string } | null>(null);
-
   openOverlay(date: string, time: string): void {
     this.overlayOpen.set({ date, time });
   }
@@ -298,10 +363,12 @@ export class AppointmentsListComponent implements OnInit {
     this.overlayOpen.set(null);
   }
 
-  onSlotClick(day: Date, slot: { time: string; minutesFromMidnight: number; disabled: boolean }): void {
+  onSlotClick(
+    day: DayViewModel,
+    slot: { time: string; minutesFromMidnight: number; disabled: boolean }
+  ): void {
     if (slot.disabled) return;
-    const date = toDateKey(day);
-    this.openOverlay(date, slot.time);
+    this.openOverlay(day.key, slot.time);
   }
 
   onAppointmentCreated(): void {
@@ -335,40 +402,5 @@ export class AppointmentsListComponent implements OnInit {
       },
       error: () => {},
     });
-  }
-
-  customerDisplay(apt: Appointment): string {
-    if (apt.customerName) return apt.customerName;
-    const c = apt.customerId;
-    if (c && typeof c === 'object' && 'name' in c) return (c as { name: string }).name;
-    return typeof c === 'string' ? c : '—';
-  }
-
-  serviceDisplay(apt: Appointment): string {
-    if (apt.serviceName) return apt.serviceName;
-    const s = apt.serviceId;
-    if (s && typeof s === 'object' && 'name' in s) return (s as { name: string }).name;
-    return typeof s === 'string' ? s : '—';
-  }
-
-  priceDisplay(apt: Appointment): string {
-    if (apt.price != null) return `${apt.price} ₪`;
-    return '—';
-  }
-
-  customerPhoneDisplay(apt: Appointment): string {
-    if (apt.customerPhone != null && apt.customerPhone !== '') return apt.customerPhone;
-    const c = apt.customerId;
-    if (c && typeof c === 'object' && 'phone' in c) return (c as { phone?: string }).phone ?? '—';
-    return '—';
-  }
-
-  statusSeverity(status: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-    const s = (status || '').toLowerCase();
-    if (s === 'confirmed') return 'success';
-    if (s === 'pending') return 'warn';
-    if (s === 'completed') return 'info';
-    if (s === 'cancelled' || s === 'canceled') return 'danger';
-    return 'secondary';
   }
 }

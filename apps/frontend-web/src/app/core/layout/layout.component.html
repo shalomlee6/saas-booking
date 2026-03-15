@@ -120,14 +120,15 @@
       [rounded]="true"
       [text]="true"
       severity="secondary"
-      [attr.aria-label]="menuAriaLabel"
+      [attr.aria-label]="menuAriaLabel()"
       [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
       (onClick)="toggleSidebar()"
       styleClass="layout-topbar-menu-btn layout-topbar-menu-btn-p"
     />
     <h1 class="layout-topbar-title">Page title</h1>
     <div class="layout-topbar-search-wrap">
-      <input type="text" class="layout-topbar-search" placeholder="Search..." readonly />
+      <!-- TODO: wire up global search or remove this element -->
+      <input type="text" class="layout-topbar-search" placeholder="Search..." disabled aria-hidden="true" />
     </div>
     <div class="layout-topbar-actions">
       @if (business()?.slug) {
@@ -161,7 +162,7 @@
       <span class="layout-topbar-icon" aria-hidden="true"></span>
       <span class="layout-topbar-icon" aria-hidden="true"></span>
       <span class="layout-topbar-user">
-        @if (auth.activeBusinessName(); as bizName) {
+        @if (activeBusinessName(); as bizName) {
           <span class="layout-topbar-business-name">{{ bizName }}</span>
           <span class="layout-topbar-user-sep">·</span>
         }
