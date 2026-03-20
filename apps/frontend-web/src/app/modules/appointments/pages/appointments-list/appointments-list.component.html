@@ -189,7 +189,7 @@
                         class="calendar-slot"
                         [class.calendar-slot--disabled]="slot.disabled"
                         [attr.data-time]="slot.time"
-                        [attr.aria-label]="slot.disabled ? null : 'Add appointment at ' + slot.time"
+                        [attr.aria-label]="slot.ariaLabel"
                         (click)="onSlotClick(day, slot)"
                       ></div>
                     }

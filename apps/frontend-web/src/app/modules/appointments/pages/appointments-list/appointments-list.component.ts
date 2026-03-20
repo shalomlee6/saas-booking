@@ -68,7 +68,7 @@ export interface DayViewModel {
   isToday: boolean;
   workingTitle: string;
   disabledRanges: { key: string; topPx: number; heightPx: number }[];
-  slots: { time: string; minutesFromMidnight: number; disabled: boolean }[];
+  slots: { time: string; minutesFromMidnight: number; disabled: boolean; ariaLabel: string | null }[];
   blocks: (AppointmentBlockLayout & { statusClass: string })[];
 }
 
@@ -239,7 +239,10 @@ export class AppointmentsListComponent implements OnInit {
         isToday: key === todayKey,
         workingTitle: wh ? getWorkingHoursSummary(date.getDay(), wh) : 'Working hours not set',
         disabledRanges: getDisabledRangesForDay(date, wh),
-        slots: getSlotsForDay(date, wh),
+        slots: getSlotsForDay(date, wh).map((slot) => ({
+          ...slot,
+          ariaLabel: slot.disabled ? null : `Add appointment at ${slot.time}`,
+        })),
         blocks,
       });
     }
@@ -400,7 +403,13 @@ export class AppointmentsListComponent implements OnInit {
         this.appointmentsApi.refresh();
         this.growthBrain.refresh();
       },
-      error: () => {},
+      error: (err) => {
+        // Surface the cancellation error — previously was silently swallowed.
+        const msg: string =
+          (err as { error?: { message?: string } })?.error?.message ??
+          'Failed to cancel appointment. Please try again.';
+        this.store.dispatch(AppointmentsActions.loadFailure({ error: msg }));
+      },
     });
   }
 }

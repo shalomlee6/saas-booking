@@ -1,9 +1,8 @@
-// Page
+// ─── Page ────────────────────────────────────────────────────────────────────
 .wh-page {
   min-height: 100%;
   background: var(--bg-app, #f5f6f8);
-  padding: 1rem 1.25rem;
-  padding-bottom: 2rem;
+  padding: 1rem 1.25rem 2rem;
   max-width: 720px;
   margin-inline: auto;
   box-sizing: border-box;
@@ -17,39 +16,52 @@
   text-align: start;
 }
 
-// Tabs – premium segmented control, strong contrast on hover and active
+// ─── Tabs ─────────────────────────────────────────────────────────────────────
 .wh-tabs {
   ::ng-deep .p-tablist {
     background: var(--bg-card, #fff);
     border-radius: 12px;
-    padding: 0.25rem;
+    padding: 0.3rem;
     margin-bottom: 1.25rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.07);
     border: 1px solid var(--border-color, #e5e7eb);
+    gap: 0.25rem;
   }
+
   ::ng-deep .p-tab {
-    border-radius: 10px;
-    padding: 0.625rem 1.25rem;
+    border-radius: 9px;
+    padding: 0.6rem 1.5rem;
     font-weight: 500;
+    font-size: 0.9375rem;
     color: var(--text-primary, #0f172a);
     transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+
     &:hover {
       background: color-mix(in srgb, var(--color-primary, #3787f6) 8%, transparent);
-      color: var(--text-primary, #0f172a);
+      color: var(--color-primary, #3787f6);
     }
   }
+
   ::ng-deep .p-tab[data-p-active="true"],
   ::ng-deep .p-tab.p-highlight {
     background: var(--color-primary, #3787f6);
     color: #fff;
     font-weight: 600;
   }
-  ::ng-deep .p-tabpanel-active .p-tabpanels-content {
+
+  ::ng-deep .p-tabpanels {
+    background: transparent;
     padding: 0;
+  }
+
+  ::ng-deep .p-tabpanel {
+    padding: 0;
+    background: transparent;
   }
 }
 
-// Day cards list (Tab 1)
+// ─── Day cards list (Tab 1) ───────────────────────────────────────────────────
 .wh-days-container {
   display: flex;
   flex-direction: column;
@@ -71,11 +83,11 @@
   gap: 0.625rem;
   text-align: start;
   transition: box-shadow 0.15s, border-color 0.15s;
-}
 
-.wh-day-card:hover {
-  border-color: var(--border-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  &:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border-color: color-mix(in srgb, var(--color-primary, #3787f6) 25%, var(--border-color));
+  }
 }
 
 .wh-day-card-main {
@@ -111,11 +123,11 @@
   min-height: 36px;
 }
 
-// Card for calendar (Tab 2)
+// ─── Calendar card (Tab 2) ────────────────────────────────────────────────────
 .wh-card {
   background: var(--bg-card, #fff);
   border-radius: 16px;
-  padding: 1rem 1.25rem;
+  padding: 1.25rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   margin-bottom: 1rem;
   border: 1px solid var(--border-color, #eee);
@@ -125,43 +137,219 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0;
 }
 
+.wh-calendar-wrap {
+  width: 100%;
+}
+
+// PrimeNG DatePicker full theme override — removes all Aura dark defaults
 .wh-calendar {
+  width: 100%;
+
+  // Outer shell
   ::ng-deep .p-datepicker {
     border: none;
     background: transparent;
+    color: var(--text-primary);
+    width: 100%;
+    padding: 0;
+    box-shadow: none;
   }
+
+  // Month navigation header
+  ::ng-deep .p-datepicker-header {
+    background: transparent;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 0.5rem 0 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  ::ng-deep .p-datepicker-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--text-primary);
+  }
+
+  // Month / Year select buttons inside header
+  ::ng-deep .p-datepicker-select-month,
+  ::ng-deep .p-datepicker-select-year {
+    background: transparent;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1rem;
+    border: none;
+    padding: 0.125rem 0.25rem;
+    border-radius: 6px;
+
+    &:hover {
+      background: color-mix(in srgb, var(--color-primary, #3787f6) 10%, transparent);
+      color: var(--color-primary, #3787f6);
+    }
+  }
+
+  // Prev / Next nav buttons
+  ::ng-deep .p-datepicker-prev-button,
+  ::ng-deep .p-datepicker-next-button {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    width: 2rem;
+    height: 2rem;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+
+    &:hover {
+      background: color-mix(in srgb, var(--color-primary, #3787f6) 8%, transparent);
+      color: var(--color-primary, #3787f6);
+      border-color: color-mix(in srgb, var(--color-primary, #3787f6) 35%, transparent);
+    }
+
+    .p-icon {
+      color: inherit;
+    }
+  }
+
+  // Day-of-week header row
+  ::ng-deep .p-datepicker-weekday-cell,
+  ::ng-deep .p-datepicker-weekday {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.25rem 0;
+  }
+
+  // Calendar table
   ::ng-deep .p-datepicker-calendar {
     width: 100%;
+    border-collapse: separate;
+    border-spacing: 2px;
+  }
+
+  // Each day cell wrapper
+  ::ng-deep .p-datepicker-day-cell {
+    padding: 1px;
+    text-align: center;
+  }
+
+  // Day button
+  ::ng-deep .p-datepicker-day {
+    width: 2.375rem;
+    height: 2.375rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto;
+    transition: background 0.12s, color 0.12s;
+    cursor: pointer;
+
+    &:hover:not(.p-disabled):not([data-p-selected="true"]) {
+      background: color-mix(in srgb, var(--color-primary, #3787f6) 12%, transparent);
+      color: var(--color-primary, #3787f6);
+    }
+
+    &.p-disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+
+  // Selected day
+  ::ng-deep .p-datepicker-day[data-p-selected="true"],
+  ::ng-deep .p-datepicker-day.p-datepicker-day-selected {
+    background: var(--color-primary, #3787f6) !important;
+    color: #fff !important;
+    font-weight: 700;
+  }
+
+  // Today (not selected)
+  ::ng-deep .p-datepicker-today .p-datepicker-day:not([data-p-selected="true"]) {
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 12%, transparent);
+    color: var(--color-primary, #3787f6);
+    font-weight: 600;
+  }
+
+  // Other-month days
+  ::ng-deep .p-datepicker-other-month .p-datepicker-day {
+    color: var(--text-muted);
+    opacity: 0.45;
   }
 }
 
+// ─── Calendar day cell template (dot markers) ─────────────────────────────────
+.wh-cal-day-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.wh-cal-day-num {
+  display: block;
+  line-height: 1;
+}
+
+.wh-cal-day-dot {
+  display: block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.wh-cal-day-dot--closed {
+    background: var(--color-danger, #dc2626);
+  }
+
+  &.wh-cal-day-dot--custom {
+    background: #ea580c;
+  }
+}
+
+// ─── Legend ───────────────────────────────────────────────────────────────────
 .wh-legend {
   display: flex;
-  gap: 1rem;
+  gap: 1.25rem;
   margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
   font-size: 0.8125rem;
   color: var(--text-muted, #64748b);
-  flex-direction: row;
   justify-content: center;
+  width: 100%;
 }
 
 .wh-legend-item {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 
-.wh-legend-closed .pi {
-  color: #dc2626;
+.wh-legend-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+
+  &.wh-legend-dot--closed {
+    background: var(--color-danger, #dc2626);
+  }
+
+  &.wh-legend-dot--custom {
+    background: #ea580c;
+  }
 }
 
-.wh-legend-custom .pi {
-  color: #ea580c;
-}
-
-// Day editor (drawer / dialog content)
+// ─── Editor content (shared between drawer and dialog) ───────────────────────
 .wh-editor-body {
   display: flex;
   flex-direction: column;
@@ -209,9 +397,7 @@
   flex-wrap: wrap;
 }
 
-// p-select range row: start / end groups with consistent widths
 .wh-range-row-selects {
-  
   gap: 0.75rem 1rem;
 }
 
@@ -224,94 +410,51 @@
 
 .wh-time-select-wrap {
   display: flex;
-  justify-content: center;
   flex-direction: row-reverse;
   align-items: center;
   gap: 1.35rem;
   flex-wrap: wrap;
 }
 
-.p-select {
-  width: 60px;
-  background: white;
-  min-height: 40px;
-}
-
+// ─── p-select overrides — use theme tokens, not hardcoded black/white ─────────
 .wh-pselect {
   display: block;
+
   ::ng-deep .p-select {
     width: 100%;
-    background: white;
+    background: var(--bg-card, #fff);
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 8px;
     min-height: 40px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:focus-within,
+    &.p-focus {
+      border-color: var(--color-primary, #3787f6);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #3787f6) 15%, transparent);
+      outline: none;
+    }
   }
+
   ::ng-deep .p-select-label {
     font-size: 0.9375rem;
     text-align: center;
     width: 100%;
-    color: black;
+    color: var(--text-primary, #0f172a);
     font-weight: 500;
   }
+
   ::ng-deep .p-select-dropdown {
-    width: 100%;
-    color: black;
-    font-weight: 500;
-    background: white;
+    color: var(--text-muted, #64748b);
   }
 }
 
-.wh-pselect-hour {
-  min-width: 4rem;
-  ::ng-deep .p-select {
-    min-width: 4rem;
-  }
-}
-
+.wh-pselect-hour,
 .wh-pselect-min {
   min-width: 4rem;
+
   ::ng-deep .p-select {
     min-width: 4rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .p-select {
-    width: 100px;
-    background: white;
-    min-height: 60px;
-  }
-  .wh-range-row-selects {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .wh-range-sep {
-    display: none;
-  }
-  .wh-range-group {
-    width: 100%;
-  }
-  .wh-time-select-wrap {
-    flex-direction: row;
-  }
-}
-
-.wh-range-start {
-  display: flex;
-  flex-direction: column;
-}
-
-.wh-range-end {
-  display: flex;
-  flex-direction: column;
-}
-@media (max-width: 480px) {
-  .wh-range-row {
-    gap: 0.35rem;
-  }
-  .wh-range-label {
-    flex: 0 0 100%;
-  }
-  .wh-time-select {
-    min-width: 3.5rem;
   }
 }
 
@@ -320,45 +463,10 @@
   font-weight: 500;
 }
 
-.wh-time-input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 8px;
-  font-size: 1rem;
-  min-width: 0;
-  flex: 1 1 100px;
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
-
-.wh-time-input:focus {
-  outline: none;
-  border-color: var(--color-primary);
-}
-
 .wh-range-label {
   font-size: 0.8125rem;
   color: var(--text-muted);
   white-space: nowrap;
-}
-
-.wh-time-select {
-  padding: 0.5rem 0.5rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  background: var(--bg-card);
-  color: var(--text-primary);
-}
-
-.wh-time-select-hour {
-  min-width: 3.25rem;
-  width: 3.25rem;
-}
-
-.wh-time-select-min {
-  min-width: 3.25rem;
-  width: 3.25rem;
 }
 
 .wh-range-remove {
@@ -367,28 +475,32 @@
   min-height: 40px;
 }
 
+// ─── Inline messages ──────────────────────────────────────────────────────────
 .wh-inline-message {
   font-size: 0.8125rem;
-  padding: 0.35rem 0.5rem;
+  padding: 0.375rem 0.625rem;
   border-radius: 6px;
 }
 
 .wh-inline-message-warn {
-  background: #fef3c7;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
   color: #92400e;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
 }
 
 .wh-range-error {
-  background: #fef2f2;
-  color: #dc2626;
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 10%, transparent);
+  color: var(--color-danger, #dc2626);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 25%, transparent);
 }
 
 .wh-conflict-warn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: #fef3c7;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
   color: #92400e;
+  border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
   padding: 0.75rem;
   border-radius: 8px;
   font-weight: 500;
@@ -405,34 +517,126 @@
   min-height: 40px;
 }
 
+// ─── Override type selector (radio card group) ────────────────────────────────
+.wh-override-type-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.wh-override-type-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.wh-override-type-options {
+  display: flex;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+
+.wh-override-type-option {
+  flex: 1 1 140px;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color, #e5e7eb);
+  background: var(--bg-app, #f5f6f8);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  min-height: 48px;
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--color-primary, #3787f6) 40%, transparent);
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 5%, var(--bg-app));
+  }
+
+  &.wh-override-type-option--active {
+    border-color: var(--color-primary, #3787f6);
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 8%, var(--bg-card, #fff));
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #3787f6) 12%, transparent);
+  }
+}
+
+.wh-override-type-text {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+
+  .pi {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+  }
+}
+
+.wh-override-type-option--active .wh-override-type-text .pi {
+  color: var(--color-primary, #3787f6);
+}
+
+// ─── Note input ───────────────────────────────────────────────────────────────
+.wh-note-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.wh-note-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.wh-note-input {
+  // Override pInputText dark theme defaults
+  background: var(--bg-card, #fff) !important;
+  color: var(--text-primary, #0f172a) !important;
+  border: 1px solid var(--border-color, #e2e8f0) !important;
+  border-radius: 8px !important;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.9375rem !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: var(--text-muted, #64748b) !important;
+  }
+
+  &:focus {
+    outline: none !important;
+    border-color: var(--color-primary, #3787f6) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #3787f6) 15%, transparent) !important;
+  }
+}
+
+// ─── Editor action bar ────────────────────────────────────────────────────────
 .wh-editor-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-  padding-top: 0.5rem;
+  padding-top: 0.75rem;
   border-top: 1px solid var(--border-color);
 }
 
-// Drawer – theme-aware
+// ─── Drawer ───────────────────────────────────────────────────────────────────
 .wh-drawer {
   ::ng-deep .p-drawer-header {
-    background: var(--p-drawer-header-background, var(--bg-card));
-    color: var(--p-drawer-header-color, var(--text-primary));
+    background: var(--bg-card, #fff);
+    color: var(--text-primary);
     border-bottom: 1px solid var(--border-color);
+    padding: 1rem 1.5rem;
   }
+
   ::ng-deep .p-drawer-content {
     padding: 1.25rem 1.5rem;
     padding-bottom: env(safe-area-inset-bottom, 1.25rem);
-    background: var(--p-drawer-content-background, var(--bg-card));
-    color: var(--p-drawer-content-color, var(--text-primary));
-  }
-}
-
-.wh-drawer-day {
-  ::ng-deep .p-drawer-header {
-    padding: 1rem 1.5rem;
-  }
-  ::ng-deep .p-drawer-content {
+    background: var(--bg-card, #fff);
+    color: var(--text-primary);
     overflow-y: auto;
   }
 }
@@ -440,39 +644,58 @@
 .wh-drawer-body {
   display: flex;
   flex-direction: column;
+  gap: 1rem;
 }
 
-// Dialog – theme-aware (light/dark from PrimeNG or layout)
+// ─── Dialog ───────────────────────────────────────────────────────────────────
+// These must use ::ng-deep at file root because dialogs are rendered in the
+// document body outside component view encapsulation.
 ::ng-deep .wh-dialog-day.p-dialog,
 ::ng-deep .wh-dialog-override.p-dialog {
-  background: var(--p-dialog-background, var(--bg-card, #fff));
-  border: 1px solid var(--p-dialog-border-color, var(--border-color));
-  border-radius: var(--p-dialog-border-radius, 12px);
-  box-shadow: var(--p-dialog-shadow);
-  color: var(--p-dialog-color, var(--text-primary));
+  background: var(--bg-card, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  color: var(--text-primary);
 }
 
 ::ng-deep .wh-dialog-day .p-dialog-header,
 ::ng-deep .wh-dialog-override .p-dialog-header {
-  background: var(--p-dialog-header-background, var(--bg-card));
-  color: var(--p-dialog-header-color, var(--text-primary));
+  background: var(--bg-card, #fff);
+  color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
+  padding: 1.125rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+::ng-deep .wh-dialog-day .p-dialog-header-close,
+::ng-deep .wh-dialog-override .p-dialog-header-close {
+  color: var(--text-muted);
+  border-radius: 8px;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: color-mix(in srgb, var(--text-primary) 8%, transparent);
+    color: var(--text-primary);
+  }
 }
 
 ::ng-deep .wh-dialog-day .p-dialog-content,
 ::ng-deep .wh-dialog-override .p-dialog-content {
-  padding: 1rem 1.5rem;
-  background: var(--p-dialog-content-background, var(--bg-card));
-  color: var(--p-dialog-content-color, var(--text-primary));
+  padding: 1.25rem 1.5rem;
+  background: var(--bg-card, #fff);
+  color: var(--text-primary);
 }
 
 ::ng-deep .wh-dialog-day .p-dialog-footer,
 ::ng-deep .wh-dialog-override .p-dialog-footer {
-  background: var(--p-dialog-footer-background, var(--bg-card));
+  background: var(--bg-card, #fff);
   border-top: 1px solid var(--border-color);
+  padding: 0.75rem 1.5rem;
 }
 
-// Utility
+// ─── Utility classes ──────────────────────────────────────────────────────────
 .mb-1 { margin-bottom: 0.25rem; }
 .mb-2 { margin-bottom: 0.5rem; }
 .mb-3 { margin-bottom: 1rem; }
@@ -484,10 +707,10 @@
 .align-items-center { align-items: center; }
 .gap-2 { gap: 0.5rem; }
 
-// Mobile: full-width cards, larger touch targets
+// ─── Mobile ───────────────────────────────────────────────────────────────────
 @media (max-width: 768px) {
   .wh-page {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1rem 1.5rem;
     max-width: 100%;
   }
 
@@ -497,12 +720,10 @@
   }
 
   .wh-day-card {
-    padding: 1rem 1.25rem;
-    border-radius: 12px;
+    padding: 1rem 1.125rem;
   }
 
   .wh-day-toggle {
-    // PrimeNG toggle is already touch-friendly; ensure minimum tap area
     ::ng-deep .p-toggleswitch {
       min-width: 48px;
       min-height: 28px;
@@ -514,10 +735,33 @@
     padding-inline: 1rem;
   }
 
-  .wh-time-input {
-    padding: 0.625rem 0.75rem;
-    font-size: 16px; // avoids zoom on focus on iOS
-    min-height: 44px;
+  .wh-range-row-selects {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wh-range-sep {
+    display: none;
+  }
+
+  .wh-range-group {
+    width: 100%;
+  }
+
+  .wh-time-select-wrap {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.75rem;
+  }
+
+  .wh-pselect {
+    ::ng-deep .p-select {
+      min-height: 44px;
+    }
+
+    ::ng-deep .p-select-label {
+      font-size: 16px; // prevents iOS zoom on focus
+    }
   }
 
   .wh-range-remove {
@@ -529,18 +773,41 @@
     min-height: 44px;
   }
 
+  .wh-override-type-option {
+    padding: 0.875rem 1rem;
+  }
+
+  .wh-note-input {
+    font-size: 16px !important; // prevents iOS zoom
+    min-height: 44px;
+  }
+
   .wh-editor-actions {
     position: sticky;
     bottom: 0;
-    background: var(--bg-card);
-    padding: 1rem 0 0;
+    background: var(--bg-card, #fff);
     margin: 0 -1.5rem -1.25rem;
     padding: 1rem 1.5rem;
     padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--border-color);
   }
 
   .wh-editor-actions p-button {
     flex: 1;
     min-width: 120px;
+  }
+}
+
+// ─── Very short screens (landscape phone, iPhone SE) ─────────────────────────
+@media (max-height: 620px) {
+  .wh-drawer {
+    ::ng-deep .p-drawer-content {
+      padding-top: 0.75rem;
+      padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  .wh-editor-body {
+    gap: 0.75rem;
   }
 }

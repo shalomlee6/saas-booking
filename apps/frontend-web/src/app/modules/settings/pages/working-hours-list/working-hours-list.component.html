@@ -4,7 +4,7 @@
   <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)" class="wh-tabs">
     <p-tablist>
       <p-tab [value]="0">שעות קבועות</p-tab>
-      <p-tab [value]="1">חריגים</p-tab>
+      <p-tab [value]="1">שעות עבודה בפועל</p-tab>
     </p-tablist>
     <p-tabpanels>
       <p-tabpanel [value]="0">
@@ -19,7 +19,7 @@
                 <div class="wh-day-card-main">
                   <span class="wh-day-card-name">{{ item.name }}</span>
                   <p-toggleSwitch
-                    [ngModel]="openingHours().days[item.day]?.isOpen ?? false"
+                    [ngModel]="item.isOpen"
                     (ngModelChange)="setDayOpen(item.day, $event)"
                     [disabled]="savingHours()"
                     ariaLabel="פתוח/סגור"
@@ -48,20 +48,35 @@
           @if (loadingOverrides()) {
             <p-skeleton width="100%" height="320px" />
           } @else {
-            <p-datePicker
-              [ngModel]="calendarMonth()"
-              (ngModelChange)="onCalendarDateChange($event)"
-              [inline]="true"
-              [showIcon]="false"
-              dateFormat="dd/mm/yy"
-              [showOtherMonths]="true"
-              (onSelect)="openOverrideDrawer($event)"
-              (onMonthChange)="onCalendarMonthChange($any($event))"
-              styleClass="wh-calendar"
-            />
+            <div class="wh-calendar-wrap">
+              <p-datePicker
+                [ngModel]="calendarMonth()"
+                (ngModelChange)="onCalendarDateChange($event)"
+                [inline]="true"
+                [showIcon]="false"
+                dateFormat="dd/mm/yy"
+                [showOtherMonths]="true"
+                (onSelect)="openOverrideDrawer($event)"
+                (onMonthChange)="onCalendarMonthChange($any($event))"
+                styleClass="wh-calendar"
+              >
+                <ng-template pTemplate="date" let-date>
+                  <span class="wh-cal-day-cell">
+                    <span class="wh-cal-day-num">{{ date.day }}</span>
+                    @if (getDateOverrideDot(date); as dotClass) {
+                      <span class="wh-cal-day-dot" [ngClass]="dotClass"></span>
+                    }
+                  </span>
+                </ng-template>
+              </p-datePicker>
+            </div>
             <div class="wh-legend">
-              <span class="wh-legend-item wh-legend-closed"><i class="pi pi-circle-fill"></i> סגור</span>
-              <span class="wh-legend-item wh-legend-custom"><i class="pi pi-circle-fill"></i> שעות מיוחדות</span>
+              <span class="wh-legend-item wh-legend-closed">
+                <span class="wh-legend-dot wh-legend-dot--closed" aria-hidden="true"></span> סגור
+              </span>
+              <span class="wh-legend-item wh-legend-custom">
+                <span class="wh-legend-dot wh-legend-dot--custom" aria-hidden="true"></span> שעות מיוחדות
+              </span>
             </div>
           }
         </div>
@@ -74,7 +89,7 @@
     (visibleChange)="dayDrawerVisible.set($event)"
     position="bottom"
     [header]="editDayHeader()"
-    [style]="{ height: '85vh', maxHeight: '600px' }"
+    [style]="dayDrawerStyle"
     (onHide)="closeDayDrawer()"
     styleClass="wh-drawer wh-drawer-day"
   >
@@ -242,26 +257,43 @@
 
   <ng-template #overrideEditorContent>
     <div class="wh-drawer-body">
-      <div class="wh-editor-row flex-column gap-2 mb-3">
-        <div class="flex align-items-center gap-2">
-          <p-radioButton
-            name="overrideType"
-            value="closed"
-            [ngModel]="overrideType()"
-            (ngModelChange)="overrideType.set($event); checkOverrideConflicts()"
-            inputId="rClosed"
-          />
-          <label for="rClosed">סגור כל היום</label>
-        </div>
-        <div class="flex align-items-center gap-2">
-          <p-radioButton
-            name="overrideType"
-            value="custom"
-            [ngModel]="overrideType()"
-            (ngModelChange)="overrideType.set($event); checkOverrideConflicts()"
-            inputId="rCustom"
-          />
-          <label for="rCustom">שעות מיוחדות</label>
+      <div class="wh-override-type-group mb-3">
+        <span class="wh-override-type-label">סוג חריג</span>
+        <div class="wh-override-type-options">
+          <label
+            class="wh-override-type-option"
+            [class.wh-override-type-option--active]="overrideType() === 'custom'"
+            for="rCustom"
+          >
+            <p-radioButton
+              name="overrideType"
+              value="custom"
+              [ngModel]="overrideType()"
+              (ngModelChange)="overrideType.set($event); checkOverrideConflicts()"
+              inputId="rCustom"
+            />
+            <span class="wh-override-type-text">
+              <i class="pi pi-clock" aria-hidden="true"></i>
+              שעות מיוחדות
+            </span>
+          </label>
+          <label
+            class="wh-override-type-option"
+            [class.wh-override-type-option--active]="overrideType() === 'closed'"
+            for="rClosed"
+          >
+            <p-radioButton
+              name="overrideType"
+              value="closed"
+              [ngModel]="overrideType()"
+              (ngModelChange)="overrideType.set($event); checkOverrideConflicts()"
+              inputId="rClosed"
+            />
+            <span class="wh-override-type-text">
+              <i class="pi pi-ban" aria-hidden="true"></i>
+              סגור כל היום
+            </span>
+          </label>
         </div>
       </div>
       @if (overrideType() === 'custom') {
@@ -354,14 +386,15 @@
           <i class="pi pi-exclamation-triangle"></i> {{ cmsg }}
         </div>
       }
-      <div class="mb-3">
-        <label class="block mb-1">הערה</label>
+      <div class="wh-note-field mb-3">
+        <label class="wh-note-label" for="overrideNote">הערה (אופציונלי)</label>
         <input
+          id="overrideNote"
           pInputText
           [ngModel]="overrideNote()"
           (ngModelChange)="overrideNote.set($event)"
           placeholder="למשל: רופא שיניים"
-          class="w-full"
+          class="wh-note-input w-full"
         />
       </div>
       <div class="wh-editor-actions flex-wrap">

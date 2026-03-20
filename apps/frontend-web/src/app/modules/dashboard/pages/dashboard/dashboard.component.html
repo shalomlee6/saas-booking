@@ -2,22 +2,31 @@
   <h1 class="dashboard-page-title">Dashboard</h1>
 
   <section class="dashboard-stats">
-    <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Total revenue</span>
-      <span class="dashboard-stat-value">{{ (insights$ | async)?.totalRevenue | currency:'ILS' }}</span>
-    </div>
-    <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Inactive customers (60d)</span>
-      <span class="dashboard-stat-value">{{ (insights$ | async)?.inactiveCustomersCount ?? 0 }}</span>
-    </div>
-    <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Appointments</span>
-      <span class="dashboard-stat-value">{{ (appointments$ | async)?.length ?? 0 }}</span>
-    </div>
-    <div class="dashboard-card dashboard-stat-card">
-      <span class="dashboard-stat-label">Top customers</span>
-      <span class="dashboard-stat-value">{{ (insights$ | async)?.topCustomers?.length ?? 0 }}</span>
-    </div>
+    @if (insights$ | async; as insights) {
+      <div class="dashboard-card dashboard-stat-card">
+        <span class="dashboard-stat-label">Total revenue</span>
+        <span class="dashboard-stat-value">{{ insights.totalRevenue | currency:'ILS' }}</span>
+      </div>
+      <div class="dashboard-card dashboard-stat-card">
+        <span class="dashboard-stat-label">Inactive customers (60d)</span>
+        <span class="dashboard-stat-value">{{ insights.inactiveCustomersCount }}</span>
+      </div>
+      <div class="dashboard-card dashboard-stat-card">
+        <span class="dashboard-stat-label">Appointments</span>
+        <span class="dashboard-stat-value">{{ (appointments$ | async)?.length ?? 0 }}</span>
+      </div>
+      <div class="dashboard-card dashboard-stat-card">
+        <span class="dashboard-stat-label">Top customers</span>
+        <span class="dashboard-stat-value">{{ insights.topCustomers.length }}</span>
+      </div>
+    } @else {
+      @for (i of [1,2,3,4]; track i) {
+        <div class="dashboard-card dashboard-stat-card">
+          <span class="dashboard-stat-label">&nbsp;</span>
+          <span class="dashboard-stat-value">—</span>
+        </div>
+      }
+    }
   </section>
 
   <section class="dashboard-charts">

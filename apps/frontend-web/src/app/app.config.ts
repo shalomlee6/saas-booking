@@ -24,9 +24,7 @@ import {
 } from './modules/appointments/state/appointments.reducer';
 import {
   loadAppointments$,
-  createAppointment$,
-  createSuccessReload$,
-  createSuccessNavigate$,
+  createAppointment$
 } from './modules/appointments/state/appointments.effects';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { providePrimeNG } from 'primeng/config';
@@ -40,9 +38,7 @@ export const appConfig: ApplicationConfig = {
     provideState(appointmentsFeatureKey, appointmentsReducer),
     provideEffects({
       loadAppointments$,
-      createAppointment$,
-      createSuccessReload$,
-      createSuccessNavigate$,
+      createAppointment$
     }),
     ...(isDevMode()
       ? [
@@ -70,7 +66,13 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
-        preset: Aura
+        preset: Aura,
+        options: {
+          // Tie PrimeNG dark mode to the app's own .theme-dark body class
+          // (managed by ThemeService) instead of the default 'system' which
+          // reads @media (prefers-color-scheme: dark) and ignores the app class.
+          darkModeSelector: '.theme-dark'
+        }
       }
     })
   ],

@@ -16,12 +16,9 @@
           class="login-input"
           [class.login-input-invalid]="email?.invalid && (email?.touched || email?.dirty)"
         />
-        <p
-          *ngIf="email?.invalid && (email?.touched || email?.dirty)"
-          class="login-form-error"
-        >
-          Please enter a valid email address.
-        </p>
+        @if (email?.invalid && (email?.touched || email?.dirty)) {
+        <p class="login-form-error">Please enter a valid email address.</p>
+      }
       </div>
 
       <div class="login-form-field">
@@ -34,12 +31,9 @@
           class="login-input"
           [class.login-input-invalid]="password?.invalid && (password?.touched || password?.dirty)"
         />
-        <!-- <p
-          *ngIf="password?.invalid && (password?.touched || password?.dirty)"
-          class="login-form-error"
-        >
-          Password must be at least 6 characters.
-        </p> -->
+        @if (password?.invalid && (password?.touched || password?.dirty)) {
+          <p class="login-form-error">Password must be at least 4 characters.</p>
+        }
       </div>
 
       <button
@@ -47,19 +41,24 @@
         class="login-form-submit"
         [disabled]="form.invalid || loading()"
       >
-        <span *ngIf="!loading()">Login</span>
-        <span *ngIf="loading()">Signing in…</span>
+        @if (loading()) { Signing in… } @else { Login }
       </button>
 
       <div class="login-form-forgot-wrap">
-        <button type="button" class="login-form-forgot" tabindex="-1">
+        <button
+          type="button"
+          class="login-form-forgot"
+          disabled
+          title="Password reset is not available yet"
+          aria-label="Forgot password — not available yet"
+        >
           Forgot password?
         </button>
       </div>
 
-      <p *ngIf="errorMessage()" class="login-form-error login-form-error-global">
-        {{ errorMessage() }}
-      </p>
+      @if (errorMessage()) {
+        <p class="login-form-error login-form-error-global">{{ errorMessage() }}</p>
+      }
     </form>
   </div>
 </div>

@@ -7,7 +7,7 @@ import {
   effect,
   afterNextRender,
 } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { MessageService } from 'primeng/api';
@@ -49,6 +49,7 @@ export interface EditableRangeVm {
   imports: [
     FormsModule,
     NgTemplateOutlet,
+    NgClass,
     TabsModule,
     DrawerModule,
     DialogModule,
@@ -108,6 +109,17 @@ export class WorkingHoursListComponent implements OnInit {
 
   readonly dayNamesHe = DAY_NAMES_HE;
 
+  /**
+   * Stable style object for the day-editor bottom drawer.
+   * Uses dvh (dynamic viewport height) so the drawer never exceeds the actual
+   * visible area on mobile browsers where the address bar changes the viewport.
+   * Falls back to vh for browsers that don't support dvh yet.
+   */
+  readonly dayDrawerStyle = {
+    height: 'min(85dvh, 85vh, 600px)',
+    maxHeight: '90dvh',
+  };
+
   /** 00–23 for p-select. */
   readonly hourOptions: SelectOption[] = Array.from({ length: 24 }, (_, i) => ({
     label: String(i).padStart(2, '0'),
@@ -150,6 +162,18 @@ export class WorkingHoursListComponent implements OnInit {
 
   readonly overrideConflictWarningText = computed(() => this.overrideConflictWarning());
 
+  /**
+   * Returns a CSS modifier class for the date-template dot, or null when no override exists.
+   * PrimeNG passes { day, month (0-based), year } to the date template.
+   */
+  getDateOverrideDot(date: { day: number; month: number; year: number }): string | null {
+    const d = new Date(date.year, date.month, date.day);
+    const key = formatDateForApi(d);
+    const ov = this.overridesByDate().get(key);
+    if (!ov) return null;
+    return ov.type === 'closed' ? 'wh-cal-day-dot--closed' : 'wh-cal-day-dot--custom';
+  }
+
   readonly editDayHeader = computed(() => {
     const idx = this.editingDayIndex();
     if (idx == null) return 'עריכת יום';
@@ -171,9 +195,10 @@ export class WorkingHoursListComponent implements OnInit {
     const oh = this.openingHours();
     return (oh.days ?? []).map((d, i) => {
       const name = DAY_NAMES_HE[i] ?? '';
-      if (!d.isOpen || !d.ranges?.length) return { day: d.day, name, summary: 'סגור' };
+      const isOpen = d.isOpen ?? false;
+      if (!isOpen || !d.ranges?.length) return { day: d.day, name, isOpen, summary: 'סגור' };
       const s = d.ranges.map(r => `${to24h(r.start)}–${to24h(r.end)}`).join(', ');
-      return { day: d.day, name, summary: `פתוח: ${s}` };
+      return { day: d.day, name, isOpen, summary: `פתוח: ${s}` };
     });
   });
 
@@ -383,7 +408,7 @@ export class WorkingHoursListComponent implements OnInit {
     const existing = this.overridesByDate().get(dateStr);
     const step = this.openingHours().slotStepMinutes ?? 30;
     this.overrideDate.set(date);
-    this.overrideType.set(existing?.type ?? 'closed');
+    this.overrideType.set(existing?.type ?? 'custom');
     const sourceRanges =
       existing?.type === 'custom' && existing.ranges?.length
         ? existing.ranges.map(r => ({

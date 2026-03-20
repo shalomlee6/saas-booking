@@ -20,6 +20,10 @@ import { ButtonModule } from 'primeng/button';
 
 const BREAKPOINT_PX = 768;
 
+/** Stable object references for routerLinkActiveOptions — avoids recreating objects on every CD cycle. */
+const LINK_OPTS_EXACT = { exact: true } as const;
+const LINK_OPTS_PREFIX = { exact: false } as const;
+
 @Component({
   selector: 'app-layout',
   standalone: true,
@@ -114,6 +118,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   /** Sidebar: Customers nav link. */
   readonly customersNavLink = computed<string>(() =>
     this.isSuperAdmin() && !this.isImpersonating() ? '/admin/business-customers' : '/customers'
+  );
+
+  /** Stable routerLinkActiveOptions for the customers nav item. */
+  readonly customersNavLinkActiveOptions = computed(() =>
+    this.customersNavLink() === '/admin/business-customers' ? LINK_OPTS_EXACT : LINK_OPTS_PREFIX
   );
 
   /** URL for the public customer site (open in new tab). */

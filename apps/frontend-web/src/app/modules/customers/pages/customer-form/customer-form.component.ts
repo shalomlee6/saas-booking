@@ -6,13 +6,12 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { NgIf } from '@angular/common';
 import { CustomersApiService } from '../../services/customers-api.service';
 
 @Component({
   selector: 'app-customer-form',
   standalone: true,
-  imports: [ReactiveFormsModule, NgIf, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink],
   templateUrl: './customer-form.component.html',
   styleUrl: './customer-form.component.scss',
 })

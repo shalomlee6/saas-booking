@@ -52,7 +52,7 @@
         <a
           [routerLink]="customersNavLink()"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="customersNavLink() === '/admin/business-customers' ? { exact: true } : { exact: false }"
+          [routerLinkActiveOptions]="customersNavLinkActiveOptions()"
           class="layout-sidebar-link"
           [title]="customersNavLabel()"
           (click)="closeMobileMenu()"

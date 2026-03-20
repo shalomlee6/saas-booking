@@ -5,7 +5,6 @@ import {
   ReactiveFormsModule,
   Validators,
 } from '@angular/forms';
-import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { ApiService } from '../../../../core/api/api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -13,7 +12,7 @@ import { AuthService } from '../../../../core/auth/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, NgIf],
+  imports: [ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })

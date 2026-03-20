@@ -130,18 +130,25 @@ export class WorkingHoursEditComponent implements OnInit {
     const updated: WorkingHours = {};
     const slots = [...this.slots()];
     const { start, end } = this.slotsToStartEnd(slots);
-    
+
     for (const k of WORKING_HOURS_DAY_KEYS) {
       if (k === key) {
         updated[k] = { enabled: this.enabled(), slots: [...this.slots()], start: start ?? '', end: end ?? '' };
       } else {
+        // Each other day must derive its own start/end from its own slots.
+        let daySlots: boolean[];
+        let dayEnabled: boolean;
         const existing = current[k];
         if (existing?.slots?.length === SLOTS_PER_DAY) {
-          updated[k] = { enabled: existing.enabled, slots: existing.slots, start: start ?? '', end: end ?? ''};
+          daySlots = existing.slots;
+          dayEnabled = existing.enabled;
         } else {
           const day = normalizeDayToSlots(current[k] as Record<string, unknown>, k);
-          updated[k] = { enabled: day.enabled, slots: day.slots, start: start ?? '', end: end ?? ''};
+          daySlots = day.slots;
+          dayEnabled = day.enabled;
         }
+        const { start: dayStart, end: dayEnd } = this.slotsToStartEnd(daySlots);
+        updated[k] = { enabled: dayEnabled, slots: daySlots, start: dayStart ?? '', end: dayEnd ?? '' };
       }
     }
     this.api.patch<{ workingHours: WorkingHours }>('business/settings', { workingHours: updated }).subscribe({
@@ -161,7 +168,7 @@ export class WorkingHoursEditComponent implements OnInit {
     this.router.navigate(['/settings/working-hours']);
   }
 
-  slotsToStartEnd(
+  private slotsToStartEnd(
     slots: boolean[],
     dayStartHour = 8,
     slotMinutes = 30

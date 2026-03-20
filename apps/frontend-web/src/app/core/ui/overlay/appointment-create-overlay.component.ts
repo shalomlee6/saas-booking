@@ -120,16 +120,8 @@ export class AppointmentCreateOverlayComponent {
   }
 
   private patchFormFromInputs(): void {
-    const d = this.date;
-    const t = this.time;
-    if (!d || !t) return;
-    const startStr = `${d}T${t}`;
-    const startDate = new Date(startStr);
-    if (isNaN(startDate.getTime())) return;
-    const endDate = new Date(
-      startDate.getTime() +
-        DEFAULT_APPOINTMENT_DURATION_MINUTES * 60 * 1000
-    );
+    // Reset form selections when the overlay opens for a new slot.
+    // start/end are derived at submit time from this.date + this.time inputs.
     this.form.patchValue({
       customerId: '',
       serviceId: '',
