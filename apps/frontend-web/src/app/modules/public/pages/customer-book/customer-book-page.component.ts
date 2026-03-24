@@ -185,9 +185,25 @@ export class CustomerBookPageComponent implements OnInit {
       body.customerPhone = this.customerPhone().trim() || undefined;
     }
     this.publicApi.createAppointment(body).subscribe({
-      next: () => {
+      next: (res) => {
         this.submitting.set(false);
-        this.appointmentSuccess.set(true);
+        const slug = this.slug();
+        if (slug) {
+          this.router.navigate(['/b', slug], {
+            state: {
+              booked: true,
+              apt: {
+                id: res.id,
+                date: dateStr,
+                time,
+                status: res.status,
+                serviceName: service.nameHe,
+              },
+            },
+          });
+        } else {
+          this.appointmentSuccess.set(true);
+        }
       },
       error: (err) => {
         this.submitting.set(false);

@@ -423,3 +423,71 @@ export async function createPublicAppointment(req: Request, res: Response) {
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
+
+// --- GET /api/public/appointments/upcoming
+/**
+ * Returns the customer's nearest upcoming (non-cancelled, future) appointment.
+ * Requires a valid public-customer Bearer JWT (role=customer).
+ * Returns { appointment: null } when unauthenticated or no future appointment exists.
+ */
+export async function getUpcomingCustomerAppointment(req: Request, res: Response) {
+  try {
+    const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+    if (!publicCustomer) {
+      return res.json({ appointment: null });
+    }
+
+    const now = new Date();
+    const apt = await Appointment.findOne({
+      customerId: new Types.ObjectId(publicCustomer.customerId),
+      businessId: new Types.ObjectId(publicCustomer.businessId),
+      status: { $nin: ['cancelled'] },
+      start: { $gt: now },
+    })
+      .sort({ start: 1 })
+      .populate<{ serviceId: { name: string } }>('serviceId', 'name')
+      .lean();
+
+    if (!apt) {
+      return res.json({ appointment: null });
+    }
+
+    const settings = await BusinessSettings.findOne({
+      businessId: new Types.ObjectId(publicCustomer.businessId),
+    });
+    const timezone = settings?.localization?.timezone ?? 'Asia/Jerusalem';
+
+    // Use Intl.DateTimeFormat to convert the UTC Date to the business timezone —
+    // avoids Luxon v3 generic-type issues while being correct and dependency-free.
+    const dtParts = new Intl.DateTimeFormat('he-IL', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(apt.start);
+    const getPart = (type: string) =>
+      dtParts.find((p) => p.type === type)?.value ?? '00';
+    const rawHour = getPart('hour');
+    const aptDate = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
+    const aptTime = `${rawHour === '24' ? '00' : rawHour}:${getPart('minute')}`;
+
+    return res.json({
+      appointment: {
+        id: apt._id.toString(),
+        date: aptDate,
+        time: aptTime,
+        status: apt.status,
+        serviceName:
+          apt.serviceId && typeof apt.serviceId === 'object' && 'name' in apt.serviceId
+            ? (apt.serviceId as { name: string }).name
+            : '',
+      },
+    });
+  } catch (err) {
+    console.error('Error GET /public/appointments/upcoming:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}

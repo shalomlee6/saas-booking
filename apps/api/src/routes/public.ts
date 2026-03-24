@@ -11,6 +11,7 @@ import {
   getAvailability,
   getPublicAvailability,
   createPublicAppointment as createPublicAppointmentBooking,
+  getUpcomingCustomerAppointment,
 } from '../controllers/publicBookingController';
 import { requestOtp, verifyOtp } from '../controllers/publicAuthController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
@@ -28,6 +29,8 @@ publicRouter.get('/businesses/:slug/services', getPublicServicesBooking);
 publicRouter.get('/businesses/:slug/availability', getAvailability);
 // POST /api/public/appointments (optional Bearer = customer; else guest with customerName required)
 publicRouter.post('/appointments', optionalPublicCustomer, createPublicAppointmentBooking);
+// GET /api/public/appointments/upcoming (optional Bearer; returns null when guest/unauthenticated)
+publicRouter.get('/appointments/upcoming', optionalPublicCustomer, getUpcomingCustomerAppointment);
 
 // --- Legacy public routes (dashboard / auth)
 publicRouter.get('/:businessSlug/business', getPublicBusiness);

@@ -50,6 +50,18 @@ export interface CreateAppointmentResponse {
   status: string;
 }
 
+export interface UpcomingAppointment {
+  id: string;
+  date: string;   // YYYY-MM-DD
+  time: string;   // HH:mm
+  status: string;
+  serviceName: string;
+}
+
+export interface UpcomingAppointmentResponse {
+  appointment: UpcomingAppointment | null;
+}
+
 export interface RequestOtpBody {
   phone: string;
   firstName?: string;
@@ -183,5 +195,30 @@ export class PublicApiService {
       return of({ id: 'apt1', status: 'confirmed' }).pipe(delay(800));
     }
     return this.api.post<CreateAppointmentResponse>('public/appointments', body);
+  }
+
+  /**
+   * GET /api/public/appointments/upcoming
+   * Returns the authenticated customer's nearest future non-cancelled appointment,
+   * or { appointment: null } for guests or when none exists.
+   */
+  getUpcomingAppointment(): Observable<UpcomingAppointmentResponse> {
+    if (environment.mockPublicApi) {
+      const mock: UpcomingAppointmentResponse = {
+        appointment: {
+          id: 'apt-mock-1',
+          date: (() => {
+            const d = new Date();
+            d.setDate(d.getDate() + 3);
+            return d.toISOString().slice(0, 10);
+          })(),
+          time: '10:30',
+          status: 'confirmed',
+          serviceName: 'מניקור',
+        },
+      };
+      return of(mock).pipe(delay(400));
+    }
+    return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming');
   }
 }

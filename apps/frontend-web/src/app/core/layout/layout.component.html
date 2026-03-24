@@ -130,63 +130,63 @@
       <!-- TODO: wire up global search or remove this element -->
       <input type="text" class="layout-topbar-search" placeholder="Search..." disabled aria-hidden="true" />
     </div>
-    <div class="layout-topbar-actions">
-      @if (business()?.slug) {
-        <a
-          [href]="customerSiteUrl()"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="layout-topbar-customer-site"
-          title="לאתר הלקוחות"
-        >
-          Customer Site
-        </a>
-      } @else if (business() && !isSuperAdmin()) {
-        <span class="layout-topbar-customer-site-warning" title="Add a slug in settings to enable the customer site">
-          Customer Site (no slug)
-        </span>
-      }
-      @if (isImpersonating()) {
-        <span class="layout-topbar-impersonation-badge">Impersonating</span>
-      }
-      @if (isSuperAdmin()) {
-        <button
-          type="button"
-          class="layout-theme-toggle"
-          [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
-          (click)="toggleTheme()"
-        >
-          {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
-        </button>
-      }
-      <span class="layout-topbar-icon" aria-hidden="true"></span>
-      <span class="layout-topbar-icon" aria-hidden="true"></span>
-      <span class="layout-topbar-user">
-        @if (activeBusinessName(); as bizName) {
-          <span class="layout-topbar-business-name">{{ bizName }}</span>
-          <span class="layout-topbar-user-sep">·</span>
+    @if (!isMobile()) {
+      <div class="layout-topbar-actions">
+        @if (business()?.slug) {
+          <a
+            [href]="customerSiteUrl()"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="layout-topbar-customer-site"
+            title="לאתר הלקוחות"
+          >
+            Customer Site
+          </a>
+        } @else if (business() && !isSuperAdmin()) {
+          <span class="layout-topbar-customer-site-warning" title="Add a slug in settings to enable the customer site">
+            Customer Site (no slug)
+          </span>
         }
-        {{ user()?.email ?? 'User' }}
-      </span>
-    </div>
+        @if (isImpersonating()) {
+          <span class="layout-topbar-impersonation-badge">Impersonating</span>
+        }
+        @if (isSuperAdmin()) {
+          <button
+            type="button"
+            class="layout-theme-toggle"
+            [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
+            (click)="toggleTheme()"
+          >
+            {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
+          </button>
+        }
+        <span class="layout-topbar-icon" aria-hidden="true"></span>
+        <span class="layout-topbar-icon" aria-hidden="true"></span>
+        <span class="layout-topbar-user">
+          @if (activeBusinessName(); as bizName) {
+            <span class="layout-topbar-business-name">{{ bizName }}</span>
+            <span class="layout-topbar-user-sep">·</span>
+          }
+          {{ user()?.email ?? 'User' }}
+        </span>
+      </div>
+    }
   </header>
 
   <main class="layout-main">
-    <div class="layout-section">
-      @if (isImpersonating()) {
-        <div class="layout-impersonation-banner">
-          <span class="layout-impersonation-banner-text">
-            Impersonating: {{ business()?.name ?? 'Business' }}
-            @if (business()?.ownerEmail) {
-              ({{ business()?.ownerEmail }})
-            }
-          </span>
-          <button type="button" class="layout-impersonation-banner-btn" (click)="exitImpersonation()">
-            Exit impersonation
-          </button>
-        </div>
-      }
-      <router-outlet></router-outlet>
-    </div>
+    @if (isImpersonating()) {
+      <div class="layout-impersonation-banner">
+        <span class="layout-impersonation-banner-text">
+          Impersonating: {{ business()?.name ?? 'Business' }}
+          @if (business()?.ownerEmail) {
+            ({{ business()?.ownerEmail }})
+          }
+        </span>
+        <button type="button" class="layout-impersonation-banner-btn" (click)="exitImpersonation()">
+          Exit impersonation
+        </button>
+      </div>
+    }
+    <router-outlet></router-outlet>
   </main>
 </div>

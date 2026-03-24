@@ -2,7 +2,6 @@
 .wh-page {
   min-height: 100%;
   background: var(--bg-app, #f5f6f8);
-  padding: 1rem 1.25rem 2rem;
   max-width: 720px;
   margin-inline: auto;
   box-sizing: border-box;
@@ -421,6 +420,10 @@
   display: block;
 
   ::ng-deep .p-select {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     width: 100%;
     background: var(--bg-card, #fff);
     border: 1px solid var(--border-color, #e2e8f0);
@@ -710,7 +713,7 @@
 // ─── Mobile ───────────────────────────────────────────────────────────────────
 @media (max-width: 768px) {
   .wh-page {
-    padding: 0.75rem 1rem 1.5rem;
+    
     max-width: 100%;
   }
 

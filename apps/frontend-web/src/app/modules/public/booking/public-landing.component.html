@@ -1,5 +1,7 @@
 <div class="public-page" dir="rtl">
-  <section class="public-page-media">
+
+  <!-- ── Hero media carousel ─────────────────────────────────────────────── -->
+  <section class="public-hero" aria-hidden="true">
     <p-carousel
       [value]="carouselImages"
       [showIndicators]="true"
@@ -18,22 +20,91 @@
     </p-carousel>
   </section>
 
-  <section class="public-page-card-wrapper p-3">
-    <div class="public-page-card p-4">
-      <h1 class="public-page-greeting mb-2">
-        שלום {{ customerName }}, ברוכים הבאים
-      </h1>
-      <p class="public-page-subtitle mb-4">
-        בואי נקבע תור בקלות ובמהירות
-      </p>
+  <!-- ── Main content card ────────────────────────────────────────────────── -->
+  <section class="public-content">
+
+    <!-- Greeting -->
+    <div class="public-greeting">
+      <h1 class="public-greeting-title">שלום, ברוכות הבאות</h1>
+      <p class="public-greeting-sub">בואי נקבע תור בקלות ובמהירות</p>
+    </div>
+
+    <!-- ── Upcoming appointment ─────────────────────────────────────────── -->
+    <div class="public-upcoming">
+      <h2 class="public-upcoming-heading">
+        <i class="pi pi-calendar" aria-hidden="true"></i>
+        התור הקרוב שלך
+      </h2>
+
+      <!-- Loading skeleton -->
+      @if (loadingUpcoming()) {
+        <div class="public-apt-card public-apt-card--skeleton">
+          <p-skeleton width="60%" height="1.125rem" styleClass="mb-2" />
+          <p-skeleton width="40%" height="0.875rem" styleClass="mb-1" />
+          <p-skeleton width="50%" height="0.875rem" />
+        </div>
+      }
+
+      <!-- Has upcoming appointment -->
+      @else if (displayApt(); as apt) {
+        <div class="public-apt-card">
+          <div class="public-apt-card-header">
+            <p-tag
+              [value]="statusLabel()"
+              [severity]="statusSeverity()"
+              styleClass="public-apt-status"
+            />
+          </div>
+          <div class="public-apt-row">
+            <i class="pi pi-wrench public-apt-icon" aria-hidden="true"></i>
+            <span class="public-apt-service">{{ apt.serviceName }}</span>
+          </div>
+          <div class="public-apt-row">
+            <i class="pi pi-calendar public-apt-icon" aria-hidden="true"></i>
+            <span class="public-apt-date">{{ formattedDate() }}</span>
+          </div>
+          <div class="public-apt-row">
+            <i class="pi pi-clock public-apt-icon" aria-hidden="true"></i>
+            <span class="public-apt-time">{{ apt.time }}</span>
+          </div>
+        </div>
+      }
+
+      <!-- Error state (soft — don't crash the page) -->
+      @else if (upcomingError()) {
+        <div class="public-apt-card public-apt-card--error">
+          <i class="pi pi-exclamation-circle public-apt-error-icon" aria-hidden="true"></i>
+          <p class="public-apt-error-msg">לא ניתן לטעון את פרטי התור כרגע</p>
+        </div>
+      }
+
+      <!-- Empty state: no upcoming appointment -->
+      @else {
+        <div class="public-apt-empty">
+          <i class="pi pi-calendar-plus public-apt-empty-icon" aria-hidden="true"></i>
+          <p class="public-apt-empty-msg">אין לך תור קרוב</p>
+          <p-button
+            label="לקביעת תור חדש"
+            icon="pi pi-plus"
+            iconPos="right"
+            styleClass="public-apt-cta"
+            (onClick)="goToBook()"
+          />
+        </div>
+      }
+    </div>
+
+    <!-- ── Primary CTA (always visible) ────────────────────────────────── -->
+    <div class="public-cta-wrap">
       <p-button
-        label="לחצי לקביעת תור"
-        styleClass="p-button-lg landing-cta w-full mb-3"
+        label="לקביעת תור"
+        icon="pi pi-calendar-plus"
+        iconPos="right"
+        styleClass="public-cta-btn"
         (onClick)="goToBook()"
       />
-      <p class="public-page-notice mb-0">
-        יש להודיע מראש על ביטול התור
-      </p>
+      <p class="public-cta-notice">יש להודיע מראש על ביטול התור</p>
     </div>
+
   </section>
 </div>
