@@ -10,10 +10,7 @@ import {
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
-import {
-  clearImpersonationToken,
-  AdminApiService,
-} from '../../modules/admin/services/admin-api.service';
+import { AdminApiService } from '../../modules/admin/services/admin-api.service';
 import { DOCUMENT } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
@@ -41,7 +38,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly user = this.auth.user;
   readonly business = this.auth.business;
   readonly isSuperAdmin = computed(() => this.auth.isSuperAdmin());
-  readonly isImpersonating = computed(() => this.auth.isImpersonating());
+  readonly isImpersonating = this.auth.isImpersonating;
   readonly activeBusinessName = computed(() => this.auth.activeBusinessName());
 
   /** Mobile: drawer open/close. Desktop: unused. */
@@ -107,7 +104,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   /** Sidebar: Services nav link. */
   readonly servicesNavLink = computed<string>(() =>
-    this.isSuperAdmin() && !this.isImpersonating() ? '/admin/business-customers' : '/services'
+    this.isSuperAdmin() && !this.isImpersonating() ? '/services' : '/services'
   );
 
   /** Sidebar: Customers label. */
@@ -139,19 +136,12 @@ export class LayoutComponent implements OnInit, OnDestroy {
   exitImpersonation(): void {
     const auth = this.auth;
     const router = this.router;
-    this.adminApi.stopImpersonation().subscribe({
-      next: () => {
-        clearImpersonationToken();
-        auth.init().subscribe(() => {
-          router.navigate([auth.isSuperAdmin() ? '/admin/business-customers' : '/dashboard']);
-        });
-      },
-      error: () => {
-        clearImpersonationToken();
-        auth.init().subscribe(() => {
-          router.navigate([auth.isSuperAdmin() ? '/admin/business-customers' : '/dashboard']);
-        });
-      },
-    });
+    const finish = () => {
+      auth.stopImpersonation();
+      auth.init().subscribe(() => {
+        router.navigate([auth.isSuperAdmin() ? '/admin/business-customers' : '/dashboard']);
+      });
+    };
+    this.adminApi.stopImpersonation().subscribe({ next: finish, error: finish });
   }
 }

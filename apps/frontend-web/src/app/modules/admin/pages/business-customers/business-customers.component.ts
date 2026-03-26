@@ -11,7 +11,6 @@ import { FormsModule } from '@angular/forms';
 import {
   AdminApiService,
   type AdminBusiness,
-  setImpersonationToken,
 } from '../../services/admin-api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 
@@ -72,7 +71,7 @@ export class BusinessCustomersComponent implements OnInit {
     this.impersonating.set(true);
     this.adminApi.impersonateBusiness(business._id).subscribe({
       next: (res) => {
-        setImpersonationToken(res.token, res.impersonatingBusinessId);
+        this.auth.startImpersonation(res.token, res.impersonatingBusinessId);
         this.auth.init().subscribe(() => {
           this.impersonating.set(false);
           this.router.navigate(['/dashboard']);

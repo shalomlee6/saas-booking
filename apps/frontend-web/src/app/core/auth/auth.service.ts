@@ -1,4 +1,4 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, tap, catchError, of, map } from 'rxjs';
 import { ApiService } from '../api/api.service';
 import type { BusinessUi } from '../config/theme.service';
@@ -53,6 +53,13 @@ export interface AuthMeResponse {
   } | null;
 }
 
+const LS_IMPERSONATION_TOKEN = 'sb_impersonation_token';
+const LS_IMPERSONATION_BIZ_ID = 'sb_impersonation_business_id';
+
+function lsGet(key: string): string | null {
+  return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(ApiService);
@@ -62,6 +69,17 @@ export class AuthService {
   readonly business = signal<AuthMeBusiness | null>(null);
   readonly businessSettings = signal<AuthMeResponse['businessSettings']>(null);
   readonly initialized = signal<boolean>(false);
+
+  // ── Impersonation reactive state ───────────────────────────────────────────
+  // Seeded from localStorage so state survives a hard refresh correctly.
+  private readonly _impersonationToken = signal<string | null>(lsGet(LS_IMPERSONATION_TOKEN));
+  private readonly _impersonatingBusinessId = signal<string | null>(lsGet(LS_IMPERSONATION_BIZ_ID));
+
+  /** True when super-admin is currently impersonating a business. Reactive. */
+  readonly isImpersonating = computed(() => !!this._impersonationToken());
+
+  /** Id of the business being impersonated, or null. Reactive. */
+  readonly impersonatingBusinessId = computed(() => this._impersonatingBusinessId());
 
   init(): Observable<void> {
     return this.api.get<AuthMeResponse>('auth/me').pipe(
@@ -101,19 +119,36 @@ export class AuthService {
     return this.user()?.role === 'super_admin';
   }
 
-  /** True when super-admin is impersonating a business (Bearer token in use). */
-  isImpersonating(): boolean {
-    return typeof localStorage !== 'undefined' && !!localStorage.getItem('sb_impersonation_token');
-  }
-
-  /** When impersonating, the business id being impersonated; otherwise null. */
-  impersonatingBusinessId(): string | null {
-    return typeof localStorage !== 'undefined' ? localStorage.getItem('sb_impersonation_business_id') : null;
-  }
-
   /** Active business name (own business or impersonated). */
   activeBusinessName(): string | null {
     return this.business()?.name ?? null;
+  }
+
+  /**
+   * Begin impersonating a business.
+   * Writes to localStorage (so authInterceptor picks it up per-request)
+   * and updates the reactive signals immediately so the UI responds without a reload.
+   */
+  startImpersonation(token: string, businessId: string): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(LS_IMPERSONATION_TOKEN, token);
+      localStorage.setItem(LS_IMPERSONATION_BIZ_ID, businessId);
+    }
+    this._impersonationToken.set(token);
+    this._impersonatingBusinessId.set(businessId);
+  }
+
+  /**
+   * Stop impersonating.
+   * Removes from localStorage and clears the reactive signals immediately.
+   */
+  stopImpersonation(): void {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(LS_IMPERSONATION_TOKEN);
+      localStorage.removeItem(LS_IMPERSONATION_BIZ_ID);
+    }
+    this._impersonationToken.set(null);
+    this._impersonatingBusinessId.set(null);
   }
 
   /** Update businessSettings locally (e.g. after PATCH business/settings). */
