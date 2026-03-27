@@ -417,8 +417,10 @@
 
 // ─── p-select overrides — use theme tokens, not hardcoded black/white ─────────
 .wh-pselect {
-  display: block;
-
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
   ::ng-deep .p-select {
     display: flex;
     flex-direction: column;
@@ -760,6 +762,7 @@
   .wh-pselect {
     ::ng-deep .p-select {
       min-height: 44px;
+
     }
 
     ::ng-deep .p-select-label {
