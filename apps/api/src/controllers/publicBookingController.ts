@@ -457,9 +457,11 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     });
     const timezone = settings?.localization?.timezone ?? 'Asia/Jerusalem';
 
-    // Use Intl.DateTimeFormat to convert the UTC Date to the business timezone —
-    // avoids Luxon v3 generic-type issues while being correct and dependency-free.
-    const dtParts = new Intl.DateTimeFormat('he-IL', {
+    // Use Intl.DateTimeFormat to convert the UTC Date to the business timezone.
+    // 'en-CA' is chosen deliberately: it reliably yields plain Arabic-numeral parts
+    // (year/month/day/hour/minute) without RTL marks or locale-specific separators
+    // that some environments inject for non-Latin locales such as 'he-IL'.
+    const dtParts = new Intl.DateTimeFormat('en-CA', {
       timeZone: timezone,
       year: 'numeric',
       month: '2-digit',

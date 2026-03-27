@@ -4,6 +4,8 @@ import {
   inject,
   computed,
   signal,
+  effect,
+  untracked,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
@@ -62,6 +64,25 @@ export class PublicLandingComponent implements OnInit {
   private readonly session = inject(PublicSessionService);
   private readonly messageService = inject(MessageService);
 
+  constructor() {
+    // Safety net: if the authenticated customer identity changes while this component
+    // is alive (tab reuse, future in-page auth flow, etc.), clear every piece of
+    // appointment state immediately so stale data can never bleed to the new identity.
+    let prevCustomerId: string | null | undefined;
+    effect(() => {
+      const currentId = this.session.customerId();
+      if (prevCustomerId !== undefined && prevCustomerId !== currentId) {
+        untracked(() => {
+          this.upcomingApt.set(null);
+          this.justBookedApt.set(null);
+          this.upcomingError.set(false);
+          this.loadingUpcoming.set(false);
+        });
+      }
+      prevCustomerId = currentId;
+    });
+  }
+
   readonly businessSlug = computed(
     () => this.route.parent?.snapshot.paramMap.get('slug') ?? ''
   );
@@ -102,29 +123,40 @@ export class PublicLandingComponent implements OnInit {
 
   ngOnInit(): void {
     const slug = this.businessSlug();
+    // The customer ID that belongs to the current authenticated session.
+    const currentCustomerId = this.session.customerId();
 
-    // Read router state set by CustomerBookPageComponent on successful booking.
-    // history.state is set by Angular Router navigate() extras.state and persists
-    // for the duration of this navigation only — gone on manual refresh.
+    // Read router state written by CustomerBookPageComponent on successful booking.
+    // history.state persists for the current navigation only and is absent on refresh.
     const state = (typeof window !== 'undefined' ? window.history.state : {}) as Record<string, unknown>;
     if (state?.['booked'] === true) {
       const aptData = state['apt'] as UpcomingAppointment | undefined;
-      if (aptData) {
+      // IDENTITY GUARD: only accept the just-booked appointment card if its
+      // embedded customerId matches the current session.  This prevents a
+      // lingering history entry from a previous customer being shown to a
+      // different customer who navigates to the same URL later.
+      const stateCustomerId = (state['customerId'] as string | null | undefined) ?? null;
+      const identityMatch = stateCustomerId === currentCustomerId;
+
+      if (aptData && identityMatch) {
         this.justBookedApt.set(aptData);
       }
+
+      // Always show the success toast — the booking itself succeeded regardless.
       this.messageService.add({
         severity: 'success',
         summary: 'התור נקבע!',
         detail: 'התור שלך אושר בהצלחה',
         life: 5000,
       });
-      // Clear the state so a back+forward navigation does not re-show it.
+
+      // Neutralise the state so back/forward navigation does not re-trigger it.
       if (typeof window !== 'undefined') {
         window.history.replaceState({ ...state, booked: false }, '');
       }
     }
 
-    // Fetch the real upcoming appointment only for authenticated customers.
+    // Fetch the real upcoming appointment only for the currently authenticated customer.
     if (slug && this.session.hasSessionFor(slug)) {
       this.loadUpcoming();
     }

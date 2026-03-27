@@ -204,20 +204,10 @@ export class PublicApiService {
    */
   getUpcomingAppointment(): Observable<UpcomingAppointmentResponse> {
     if (environment.mockPublicApi) {
-      const mock: UpcomingAppointmentResponse = {
-        appointment: {
-          id: 'apt-mock-1',
-          date: (() => {
-            const d = new Date();
-            d.setDate(d.getDate() + 3);
-            return d.toISOString().slice(0, 10);
-          })(),
-          time: '10:30',
-          status: 'confirmed',
-          serviceName: 'מניקור',
-        },
-      };
-      return of(mock).pipe(delay(400));
+      // Return no appointment in mock mode.  Returning a hardcoded appointment
+      // for every session regardless of identity would mask identity-isolation
+      // bugs during development and testing.
+      return of({ appointment: null }).pipe(delay(400));
     }
     return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming');
   }

@@ -192,6 +192,9 @@ export class CustomerBookPageComponent implements OnInit {
           this.router.navigate(['/b', slug], {
             state: {
               booked: true,
+              // Stamp the booking owner's identity so the home page can verify
+              // it belongs to the current session before displaying the card.
+              customerId: this.session.customerId(),
               apt: {
                 id: res.id,
                 date: dateStr,
