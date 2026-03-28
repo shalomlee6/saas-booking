@@ -95,13 +95,10 @@ export class PublicLandingComponent implements OnInit {
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
-    return name ? `שלום, ${name}` : 'שלום, ברוכות הבאות';
+    return name ? `שלום, ${name}, ברוכות הבאות` : 'שלום, ברוכות הבאות';
   });
 
-  readonly greetingSub = computed(() => {
-    const name = this.session.customerName();
-    return name ? 'ברוכות הבאות! בואי נקבע תור' : 'בואי נקבע תור בקלות ובמהירות';
-  });
+  readonly greetingSub = 'בואי נקבע תור בקלות ובמהירות';
 
   readonly carouselImages = [
     'https://picsum.photos/800/400?random=1',

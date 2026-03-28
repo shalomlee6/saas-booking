@@ -18,6 +18,7 @@ import {
   type CreateAppointmentBody,
 } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
+import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
 
 /** Steps: 1=service, 2=date, 3=time, 4=confirm */
 type BookStep = 1 | 2 | 3 | 4;
@@ -43,6 +44,7 @@ const CTA_LABELS: Record<BookStep, string> = {
     FormsModule,
     ButtonModule,
     DatePickerModule,
+    HoldToConfirmButtonComponent,
     SkeletonModule,
   ],
   templateUrl: './customer-book-page.component.html',
@@ -76,6 +78,11 @@ export class CustomerBookPageComponent implements OnInit {
 
   // ── Step navigation ────────────────────────────────────────────────────────
   readonly currentStep = signal<BookStep>(1);
+  /**
+   * Toggled off then on after a non-fatal booking error to destroy and
+   * recreate the hold-to-confirm component so the progress ring resets.
+   */
+  readonly showHoldButton = signal(true);
   readonly stepNumbers = [1, 2, 3, 4] as const;
 
   // ── Route ─────────────────────────────────────────────────────────────────
@@ -116,6 +123,7 @@ export class CustomerBookPageComponent implements OnInit {
 
   readonly stepTitle = computed(() => STEP_TITLES[this.currentStep()]);
   readonly ctaLabel = computed(() => CTA_LABELS[this.currentStep()]);
+  readonly progressPercent = computed(() => (this.currentStep() / 4) * 100);
 
   readonly canGoNext = computed(() => {
     switch (this.currentStep()) {
@@ -303,6 +311,11 @@ export class CustomerBookPageComponent implements OnInit {
           }
         } else {
           this.showError(err?.error?.message ?? 'שגיאה באישור התור');
+          // Reset the hold ring so the customer can try again without
+          // navigating away.  Toggle the signal off then back on so Angular
+          // destroys and recreates the component, clearing internal state.
+          this.showHoldButton.set(false);
+          setTimeout(() => this.showHoldButton.set(true), 50);
         }
       },
     });
