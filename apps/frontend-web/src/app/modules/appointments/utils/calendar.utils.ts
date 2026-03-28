@@ -81,8 +81,15 @@ export const CALENDAR_HOUR_END = 20;
 /** Time slot interval in minutes. */
 export const CALENDAR_SLOT_MINUTES = 30;
 
-/** Pixels per minute for block positioning. Change this to make the grid taller/shorter. */
-export const CALENDAR_PIXELS_PER_MINUTE = 2;
+/**
+ * Pixels per minute for block positioning.
+ * 1.0 px/min → 30 px per 30-min slot → 720 px total grid (8am–8pm).
+ * At this density the full workday (8–20) fits within the viewport on
+ * standard desktop screens (1440×900: ~95 % visible, 1536×864: ~90 %,
+ * 1366×768: ~77 %). Matches the "compact" density of Google Calendar /
+ * Outlook dense view — professional and readable at font-size 11 px.
+ */
+export const CALENDAR_PIXELS_PER_MINUTE = 1.0;
 
 /** Minimum height of an appointment block in pixels. */
 export const CALENDAR_MIN_BLOCK_HEIGHT_PX = 24;

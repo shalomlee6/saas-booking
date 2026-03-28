@@ -21,6 +21,9 @@ import {
 import {
   GRID_BODY_HEIGHT_PX,
   CALENDAR_SLOT_HEIGHT_PX,
+  CALENDAR_HOUR_START,
+  CALENDAR_HOUR_END,
+  asDate,
   getHourLabelsWithStyle,
   getSlotsForDay,
   groupAppointmentsByDay,
@@ -61,6 +64,32 @@ const STATUS_CLASS_MAP: Record<string, string> = {
   cancelled: 'calendar-block--cancelled',
   canceled: 'calendar-block--cancelled',
 };
+
+export interface DayChip {
+  date: Date;
+  key: string;
+  dayLabel: string;
+  dateNum: number;
+  isToday: boolean;
+  isSelected: boolean;
+}
+
+export interface AgendaGroup {
+  hour: number;
+  label: string;
+  blocks: (AppointmentBlockLayout & { statusClass: string })[];
+}
+
+/** One day section in the mobile 3-day stacked view. */
+export interface MobileDayGroup {
+  dayKey: string;
+  /** "Today", "Tomorrow", or "Monday" */
+  heading: string;
+  /** "Fri, Mar 28" */
+  subLabel: string;
+  isToday: boolean;
+  blocks: (AppointmentBlockLayout & { statusClass: string })[];
+}
 
 export interface DayViewModel {
   date: Date;
@@ -139,7 +168,10 @@ function getStatusClass(status: string): string {
   return STATUS_CLASS_MAP[(status || '').toLowerCase()] ?? 'calendar-block--neutral';
 }
 
-const DETAIL_BREAKPOINT_PX = 768;
+/** Below this width → mobile agenda view + drawer for detail panel. */
+const MOBILE_BREAKPOINT_PX = 768;
+/** Below this width → 5-day week grid instead of 7-day. */
+const TABLET_BREAKPOINT_PX = 1024;
 
 @Component({
   selector: 'app-appointments-list',
@@ -197,6 +229,155 @@ export class AppointmentsListComponent implements OnInit {
   });
 
   readonly hourLabelsWithStyle = computed(() => getHourLabelsWithStyle());
+
+  /** True when the visible start date IS today (business-timezone-aware). */
+  readonly isAtToday = computed<boolean>(() =>
+    toDateKey(this.visibleStartDate(), this.timezone()) === this.todayKeyTz()
+  );
+
+  /** Human-readable label for the selected mobile day (e.g. "Wednesday, Mar 28" or "Today, Mar 28"). */
+  readonly mobileSelectedDayLabel = computed<string>(() => {
+    const tz = this.timezone();
+    const day = this.visibleStartDate();
+    const isToday = toDateKey(day, tz) === this.todayKeyTz();
+    const datePart = new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      month: 'short',
+      day: 'numeric',
+    }).format(day);
+    if (isToday) return `Today, ${datePart}`;
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: tz,
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    }).format(day);
+  });
+
+  /**
+   * 7-day chip strip for the mobile view.
+   * Shows Sunday–Saturday of the week that contains `visibleStartDate`.
+   */
+  readonly weekDayChips = computed<DayChip[]>(() => {
+    const selected = this.visibleStartDate();
+    const tz = this.timezone();
+    const todayKey = this.todayKeyTz();
+    const selectedKey = toDateKey(selected, tz);
+
+    const startDateStr = toDateKey(selected, tz);
+    const [sy, sm, sd] = startDateStr.split('-').map(Number);
+    const selectedParts = getLocalParts(selected, tz);
+    const dow = selectedParts.dayOfWeek; // 0=Sun … 6=Sat
+
+    const chips: DayChip[] = [];
+    for (let i = 0; i < 7; i++) {
+      const dayOffset = i - dow;
+      const anchorUtc = new Date(
+        Date.UTC(sy ?? 0, (sm ?? 1) - 1, (sd ?? 1) + dayOffset, 12, 0, 0)
+      );
+      const key = toDateKey(anchorUtc, tz);
+      const parts = getLocalParts(anchorUtc, tz);
+      chips.push({
+        date: businessDayStartUtc(key, tz),
+        key,
+        dayLabel: (['S', 'M', 'T', 'W', 'T', 'F', 'S'] as const)[parts.dayOfWeek] ?? '',
+        dateNum: parts.day,
+        isToday: key === todayKey,
+        isSelected: key === selectedKey,
+      });
+    }
+    return chips;
+  });
+
+  /**
+   * Agenda groups for the mobile day view.
+   * Groups the visible day's appointment blocks by their START hour.
+   */
+  readonly agendaGroups = computed<AgendaGroup[]>(() => {
+    const days = this.visibleDays();
+    const day = days[0];
+    if (!day) return [];
+    const tz = this.timezone();
+
+    const hourMap = new Map<number, (AppointmentBlockLayout & { statusClass: string })[]>();
+    for (const block of day.blocks) {
+      const start = asDate(block.appointment.start);
+      if (!start) continue;
+      const { hour } = getLocalParts(start, tz);
+      const list = hourMap.get(hour) ?? [];
+      list.push(block);
+      hourMap.set(hour, list);
+    }
+
+    const groups: AgendaGroup[] = [];
+    for (let h = CALENDAR_HOUR_START; h < CALENDAR_HOUR_END; h++) {
+      groups.push({
+        hour: h,
+        label: `${String(h).padStart(2, '0')}:00`,
+        blocks: hourMap.get(h) ?? [],
+      });
+    }
+    return groups;
+  });
+
+  /**
+   * 3-day stacked sections for the mobile view.
+   * Each section represents one of the 3 visible days with its appointments.
+   * Blocks are already sorted by topPx (= chronological order).
+   */
+  readonly mobileDayGroups = computed<MobileDayGroup[]>(() => {
+    const days = this.visibleDays();
+    const tz = this.timezone();
+    const todayKey = this.todayKeyTz();
+
+    // Derive tomorrow's date-key in the business timezone.
+    const [ty, tm, td] = todayKey.split('-').map(Number);
+    const tomorrowAnchorUtc = new Date(
+      Date.UTC(ty ?? 0, (tm ?? 1) - 1, (td ?? 1) + 1, 12, 0, 0)
+    );
+    const tomorrowKey = toDateKey(tomorrowAnchorUtc, tz);
+
+    return days.map((day) => {
+      let heading: string;
+      let subLabel: string;
+
+      if (day.key === todayKey) {
+        heading = 'Today';
+        subLabel = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }).format(day.date);
+      } else if (day.key === tomorrowKey) {
+        heading = 'Tomorrow';
+        subLabel = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }).format(day.date);
+      } else {
+        heading = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          weekday: 'long',
+        }).format(day.date);
+        subLabel = new Intl.DateTimeFormat('en-US', {
+          timeZone: tz,
+          month: 'short',
+          day: 'numeric',
+        }).format(day.date);
+      }
+
+      return {
+        dayKey: day.key,
+        heading,
+        subLabel,
+        isToday: day.key === todayKey,
+        blocks: day.blocks, // already sorted by topPx = chronological
+      };
+    });
+  });
 
   readonly filteredItems = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
@@ -314,12 +495,6 @@ export class AppointmentsListComponent implements OnInit {
     return `${start} – ${end}`;
   });
 
-  /** True when the visible range starts at today in the business timezone. */
-  readonly isAtToday = computed<boolean>(() => {
-    const tz = this.timezone();
-    return toDateKey(this.visibleStartDate(), tz) === toDateKey(new Date(), tz);
-  });
-
   /** Selected appointment detail view-model. */
   readonly selectedAptVm = computed<AppointmentCardVm | null>(() => {
     const apt = this.selectedAppointment();
@@ -343,8 +518,12 @@ export class AppointmentsListComponent implements OnInit {
       const win = this.doc.defaultView;
       if (!win) return;
       const update = () => {
-        this.isMobile.set(win.innerWidth < DETAIL_BREAKPOINT_PX);
+        const wasMobile = this.isMobile();
+        const nowMobile = win.innerWidth < MOBILE_BREAKPOINT_PX;
+        this.isMobile.set(nowMobile);
         this.updateVisibleDaysCount();
+        // Reload only when crossing the mobile boundary to fix day count.
+        if (wasMobile !== nowMobile) this.loadForCurrentView();
       };
       update();
       win.addEventListener('resize', update);
@@ -357,12 +536,18 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   private updateVisibleDaysCount(): void {
-    const mode = this.viewMode();
-    if (mode === 'day') {
+    // Mobile shows a 3-day stacked agenda view.
+    if (this.isMobile()) {
+      this.visibleDaysCount.set(3);
+      return;
+    }
+    if (this.viewMode() === 'day') {
       this.visibleDaysCount.set(1);
       return;
     }
-    this.visibleDaysCount.set(this.isMobile() ? 3 : 7);
+    // Tablet (768–1023px): 5-day grid; desktop (≥1024px): 7-day grid.
+    const width = this.doc.defaultView?.innerWidth ?? 1200;
+    this.visibleDaysCount.set(width < TABLET_BREAKPOINT_PX ? 5 : 7);
   }
 
   setViewMode(mode: ViewMode): void {
@@ -393,6 +578,18 @@ export class AppointmentsListComponent implements OnInit {
       this.timezone()
     );
     this.store.dispatch(AppointmentsActions.load({ params }));
+  }
+
+  /** Navigate mobile view to a specific day (from chip tap). */
+  selectMobileDay(date: Date): void {
+    this.visibleStartDate.set(startOfDay(date));
+    this.loadForCurrentView();
+  }
+
+  /** Jump to today in any view. */
+  goToToday(): void {
+    this.visibleStartDate.set(startOfDay(new Date()));
+    this.loadForCurrentView();
   }
 
   onSearchInput(value: string): void {

@@ -1,144 +1,94 @@
 <div class="appointments-page">
-  <header class="appointments-toolbar">
-    <div class="appointments-toolbar-row appointments-toolbar-row-1">
-      <h1 class="appointments-toolbar-title">Appointments</h1>
-      <div class="appointments-toolbar-desktop">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  DESKTOP / TABLET VIEW  (≥ 768px)                                      -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  @if (!isMobile()) {
+    <!-- Single-row compact toolbar -->
+    <header class="apt-toolbar">
+      <div class="apt-toolbar-start">
+        <h1 class="apt-toolbar-title">Appointments</h1>
+        <div class="apt-toolbar-nav">
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-left"
+            class="p-button-text p-button-sm apt-nav-btn"
+            [disabled]="isAtToday()"
+            (click)="prevRange()"
+            aria-label="Previous range"
+          ></button>
+          <span class="apt-date-range">{{ visibleDateRangeLabel() }}</span>
+          <button
+            pButton
+            type="button"
+            icon="pi pi-chevron-right"
+            class="p-button-text p-button-sm apt-nav-btn"
+            (click)="nextRange()"
+            aria-label="Next range"
+          ></button>
+        </div>
+      </div>
+
+      <div class="apt-toolbar-end">
         <input
           type="text"
-          class="appointments-search"
-          placeholder="Search by customer, service, or status..."
+          class="apt-search"
+          placeholder="Search by customer, service…"
           [ngModel]="searchQuery()"
           (ngModelChange)="onSearchInput($event)"
         />
-        <div class="appointments-view-toggle">
+        <div class="apt-view-toggle">
           <button
             type="button"
-            class="appointments-toggle-btn"
-            [class.appointments-toggle-btn-active]="viewMode() === 'day'"
+            class="apt-view-btn"
+            [class.apt-view-btn--active]="viewMode() === 'day'"
             (click)="setViewMode('day')"
-          >
-            Day
-          </button>
+          >Day</button>
           <button
             type="button"
-            class="appointments-toggle-btn"
-            [class.appointments-toggle-btn-active]="viewMode() === 'week'"
+            class="apt-view-btn"
+            [class.apt-view-btn--active]="viewMode() === 'week'"
             (click)="setViewMode('week')"
-          >
-            Week
-          </button>
+          >Week</button>
         </div>
-        <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary appointments-btn-new">
+        <a routerLink="/appointments/new" class="apt-btn-primary">
+          <i class="pi pi-plus" aria-hidden="true"></i>
           New Appointment
         </a>
       </div>
-      <div class="appointments-toolbar-mobile-nav">
-        <div class="appointments-calendar-nav">
-          <button
-            pButton
-            type="button"
-            icon="pi pi-chevron-left"
-            class="p-button-text appointments-nav-btn"
-            [disabled]="isAtToday()"
-            (click)="prevRange()"
-            aria-label="Previous range"
-          ></button>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-chevron-right"
-            class="p-button-text appointments-nav-btn"
-            (click)="nextRange()"
-            aria-label="Next range"
-          ></button>
-        </div>
-      </div>
-    </div>
-    <div class="appointments-toolbar-row appointments-toolbar-row-2">
-      <div class="appointments-toolbar-nav-range">
-        <div class="appointments-calendar-nav appointments-toolbar-desktop-nav">
-          <button
-            pButton
-            type="button"
-            icon="pi pi-chevron-left"
-            class="p-button-text appointments-nav-btn"
-            [disabled]="isAtToday()"
-            (click)="prevRange()"
-            aria-label="Previous range"
-          ></button>
-          <button
-            pButton
-            type="button"
-            icon="pi pi-chevron-right"
-            class="p-button-text appointments-nav-btn"
-            (click)="nextRange()"
-            aria-label="Next range"
-          ></button>
-        </div>
-        <span class="appointments-toolbar-date-range">{{ visibleDateRangeLabel() }}</span>
-      </div>
-      <input
-        type="text"
-        class="appointments-search appointments-toolbar-mobile-search"
-        placeholder="Search..."
-        [ngModel]="searchQuery()"
-        (ngModelChange)="onSearchInput($event)"
-      />
-    </div>
-    <div class="appointments-toolbar-row appointments-toolbar-row-3">
-      <div class="appointments-view-toggle">
-        <button
-          type="button"
-          class="appointments-toggle-btn"
-          [class.appointments-toggle-btn-active]="viewMode() === 'day'"
-          (click)="setViewMode('day')"
+    </header>
+
+    <!-- Calendar card -->
+    <div class="apt-calendar-card">
+      @if (error()) {
+        <p class="appointments-error">
+          {{ error() }}
+          <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
+        </p>
+      }
+
+      @if (loading()) {
+        <div class="appointments-loading">Loading appointments…</div>
+      }
+
+      @if (overlayOpen(); as overlay) {
+        <app-appointment-create-overlay
+          [open]="true"
+          [date]="overlay.date"
+          [time]="overlay.time"
+          (closed)="closeOverlay()"
+          (created)="onAppointmentCreated()"
+        />
+      }
+
+      @if (!loading()) {
+        <div
+          class="calendar-shell"
+          [style.--day-count]="visibleDaysCount()"
         >
-          Day
-        </button>
-        <button
-          type="button"
-          class="appointments-toggle-btn"
-          [class.appointments-toggle-btn-active]="viewMode() === 'week'"
-          (click)="setViewMode('week')"
-        >
-          Week
-        </button>
-      </div>
-      <a routerLink="/appointments/new" class="appointments-btn appointments-btn-primary appointments-btn-new">
-        New Appointment
-      </a>
-    </div>
-  </header>
-
-  <div class="appointments-card appointments-calendar-card">
-    @if (error()) {
-      <p class="appointments-error">
-        {{ error() }}
-        <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
-      </p>
-    }
-
-    @if (loading()) {
-      <div class="appointments-loading">Loading appointments…</div>
-    }
-
-    @if (overlayOpen(); as overlay) {
-      <app-appointment-create-overlay
-        [open]="true"
-        [date]="overlay.date"
-        [time]="overlay.time"
-        (closed)="closeOverlay()"
-        (created)="onAppointmentCreated()"
-      />
-    }
-
-    @if (!loading()) {
-      <div class="calendar-shell">
-        <div class="appointments-header">
-          <div
-            class="calendar-header appointments-days"
-            [style.--day-count]="visibleDaysCount()"
-          >
+          <!-- Sticky header row -->
+          <div class="calendar-header appointments-days">
             <div class="calendar-header-time"></div>
             @for (day of visibleDays(); track day.key) {
               <div
@@ -150,91 +100,215 @@
               </div>
             }
           </div>
-        </div>
 
-        <div
-          class="calendar-scroll"
-          [style.--grid-body-height]="gridBodyHeightPx + 'px'"
-          [style.--slot-height]="slotHeightPx + 'px'"
-          [style.--day-count]="visibleDaysCount()"
-        >
-          <div class="calendar-body">
-            <div class="calendar-time-col">
-              @for (row of hourLabelsWithStyle(); track $index) {
-                <div
-                  class="calendar-time-slot"
-                  [class.calendar-time-slot--half-hour]="!row.isFullHour"
-                >
-                  {{ row.label }}
-                </div>
-              }
-            </div>
-            <div class="calendar-days">
-              @for (day of visibleDays(); track day.key) {
-                <div
-                  class="calendar-day-col"
-                  [class.calendar-day-col--today]="day.isToday"
-                  [attr.title]="day.workingTitle"
-                >
-                  @for (range of day.disabledRanges; track range.key) {
-                    <div
-                      class="calendar-day-disabled"
-                      [style.top.px]="range.topPx"
-                      [style.height.px]="range.heightPx"
-                    ></div>
-                  }
-                  <div class="calendar-slot-layer">
-                    @for (slot of day.slots; track slot.minutesFromMidnight) {
+          <!-- Scrollable grid body -->
+          <div
+            class="calendar-scroll"
+            [style.--grid-body-height]="gridBodyHeightPx + 'px'"
+            [style.--slot-height]="slotHeightPx + 'px'"
+            [style.--day-count]="visibleDaysCount()"
+          >
+            <div class="calendar-body">
+              <div class="calendar-time-col">
+                @for (row of hourLabelsWithStyle(); track $index) {
+                  <div
+                    class="calendar-time-slot"
+                    [class.calendar-time-slot--half-hour]="!row.isFullHour"
+                  >{{ row.label }}</div>
+                }
+              </div>
+
+              <div class="calendar-days">
+                @for (day of visibleDays(); track day.key) {
+                  <div
+                    class="calendar-day-col"
+                    [class.calendar-day-col--today]="day.isToday"
+                    [attr.title]="day.workingTitle"
+                  >
+                    @for (range of day.disabledRanges; track range.key) {
                       <div
-                        class="calendar-slot"
-                        [class.calendar-slot--disabled]="slot.disabled"
-                        [attr.data-time]="slot.time"
-                        [attr.aria-label]="slot.ariaLabel"
-                        (click)="onSlotClick(day, slot)"
+                        class="calendar-day-disabled"
+                        [style.top.px]="range.topPx"
+                        [style.height.px]="range.heightPx"
                       ></div>
                     }
-                  </div>
-                  @for (block of day.blocks; track block.appointment._id) {
-                    <div
-                      class="calendar-block calendar-block-clickable"
-                      [class]="block.statusClass"
-                      [style.top.px]="block.topPx"
-                      [style.height.px]="block.heightPx"
-                      [style.--block-bg]="block.bgColor"
-                      [style.--block-text]="block.textColor"
-                      [style.--block-border]="block.borderColor"
-                      (click)="$event.stopPropagation(); openAppointment(block.appointment)"
-                    >
-                      <strong class="calendar-block-service">{{ block.serviceName }}</strong>
-                      <span class="calendar-block-customer">{{ block.customerName }}</span>
-                      <span class="calendar-block-time">{{ block.timeLabel }}</span>
+
+                    <div class="calendar-slot-layer">
+                      @for (slot of day.slots; track slot.minutesFromMidnight) {
+                        <div
+                          class="calendar-slot"
+                          [class.calendar-slot--disabled]="slot.disabled"
+                          [attr.data-time]="slot.time"
+                          [attr.aria-label]="slot.ariaLabel"
+                          (click)="onSlotClick(day, slot)"
+                        ></div>
+                      }
                     </div>
-                  }
+
+                    @for (block of day.blocks; track block.appointment._id) {
+                      <div
+                        class="calendar-block calendar-block-clickable"
+                        [class]="block.statusClass"
+                        [style.top.px]="block.topPx"
+                        [style.height.px]="block.heightPx"
+                        [style.--block-bg]="block.bgColor"
+                        [style.--block-text]="block.textColor"
+                        [style.--block-border]="block.borderColor"
+                        (click)="$event.stopPropagation(); openAppointment(block.appointment)"
+                      >
+                        <strong class="calendar-block-service">{{ block.serviceName }}</strong>
+                        <span class="calendar-block-customer">{{ block.customerName }}</span>
+                        <span class="calendar-block-time">{{ block.timeLabel }}</span>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Compact appointment list below the calendar -->
+      @if (!loading() && appointmentCards().length > 0) {
+        <section class="appointments-cards-section">
+          <h2 class="appointments-cards-title">תורים</h2>
+          <div class="appointments-cards-list">
+            @for (vm of appointmentCards(); track vm.apt._id) {
+              <div class="appointment-card" (click)="openAppointment(vm.apt)">
+                <div class="appointment-card-time">{{ vm.apt.start | date:'HH:mm' }} – {{ vm.apt.end | date:'HH:mm' }}</div>
+                <div class="appointment-card-customer">{{ vm.customerDisplay }}</div>
+                <div class="appointment-card-service">{{ vm.serviceDisplay }}</div>
+                <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
+              </div>
+            }
+          </div>
+        </section>
+      }
+    </div>
+  }
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  MOBILE VIEW  (< 768px) — 3-Day Stacked View                           -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  @if (isMobile()) {
+
+    <!-- Mobile top bar -->
+    <div class="apt-mobile-bar">
+      <h1 class="apt-mobile-title">Appointments</h1>
+      <div class="apt-mobile-bar-actions">
+        @if (!isAtToday()) {
+          <button type="button" class="apt-today-chip" (click)="goToToday()">Today</button>
+        }
+        <a routerLink="/appointments/new" class="apt-mobile-new-btn" aria-label="New Appointment">
+          <i class="pi pi-plus" aria-hidden="true"></i>
+        </a>
+      </div>
+    </div>
+
+    <!-- 3-day date range nav: ← Mar 28 – Mar 30 → -->
+    <div class="apt-mobile-date-nav">
+      <button
+        pButton
+        type="button"
+        icon="pi pi-chevron-left"
+        class="p-button-text apt-nav-btn"
+        (click)="prevRange()"
+        aria-label="Previous 3 days"
+      ></button>
+      <span class="apt-mobile-date-label">{{ visibleDateRangeLabel() }}</span>
+      <button
+        pButton
+        type="button"
+        icon="pi pi-chevron-right"
+        class="p-button-text apt-nav-btn"
+        (click)="nextRange()"
+        aria-label="Next 3 days"
+      ></button>
+    </div>
+
+    <!-- Error state -->
+    @if (error()) {
+      <p class="appointments-error apt-mobile-error">
+        {{ error() }}
+        <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
+      </p>
+    }
+
+    <!-- Create overlay -->
+    @if (overlayOpen(); as overlay) {
+      <app-appointment-create-overlay
+        [open]="true"
+        [date]="overlay.date"
+        [time]="overlay.time"
+        (closed)="closeOverlay()"
+        (created)="onAppointmentCreated()"
+      />
+    }
+
+    <!-- 3-day stacked sections -->
+    <div class="apt-3day-view">
+      @if (loading()) {
+        <div class="apt-3day-loading">
+          <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
+          Loading…
+        </div>
+      }
+
+      @if (!loading()) {
+        @for (group of mobileDayGroups(); track group.dayKey) {
+          <div class="apt-3day-section">
+
+            <!-- Sticky day header -->
+            <div
+              class="apt-3day-header"
+              [class.apt-3day-header--today]="group.isToday"
+            >
+              <span class="apt-3day-heading">{{ group.heading }}</span>
+              <span class="apt-3day-sublabel">{{ group.subLabel }}</span>
+            </div>
+
+            <!-- Appointments or empty state -->
+            <div class="apt-3day-body">
+              @if (group.blocks.length === 0) {
+                <p class="apt-3day-empty">No appointments</p>
+              }
+              @for (block of group.blocks; track block.appointment._id) {
+                <div
+                  class="apt-3day-card"
+                  [class]="block.statusClass"
+                  [style.--block-border]="block.borderColor"
+                  (click)="openAppointment(block.appointment)"
+                >
+                  <div class="apt-3day-card-time">{{ block.timeLabel }}</div>
+                  <div class="apt-3day-card-service">{{ block.serviceName }}</div>
+                  <div class="apt-3day-card-customer">
+                    <i class="pi pi-user" aria-hidden="true"></i>
+                    {{ block.customerName }}
+                  </div>
                 </div>
               }
             </div>
           </div>
-        </div>
-      </div>
-    }
+        }
+      }
+    </div>
 
-    @if (!loading() && appointmentCards().length > 0) {
-      <section class="appointments-cards-section">
-        <h2 class="appointments-cards-title">תורים</h2>
-        <div class="appointments-cards-list">
-          @for (vm of appointmentCards(); track vm.apt._id) {
-            <div class="appointment-card" (click)="openAppointment(vm.apt)">
-              <div class="appointment-card-time">{{ vm.apt.start | date:'HH:mm' }} – {{ vm.apt.end | date:'HH:mm' }}</div>
-              <div class="appointment-card-customer">{{ vm.customerDisplay }}</div>
-              <div class="appointment-card-service">{{ vm.serviceDisplay }}</div>
-              <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
-            </div>
-          }
-        </div>
-      </section>
-    }
-  </div>
+    <!-- Floating action button -->
+    <a
+      routerLink="/appointments/new"
+      class="apt-mobile-fab"
+      aria-label="New Appointment"
+    >
+      <i class="pi pi-plus" aria-hidden="true"></i>
+    </a>
+  }
 
+
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
+  <!--  APPOINTMENT DETAIL PANEL (shared between desktop & mobile)            -->
+  <!-- ═══════════════════════════════════════════════════════════════════════ -->
   @if (selectedAptVm(); as vm) {
     @if (!isMobile()) {
       <p-dialog
@@ -276,11 +350,12 @@
         </ng-template>
       </p-dialog>
     }
+
     @if (isMobile()) {
       <p-drawer
         [visible]="true"
-        position="right"
-        [style]="{ width: 'min(100%, 360px)' }"
+        position="bottom"
+        [style]="{ height: 'auto', maxHeight: '85vh' }"
         (visibleChange)="onDetailVisibleChange($event)"
         styleClass="appointments-detail-drawer"
       >

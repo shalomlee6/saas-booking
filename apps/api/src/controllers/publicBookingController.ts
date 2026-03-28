@@ -74,11 +74,20 @@ export async function getPublicServices(req: Request, res: Response) {
   }
 }
 
-/** Build list of slot start times "HH:mm" for a given day using openingHours in timezone */
+/**
+ * Build list of valid slot start times "HH:mm" for a given day.
+ *
+ * A slot is only emitted when the FULL service fits inside the working range:
+ *   slotStart + durationMinutes <= rangeEnd
+ *
+ * This prevents slots like 17:30 from appearing when the service is 90 min
+ * and the business closes at 18:00 (17:30 + 90 = 19:00 > 18:00).
+ */
 function buildCandidateSlots(
   dateStr: string,
   timezone: string,
-  openingHours: IOpeningHours
+  openingHours: IOpeningHours,
+  durationMinutes: number
 ): string[] {
   const dt = DateTime.fromISO(dateStr, { zone: timezone });
   if (!dt.isValid) return [];
@@ -94,7 +103,8 @@ function buildCandidateSlots(
     const [endH, endM] = range.end.split(':').map(Number);
     let minutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
-    while (minutes + step <= endMinutes) {
+    // Full-fit check: the entire service duration must complete before range end.
+    while (minutes + durationMinutes <= endMinutes) {
       const h = Math.floor(minutes / 60);
       const m = minutes % 60;
       out.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
@@ -173,8 +183,8 @@ export async function getAvailabilityForBusiness(
     .lean();
 
 
-  const candidateSlots = buildCandidateSlots(dateStr, timezone, openingHours);
   const durationMinutes = service.durationMinutes ?? 30;
+  const candidateSlots = buildCandidateSlots(dateStr, timezone, openingHours, durationMinutes);
 
   const available: string[] = [];
   for (const timeStr of candidateSlots) {
