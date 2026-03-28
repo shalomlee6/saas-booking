@@ -12,6 +12,7 @@ import {
   getPublicAvailability,
   createPublicAppointment as createPublicAppointmentBooking,
   getUpcomingCustomerAppointment,
+  cancelCustomerAppointment,
 } from '../controllers/publicBookingController';
 import { requestOtp, verifyOtp } from '../controllers/publicAuthController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
@@ -31,6 +32,8 @@ publicRouter.get('/businesses/:slug/availability', getAvailability);
 publicRouter.post('/appointments', optionalPublicCustomer, createPublicAppointmentBooking);
 // GET /api/public/appointments/upcoming (optional Bearer; returns null when guest/unauthenticated)
 publicRouter.get('/appointments/upcoming', optionalPublicCustomer, getUpcomingCustomerAppointment);
+// DELETE /api/public/appointments/:appointmentId (requires valid customer Bearer JWT)
+publicRouter.delete('/appointments/:appointmentId', optionalPublicCustomer, cancelCustomerAppointment);
 
 // --- Legacy public routes (dashboard / auth)
 publicRouter.get('/:businessSlug/business', getPublicBusiness);

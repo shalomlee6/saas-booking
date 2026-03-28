@@ -479,3 +479,61 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
+
+// --- DELETE /api/public/appointments/:appointmentId
+/**
+ * Customer-initiated cancellation of their own appointment.
+ * Requires a valid public-customer Bearer JWT (role=customer).
+ *
+ * Rules enforced:
+ *  - appointment must belong to the authenticated customer
+ *  - appointment must belong to the same business as the JWT
+ *  - appointment must not already be cancelled
+ *  - a non-empty cancellationReason is required (validated here as defence-in-depth)
+ */
+export async function cancelCustomerAppointment(req: Request, res: Response) {
+  try {
+    const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+    if (!publicCustomer) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    const { appointmentId } = req.params;
+    const { cancellationReason } = req.body as { cancellationReason?: string };
+
+    // Validate reason (defence-in-depth; frontend also enforces this).
+    const trimmedReason = (cancellationReason ?? '').trim();
+    if (!trimmedReason) {
+      return res.status(400).json({ message: 'cancellationReason is required' });
+    }
+
+    // Load the appointment, enforcing both customer AND business ownership.
+    const apt = await Appointment.findOne({
+      _id: appointmentId,
+      customerId: new Types.ObjectId(publicCustomer.customerId),
+      businessId: new Types.ObjectId(publicCustomer.businessId),
+    });
+
+    if (!apt) {
+      // Return 404 regardless of whether the id exists — prevents info leakage.
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+
+    if (apt.status === 'cancelled') {
+      return res.status(409).json({ message: 'Appointment is already cancelled' });
+    }
+
+    if (apt.status === 'completed') {
+      return res.status(409).json({ message: 'Completed appointments cannot be cancelled' });
+    }
+
+    apt.status = 'cancelled';
+    apt.cancellationReason = trimmedReason;
+    await apt.save();
+
+    return res.json({ ok: true, appointmentId: apt._id.toString() });
+  } catch (err) {
+    console.error('Error DELETE /public/appointments/:appointmentId:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}

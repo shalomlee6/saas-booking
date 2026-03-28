@@ -261,6 +261,251 @@
   text-align: center;
 }
 
+// ─── Appointment card header (status + cancel button) ─────────────────────────
+// Override the existing flex-end so the cancel button sits at the left (RTL = inline-start).
+.public-apt-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+// ─── Cancel appointment button ────────────────────────────────────────────────
+.apt-cancel-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-danger, #dc2626);
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 25%, transparent);
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 36px;
+  min-width: 80px;
+  transition: background 0.18s, border-color 0.18s, transform 0.14s;
+  white-space: nowrap;
+  font-family: inherit;
+
+  .pi {
+    font-size: 0.875rem;
+  }
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--color-danger, #dc2626) 14%, transparent);
+    border-color: color-mix(in srgb, var(--color-danger, #dc2626) 45%, transparent);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-danger, #dc2626);
+    outline-offset: 2px;
+  }
+}
+
+::ng-deep .p-drawer {
+  height: fit-content;
+}
+
+// ─── Cancellation drawer ──────────────────────────────────────────────────────
+::ng-deep .cancel-drawer {
+  // Rounded top corners for bottom drawer
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  height: auto !important;
+  .p-drawer-header {
+    padding: 1.25rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+
+  .p-drawer-content {
+    padding: 0;
+    overflow-y: auto;
+  }
+}
+
+.cancel-drawer-header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.cancel-drawer-icon {
+  font-size: 1.25rem;
+  color: var(--color-danger, #dc2626);
+}
+
+.cancel-drawer-title {
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.cancel-drawer-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.125rem;
+}
+
+// ─── Appointment summary inside drawer ────────────────────────────────────────
+.cancel-apt-summary {
+  background: var(--bg-app, #f5f6f8);
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cancel-apt-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9rem;
+  color: var(--text-primary, #1a1a1a);
+
+  .pi {
+    color: var(--color-primary, #3787f6);
+    font-size: 0.875rem;
+    width: 1rem;
+    text-align: center;
+    flex-shrink: 0;
+  }
+}
+
+.apt-time-ltr {
+  direction: ltr;
+  display: inline-block;
+}
+
+// ─── Confirmation text ────────────────────────────────────────────────────────
+.cancel-confirm-text {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-primary, #1a1a1a);
+  font-weight: 500;
+  text-align: right;
+}
+
+// ─── Cancellation reason textarea ─────────────────────────────────────────────
+.cancel-reason-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.cancel-reason-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.cancel-reason-required {
+  color: var(--color-danger, #dc2626);
+  margin-inline-start: 0.125rem;
+}
+
+.cancel-reason-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-color, #e5e7eb);
+  padding: 0.75rem 0.875rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: var(--text-primary, #1a1a1a);
+  background: var(--bg-card, #fff);
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.18s, box-shadow 0.18s;
+  direction: rtl;
+  text-align: right;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary, #3787f6);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary, #3787f6) 15%, transparent);
+  }
+
+  &--invalid {
+    border-color: var(--color-danger, #dc2626);
+
+    &:focus {
+      border-color: var(--color-danger, #dc2626);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger, #dc2626) 15%, transparent);
+    }
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.cancel-reason-error {
+  font-size: 0.8125rem;
+  color: var(--color-danger, #dc2626);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+// ─── Server error banner ──────────────────────────────────────────────────────
+.cancel-server-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 8%, var(--bg-card, #fff));
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 25%, transparent);
+  border-radius: 10px;
+  font-size: 0.875rem;
+  color: var(--color-danger, #dc2626);
+
+  .pi {
+    flex-shrink: 0;
+    font-size: 1rem;
+  }
+}
+
+// ─── Drawer action buttons ────────────────────────────────────────────────────
+.cancel-drawer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+}
+
+.cancel-confirm-btn {
+  ::ng-deep .p-button {
+    width: 100%;
+    border-radius: 12px;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 0.875rem 1.5rem;
+    min-height: 52px;
+    gap: 0.5rem;
+  }
+}
+
+.cancel-back-btn {
+  ::ng-deep .p-button {
+    width: 100%;
+    border-radius: 12px;
+    justify-content: center;
+    font-size: 0.9375rem;
+    padding: 0.75rem 1.5rem;
+    min-height: 48px;
+    gap: 0.5rem;
+  }
+}
+
 // ─── Responsive ───────────────────────────────────────────────────────────────
 @media (min-width: 480px) {
   .public-hero {

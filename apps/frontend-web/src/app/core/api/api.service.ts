@@ -34,4 +34,13 @@ export class ApiService {
     const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
     return this.http.delete<T>(url, { withCredentials: true });
   }
+
+  /** DELETE with a JSON request body (used when the endpoint needs extra context, e.g. reason). */
+  deleteWithBody<T>(path: string, body: unknown): Observable<T> {
+    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
+    return this.http.request<T>('DELETE', url, {
+      body,
+      withCredentials: true,
+    });
+  }
 }

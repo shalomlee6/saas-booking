@@ -21,6 +21,8 @@ export interface IAppointment extends Document {
   status: AppointmentStatus;
   source: 'owner' | 'client-online';
   notes?: string;
+  /** Free-text reason supplied by the customer when cancelling their own appointment. */
+  cancellationReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -61,6 +63,7 @@ const AppointmentSchema = new Schema<IAppointment>(
       default: 'owner',
     },
     notes: String,
+    cancellationReason: String,
   },
   { timestamps: true }
 );

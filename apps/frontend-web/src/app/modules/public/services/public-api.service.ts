@@ -211,4 +211,22 @@ export class PublicApiService {
     }
     return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming');
   }
+
+  /**
+   * DELETE /api/public/appointments/:appointmentId
+   * Cancels the authenticated customer's own appointment.
+   * Requires a non-empty cancellationReason.
+   */
+  cancelAppointment(
+    appointmentId: string,
+    cancellationReason: string
+  ): Observable<{ ok: boolean }> {
+    if (environment.mockPublicApi) {
+      return of({ ok: true }).pipe(delay(600));
+    }
+    return this.api.deleteWithBody<{ ok: boolean }>(
+      `public/appointments/${encodeURIComponent(appointmentId)}`,
+      { cancellationReason }
+    );
+  }
 }

@@ -1,18 +1,21 @@
 import {
-  Component,
-  OnInit,
-  inject,
-  computed,
-  signal,
-  effect,
-  untracked,
+ Component,
+ OnInit,
+ inject,
+ computed,
+ signal,
+ effect,
+ untracked,
 } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { CarouselModule } from 'primeng/carousel';
+import { DrawerModule } from 'primeng/drawer';
+import { TextareaModule } from 'primeng/textarea';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
+import { FormsModule } from '@angular/forms';
 import {
   PublicApiService,
   type UpcomingAppointment,
@@ -50,10 +53,13 @@ function formatDateHe(dateStr: string): string {
   });
 }
 
+/** Statuses that allow a customer to cancel their appointment. */
+const CANCELLABLE_STATUSES = new Set(['confirmed', 'pending']);
+
 @Component({
   selector: 'app-public-landing',
   standalone: true,
-  imports: [ButtonModule, CarouselModule, SkeletonModule, TagModule],
+  imports: [ButtonModule, CarouselModule, DrawerModule, FormsModule, TextareaModule, SkeletonModule, TagModule],
   templateUrl: './public-landing.component.html',
   styleUrl: './public-landing.component.scss',
 })
@@ -102,6 +108,26 @@ export class PublicLandingComponent implements OnInit {
   /** The appointment to display: prefer the live-fetched one, fall back to just-booked. */
   readonly displayApt = computed(
     () => this.upcomingApt() ?? this.justBookedApt()
+  );
+
+  // ── Cancellation drawer state ─────────────────────────────────────────────
+  readonly cancelDrawerOpen = signal(false);
+  readonly cancelReason = signal('');
+  readonly cancelReasonTouched = signal(false);
+  readonly cancelling = signal(false);
+  readonly cancelError = signal<string | null>(null);
+
+  readonly canCancelApt = computed(() => {
+    const apt = this.displayApt();
+    return !!apt && CANCELLABLE_STATUSES.has(apt.status);
+  });
+
+  readonly cancelReasonInvalid = computed(
+    () => this.cancelReasonTouched() && this.cancelReason().trim().length === 0
+  );
+
+  readonly cancelBtnDisabled = computed(
+    () => this.cancelling() || this.cancelReason().trim().length === 0
   );
 
   readonly statusLabel = computed(() => {
@@ -162,7 +188,7 @@ export class PublicLandingComponent implements OnInit {
     }
   }
 
-  private loadUpcoming(): void {
+  loadUpcoming(): void {
     this.loadingUpcoming.set(true);
     this.upcomingError.set(false);
     this.publicApi.getUpcomingAppointment().subscribe({
@@ -173,6 +199,61 @@ export class PublicLandingComponent implements OnInit {
       error: () => {
         this.upcomingError.set(true);
         this.loadingUpcoming.set(false);
+      },
+    });
+  }
+
+  openCancelDrawer(): void {
+    this.cancelReason.set('');
+    this.cancelReasonTouched.set(false);
+    this.cancelError.set(null);
+    this.cancelDrawerOpen.set(true);
+  }
+
+  closeCancelDrawer(): void {
+    if (this.cancelling()) return;
+    this.cancelDrawerOpen.set(false);
+  }
+
+  confirmCancel(): void {
+    this.cancelReasonTouched.set(true);
+    const reason = this.cancelReason().trim();
+    if (!reason) return;
+
+    const apt = this.displayApt();
+    if (!apt) return;
+
+    this.cancelling.set(true);
+    this.cancelError.set(null);
+
+    this.publicApi.cancelAppointment(apt.id, reason).subscribe({
+      next: () => {
+        this.cancelling.set(false);
+        this.cancelDrawerOpen.set(false);
+        // Clear local appointment state immediately, then fetch fresh state.
+        this.upcomingApt.set(null);
+        this.justBookedApt.set(null);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'התור בוטל',
+          detail: 'התור שלך בוטל בהצלחה',
+          life: 5000,
+        });
+        // Refresh from server to get accurate state.
+        if (this.session.hasSessionFor(this.businessSlug())) {
+          this.loadUpcoming();
+        }
+      },
+      error: (err: { error?: { message?: string }; status?: number }) => {
+        this.cancelling.set(false);
+        const serverMsg = err?.error?.message;
+        if (err?.status === 409) {
+          this.cancelError.set(serverMsg ?? 'התור כבר בוטל');
+        } else if (err?.status === 404) {
+          this.cancelError.set('התור לא נמצא. ייתכן שכבר בוטל.');
+        } else {
+          this.cancelError.set('אירעה שגיאה. אנא נסי שוב.');
+        }
       },
     });
   }
