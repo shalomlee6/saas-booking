@@ -116,7 +116,11 @@ export class CustomerLoginComponent implements OnInit {
 
     this.publicApi.verifyOtp(slug, { phone: phoneVal, code: codeVal }).subscribe({
       next: (res) => {
-        this.session.setSession(res.token, slug, res.customerId);
+        // Prefer the name returned by the server (registered name); fall back to
+        // what the user typed in the form if the backend did not echo it back.
+        const nameFromForm = this.formStep1.get('name')?.value?.trim() ?? '';
+        const displayName = (res.customerName ?? nameFromForm) || undefined;
+        this.session.setSession(res.token, slug, res.customerId, displayName);
         this.loading.set(false);
         this.router.navigate(['/b', slug]);
       },

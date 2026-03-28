@@ -1,230 +1,548 @@
-﻿.book-page {
-  min-height: 100vh;
+// ─── Page shell ───────────────────────────────────────────────────────────────
+.book-flow {
+  min-height: 100dvh;
   background: var(--bg-app, #f5f6f8);
   display: flex;
   flex-direction: column;
-  padding-bottom: 2rem;
 }
 
-.book-page-header {
+// ─── Header ───────────────────────────────────────────────────────────────────
+.book-flow-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
   background: var(--bg-card, #fff);
-  padding: 1rem 1.25rem;
-  box-shadow: var(--shadow-sm, 0 1px 3px rgba(0, 0, 0, 0.06));
   border-bottom: 1px solid var(--border-color, #e5e7eb);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex-shrink: 0;
 }
 
-.book-page-title {
+.book-flow-back {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  color: var(--text-primary, #1a1a1a);
+  transition: background 0.15s;
+  font-family: inherit;
+
+  &:hover {
+    background: var(--bg-app, #f5f6f8);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3787f6);
+    outline-offset: 2px;
+  }
+
+  .pi {
+    font-size: 1rem;
+  }
+}
+
+.book-flow-header-center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  overflow: hidden;
+}
+
+.book-flow-business-name {
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+.book-flow-step-title {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  display: block;
+}
+
+.book-flow-step-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: left;
+}
+
+// ─── Progress dots ────────────────────────────────────────────────────────────
+.book-flow-progress {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding: 0.75rem 0;
+  background: var(--bg-card, #fff);
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  flex-shrink: 0;
+}
+
+.book-flow-dot {
+  height: 8px;
+  width: 8px;
+  border-radius: 4px;
+  background: var(--border-color, #e2e8f0);
+  transition: width 0.25s ease, background 0.25s ease;
+
+  &--active {
+    width: 28px;
+    background: var(--color-primary, #3787f6);
+  }
+
+  &--done {
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 40%, var(--border-color, #e2e8f0));
+  }
+}
+
+// ─── Scrollable body ──────────────────────────────────────────────────────────
+.book-flow-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1.375rem 1rem 0.5rem;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+// ─── Step container ───────────────────────────────────────────────────────────
+.book-step {
+  display: flex;
+  flex-direction: column;
+  gap: 1.375rem;
+  padding-bottom: 1rem;
+  animation: step-in 0.2s ease-out;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.book-step-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.book-step-title {
   margin: 0;
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+  line-height: 1.3;
+}
+
+.book-step-subtitle {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-muted, #64748b);
+}
+
+// ─── Step 1: Service list ─────────────────────────────────────────────────────
+.book-service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+
+.book-service-skeleton {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.book-service-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 76px;
+  padding: 1rem 1.25rem;
+  border: 1.5px solid var(--border-color, #e2e8f0);
+  border-radius: 16px;
+  background: var(--bg-card, #fff);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  text-align: right;
+  font-family: inherit;
+  box-sizing: border-box;
+
+  &:hover {
+    border-color: var(--color-primary, #3787f6);
+    box-shadow: 0 2px 12px rgba(55, 135, 246, 0.1);
+  }
+
+  &--selected {
+    border-color: var(--color-primary, #3787f6);
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 6%, var(--bg-card, #fff));
+    box-shadow: 0 2px 12px rgba(55, 135, 246, 0.14);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3787f6);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.book-service-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.book-service-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.book-service-meta {
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  .pi {
+    font-size: 0.8125rem;
+    flex-shrink: 0;
+  }
+}
+
+.book-service-sep {
+  opacity: 0.45;
+}
+
+.book-service-check {
+  color: var(--color-primary, #3787f6);
   font-size: 1.25rem;
+  flex-shrink: 0;
+  margin-inline-start: 0.75rem;
+}
+
+// ─── Step 2: Date picker ──────────────────────────────────────────────────────
+.book-date-picker-wrap {
+  display: flex;
+  justify-content: center;
+
+  ::ng-deep .book-date-picker {
+    width: 100%;
+    max-width: 360px;
+
+    .p-datepicker-panel {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid var(--border-color, #e5e7eb);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+      overflow: hidden;
+    }
+  }
+}
+
+.book-slots-preload {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted, #64748b);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+// ─── Step 3: Slot grid ────────────────────────────────────────────────────────
+.book-slots-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.625rem;
+
+  @media (max-width: 360px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.book-slot-btn {
+  padding: 0.875rem 0.5rem;
+  border: 1.5px solid var(--border-color, #e2e8f0);
+  border-radius: 12px;
+  background: var(--bg-card, #fff);
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  color: var(--text-primary, #1a1a1a);
+  text-align: center;
+  min-height: 52px;
+  font-family: inherit;
+  direction: ltr;
+
+  &:hover {
+    border-color: var(--color-primary, #3787f6);
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 5%, var(--bg-card, #fff));
+  }
+
+  &--selected {
+    border-color: var(--color-primary, #3787f6);
+    background: color-mix(in srgb, var(--color-primary, #3787f6) 12%, var(--bg-card, #fff));
+    color: var(--color-primary, #3787f6);
+    font-weight: 700;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary, #3787f6);
+    outline-offset: 2px;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+// ─── Empty / error states ─────────────────────────────────────────────────────
+.book-empty-state,
+.book-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.25rem 1.5rem;
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  border: 1.5px dashed var(--border-color, #e5e7eb);
+  text-align: center;
+}
+
+.book-empty-icon {
+  font-size: 2.25rem;
+  color: var(--border-color-strong, #cbd5e1);
+}
+
+.book-empty-msg {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--text-muted, #64748b);
+}
+
+.book-error-icon {
+  font-size: 2.25rem;
+  color: var(--color-danger, #dc2626);
+}
+
+.book-error-msg {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: var(--color-danger, #dc2626);
+}
+
+.book-retry-btn,
+.book-alt-date-btn {
+  ::ng-deep .p-button {
+    border-radius: 9999px;
+    padding: 0.5rem 1.25rem;
+  }
+}
+
+// ─── Step 4: Summary card ─────────────────────────────────────────────────────
+.book-summary-card {
+  background: var(--bg-card, #fff);
+  border-radius: 16px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.book-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.book-summary-divider {
+  height: 1px;
+  background: var(--border-color, #f1f5f9);
+  margin: 0 1.25rem;
+}
+
+.book-summary-icon {
+  color: var(--color-primary, #3787f6);
+  font-size: 1.125rem;
+  flex-shrink: 0;
+  width: 1.25rem;
+  text-align: center;
+}
+
+.book-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+.book-summary-label {
+  font-size: 0.75rem;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.book-summary-value {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.book-summary-time {
+  direction: ltr;
+  display: inline-block;
+}
+
+// ─── Step 4: Guest fields ─────────────────────────────────────────────────────
+.book-guest-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.book-guest-title {
+  margin: 0;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--text-primary, #1a1a1a);
 }
 
-.book-page-body {
-  flex: 1;
-  padding: 1rem 1.25rem;
-  max-width: 480px;
-  margin: 0 auto;
-  width: 100%;
-}
-
-.book-page-notice {
-  font-size: 0.8125rem;
-  color: var(--text-muted, #64748b);
-  background: var(--bg-app, #f1f5f9);
-  padding: 0.75rem 1rem;
-  border-radius: 12px;
-  margin: 0 0 1rem;
-  border: 1px solid var(--border-color, #e5e7eb);
-}
-
-.book-page-section {
-  margin-bottom: 1.5rem;
-}
-
-.book-page-section-title {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary, #334155);
-}
-
-.book-page-details-fields {
+.book-field {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.375rem;
 }
 
-.book-page-label {
+.book-field-label {
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text-primary, #334155);
   display: block;
 }
 
-.book-page-required {
+.book-field-required {
   color: var(--color-danger, #dc2626);
 }
 
-.book-page-input {
+.book-field-input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  box-sizing: border-box;
+  padding: 0.875rem 1rem;
   font-size: 1rem;
-  border: 1px solid var(--border-color, #e2e8f0);
+  border: 1.5px solid var(--border-color, #e2e8f0);
   border-radius: 12px;
   background: var(--bg-card, #fff);
   color: var(--text-primary, #1a1a1a);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.book-page-input:focus {
-  outline: none;
-  border-color: var(--color-primary, #3787f6);
-  box-shadow: 0 0 0 3px rgba(55, 135, 246, 0.15);
-}
-
-.book-page-input::placeholder {
-  color: var(--text-muted, #94a3b8);
-}
-
-.book-page-service-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.book-page-service-skeleton {
-  border-radius: 12px;
-}
-
-.book-page-service-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: right;
-  width: 100%;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 16px;
-  background: var(--bg-card, #fff);
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
-
-  &:hover {
-    border-color: var(--color-primary, #3787f6);
-    box-shadow: 0 2px 8px rgba(55, 135, 246, 0.12);
-  }
-
-  &.selected {
-    border-color: var(--color-primary, #3787f6);
-    background: rgba(55, 135, 246, 0.06);
-  }
-}
-
-.book-page-service-name {
-  font-weight: 600;
-  font-size: 1rem;
-  color: var(--text-primary, #1a1a1a);
-}
-
-.book-page-service-meta {
-  font-size: 0.875rem;
-  color: var(--text-muted, #64748b);
-  margin-top: 0.25rem;
-}
-
-.book-page-slots-empty {
-  margin: 0;
-  padding: 1rem;
-  font-size: 1rem;
-  color: var(--text-muted, #64748b);
-  text-align: center;
-  background: var(--bg-app, #f8fafc);
-  border-radius: 12px;
-  border: 1px solid var(--border-color, #e5e7eb);
-}
-
-.book-page-slots {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-}
-
-@media (max-width: 360px) {
-  .book-page-slots {
-    grid-template-columns: 1fr;
-  }
-}
-
-.book-page-slot-btn {
-  padding: 0.875rem 0.75rem;
-  border: 1px solid var(--border-color, #e2e8f0);
-  border-radius: 12px;
-  background: var(--bg-card, #fff);
-  font-size: 1rem;
-  cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
-  color: var(--text-primary, #1a1a1a);
-  text-align: center;
   min-height: 52px;
+  font-family: inherit;
+  text-align: right;
 
-  &:hover {
+  &:focus {
     border-color: var(--color-primary, #3787f6);
-    background: rgba(55, 135, 246, 0.06);
+    box-shadow: 0 0 0 3px rgba(55, 135, 246, 0.15);
   }
 
-  &.selected {
-    border-color: var(--color-primary, #3787f6);
-    background: rgba(55, 135, 246, 0.12);
-    font-weight: 600;
+  &::placeholder {
+    color: var(--text-muted, #94a3b8);
   }
 }
 
-.book-page-hold-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 0.5rem;
+// ─── Step 4: Cancellation notice ─────────────────────────────────────────────
+.book-cancellation-notice {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--text-muted, #64748b);
+  background: var(--bg-app, #f5f6f8);
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  text-align: right;
 }
 
-.book-page-success {
-  text-align: center;
-  padding: 2rem 0;
+// ─── Sticky footer CTA ────────────────────────────────────────────────────────
+.book-flow-footer {
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-card, #fff);
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  padding: 1rem;
+  // Extra safe-area for notched phones
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+  flex-shrink: 0;
+  z-index: 10;
 }
 
-.book-page-success-icon {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--color-success, #22c55e);
-  color: #fff;
-  font-size: 2rem;
-  font-weight: bold;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 1rem;
-}
+.book-flow-cta-btn {
+  ::ng-deep .p-button {
+    width: 100%;
+    border-radius: 9999px;
+    justify-content: center;
+    font-size: 1rem;
+    font-weight: 700;
+    padding: 0.9375rem 1.5rem;
+    min-height: 56px;
+    transition: opacity 0.15s, transform 0.15s;
 
-.book-page-success-msg {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: var(--text-primary, #1a1a1a);
-  margin: 0 0 1.5rem;
-}
+    &:not(:disabled):hover {
+      transform: translateY(-1px);
+    }
 
-.book-page-drawer {
-  ::ng-deep .p-drawer-content {
-    padding: 1rem;
+    &:not(:disabled):active {
+      transform: scale(0.99);
+    }
   }
 }
 
-.book-page-drawer-content {
-  display: flex;
-  justify-content: center;
-}
+// ─── Responsive ───────────────────────────────────────────────────────────────
+@media (min-width: 480px) {
+  .book-flow-body {
+    padding: 1.5rem 1.5rem 0.75rem;
+  }
 
-.mb-2 {
-  margin-bottom: 0.5rem;
+  .book-flow-footer {
+    padding: 1.25rem 1.5rem;
+    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+  }
 }

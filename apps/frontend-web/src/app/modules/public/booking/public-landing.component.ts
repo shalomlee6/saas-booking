@@ -93,6 +93,16 @@ export class PublicLandingComponent implements OnInit {
     () => this.route.parent?.snapshot.paramMap.get('slug') ?? ''
   );
 
+  readonly greetingTitle = computed(() => {
+    const name = this.session.customerName();
+    return name ? `שלום, ${name}` : 'שלום, ברוכות הבאות';
+  });
+
+  readonly greetingSub = computed(() => {
+    const name = this.session.customerName();
+    return name ? 'ברוכות הבאות! בואי נקבע תור' : 'בואי נקבע תור בקלות ובמהירות';
+  });
+
   readonly carouselImages = [
     'https://picsum.photos/800/400?random=1',
     'https://picsum.photos/800/400?random=2',
