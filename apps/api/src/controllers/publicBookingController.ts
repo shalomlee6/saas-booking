@@ -198,28 +198,14 @@ export async function getAvailabilityForBusiness(
       .toMillis();
 
     let overlaps = false;
-    let firstOverlapForDebug: { startMs: number; endMs: number } | null = null;
 
     for (const apt of existing as { start: Date; end: Date }[]) {
       const apptStartMs = DateTime.fromJSDate(apt.start).toUTC().toMillis();
       const apptEndMs = DateTime.fromJSDate(apt.end).toUTC().toMillis();
       if (slotStartMs < apptEndMs && slotEndMs > apptStartMs) {
         overlaps = true;
-        if (!firstOverlapForDebug) {
-          firstOverlapForDebug = { startMs: apptStartMs, endMs: apptEndMs };
-        }
         break;
       }
-    }
-
-    // Temporary debug for specific slot (e.g. 13:00)
-    if (timeStr === '13:00') {
-      console.log('[availability debug] slot 13:00', {
-        slotStartMs,
-        slotEndMs,
-        hasOverlap: overlaps,
-        firstOverlap: firstOverlapForDebug,
-      });
     }
 
     if (!overlaps) available.push(timeStr);

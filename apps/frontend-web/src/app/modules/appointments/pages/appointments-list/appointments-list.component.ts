@@ -26,6 +26,8 @@ import {
   groupAppointmentsByDay,
   getAppointmentBlockLayout,
   toDateKey,
+  getLocalParts,
+  businessDayStartUtc,
   getDisabledRangesForDay,
   getWorkingHoursSummary,
 } from '../../utils/calendar.utils';
@@ -80,20 +82,35 @@ export interface AppointmentCardVm {
   severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 }
 
+/**
+ * Returns a Date set to midnight of `d` in the BROWSER's local timezone.
+ * Used only for signal initialisation and same-timezone comparisons — NOT for
+ * business-timezone-aware calendar logic (use `businessDayStartUtc` for that).
+ */
 function startOfDay(d: Date): Date {
   const out = new Date(d);
   out.setHours(0, 0, 0, 0);
   return out;
 }
 
+/**
+ * Returns `from`/`to` ISO strings that bracket `dayCount` calendar days
+ * starting from `visibleStart`, anchored to the BUSINESS timezone so the API
+ * never misses appointments near day boundaries.
+ */
 function getListParamsForVisibleRange(
   visibleStart: Date,
-  dayCount: number
+  dayCount: number,
+  timezone: string
 ): { from: string; to: string } {
-  const start = startOfDay(new Date(visibleStart));
-  const end = new Date(start);
-  end.setDate(end.getDate() + dayCount);
-  return { from: start.toISOString(), to: end.toISOString() };
+  // Resolve which calendar date the visibleStart represents in the business tz.
+  const startDateStr = toDateKey(visibleStart, timezone);
+  // Convert that date's midnight back to a UTC timestamp.
+  const from = businessDayStartUtc(startDateStr, timezone);
+  // `to` is exactly `dayCount` × 24 h later (safe: calendar days are always 86400 s
+  // for the purpose of bounding a server query even across DST boundaries).
+  const to = new Date(from.getTime() + dayCount * 24 * 60 * 60 * 1000);
+  return { from: from.toISOString(), to: to.toISOString() };
 }
 
 function getCustomerDisplay(apt: Appointment): string {
@@ -149,7 +166,6 @@ export class AppointmentsListComponent implements OnInit {
 
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
-  readonly today = new Date();
   readonly isMobile = signal(false);
   readonly selectedAppointment = signal<Appointment | null>(null);
 
@@ -160,6 +176,19 @@ export class AppointmentsListComponent implements OnInit {
   private readonly workingHours = computed(
     () => this.auth.businessSettings()?.workingHours ?? null
   );
+
+  /**
+   * IANA timezone for the active business.
+   * All calendar layout, grouping, and label functions read this signal so that
+   * appointment blocks are positioned in the business's local clock, not the browser's.
+   */
+  private readonly timezone = computed(() => this.auth.businessTimezone());
+
+  /**
+   * "Today" expressed as a date-key in the business timezone.
+   * Recomputed when auth loads (the timezone may not be known yet at construction).
+   */
+  private readonly todayKeyTz = computed(() => toDateKey(new Date(), this.timezone()));
 
   readonly items = toSignal(this.store.select(selectItems), { initialValue: [] });
   readonly loading = toSignal(this.store.select(selectLoading), { initialValue: false });
@@ -199,32 +228,45 @@ export class AppointmentsListComponent implements OnInit {
     const list = this.filteredItems();
     const start = this.visibleStartDate();
     const count = this.visibleDaysCount();
-    const rangeStart = startOfDay(new Date(start));
-    const rangeEnd = new Date(rangeStart);
-    rangeEnd.setDate(rangeEnd.getDate() + count);
-    return groupAppointmentsByDay(list, rangeStart, rangeEnd);
+    const tz = this.timezone();
+    // Build the range from business-timezone midnight so grouping boundaries match display.
+    const startDateStr = toDateKey(start, tz);
+    const rangeStart = businessDayStartUtc(startDateStr, tz);
+    const rangeEnd = new Date(rangeStart.getTime() + count * 24 * 60 * 60 * 1000);
+    return groupAppointmentsByDay(list, rangeStart, rangeEnd, tz);
   });
 
   /** Full precomputed day view-models — used in both calendar header and body. */
   readonly visibleDays = computed<DayViewModel[]>(() => {
     const start = this.visibleStartDate();
     const count = this.visibleDaysCount();
-    const todayKey = toDateKey(this.today);
+    const tz = this.timezone();
+    const todayKey = this.todayKeyTz();
     const wh = this.workingHours();
     const byDay = this.byDay();
 
+    // Derive the first column's date string in the business timezone so that
+    // advancing by whole days stays on the correct calendar boundary even when
+    // the browser clock is in a different timezone.
+    const startDateStr = toDateKey(start, tz);
+    const [sy, sm, sd] = startDateStr.split('-').map(Number);
+
     const days: DayViewModel[] = [];
     for (let i = 0; i < count; i++) {
-      const date = new Date(start);
-      date.setDate(date.getDate() + i);
-      date.setHours(0, 0, 0, 0);
-      const key = toDateKey(date);
+      // Build a UTC anchor for "noon of column i" — chosen to be safely within
+      // the same calendar day for any timezone between UTC−11 and UTC+12.
+      const anchorUtc = new Date(Date.UTC(sy ?? 0, (sm ?? 1) - 1, (sd ?? 1) + i, 12, 0, 0));
+      const key = toDateKey(anchorUtc, tz);
+
+      // Business-local midnight for this column (used as the day anchor for layout).
+      const dayMidnightUtc = businessDayStartUtc(key, tz);
+
+      const dayParts = getLocalParts(anchorUtc, tz);
 
       const dayBlockList = byDay.get(key) ?? [];
       const blocks: (AppointmentBlockLayout & { statusClass: string })[] = [];
-      const dayStart = new Date(date);
       for (const apt of dayBlockList) {
-        const layout = getAppointmentBlockLayout(apt, dayStart);
+        const layout = getAppointmentBlockLayout(apt, dayMidnightUtc, tz);
         if (layout) {
           blocks.push({ ...layout, statusClass: getStatusClass(layout.status) });
         }
@@ -232,14 +274,16 @@ export class AppointmentsListComponent implements OnInit {
       blocks.sort((a, b) => a.topPx - b.topPx);
 
       days.push({
-        date,
+        date: dayMidnightUtc,
         key,
-        dayName: DAY_NAMES[date.getDay()],
-        dateLabel: `${date.getMonth() + 1}/${date.getDate()}`,
+        dayName: DAY_NAMES[dayParts.dayOfWeek] ?? '',
+        dateLabel: `${dayParts.month}/${dayParts.day}`,
         isToday: key === todayKey,
-        workingTitle: wh ? getWorkingHoursSummary(date.getDay(), wh) : 'Working hours not set',
-        disabledRanges: getDisabledRangesForDay(date, wh),
-        slots: getSlotsForDay(date, wh).map((slot) => ({
+        workingTitle: wh
+          ? getWorkingHoursSummary(dayParts.dayOfWeek, wh)
+          : 'Working hours not set',
+        disabledRanges: getDisabledRangesForDay(anchorUtc, wh, tz),
+        slots: getSlotsForDay(anchorUtc, wh, tz).map((slot) => ({
           ...slot,
           ariaLabel: slot.disabled ? null : `Add appointment at ${slot.time}`,
         })),
@@ -249,22 +293,20 @@ export class AppointmentsListComponent implements OnInit {
     return days;
   });
 
-  /** Toolbar date range label. */
+  /** Toolbar date range label — dates shown in the business timezone. */
   readonly visibleDateRangeLabel = computed<string>(() => {
     const days = this.visibleDays();
+    const tz = this.timezone();
     if (days.length === 0) return '';
+
+    const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) =>
+      new Intl.DateTimeFormat('en-US', { ...opts, timeZone: tz }).format(d);
+
     if (days.length === 1) {
-      return days[0].date.toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric',
-      });
+      return fmt(days[0].date, { month: 'short', day: 'numeric', year: 'numeric' });
     }
-    const start = days[0].date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-    });
-    const end = days[days.length - 1].date.toLocaleDateString(undefined, {
+    const start = fmt(days[0].date, { month: 'short', day: 'numeric' });
+    const end = fmt(days[days.length - 1].date, {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -272,11 +314,10 @@ export class AppointmentsListComponent implements OnInit {
     return `${start} – ${end}`;
   });
 
-  /** True when the visible range starts at today (prev arrow disabled). */
+  /** True when the visible range starts at today in the business timezone. */
   readonly isAtToday = computed<boolean>(() => {
-    const a = startOfDay(this.visibleStartDate());
-    const b = startOfDay(this.today);
-    return a.getTime() === b.getTime();
+    const tz = this.timezone();
+    return toDateKey(this.visibleStartDate(), tz) === toDateKey(new Date(), tz);
   });
 
   /** Selected appointment detail view-model. */
@@ -346,7 +387,11 @@ export class AppointmentsListComponent implements OnInit {
 
   private loadForCurrentView(): void {
     const count = this.visibleDaysCount();
-    const params = getListParamsForVisibleRange(this.visibleStartDate(), count);
+    const params = getListParamsForVisibleRange(
+      this.visibleStartDate(),
+      count,
+      this.timezone()
+    );
     this.store.dispatch(AppointmentsActions.load({ params }));
   }
 

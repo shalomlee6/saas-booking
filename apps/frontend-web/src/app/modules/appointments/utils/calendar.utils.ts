@@ -1,6 +1,79 @@
 import type { Appointment } from '../model/appointment';
 import type { AppointmentCustomer, AppointmentService } from '../model/appointment';
 
+// ─── Timezone-safe date extraction ───────────────────────────────────────────
+
+export interface TzDateParts {
+  year: number;
+  month: number;    // 1–12
+  day: number;      // 1–31
+  hour: number;     // 0–23
+  minute: number;   // 0–59
+  second: number;   // 0–59
+  dayOfWeek: number; // 0=Sun … 6=Sat
+}
+
+const WEEKDAY_SHORT_EN = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/**
+ * Extracts date/time parts for `date` rendered in `timezone`.
+ * Uses Intl.DateTimeFormat.formatToParts so that all calendar arithmetic is
+ * based on the business's local time, not the browser's.
+ */
+export function getLocalParts(date: Date, timezone: string): TzDateParts {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hour12: false,
+    weekday: 'short',
+  }).formatToParts(date);
+
+  const get = (type: string): number =>
+    Number(parts.find((p) => p.type === type)?.value ?? '0');
+  const weekdayStr = parts.find((p) => p.type === 'weekday')?.value ?? '';
+
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    // hour12:false can return 24 for midnight in some browsers — normalise to 0–23.
+    hour: get('hour') % 24,
+    minute: get('minute'),
+    second: get('second'),
+    dayOfWeek: WEEKDAY_SHORT_EN.indexOf(weekdayStr),
+  };
+}
+
+/**
+ * Returns the UTC Date that represents midnight (00:00:00) of `dateStr`
+ * (YYYY-MM-DD) in the given `timezone`.
+ *
+ * Algorithm: anchor on UTC noon of that date (which falls within the same
+ * calendar day for any timezone ±12h), then back-calculate midnight.
+ */
+export function businessDayStartUtc(dateStr: string, timezone: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  // UTC noon of the date — guaranteed to be the same calendar day in any
+  // timezone between UTC−11 and UTC+12 (covers all real business locales).
+  const utcNoon = new Date(Date.UTC(y ?? 2000, (m ?? 1) - 1, d ?? 1, 12, 0, 0));
+
+  const { hour, minute } = getLocalParts(utcNoon, timezone);
+  // UTC noon − (minutes since local midnight) = business-local midnight in UTC
+  const minutesSinceMidnight = hour * 60 + minute;
+  const candidate = new Date(utcNoon.getTime() - minutesSinceMidnight * 60_000);
+
+  // Verify — one correction handles any DST edge case at midnight.
+  const v = getLocalParts(candidate, timezone);
+  if (v.hour === 0 && v.minute === 0) return candidate;
+  const remaining = v.hour * 60 + v.minute;
+  return new Date(candidate.getTime() - remaining * 60_000);
+}
+
 /** Hour range for the calendar grid (inclusive start, exclusive end would be 20). */
 export const CALENDAR_HOUR_START = 8;
 export const CALENDAR_HOUR_END = 20;
@@ -44,81 +117,50 @@ export function asDate(v: unknown): Date | null {
 }
 
 /**
- * Returns Sunday 00:00:00 of the week containing the given date (week = Sun–Sat).
+ * Minutes from midnight (00:00) for the given UTC Date, rendered in `timezone`.
+ * Used for block top-position calculation — must match the business's local clock.
  */
-export function getWeekStart(anchor: Date): Date {
-  const d = new Date(anchor);
-  const day = d.getDay();
-  d.setDate(d.getDate() - day);
-  d.setHours(0, 0, 0, 0);
-  return d;
+export function minutesFromMidnight(d: Date, timezone: string): number {
+  const { hour, minute, second } = getLocalParts(d, timezone);
+  return hour * 60 + minute + second / 60;
 }
 
 /**
- * Returns the next Sunday 00:00:00 after the week containing the given date.
- */
-export function getWeekEnd(anchor: Date): Date {
-  const start = getWeekStart(anchor);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 7);
-  return end;
-}
-
-/**
- * Returns an array of 7 dates (Sun, Mon, …, Sat) for the week containing the given date.
- */
-export function getWeekDays(anchor: Date): Date[] {
-  const start = getWeekStart(anchor);
-  const days: Date[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    days.push(d);
-  }
-  return days;
-}
-
-/**
- * Minutes from midnight (00:00) for the given date.
- */
-export function minutesFromMidnight(d: Date): number {
-  return d.getHours() * 60 + d.getMinutes() + d.getSeconds() / 60;
-}
-
-/**
- * Duration in minutes between start and end.
+ * Duration in minutes between start and end (timezone-independent — always UTC diff).
  */
 export function durationMinutes(start: Date, end: Date): number {
   return (end.getTime() - start.getTime()) / (60 * 1000);
 }
 
 /**
- * Date-only key YYYY-MM-DD for grouping.
+ * Date-only key YYYY-MM-DD for a UTC Date rendered in `timezone`.
+ * Used for grouping appointments by day and comparing with "today".
  */
-export function toDateKey(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+export function toDateKey(d: Date, timezone: string): string {
+  const { year, month, day } = getLocalParts(d, timezone);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }
 
 /**
- * Groups appointments by date key (YYYY-MM-DD). Uses start/end ISO strings.
+ * Groups appointments by date key (YYYY-MM-DD) in the business `timezone`.
+ * An appointment whose UTC start time falls on Tuesday 23:30 in UTC but
+ * Wednesday 02:30 in the business timezone will be grouped under Wednesday.
  */
 export function groupAppointmentsByDay(
   appointments: Appointment[],
   weekStart: Date,
-  weekEnd: Date
+  weekEnd: Date,
+  timezone: string
 ): Map<string, Appointment[]> {
   const map = new Map<string, Appointment[]>();
-  const startKey = toDateKey(weekStart);
-  const endKey = toDateKey(new Date(weekEnd.getTime() - 1));
+  const startKey = toDateKey(weekStart, timezone);
+  const endKey = toDateKey(new Date(weekEnd.getTime() - 1), timezone);
 
   for (const apt of appointments) {
     const startVal = (apt as any).start ?? (apt as any).startTime;
     const startDate = asDate(startVal);
     if (!startDate) continue;
-    const key = toDateKey(startDate);
+    const key = toDateKey(startDate, timezone);
     if (key < startKey || key > endKey) continue;
     const list = map.get(key) ?? [];
     list.push(apt);
@@ -143,11 +185,14 @@ export interface AppointmentBlockLayout {
 
 /**
  * Computes layout for one appointment: top (px), height (px), and labels.
+ * All times are resolved in `timezone` so the block lands on the correct
+ * pixel row regardless of the browser's local clock.
  * top is relative to the grid body (0 = 08:00). Clamps to grid bounds.
  */
 export function getAppointmentBlockLayout(
   appointment: Appointment,
-  dayStart: Date
+  dayStart: Date,
+  timezone: string
 ): AppointmentBlockLayout | null {
   const start = asDate((appointment as any).start ?? (appointment as any).startTime);
   const end = asDate((appointment as any).end ?? (appointment as any).endTime);
@@ -155,7 +200,7 @@ export function getAppointmentBlockLayout(
     return null;
   }
 
-  const startMinutes = minutesFromMidnight(start);
+  const startMinutes = minutesFromMidnight(start, timezone);
   const dur = durationMinutes(start, end);
   if (dur <= 0) return null;
 
@@ -176,7 +221,7 @@ export function getAppointmentBlockLayout(
   let heightPx = heightMinutes * CALENDAR_PIXELS_PER_MINUTE;
   if (heightPx < CALENDAR_MIN_BLOCK_HEIGHT_PX) heightPx = CALENDAR_MIN_BLOCK_HEIGHT_PX;
 
-  const timeLabel = formatTimeRange(start, end);
+  const timeLabel = formatTimeRange(start, end, timezone);
   const customerName = getCustomerDisplay(appointment);
   const serviceName = getServiceDisplay(appointment);
   const status = appointment.status ?? '';
@@ -200,14 +245,13 @@ export function getAppointmentBlockLayout(
   };
 }
 
-function formatTimeRange(start: Date, end: Date): string {
-  const sh = start.getHours();
-  const sm = start.getMinutes();
-  const eh = end.getHours();
-  const em = end.getMinutes();
+/** Format a time range as "HH:mm–HH:mm" in the business timezone. */
+function formatTimeRange(start: Date, end: Date, timezone: string): string {
+  const sp = getLocalParts(start, timezone);
+  const ep = getLocalParts(end, timezone);
   const fmt = (h: number, m: number) =>
     `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-  return `${fmt(sh, sm)}–${fmt(eh, em)}`;
+  return `${fmt(sp.hour, sp.minute)}–${fmt(ep.hour, ep.minute)}`;
 }
 
 function getCustomerDisplay(apt: Appointment): string {
@@ -238,21 +282,6 @@ export function getHourLabels(): string[] {
   return labels;
 }
 
-/**
- * One entry per 30-min slot (24 rows). Full-hour rows get a label (08:00, 09:00, …);
- * :30 rows get "" so labels align to 60-minute ticks while grid stays 30-min.
- */
-export function getHourSlotRows(): string[] {
-  const rows: string[] = [];
-  for (let h = CALENDAR_HOUR_START; h < CALENDAR_HOUR_END; h++) {
-    rows.push(`${String(h).padStart(2, '0')}:00`);
-    if (CALENDAR_SLOT_MINUTES === 30) {
-      rows.push('');
-    }
-  }
-  return rows;
-}
-
 /** Labels for time column: 08:00, 08:30, … with isFullHour for styling. */
 export function getHourLabelsWithStyle(): { label: string; isFullHour: boolean }[] {
   const labels = getHourLabels();
@@ -262,32 +291,15 @@ export function getHourLabelsWithStyle(): { label: string; isFullHour: boolean }
 /** One slot per 30 min for a day: time (HH:mm), minutesFromMidnight, disabled (outside working hours). */
 export function getSlotsForDay(
   day: Date,
-  workingHours: Record<string, unknown> | null | undefined
+  workingHours: Record<string, unknown> | null | undefined,
+  timezone: string
 ): { time: string; minutesFromMidnight: number; disabled: boolean }[] {
   const labels = getHourLabels();
   return labels.map((time, i) => {
     const minutesFromMidnight = GRID_START_MINUTES + i * CALENDAR_SLOT_MINUTES;
-    const disabled = !isSlotInWorkingHours(day, minutesFromMidnight, workingHours);
+    const disabled = !isSlotInWorkingHours(day, minutesFromMidnight, workingHours, timezone);
     return { time, minutesFromMidnight, disabled };
   });
-}
-
-/**
- * Build query params for /appointments/new from a slot click (date = YYYY-MM-DD, time = HH:mm).
- */
-export function buildNewAppointmentQueryParams(date: Date, slotMinutesFromMidnight: number): {
-  date: string;
-  time: string;
-} {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  const h = Math.floor(slotMinutesFromMidnight / 60);
-  const min = slotMinutesFromMidnight % 60;
-  return {
-    date: `${y}-${m}-${d}`,
-    time: `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`,
-  };
 }
 
 // ——— Working hours (businessSettings.workingHours: slots format) ———
@@ -310,13 +322,17 @@ function getNormalizedDay(
   return normalizeDayToSlots(workingHours?.[key] as Record<string, unknown>, key);
 }
 
-/** Disabled ranges for one day column: topPx/heightPx relative to grid (0 = 08:00). Uses slots. */
+/**
+ * Disabled ranges for one day column: topPx/heightPx relative to grid (0 = 08:00).
+ * Uses `timezone` to resolve the correct day-of-week for the business locale.
+ */
 export function getDisabledRangesForDay(
   day: Date,
-  workingHours: Record<string, unknown> | null | undefined
+  workingHours: Record<string, unknown> | null | undefined,
+  timezone: string
 ): { key: string; topPx: number; heightPx: number }[] {
   const result: { key: string; topPx: number; heightPx: number }[] = [];
-  const dayOfWeek = day.getDay();
+  const { dayOfWeek } = getLocalParts(day, timezone);
   const { enabled, slots } = getNormalizedDay(dayOfWeek, workingHours);
   const slotHeightPx = CALENDAR_SLOT_MINUTES * CALENDAR_PIXELS_PER_MINUTE;
 
@@ -350,9 +366,11 @@ export function getDisabledRangesForDay(
 export function isSlotInWorkingHours(
   day: Date,
   slotMinutesFromMidnight: number,
-  workingHours: Record<string, unknown> | null | undefined
+  workingHours: Record<string, unknown> | null | undefined,
+  timezone: string
 ): boolean {
-  const { enabled, slots } = getNormalizedDay(day.getDay(), workingHours);
+  const { dayOfWeek } = getLocalParts(day, timezone);
+  const { enabled, slots } = getNormalizedDay(dayOfWeek, workingHours);
   if (!enabled) return false;
   const idx = minutesToSlotIndex(slotMinutesFromMidnight);
   return slots[idx] === true;

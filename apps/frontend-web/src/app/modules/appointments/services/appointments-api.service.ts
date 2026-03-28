@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, BehaviorSubject, switchMap, map } from 'rxjs';
+import { Observable, BehaviorSubject, switchMap, map, shareReplay } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import type { Appointment, AppointmentListItem } from '../model/appointment';
 import type { CreateAppointmentDto } from '../dto/create-appointment.dto';
@@ -15,9 +15,14 @@ export class AppointmentsApiService {
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
-  /** Reactive stream: re-fetches when refresh() is called. Default params (from/to) for dashboard. */
+  /**
+   * Reactive stream: re-fetches when refresh() is called. Default params for dashboard.
+   * shareReplay(1) ensures multiple subscribers (e.g. dashboard + growth-brain) share
+   * a single HTTP request instead of each triggering their own.
+   */
   readonly appointments$ = this.refresh$.pipe(
-    switchMap(() => this.list({}))
+    switchMap(() => this.list({})),
+    shareReplay(1)
   );
 
   refresh(): void {

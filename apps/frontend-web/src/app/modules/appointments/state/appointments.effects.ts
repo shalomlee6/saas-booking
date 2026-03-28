@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, mergeMap, of } from 'rxjs';
+import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
 import { AppointmentsApiService } from '../services/appointments-api.service';
 import * as AppointmentsActions from './appointments.actions';
 
@@ -8,7 +8,9 @@ export const loadAppointments$ = createEffect(
   (actions$ = inject(Actions), api = inject(AppointmentsApiService)) =>
     actions$.pipe(
       ofType(AppointmentsActions.load),
-      mergeMap(({ params }) =>
+      // switchMap cancels any in-flight request when a new load action arrives,
+      // preventing stale responses from overwriting fresher data.
+      switchMap(({ params }) =>
         api.list(params).pipe(
           map((items) => AppointmentsActions.loadSuccess({ items })),
           catchError((err) =>

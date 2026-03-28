@@ -41,20 +41,17 @@ export const appointmentsReducer = createReducer(
     creating: true,
     error: null,
   })),
-  on(AppointmentsActions.createSuccess, (state, { item }) => {
-    const raw = item as { start?: string | Date; end?: string | Date };
-    const normalized: Appointment = {
-      ...item,
-      start: new Date(raw.start as string | number | Date),
-      end: new Date(raw.end as string | number | Date),
-    };
-    return {
-      ...state,
-      items: [normalized, ...state.items],
-      creating: false,
-      error: null,
-    };
-  }),
+  // createSuccess intentionally does NOT add the raw backend document to state.items.
+  // The backend returns a Mongoose doc without populated service/customer names, so
+  // adding it would cause a flash of incomplete data in the calendar. Instead we
+  // just clear the creating flag; the component's onAppointmentCreated() fires
+  // immediately after and calls loadForCurrentView(), which reloads the list with
+  // fully-populated appointments.
+  on(AppointmentsActions.createSuccess, (state) => ({
+    ...state,
+    creating: false,
+    error: null,
+  })),
   on(AppointmentsActions.createFailure, (state, { error }) => ({
     ...state,
     creating: false,

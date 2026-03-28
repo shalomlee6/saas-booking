@@ -47,6 +47,10 @@ export async function getMe(req: AuthRequest, res: Response) {
                 fontFamily: settingsDoc.theme.fontFamily,
               }
             : null,
+          // Expose timezone so the frontend calendar can render in the business locale.
+          localization: {
+            timezone: settingsDoc.localization?.timezone ?? 'Asia/Jerusalem',
+          },
         };
       }
     }

@@ -3,7 +3,6 @@ import { auth, AuthRequest } from '../middleware/auth';
 import { DateTime } from 'luxon';
 import {
   getAppointmentsList,
-  getMyAppointmentsForRange,
   getBusinessAppointmentsForWeek,
   getAvailableSlots,
 } from '../controllers/appointmentController';
@@ -18,9 +17,6 @@ export const appointmentsRouter = Router();
 
 // Apply auth middleware to all routes
 appointmentsRouter.use(auth);
-
-// GET /api/appointments/my?from=2025-01-01&to=2025-01-02
-appointmentsRouter.get('/my', getMyAppointmentsForRange);
 
 // GET /api/appointments/week
 appointmentsRouter.get('/week', getBusinessAppointmentsForWeek);

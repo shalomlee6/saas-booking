@@ -50,6 +50,9 @@ export interface AuthMeResponse {
   businessSettings?: {
     theme: BusinessSettingsTheme | null;
     workingHours?: WorkingHours | null;
+    localization?: {
+      timezone?: string;
+    } | null;
   } | null;
 }
 
@@ -80,6 +83,17 @@ export class AuthService {
 
   /** Id of the business being impersonated, or null. Reactive. */
   readonly impersonatingBusinessId = computed(() => this._impersonatingBusinessId());
+
+  /**
+   * IANA timezone for the active business (e.g. 'Asia/Jerusalem').
+   * Used by the appointments calendar to render appointment blocks and labels
+   * in the business's local time, not the browser's local time.
+   * Falls back to 'Asia/Jerusalem' (the target market default) when settings
+   * haven't loaded yet or don't include a timezone.
+   */
+  readonly businessTimezone = computed(
+    () => this.businessSettings()?.localization?.timezone ?? 'Asia/Jerusalem'
+  );
 
   init(): Observable<void> {
     return this.api.get<AuthMeResponse>('auth/me').pipe(

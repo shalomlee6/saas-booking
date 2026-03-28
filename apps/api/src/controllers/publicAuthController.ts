@@ -73,9 +73,6 @@ export async function requestOtp(req: Request, res: Response) {
       lastName: lastName || undefined,
     });
 
-    // Simulate SMS send delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
     return res.json({ ok: true });
   } catch (err) {
     console.error('Error POST /public/:businessSlug/auth/request-otp:', err);

@@ -1,9 +1,36 @@
 import { Response } from 'express';
+import { Types } from 'mongoose';
+import { DateTime } from 'luxon';
 import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { defaultOpeningHours } from '../models/BusinessSettings';
+import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
+
+/** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
+function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
+  const [h, m] = timeStr.split(':').map(Number);
+  return DateTime.fromISO(dateStr, { zone: timezone })
+    .set({ hour: h ?? 0, minute: m ?? 0, second: 0, millisecond: 0 })
+    .toUTC()
+    .toJSDate();
+}
+
+/**
+ * Format a JS Date as YYYY-MM-DD in the given timezone.
+ * Uses Intl (not Luxon) to stay within the project's minimal luxon.d.ts contract.
+ */
+function utcToDateStr(date: Date, timezone: string): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date);
+}
 
 /** GET /api/appointments - list for owner dashboard; flattened DTO, sort start ASC */
 export async function getAppointmentsList(req: AuthRequest, res: Response) {
@@ -48,83 +75,6 @@ export async function getAppointmentsList(req: AuthRequest, res: Response) {
   } catch (err) {
     console.error('Error GET /appointments:', err);
     res.status(500).json({ message: 'Internal server error' });
-  }
-}
-
-export async function getMyAppointmentsForRange(req: AuthRequest, res: Response) {
-  try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    const customerId = (req.user as any).customerId;
-    const businessId = req.user.businessId;
-
-    if (!customerId) {
-      return res.status(400).json({ message: 'customerId is required' });
-    }
-
-    if (!businessId) {
-      return res.status(400).json({ message: 'businessId is required' });
-    }
-
-    const { from, to } = req.query;
-
-    if (!from || !to) {
-      return res.status(400).json({ message: 'from and to query parameters are required' });
-    }
-
-    const startDate = new Date(String(from));
-    const endDate = new Date(String(to));
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return res.status(400).json({ message: 'Invalid date format' });
-    }
-
-    const appointments = await Appointment.find({
-      customerId,
-      businessId,
-      start: { $gte: startDate, $lte: endDate },
-    })
-      .populate('customerId', 'name phone')
-      .populate('serviceId', 'name colorHex')
-      .sort({ start: 1 });
-
-    const dtoArray = appointments.map((apt) => {
-      // Check if populated (object) vs ObjectId string
-      const customerPopulated = apt.customerId && typeof apt.customerId === 'object' && 'name' in apt.customerId
-        ? apt.customerId as any
-        : null;
-      const servicePopulated = apt.serviceId && typeof apt.serviceId === 'object' && 'name' in apt.serviceId
-        ? apt.serviceId as any
-        : null;
-
-      return {
-        _id: apt._id.toString(),
-        start: apt.start,
-        end: apt.end,
-        status: apt.status,
-        customer: customerPopulated
-          ? {
-              _id: customerPopulated._id.toString(),
-              name: customerPopulated.name,
-              phone: customerPopulated.phone,
-            }
-          : null,
-        service: servicePopulated
-          ? {
-              _id: servicePopulated._id.toString(),
-              name: servicePopulated.name,
-              colorHex: servicePopulated.colorHex,
-            }
-          : null,
-      };
-    });
-
-    return res.json(dtoArray);
-  } catch (err) {
-    console.error('Error GET /appointments/my-range:', err);
-    return res.status(500).json({ message: 'Internal server error' });
   }
 }
 
@@ -229,29 +179,33 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
       service.durationMinutes ??
       60;
 
-    // Compute week range
-    let startOfWeek: Date;
+    // Load business settings to get real opening hours and timezone.
+    const settings = await ensureBusinessSettings(new Types.ObjectId(String(businessId)));
+    const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
+    const openingHours = settings.openingHours?.days?.length
+      ? settings.openingHours
+      : defaultOpeningHours;
+    const slotStep: number = openingHours.slotStepMinutes ?? 30;
+
+    // Compute week start anchored to the business timezone so day boundaries
+    // (midnight→midnight) are correct for the owner's locale.
+    let weekStartStr: string;
     if (weekStart) {
       const parsedDate = new Date(String(weekStart));
       if (isNaN(parsedDate.getTime())) {
         return res.status(400).json({ message: 'Invalid weekStart date format' });
       }
-      startOfWeek = new Date(parsedDate);
-      startOfWeek.setHours(0, 0, 0, 0);
+      weekStartStr = utcToDateStr(parsedDate, timezone);
     } else {
-      startOfWeek = new Date();
-      startOfWeek.setHours(0, 0, 0, 0);
+      weekStartStr = utcToDateStr(new Date(), timezone);
     }
 
-    const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 7);
+    // fromISO with zone gives us midnight of that date in the business timezone.
+    const weekStartDt = DateTime.fromISO(weekStartStr, { zone: timezone });
+    const startOfWeek = weekStartDt.toJSDate();
+    const endOfWeek = weekStartDt.plus({ days: 7 }).toJSDate();
 
-    // Business hours (hard-coded for now)
-    const dayStartHour = 8;
-    const dayEndHour = 20;
-    const slotGranularityMinutes = 30;
-
-    // Load existing non-cancelled appointments for the business that overlap the week range
+    // Load existing non-cancelled appointments for the week.
     const appointments = await Appointment.find({
       businessId,
       start: { $lt: endOfWeek },
@@ -259,57 +213,41 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
       status: { $ne: 'cancelled' },
     });
 
-    // Calculate number of slots needed
-    const numberOfSlots = Math.ceil(durationMinutes / slotGranularityMinutes);
+    const isSlotOccupied = (slotStart: Date, slotEnd: Date): boolean =>
+      appointments.some((apt) => apt.start < slotEnd && apt.end > slotStart);
 
-    // Helper function to check if a time slot overlaps with any appointment
-    const isSlotOccupied = (slotStart: Date, slotEnd: Date): boolean => {
-      return appointments.some((apt) => {
-        return apt.start < slotEnd && apt.end > slotStart;
-      });
-    };
-
-    // Generate available slots for the week
     const availableSlots: { start: string; end: string }[] = [];
 
-    // Iterate through each day in the week
     for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const currentDay = new Date(startOfWeek);
-      currentDay.setDate(startOfWeek.getDate() + dayOffset);
+      const dateStr = utcToDateStr(
+        weekStartDt.plus({ days: dayOffset }).toJSDate(),
+        timezone
+      );
 
-      // Generate half-hour slots for this day
-      const slotsForDay: Date[] = [];
-      for (let hour = dayStartHour; hour < dayEndHour; hour++) {
-        for (let minute = 0; minute < 60; minute += slotGranularityMinutes) {
-          const slotTime = new Date(currentDay);
-          slotTime.setHours(hour, minute, 0, 0);
-          slotsForDay.push(slotTime);
-        }
-      }
+      // Real working ranges for this date (respects openingHours, closed days, etc.).
+      const ranges = applyOpeningHoursWithOverrides(dateStr, openingHours, null);
+      if (!ranges.length) continue;
 
-      // Check each potential start slot
-      for (let i = 0; i <= slotsForDay.length - numberOfSlots; i++) {
-        const slotStart = slotsForDay[i];
-        const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
+      for (const range of ranges) {
+        const [startH, startM] = range.start.split(':').map(Number);
+        const [endH, endM] = range.end.split(':').map(Number);
+        let minutes = (startH ?? 0) * 60 + (startM ?? 0);
+        const endMinutes = (endH ?? 20) * 60 + (endM ?? 0);
 
-        // Check if all required consecutive slots are free
-        let allSlotsFree = true;
-        for (let j = 0; j < numberOfSlots; j++) {
-          const checkSlotStart = slotsForDay[i + j];
-          const checkSlotEnd = new Date(checkSlotStart.getTime() + slotGranularityMinutes * 60 * 1000);
+        while (minutes + durationMinutes <= endMinutes) {
+          const h = Math.floor(minutes / 60);
+          const m = minutes % 60;
+          const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+          const slotStart = slotToUtcDate(dateStr, timeStr, timezone);
+          const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
 
-          if (isSlotOccupied(checkSlotStart, checkSlotEnd)) {
-            allSlotsFree = false;
-            break;
+          if (!isSlotOccupied(slotStart, slotEnd)) {
+            availableSlots.push({
+              start: slotStart.toISOString(),
+              end: slotEnd.toISOString(),
+            });
           }
-        }
-
-        // Also check if the full appointment duration doesn't overlap
-        if (allSlotsFree && !isSlotOccupied(slotStart, slotEnd)) {
-          availableSlots.push({
-            start: slotStart.toISOString(),
-            end: slotEnd.toISOString(),
-          });
+          minutes += slotStep;
         }
       }
     }
