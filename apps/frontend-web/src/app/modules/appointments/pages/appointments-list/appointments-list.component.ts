@@ -4,6 +4,7 @@ import {
   inject,
   signal,
   computed,
+  effect,
   afterNextRender,
 } from '@angular/core';
 import { DOCUMENT, DatePipe } from '@angular/common';
@@ -43,6 +44,7 @@ import { DialogModule } from 'primeng/dialog';
 import { DrawerModule } from 'primeng/drawer';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
+import { DatePickerModule } from 'primeng/datepicker';
 
 type ViewMode = 'day' | 'week';
 
@@ -184,6 +186,7 @@ const TABLET_BREAKPOINT_PX = 1024;
     DrawerModule,
     TagModule,
     ButtonModule,
+    DatePickerModule,
     DatePipe,
   ],
   templateUrl: './appointments-list.component.html',
@@ -513,7 +516,78 @@ export class AppointmentsListComponent implements OnInit {
 
   readonly overlayOpen = signal<{ date: string; time: string } | null>(null);
 
+  // ─── Mobile date picker ──────────────────────────────────────────────────
+  /** Controls the bottom-sheet date picker drawer on mobile. */
+  readonly datePickerOpen = signal(false);
+  /** Current value shown in the inline date picker (plain property for two-way binding). */
+  datePickerDate: Date = new Date();
+
+  openDatePicker(): void {
+    this.datePickerDate = this.visibleStartDate();
+    this.datePickerOpen.set(true);
+  }
+
+  onDatePickerSelect(date: Date): void {
+    this.visibleStartDate.set(startOfDay(date));
+    this.updateVisibleDaysCount();
+    this.loadForCurrentView();
+    this.datePickerOpen.set(false);
+  }
+
+  // ─── Auto-scroll to first upcoming appointment ────────────────────────────
+  /**
+   * Returns the `_id` of the first appointment in today's blocks whose
+   * start time is >= now. Used to mark the element for auto-scroll.
+   */
+  readonly firstUpcomingKey = computed<string | null>(() => {
+    if (!this.isMobile() || !this.isAtToday()) return null;
+    const groups = this.mobileDayGroups();
+    const nowMs = Date.now();
+    const todayGroup = groups.find((g) => g.isToday);
+    if (!todayGroup) return null;
+    for (const block of todayGroup.blocks) {
+      const start = asDate(block.appointment.start);
+      if (start && start.getTime() >= nowMs) return block.appointment._id;
+    }
+    return null;
+  });
+
+  /** Prevents repeated auto-scroll for the same load cycle. */
+  private _hasAutoScrolled = false;
+
+  private scrollToCurrentTime(): void {
+    const container = this.doc.querySelector('.apt-3day-view') as HTMLElement | null;
+    if (!container) return;
+
+    const target = this.doc.querySelector('[data-upcoming-apt]') as HTMLElement | null;
+    if (target) {
+      const offset =
+        target.getBoundingClientRect().top -
+        container.getBoundingClientRect().top +
+        container.scrollTop -
+        56; // leave room for sticky day header
+      container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+    }
+    // If no upcoming appointment found, stay at top (Today section is first).
+  }
+
   constructor() {
+    // Auto-scroll to first upcoming appointment when mobile today-view loads.
+    effect(() => {
+      const loaded = !this.loading();
+      const mobile = this.isMobile();
+      const atToday = this.isAtToday();
+
+      if (!loaded || !mobile || !atToday) {
+        this._hasAutoScrolled = false; // reset when conditions change
+        return;
+      }
+      if (this._hasAutoScrolled) return;
+      this._hasAutoScrolled = true;
+      // Delay to let Angular finish rendering the new DOM.
+      setTimeout(() => this.scrollToCurrentTime(), 160);
+    });
+
     afterNextRender(() => {
       const win = this.doc.defaultView;
       if (!win) return;
