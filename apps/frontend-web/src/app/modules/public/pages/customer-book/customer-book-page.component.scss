@@ -1,67 +1,182 @@
-// ─── Page shell ───────────────────────────────────────────────────────────────
+// ─── Spa/Beauty design tokens — scoped to this flow ──────────────────────────
 .book-flow {
+  // Palette
+  --book-bg:             #FAF7F4;
+  --book-card:           #FFFFFF;
+  --book-pink:           #F8D7E3;
+  --book-lavender:       #EDE4F5;
+  --book-nude:           #F8F1EA;
+  --book-text:           #3A2E2E;
+  --book-text-soft:      #8A7070;
+  --book-border:         #EDE8E4;
+  --book-shadow:         0 2px 14px rgba(100, 70, 60, 0.07);
+  --book-shadow-md:      0 4px 24px rgba(100, 70, 60, 0.10);
+  --book-gradient:       linear-gradient(135deg, #F8D7E3 0%, #EDE4F5 100%);
+  --book-pink-deep:      #B06080;
+  --book-lavender-deep:  #7B5EA7;
+
   min-height: 100dvh;
-  background: var(--bg-app, #f5f6f8);
+  background: var(--book-bg);
   display: flex;
   flex-direction: column;
 }
 
-// ─── Header — back button only ────────────────────────────────────────────────
+// ─── Header ───────────────────────────────────────────────────────────────────
 .book-flow-header {
   display: flex;
   align-items: center;
-  padding: 0.625rem 0.75rem;
-  background: var(--bg-card, #fff);
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: var(--book-card);
+  border-bottom: 1px solid var(--book-border);
   flex-shrink: 0;
 }
 
 .book-flow-back {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border: none;
-  background: transparent;
+  background: var(--book-nude);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 10px;
-  color: var(--text-primary, #1a1a1a);
+  border-radius: 12px;
+  color: var(--book-text);
   font-family: inherit;
-  transition: background 0.15s;
+  transition: background 0.2s, transform 0.15s;
 
   &:hover {
-    background: var(--bg-app, #f5f6f8);
+    background: color-mix(in srgb, var(--book-pink) 50%, var(--book-nude));
+  }
+
+  &:active {
+    transform: scale(0.92);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-primary, #3787f6);
+    outline: 2px solid var(--book-lavender-deep);
     outline-offset: 2px;
   }
 
   .pi {
-    font-size: 1.0625rem;
+    font-size: 1rem;
   }
 }
 
-// ─── Thin progress line ───────────────────────────────────────────────────────
-.book-flow-progress {
-  height: 3px;
-  background: var(--border-color, #e5e7eb);
+.book-flow-step-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--book-text);
+  letter-spacing: -0.01em;
+}
+
+// Mirrors the back-button width so the title stays centered.
+.book-flow-header-spacer {
+  width: 40px;
   flex-shrink: 0;
 }
 
-.book-flow-progress-fill {
-  height: 100%;
-  background: var(--color-primary, #3787f6);
-  transition: width 0.35s ease;
+// ─── Progress: 3 labeled dots ─────────────────────────────────────────────────
+.book-progress-steps {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.875rem 1.25rem 0.625rem;
+  background: var(--book-card);
+  border-bottom: 1px solid var(--book-border);
+  flex-shrink: 0;
+  gap: 0;
+}
+
+.book-progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+
+.book-progress-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--book-border);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+
+  span {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--book-text-soft);
+    line-height: 1;
+  }
+
+  .pi {
+    font-size: 0.6875rem;
+    color: var(--book-pink-deep);
+  }
+
+  .is-done & {
+    background: var(--book-pink);
+    border-color: var(--book-pink);
+  }
+
+  .is-active & {
+    background: var(--book-gradient);
+    border-color: transparent;
+    box-shadow: 0 2px 10px rgba(180, 80, 120, 0.22);
+
+    span {
+      color: #7b3060;
+    }
+  }
+}
+
+.book-progress-connector {
+  flex: 1;
+  height: 1.5px;
+  background: var(--book-border);
+  transition: background 0.4s ease;
+  // Align vertically with center of the 30px dot
+  margin-top: 15px;
+  margin-bottom: 0;
+  min-width: 1.5rem;
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
+  align-self: flex-start;
+
+  &.is-done {
+    background: var(--book-pink);
+  }
+}
+
+.book-progress-step-label {
+  font-size: 0.6875rem;
+  color: var(--book-text-soft);
+  white-space: nowrap;
+  font-weight: 400;
+  transition: color 0.2s, font-weight 0.2s;
+
+  .is-active & {
+    color: var(--book-text);
+    font-weight: 600;
+  }
+
+  .is-done & {
+    color: var(--book-pink-deep);
+  }
 }
 
 // ─── Scrollable body ──────────────────────────────────────────────────────────
 .book-flow-body {
   flex: 1;
   overflow-y: auto;
-  padding: 1.75rem 1.25rem 0.5rem;
+  padding: 1.375rem 1rem 1.5rem;
   max-width: 480px;
   width: 100%;
   margin: 0 auto;
@@ -72,115 +187,253 @@
 .book-step {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding-bottom: 1rem;
-  animation: step-fade 0.18s ease-out;
+  gap: 1.125rem;
+  animation: step-enter 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes step-fade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+@keyframes step-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.book-step-heading {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.book-step-title {
+.book-step-hint {
   margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary, #1a1a1a);
-  line-height: 1.25;
+  font-size: 0.875rem;
+  color: var(--book-text-soft);
+  text-align: center;
+  line-height: 1.5;
 }
 
-.book-step-subtitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: var(--text-muted, #64748b);
-}
-
-// ─── Step 1: Service list ─────────────────────────────────────────────────────
+// ─── Step 1: Service cards ────────────────────────────────────────────────────
 .book-service-list {
   display: flex;
   flex-direction: column;
-  gap: 0.625rem;
+  gap: 0.75rem;
 }
 
 .book-service-card {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  gap: 1rem;
   width: 100%;
-  min-height: 72px;
+  min-height: 80px;
   padding: 1rem 1.25rem;
-  border: 1.5px solid var(--border-color, #e2e8f0);
-  border-radius: 16px;
-  background: var(--bg-card, #fff);
+  border: 1.5px solid var(--book-border);
+  border-radius: 20px;
+  background: var(--book-card);
   cursor: pointer;
   text-align: right;
   font-family: inherit;
   box-sizing: border-box;
-  transition: border-color 0.18s, background 0.18s;
-  gap: 0.3rem;
+  box-shadow: var(--book-shadow);
+  transition:
+    border-color 0.22s ease,
+    background 0.22s ease,
+    box-shadow 0.22s ease,
+    transform 0.18s ease;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--color-primary, #3787f6) 60%, transparent);
+    border-color: color-mix(in srgb, var(--book-lavender-deep) 45%, transparent);
+    box-shadow: var(--book-shadow-md);
+    transform: translateY(-2px);
   }
 
   &--selected {
-    border-color: var(--color-primary, #3787f6);
+    border-color: var(--book-lavender-deep);
     border-width: 2px;
-    background: color-mix(in srgb, var(--color-primary, #3787f6) 5%, var(--bg-card, #fff));
+    background: var(--book-lavender);
+    box-shadow: 0 4px 20px rgba(123, 94, 167, 0.16);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-primary, #3787f6);
+    outline: 2px solid var(--book-lavender-deep);
     outline-offset: 2px;
   }
 
   &:active {
-    transform: scale(0.99);
+    transform: scale(0.98);
   }
 }
 
+.book-service-initial {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: var(--book-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #7b3060;
+  flex-shrink: 0;
+  letter-spacing: -0.02em;
+  transition: background 0.22s ease;
+
+  .book-service-card--selected & {
+    background: linear-gradient(135deg, #e8bcd0 0%, #d4b8f0 100%);
+  }
+}
+
+.book-service-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
 .book-service-name {
-  font-size: 1rem;
+  font-size: 1.0625rem;
   font-weight: 600;
-  color: var(--text-primary, #1a1a1a);
+  color: var(--book-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
 }
 
 .book-service-meta {
-  font-size: 0.875rem;
-  color: var(--text-muted, #64748b);
+  font-size: 0.8125rem;
+  color: var(--book-text-soft);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 400;
+
+  .pi {
+    font-size: 0.6875rem;
+  }
 }
 
-// ─── Step 2: Date picker ──────────────────────────────────────────────────────
-.book-date-picker-wrap {
+.book-service-check {
+  font-size: 1.375rem;
+  color: var(--book-lavender-deep);
+  flex-shrink: 0;
+  animation: pop-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pop-in {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+// ─── Step 1: Empty state ──────────────────────────────────────────────────────
+.book-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: var(--book-text-soft);
+
+  p {
+    margin: 0;
+    font-size: 1rem;
+  }
+}
+
+.book-empty-icon {
+  font-size: 2.25rem;
+  opacity: 0.3;
+}
+
+// ─── Step 2: Calendar card ────────────────────────────────────────────────────
+.book-date-card {
+  background: var(--book-card);
+  border-radius: 20px;
+  border: 1px solid var(--book-border);
+  box-shadow: var(--book-shadow);
+  overflow: hidden;
   display: flex;
   justify-content: center;
+  padding: 0.5rem 0.5rem 0.75rem;
 
   ::ng-deep .book-date-picker {
     width: 100%;
-    max-width: 360px;
 
     .p-datepicker-panel {
       width: 100%;
-      border-radius: 16px;
-      border: 1px solid var(--border-color, #e5e7eb);
-      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
-      overflow: hidden;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+      background: transparent;
+    }
+
+    // Month/year navigation header
+    .p-datepicker-header {
+      background: transparent;
+      border-bottom: 1px solid var(--book-border);
+      padding: 0.75rem 0.5rem 0.75rem;
+    }
+
+    // Day cell hover
+    .p-datepicker-day-cell-inner {
+      border-radius: 50%;
+      transition: background 0.18s;
+    }
+
+    .p-datepicker-day-cell-inner:not(.p-disabled):hover {
+      background: var(--book-nude);
+    }
+
+    // Selected date
+    .p-datepicker-day-selected .p-datepicker-day-cell-inner,
+    .p-datepicker-day-cell-inner.p-datepicker-day-selected,
+    .p-datepicker-day-cell.p-datepicker-day-selected .p-datepicker-day-cell-inner {
+      background: var(--book-gradient) !important;
+      color: #7b3060 !important;
+      font-weight: 700;
+    }
+
+    // Today
+    .p-datepicker-today:not(.p-datepicker-day-selected) .p-datepicker-day-cell-inner {
+      border: 1.5px solid var(--book-pink);
+      font-weight: 600;
     }
   }
 }
 
-// ─── Step 3: Time slots ───────────────────────────────────────────────────────
+// ─── Step 2: Slots section ────────────────────────────────────────────────────
+.book-slots-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  animation: step-enter 0.22s ease-out;
+}
+
+.book-slots-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.book-slots-label {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--book-text);
+}
+
+.book-slots-date-badge {
+  font-size: 0.8125rem;
+  color: var(--book-pink-deep);
+  background: color-mix(in srgb, var(--book-pink) 50%, transparent);
+  padding: 0.25rem 0.625rem;
+  border-radius: 9999px;
+  font-weight: 500;
+}
+
 .book-slots-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.5rem;
+  gap: 0.625rem;
 
   @media (max-width: 360px) {
     grid-template-columns: repeat(2, 1fr);
@@ -189,103 +442,144 @@
 
 .book-slot-btn {
   padding: 0.875rem 0.5rem;
-  border: 1.5px solid var(--border-color, #e2e8f0);
-  border-radius: 12px;
-  background: var(--bg-card, #fff);
-  font-size: 1rem;
+  border: 1.5px solid var(--book-border);
+  border-radius: 9999px;
+  background: var(--book-card);
+  font-size: 0.9375rem;
   font-weight: 500;
   cursor: pointer;
-  color: var(--text-primary, #1a1a1a);
+  color: var(--book-text);
   text-align: center;
   min-height: 52px;
   font-family: inherit;
   direction: ltr;
-  transition: border-color 0.18s, background 0.18s;
+  box-shadow: 0 1px 4px rgba(100, 70, 60, 0.05);
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.15s ease,
+    color 0.18s ease;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--color-primary, #3787f6) 60%, transparent);
+    border-color: color-mix(in srgb, var(--book-lavender-deep) 50%, transparent);
+    box-shadow: 0 2px 10px rgba(123, 94, 167, 0.14);
   }
 
   &--selected {
-    border-color: var(--color-primary, #3787f6);
+    border-color: var(--book-lavender-deep);
     border-width: 2px;
-    background: color-mix(in srgb, var(--color-primary, #3787f6) 10%, var(--bg-card, #fff));
-    color: var(--color-primary, #3787f6);
+    background: var(--book-lavender);
+    color: var(--book-lavender-deep);
     font-weight: 700;
+    box-shadow: 0 2px 12px rgba(123, 94, 167, 0.22);
   }
 
   &:focus-visible {
-    outline: 2px solid var(--color-primary, #3787f6);
+    outline: 2px solid var(--book-lavender-deep);
     outline-offset: 2px;
   }
 
   &:active {
-    transform: scale(0.97);
+    transform: scale(0.94);
   }
 }
 
-// ─── Empty / error notice (steps 3) ──────────────────────────────────────────
+// ─── Empty / error notices ────────────────────────────────────────────────────
 .book-notice-state {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 2.5rem 1rem;
+  gap: 0.875rem;
+  padding: 2rem 1rem;
   text-align: center;
+  background: var(--book-card);
+  border-radius: 16px;
+  border: 1px dashed var(--book-border);
 
   p {
     margin: 0;
-    font-size: 1rem;
-    color: var(--text-muted, #64748b);
+    font-size: 0.9375rem;
+    color: var(--book-text-soft);
   }
 }
 
-.book-empty-msg {
-  margin: 0;
-  font-size: 1rem;
-  color: var(--text-muted, #64748b);
-}
+.book-text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: none;
+  border: none;
+  padding: 0.5rem 1.125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--book-lavender-deep);
+  cursor: pointer;
+  font-family: inherit;
+  border-radius: 9999px;
+  transition: background 0.18s;
 
-.book-inline-btn {
-  ::ng-deep .p-button {
-    border-radius: 9999px;
-    padding: 0.5rem 1.5rem;
+  &:hover {
+    background: var(--book-lavender);
   }
 }
 
-// ─── Step 4: Summary card ─────────────────────────────────────────────────────
+// ─── Step 3: Summary card ─────────────────────────────────────────────────────
 .book-summary-card {
-  background: var(--bg-card, #fff);
-  border-radius: 16px;
-  border: 1px solid var(--border-color, #e5e7eb);
+  background: var(--book-card);
+  border-radius: 20px;
+  border: 1px solid var(--book-border);
   overflow: hidden;
+  box-shadow: var(--book-shadow-md);
 }
 
 .book-summary-row {
   display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.125rem 1.25rem;
+}
+
+.book-summary-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--book-nude);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .pi {
+    font-size: 1rem;
+    color: var(--book-pink-deep);
+  }
+}
+
+.book-summary-content {
+  flex: 1;
+  display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  gap: 0.5rem;
 }
 
 .book-summary-divider {
   height: 1px;
-  background: var(--border-color, #f1f5f9);
+  background: var(--book-border);
   margin: 0 1.25rem;
 }
 
 .book-summary-label {
-  font-size: 0.875rem;
-  color: var(--text-muted, #64748b);
+  font-size: 0.8125rem;
+  color: var(--book-text-soft);
   flex-shrink: 0;
 }
 
 .book-summary-value {
   font-size: 0.9375rem;
   font-weight: 600;
-  color: var(--text-primary, #1a1a1a);
-  text-align: left;
+  color: var(--book-text);
 }
 
 .book-summary-time {
@@ -293,11 +587,41 @@
   display: inline-block;
 }
 
-// ─── Step 4: Guest fields ─────────────────────────────────────────────────────
+// ─── Step 3: Reassurance note ─────────────────────────────────────────────────
+.book-reassurance-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--book-text-soft);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  line-height: 1.5;
+
+  .pi {
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+}
+
+// ─── Step 3: Guest fields ─────────────────────────────────────────────────────
 .book-guest-section {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
+  background: var(--book-card);
+  border-radius: 20px;
+  border: 1px solid var(--book-border);
+  padding: 1.25rem;
+  box-shadow: var(--book-shadow);
+}
+
+.book-guest-title {
+  margin: 0 0 0.125rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--book-text);
 }
 
 .book-field {
@@ -307,79 +631,96 @@
 }
 
 .book-field-label {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-primary, #334155);
+  color: var(--book-text-soft);
   display: block;
 }
 
 .book-field-required {
-  color: var(--color-danger, #dc2626);
+  color: var(--book-pink-deep);
 }
 
 .book-field-input {
   width: 100%;
   box-sizing: border-box;
   padding: 0.875rem 1rem;
-  font-size: 1rem;
-  border: 1.5px solid var(--border-color, #e2e8f0);
-  border-radius: 12px;
-  background: var(--bg-card, #fff);
-  color: var(--text-primary, #1a1a1a);
+  font-size: 0.9375rem;
+  border: 1.5px solid var(--book-border);
+  border-radius: 14px;
+  background: var(--book-bg);
+  color: var(--book-text);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.18s, box-shadow 0.18s;
   min-height: 52px;
   font-family: inherit;
   text-align: right;
 
   &:focus {
-    border-color: var(--color-primary, #3787f6);
-    box-shadow: 0 0 0 3px rgba(55, 135, 246, 0.12);
+    border-color: var(--book-lavender-deep);
+    box-shadow: 0 0 0 3px rgba(123, 94, 167, 0.12);
   }
 
   &::placeholder {
-    color: var(--text-muted, #94a3b8);
+    color: color-mix(in srgb, var(--book-text-soft) 55%, transparent);
   }
 }
 
-// ─── Sticky footer CTA ────────────────────────────────────────────────────────
+// ─── Sticky footer — confirmation step ───────────────────────────────────────
 .book-flow-footer {
   position: sticky;
   bottom: 0;
-  background: var(--bg-card, #fff);
-  border-top: 1px solid var(--border-color, #e5e7eb);
-  padding: 1rem 1.25rem;
-  padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+  background: linear-gradient(to top, var(--book-card) 75%, transparent);
+  padding: 1.25rem 1.25rem;
+  padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
   flex-shrink: 0;
 }
 
-// Step 4: hold-to-confirm wrapper
+// ─── Hold-to-confirm: spa reskin via ::ng-deep ────────────────────────────────
 .book-hold-wrap {
   display: flex;
   justify-content: center;
   padding: 0.25rem 0;
-}
 
-.book-flow-cta-btn {
-  ::ng-deep .p-button {
-    width: 100%;
-    border-radius: 9999px;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 700;
-    padding: 0.9375rem 1.5rem;
-    min-height: 56px;
+  ::ng-deep .hold-btn-track {
+    stroke: var(--book-border) !important;
+  }
+
+  ::ng-deep .hold-btn-fill {
+    stroke: var(--book-pink-deep) !important;
+  }
+
+  ::ng-deep .hold-btn-inner {
+    background: var(--book-gradient) !important;
+    color: #7b3060 !important;
+  }
+
+  ::ng-deep .hold-btn-label {
+    color: #7b3060 !important;
+    font-family: inherit;
+    font-weight: 600;
+  }
+
+  ::ng-deep .hold-btn-sub {
+    color: var(--book-text-soft) !important;
+    font-size: 0.75rem !important;
+    font-family: inherit;
+  }
+
+  ::ng-deep .hold-btn--success .hold-btn-inner {
+    background: linear-gradient(135deg, #a8e6cf, #6dcfaf) !important;
+    color: #1a5c46 !important;
   }
 }
 
 // ─── Wider screens ────────────────────────────────────────────────────────────
 @media (min-width: 480px) {
   .book-flow-body {
-    padding: 2rem 1.75rem 0.75rem;
+    padding: 1.75rem 1.5rem 1.75rem;
   }
 
   .book-flow-footer {
-    padding: 1.25rem 1.75rem;
-    padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 1.25rem));
+    padding: 1.5rem 2rem;
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 1.5rem));
   }
 }

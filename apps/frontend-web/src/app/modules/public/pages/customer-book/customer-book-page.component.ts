@@ -20,21 +20,19 @@ import {
 import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
 
-/** Steps: 1=service, 2=date, 3=time, 4=confirm */
-type BookStep = 1 | 2 | 3 | 4;
+/** 3-step flow: 1=service, 2=date+time, 3=confirm */
+type BookStep = 1 | 2 | 3;
 
 const STEP_TITLES: Record<BookStep, string> = {
-  1: 'בחירת שירות',
-  2: 'בחירת תאריך',
-  3: 'בחירת שעה',
-  4: 'אישור התור',
+  1: 'בחרי שירות',
+  2: 'תאריך ושעה',
+  3: 'אישור התור',
 };
 
-const CTA_LABELS: Record<BookStep, string> = {
-  1: 'המשך',
-  2: 'המשך',
-  3: 'המשך לאישור',
-  4: 'קביעת תור',
+const STEP_NAV_LABELS: Record<BookStep, string> = {
+  1: 'שירות',
+  2: 'תאריך ושעה',
+  3: 'אישור',
 };
 
 @Component({
@@ -83,7 +81,10 @@ export class CustomerBookPageComponent implements OnInit {
    * recreate the hold-to-confirm component so the progress ring resets.
    */
   readonly showHoldButton = signal(true);
-  readonly stepNumbers = [1, 2, 3, 4] as const;
+
+  // ── Progress indicator data ─────────────────────────────────────────────────
+  readonly bookSteps: readonly BookStep[] = [1, 2, 3];
+  readonly stepNavLabels = STEP_NAV_LABELS;
 
   // ── Route ─────────────────────────────────────────────────────────────────
   readonly slug = computed(() =>
@@ -117,27 +118,18 @@ export class CustomerBookPageComponent implements OnInit {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
-      year: 'numeric',
     });
   });
 
   readonly stepTitle = computed(() => STEP_TITLES[this.currentStep()]);
-  readonly ctaLabel = computed(() => CTA_LABELS[this.currentStep()]);
-  readonly progressPercent = computed(() => (this.currentStep() / 4) * 100);
+  readonly progressPercent = computed(() => (this.currentStep() / 3) * 100);
 
-  readonly canGoNext = computed(() => {
-    switch (this.currentStep()) {
-      case 1: return this.selectedService() !== null;
-      case 2: return this.selectedDate() !== null;
-      case 3: return this.selectedSlot() !== null;
-      case 4:
-        return (
-          !this.submitting() &&
-          (this.isLoggedIn() || this.guestName().trim().length > 0)
-        );
-      default: return false;
-    }
-  });
+  /** Used only for the hold-to-confirm disabled state on step 3. */
+  readonly canConfirm = computed(
+    () =>
+      !this.submitting() &&
+      (this.isLoggedIn() || this.guestName().trim().length > 0)
+  );
 
   // ── Two-way binding shim for p-datePicker [(ngModel)] ──────────────────────
   get selectedDateValue(): Date | null {
@@ -161,35 +153,6 @@ export class CustomerBookPageComponent implements OnInit {
 
   // ── Step navigation ────────────────────────────────────────────────────────
 
-  goNext(): void {
-    const step = this.currentStep();
-
-    if (step === 4) {
-      this.confirmBooking();
-      return;
-    }
-
-    if (step === 1) {
-      // Clear downstream selections when advancing from service step.
-      this.selectedDate.set(null);
-      this.slots.set([]);
-      this.selectedSlot.set(null);
-      this.slotsError.set(false);
-    }
-
-    if (step === 2) {
-      // Slots may already be loading from onDateSelect(); trigger if not.
-      const b = this.business();
-      const svc = this.selectedService();
-      const dateStr = this.selectedDateStr();
-      if (b && svc && dateStr && !this.loadingSlots() && this.slots().length === 0 && !this.slotsError()) {
-        this.loadSlots(b.id, svc.id, dateStr);
-      }
-    }
-
-    this.currentStep.set((step + 1) as BookStep);
-  }
-
   goStepBack(): void {
     const step = this.currentStep();
     if (step <= 1) {
@@ -199,7 +162,40 @@ export class CustomerBookPageComponent implements OnInit {
     }
   }
 
-  // ── Step-3 helpers ─────────────────────────────────────────────────────────
+  // ── Selection handlers — auto-advance ──────────────────────────────────────
+
+  selectService(svc: PublicService): void {
+    if (this.selectedService()?.id !== svc.id) {
+      // Clear downstream state when service changes.
+      this.selectedDate.set(null);
+      this.slots.set([]);
+      this.selectedSlot.set(null);
+      this.slotsError.set(false);
+    }
+    this.selectedService.set(svc);
+    // Brief pause so the card selection animation is visible, then advance.
+    setTimeout(() => this.currentStep.set(2), 320);
+  }
+
+  onDateSelect(): void {
+    const b = this.business();
+    const svc = this.selectedService();
+    const dateStr = this.selectedDateStr();
+    if (!b || !svc || !dateStr) return;
+    // Load slots immediately so they're ready below the calendar.
+    this.slots.set([]);
+    this.selectedSlot.set(null);
+    this.slotsError.set(false);
+    this.loadSlots(b.id, svc.id, dateStr);
+  }
+
+  selectSlot(slot: string): void {
+    this.selectedSlot.set(slot);
+    // Brief pause so the pill selection animation is visible, then advance.
+    setTimeout(() => this.currentStep.set(3), 320);
+  }
+
+  // ── Step-2 helpers ─────────────────────────────────────────────────────────
 
   retryLoadSlots(): void {
     const b = this.business();
@@ -215,36 +211,6 @@ export class CustomerBookPageComponent implements OnInit {
     this.slots.set([]);
     this.selectedSlot.set(null);
     this.slotsError.set(false);
-    this.currentStep.set(2);
-  }
-
-  // ── Selection handlers ─────────────────────────────────────────────────────
-
-  selectService(svc: PublicService): void {
-    // Clear downstream state when the service changes.
-    if (this.selectedService()?.id !== svc.id) {
-      this.selectedDate.set(null);
-      this.slots.set([]);
-      this.selectedSlot.set(null);
-      this.slotsError.set(false);
-    }
-    this.selectedService.set(svc);
-  }
-
-  onDateSelect(): void {
-    const b = this.business();
-    const svc = this.selectedService();
-    const dateStr = this.selectedDateStr();
-    if (!b || !svc || !dateStr) return;
-    // Start loading slots proactively so they're ready when the user reaches step 3.
-    this.slots.set([]);
-    this.selectedSlot.set(null);
-    this.slotsError.set(false);
-    this.loadSlots(b.id, svc.id, dateStr);
-  }
-
-  selectSlot(slot: string): void {
-    this.selectedSlot.set(slot);
   }
 
   // ── Booking submission ─────────────────────────────────────────────────────
@@ -302,8 +268,8 @@ export class CustomerBookPageComponent implements OnInit {
             detail: 'התור נתפס, בחרי שעה אחרת',
             life: 5000,
           });
-          // Go back to step 3 with refreshed slots.
-          this.currentStep.set(3);
+          // Return to date+time step and refresh the slot grid.
+          this.currentStep.set(2);
           const b2 = this.business();
           const svc2 = this.selectedService();
           if (b2 && svc2 && dateStr) {
@@ -311,9 +277,7 @@ export class CustomerBookPageComponent implements OnInit {
           }
         } else {
           this.showError(err?.error?.message ?? 'שגיאה באישור התור');
-          // Reset the hold ring so the customer can try again without
-          // navigating away.  Toggle the signal off then back on so Angular
-          // destroys and recreates the component, clearing internal state.
+          // Destroy and recreate hold-to-confirm so the ring resets.
           this.showHoldButton.set(false);
           setTimeout(() => this.showHoldButton.set(true), 50);
         }

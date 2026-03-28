@@ -1,6 +1,6 @@
 <div class="book-flow" dir="rtl">
 
-  <!-- ── Header: back arrow only ─────────────────────────────────────────── -->
+  <!-- ── Header: back arrow + centered step title ────────────────────────── -->
   <header class="book-flow-header">
     <button
       type="button"
@@ -10,36 +10,56 @@
     >
       <i class="pi pi-arrow-right" aria-hidden="true"></i>
     </button>
+    <span class="book-flow-step-title">{{ stepTitle() }}</span>
+    <div class="book-flow-header-spacer" aria-hidden="true"></div>
   </header>
 
-  <!-- ── Single thin progress bar ────────────────────────────────────────── -->
-  <div
-    class="book-flow-progress"
-    role="progressbar"
-    [attr.aria-valuenow]="currentStep()"
-    aria-valuemin="1"
-    aria-valuemax="4"
-    aria-label="התקדמות בתהליך קביעת התור"
-  >
-    <div class="book-flow-progress-fill" [style.width.%]="progressPercent()"></div>
-  </div>
+  <!-- ── Progress: 3 labeled dots ────────────────────────────────────────── -->
+  <nav class="book-progress-steps" aria-label="שלבי תהליך הזמנה">
+    @for (s of bookSteps; track s) {
+      <div
+        class="book-progress-step"
+        [class.is-active]="currentStep() === s"
+        [class.is-done]="currentStep() > s"
+      >
+        <div class="book-progress-dot">
+          @if (currentStep() > s) {
+            <i class="pi pi-check" aria-hidden="true"></i>
+          } @else {
+            <span>{{ s }}</span>
+          }
+        </div>
+        <span class="book-progress-step-label">{{ stepNavLabels[s] }}</span>
+      </div>
+      @if (s < 3) {
+        <div
+          class="book-progress-connector"
+          [class.is-done]="currentStep() > s"
+          aria-hidden="true"
+        ></div>
+      }
+    }
+  </nav>
 
   <!-- ── Step body ───────────────────────────────────────────────────────── -->
   <div class="book-flow-body">
 
-    <!-- ═══ STEP 1: Service ══════════════════════════════════════════════════ -->
+    <!-- ═══ STEP 1: Service selection ════════════════════════════════════════ -->
     @if (currentStep() === 1) {
       <div class="book-step">
-        <h1 class="book-step-title">בחרי שירות</h1>
+        <p class="book-step-hint">טפי על השירות הרצוי להמשיך</p>
 
         @if (loadingStep1()) {
           <div class="book-service-list">
             @for (i of [1, 2, 3]; track i) {
-              <p-skeleton width="100%" height="72px" borderRadius="16px" />
+              <p-skeleton width="100%" height="84px" borderRadius="20px" />
             }
           </div>
         } @else if (services().length === 0) {
-          <p class="book-empty-msg">אין שירותים זמינים כרגע</p>
+          <div class="book-empty-state">
+            <i class="pi pi-calendar book-empty-icon" aria-hidden="true"></i>
+            <p>אין שירותים זמינים כרגע</p>
+          </div>
         } @else {
           <div class="book-service-list" role="list">
             @for (svc of services(); track svc.id) {
@@ -51,13 +71,22 @@
                 [attr.aria-pressed]="selectedService()?.id === svc.id"
                 (click)="selectService(svc)"
               >
-                <span class="book-service-name">{{ svc.nameHe }}</span>
-                <span class="book-service-meta">
-                  {{ svc.durationMinutes }} דק׳
-                  @if (svc.price != null && svc.price > 0) {
-                    · {{ svc.price }} ₪
-                  }
-                </span>
+                <div class="book-service-initial" aria-hidden="true">
+                  {{ svc.nameHe.charAt(0) }}
+                </div>
+                <div class="book-service-info">
+                  <span class="book-service-name">{{ svc.nameHe }}</span>
+                  <span class="book-service-meta">
+                    <i class="pi pi-clock" aria-hidden="true"></i>
+                    {{ svc.durationMinutes }} דק׳
+                    @if (svc.price != null && svc.price > 0) {
+                      &middot; {{ svc.price }} ₪
+                    }
+                  </span>
+                </div>
+                @if (selectedService()?.id === svc.id) {
+                  <i class="pi pi-check-circle book-service-check" aria-hidden="true"></i>
+                }
               </button>
             }
           </div>
@@ -65,17 +94,13 @@
       </div>
     }
 
-    <!-- ═══ STEP 2: Date ════════════════════════════════════════════════════ -->
+    <!-- ═══ STEP 2: Date + Time (combined) ════════════════════════════════════ -->
     @if (currentStep() === 2) {
       <div class="book-step">
-        <div class="book-step-heading">
-          <h1 class="book-step-title">בחרי תאריך</h1>
-          @if (selectedService(); as svc) {
-            <p class="book-step-subtitle">{{ svc.nameHe }}</p>
-          }
-        </div>
+        <p class="book-step-hint">בחרי תאריך שנוח לך</p>
 
-        <div class="book-date-picker-wrap">
+        <!-- Calendar card -->
+        <div class="book-date-card">
           <p-datePicker
             [(ngModel)]="selectedDateValue"
             [inline]="true"
@@ -86,78 +111,109 @@
             styleClass="book-date-picker"
           />
         </div>
-      </div>
-    }
 
-    <!-- ═══ STEP 3: Time ════════════════════════════════════════════════════ -->
-    @if (currentStep() === 3) {
-      <div class="book-step">
-        <div class="book-step-heading">
-          <h1 class="book-step-title">בחרי שעה</h1>
-          <p class="book-step-subtitle">{{ formattedBookingDate() }}</p>
-        </div>
+        <!-- Time slots — revealed once a date is selected -->
+        @if (selectedDate()) {
+          <div class="book-slots-section">
+            <div class="book-slots-header">
+              <span class="book-slots-label">שעות פנויות</span>
+              <span class="book-slots-date-badge">{{ formattedBookingDate() }}</span>
+            </div>
 
-        @if (loadingSlots()) {
-          <div class="book-slots-grid">
-            @for (i of [1, 2, 3, 4, 5, 6]; track i) {
-              <p-skeleton width="100%" height="52px" borderRadius="12px" />
-            }
-          </div>
-        } @else if (slotsError()) {
-          <div class="book-notice-state">
-            <p>לא ניתן לטעון שעות</p>
-            <p-button label="נסי שוב" severity="secondary" styleClass="book-inline-btn" (onClick)="retryLoadSlots()" />
-          </div>
-        } @else if (slots().length === 0) {
-          <div class="book-notice-state">
-            <p>אין שעות פנויות ביום זה</p>
-            <p-button label="בחרי תאריך אחר" severity="secondary" styleClass="book-inline-btn" (onClick)="goToDateStep()" />
-          </div>
-        } @else {
-          <div class="book-slots-grid" role="listbox" aria-label="שעות פנויות">
-            @for (slot of slots(); track slot) {
-              <button
-                type="button"
-                role="option"
-                class="book-slot-btn"
-                [class.book-slot-btn--selected]="selectedSlot() === slot"
-                [attr.aria-selected]="selectedSlot() === slot"
-                (click)="selectSlot(slot)"
-              >
-                {{ slot }}
-              </button>
+            @if (loadingSlots()) {
+              <div class="book-slots-grid">
+                @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+                  <p-skeleton width="100%" height="52px" borderRadius="9999px" />
+                }
+              </div>
+            } @else if (slotsError()) {
+              <div class="book-notice-state">
+                <p>לא ניתן לטעון שעות</p>
+                <button type="button" class="book-text-btn" (click)="retryLoadSlots()">
+                  <i class="pi pi-refresh" aria-hidden="true"></i>
+                  נסי שוב
+                </button>
+              </div>
+            } @else if (slots().length === 0) {
+              <div class="book-notice-state">
+                <p>אין שעות פנויות ביום זה</p>
+                <button type="button" class="book-text-btn" (click)="goToDateStep()">
+                  בחרי תאריך אחר
+                </button>
+              </div>
+            } @else {
+              <div class="book-slots-grid" role="listbox" aria-label="שעות פנויות">
+                @for (slot of slots(); track slot) {
+                  <button
+                    type="button"
+                    role="option"
+                    class="book-slot-btn"
+                    [class.book-slot-btn--selected]="selectedSlot() === slot"
+                    [attr.aria-selected]="selectedSlot() === slot"
+                    (click)="selectSlot(slot)"
+                  >
+                    {{ slot }}
+                  </button>
+                }
+              </div>
             }
           </div>
         }
       </div>
     }
 
-    <!-- ═══ STEP 4: Confirm ══════════════════════════════════════════════════ -->
-    @if (currentStep() === 4) {
+    <!-- ═══ STEP 3: Confirmation ══════════════════════════════════════════════ -->
+    @if (currentStep() === 3) {
       <div class="book-step">
-        <h1 class="book-step-title">אישור התור</h1>
+        <p class="book-step-hint">הכל נראה טוב? לחצי לאישור התור</p>
 
-        <!-- Booking summary -->
+        <!-- Summary card with icons -->
         <div class="book-summary-card">
           <div class="book-summary-row">
-            <span class="book-summary-label">שירות</span>
-            <span class="book-summary-value">{{ selectedService()?.nameHe }}</span>
+            <div class="book-summary-icon-wrap">
+              <i class="pi pi-palette" aria-hidden="true"></i>
+            </div>
+            <div class="book-summary-content">
+              <span class="book-summary-label">שירות</span>
+              <span class="book-summary-value">{{ selectedService()?.nameHe }}</span>
+            </div>
           </div>
           <div class="book-summary-divider"></div>
           <div class="book-summary-row">
-            <span class="book-summary-label">תאריך</span>
-            <span class="book-summary-value">{{ formattedBookingDate() }}</span>
+            <div class="book-summary-icon-wrap">
+              <i class="pi pi-calendar" aria-hidden="true"></i>
+            </div>
+            <div class="book-summary-content">
+              <span class="book-summary-label">תאריך</span>
+              <span class="book-summary-value">{{ formattedBookingDate() }}</span>
+            </div>
           </div>
           <div class="book-summary-divider"></div>
           <div class="book-summary-row">
-            <span class="book-summary-label">שעה</span>
-            <span class="book-summary-value book-summary-time">{{ selectedSlot() }}</span>
+            <div class="book-summary-icon-wrap">
+              <i class="pi pi-clock" aria-hidden="true"></i>
+            </div>
+            <div class="book-summary-content">
+              <span class="book-summary-label">שעה</span>
+              <span class="book-summary-value book-summary-time">{{ selectedSlot() }}</span>
+            </div>
           </div>
         </div>
+
+        <!-- Duration note -->
+        @if (selectedService(); as svc) {
+          @if (svc.durationMinutes) {
+            <p class="book-reassurance-note">
+              <i class="pi pi-info-circle" aria-hidden="true"></i>
+              משך הטיפול: {{ svc.durationMinutes }} דקות · ביטול חינם עד 24 שעות מראש
+            </p>
+          }
+        }
 
         <!-- Guest details — only for unauthenticated customers -->
         @if (!isLoggedIn()) {
           <div class="book-guest-section">
+            <h3 class="book-guest-title">פרטייך</h3>
             <div class="book-field">
               <label class="book-field-label" for="guestName">
                 שם מלא <span class="book-field-required" aria-hidden="true">*</span>
@@ -189,33 +245,26 @@
           </div>
         }
       </div>
+
+        <!-- ── Sticky button container — ONLY on confirmation step ───────────────────────── -->
+      @if (currentStep() === 3) {
+        <div class="book-flow-footer">
+          @if (showHoldButton()) {
+            <div class="book-hold-wrap">
+              <app-hold-to-confirm-button
+                [disabled]="submitting() || !canConfirm()"
+                [durationMs]="2000"
+                [successState]="false"
+                (confirm)="confirmBooking()"
+              />
+            </div>
+          }
+        </div>
+      }
     }
 
   </div><!-- /book-flow-body -->
 
-  <!-- ── Sticky footer CTA ───────────────────────────────────────────────── -->
-  <footer class="book-flow-footer">
-    @if (currentStep() < 4) {
-      <!-- Steps 1–3: plain continue button -->
-      <p-button
-        [label]="ctaLabel()"
-        [disabled]="!canGoNext()"
-        styleClass="book-flow-cta-btn"
-        (onClick)="goNext()"
-      />
-    } @else {
-      <!-- Step 4: hold-to-confirm — prevents accidental bookings -->
-      @if (showHoldButton()) {
-        <div class="book-hold-wrap">
-          <app-hold-to-confirm-button
-            [disabled]="submitting() || !canGoNext()"
-            [durationMs]="2000"
-            [successState]="false"
-            (confirm)="confirmBooking()"
-          />
-        </div>
-      }
-    }
-  </footer>
+
 
 </div>
