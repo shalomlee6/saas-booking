@@ -45,6 +45,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { FraudDatabaseComponent } from "../../components/fraud-database/fraud-database.component";
 
 type ViewMode = 'day' | 'week';
 
@@ -188,7 +189,8 @@ const TABLET_BREAKPOINT_PX = 1024;
     ButtonModule,
     DatePickerModule,
     DatePipe,
-  ],
+    FraudDatabaseComponent
+],
   templateUrl: './appointments-list.component.html',
   styleUrl: './appointments-list.component.scss',
 })

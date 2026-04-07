@@ -1,0 +1,165 @@
+<div class="fdb-shell" dir="rtl">
+  <div class="fdb-card">
+
+    <!-- ── Header ── -->
+    <header class="fdb-header">
+      <h1 class="fdb-title">מאגר הונאות</h1>
+      <span class="fdb-subtitle">– פרטי הרכב והנהגים</span>
+    </header>
+
+    <!-- ══════════════ VEHICLE SECTION ══════════════ -->
+    <section class="fdb-section">
+
+      <!-- Column headers -->
+      <div class="tbl-head">
+        <span class="col-name">פרטי הרכב</span>
+        <span class="col-policy">ערך בפוליסה</span>
+        <span class="col-iso">ערך במאגר</span>
+        <span class="col-status">סטטוס</span>
+        <span class="col-selected">
+          הערך הנבחר
+          <button class="toggle-btn" (click)="vehicleExpanded.set(!vehicleExpanded())"
+                  [attr.aria-expanded]="vehicleExpanded()">
+            <span [class.flipped]="!vehicleExpanded()">&#x2039;</span>
+          </button>
+        </span>
+      </div>
+
+      <!-- Rows -->
+      <ng-container *ngIf="vehicleExpanded()">
+        <div class="tbl-row"
+             *ngFor="let f of data().vehicleSection.result; trackBy: trackByCode"
+             [class.row-mismatch]="f.status !== FieldStatus.Valid">
+          <span class="col-name field-label">{{ f.title }}</span>
+          <span class="col-policy">
+            <span class="val-bubble val-policy">{{ f.policyValue ?? '—' }}</span>
+          </span>
+          <span class="col-iso">
+            <span class="val-bubble val-iso">{{ getIsoDisplay(f) }}</span>
+          </span>
+          <span class="col-status">
+            <span class="status-badge" [ngClass]="STATUS_CONFIG[f.status].cssClass">
+              <span class="status-dot"></span>
+              {{ STATUS_CONFIG[f.status].label }}
+            </span>
+          </span>
+          <span class="col-selected selected-val" [class.mismatch-text]="f.status !== FieldStatus.Valid">
+            {{ f.selectedValue ?? '—' }}
+          </span>
+        </div>
+      </ng-container>
+    </section>
+
+    <div class="fdb-divider"></div>
+
+    <!-- ══════════════ DRIVER SECTION ══════════════ -->
+    <section class="fdb-section">
+
+      <!-- Column headers -->
+      <div class="tbl-head">
+        <span class="col-name">פרטי הנהג</span>
+        <span class="col-policy">ערך בפוליסה</span>
+        <span class="col-iso">ערך במאגר</span>
+        <span class="col-status">סטטוס</span>
+        <span class="col-selected">
+          הערך הנבחר
+          <button class="toggle-btn" (click)="driverExpanded.set(!driverExpanded())"
+                  [attr.aria-expanded]="driverExpanded()">
+            <span [class.flipped]="!driverExpanded()">&#x2039;</span>
+          </button>
+        </span>
+      </div>
+
+      <!-- Rows -->
+      <ng-container *ngIf="driverExpanded()">
+        <div class="tbl-row"
+             *ngFor="let f of data().driverSection.result; trackBy: trackByCode"
+             [class.row-mismatch]="f.status !== FieldStatus.Valid">
+          <span class="col-name field-label">{{ f.title }}</span>
+          <span class="col-policy">
+            <span class="val-bubble val-policy">{{ f.policyValue ?? '—' }}</span>
+          </span>
+          <span class="col-iso">
+            <span class="val-bubble val-iso" [class.val-iso-mismatch]="f.status !== FieldStatus.Valid">
+              {{ getIsoDisplay(f) }}
+            </span>
+          </span>
+          <span class="col-status">
+            <span class="status-badge" [ngClass]="STATUS_CONFIG[f.status].cssClass">
+              <span class="status-dot"></span>
+              {{ STATUS_CONFIG[f.status].label }}
+            </span>
+          </span>
+          <span class="col-selected selected-val" [class.mismatch-text]="f.status !== FieldStatus.Valid">
+            {{ f.selectedValue ?? '—' }}
+          </span>
+        </div>
+      </ng-container>
+    </section>
+
+    <div class="fdb-divider"></div>
+
+    <!-- ══════════════ FOOTER / SEND PANEL ══════════════ -->
+    <footer class="fdb-footer">
+
+      <!-- Send price offer label + radio buttons -->
+      <div class="footer-top">
+        <span class="footer-label">שליחת הצעת מחיר</span>
+        <div class="radio-group">
+          <label class="radio-opt" [class.active]="sendMethod() === 'SMS'">
+            <input type="radio" name="sm" value="SMS"
+                   [checked]="sendMethod() === 'SMS'"
+                   (change)="sendMethod.set('SMS')" />
+            <span class="radio-circle"></span>
+            SMS
+          </label>
+          <label class="radio-opt" [class.active]="sendMethod() === 'LINE'">
+            <input type="radio" name="sm" value="LINE"
+                   [checked]="sendMethod() === 'LINE'"
+                   (change)="sendMethod.set('LINE')" />
+            <span class="radio-circle"></span>
+            LINE
+          </label>
+        </div>
+      </div>
+
+      <!-- Send link to forms checkbox -->
+      <div class="checkbox-row">
+        <label class="checkbox-opt" [class.checked]="sendLinkToForms()">
+          <input type="checkbox" [checked]="sendLinkToForms()"
+                 (change)="sendLinkToForms.set(!sendLinkToForms())" />
+          <span class="check-box">
+            <span *ngIf="sendLinkToForms()" class="check-mark">✓</span>
+          </span>
+          שליחת קישור לטופס סטירות
+          <span class="chevron">&#x2039;</span>
+        </label>
+      </div>
+
+      <!-- Phone + Send button + Connection status -->
+      <div class="footer-bottom">
+
+        <!-- Connection status -->
+        <div class="conn-status" [class.success]="connectionSuccess()">
+          <span class="conn-circle">{{ connectionSuccess() ? '✓' : '✗' }}</span>
+          <span>{{ connectionSuccess() ? 'הקישור נשלח בהצלחה' : 'שגיאה בשליחה' }}</span>
+        </div>
+
+        <!-- Send button -->
+        <button class="btn-send" (click)="onSend()">שלח</button>
+
+        <!-- Phone number -->
+        <div class="phone-wrap">
+          <span class="phone-star">*</span>
+          <span class="phone-lbl">מספר נייד</span>
+          <input class="phone-input" type="tel" dir="ltr"
+                 [value]="phoneNumber()"
+                 (input)="phoneNumber.set($any($event.target).value)"
+                 placeholder="052-0000000" />
+        </div>
+
+      </div>
+    </footer>
+
+  </div>
+</div>
