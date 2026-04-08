@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
+import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { Service } from '../models/Service';
 
 export const servicesRouter = Router();
 
+servicesRouter.use(auth);
+servicesRouter.use(requireBusinessContext);
+
 // GET /api/services
-servicesRouter.get('/', auth, async (req: AuthRequest, res) => {
+servicesRouter.get('/', async (req: AuthRequest, res) => {
   try {
-    const businessId = req.user!.businessId!;
+    const businessId = req.effectiveBusinessId!;
     const services = await Service.find({ businessId, isActive: true }).sort({
       name: 1,
     });
@@ -19,9 +23,9 @@ servicesRouter.get('/', auth, async (req: AuthRequest, res) => {
 });
 
 // POST /api/services
-servicesRouter.post('/', auth, async (req: AuthRequest, res) => {
+servicesRouter.post('/', async (req: AuthRequest, res) => {
   try {
-    const businessId = req.user!.businessId!;
+    const businessId = req.effectiveBusinessId!;
     const { name, price, description, durationMinutes, colorHex, textColorHex } = req.body;
 
     if (!name || !durationMinutes || !price) {
@@ -48,9 +52,9 @@ servicesRouter.post('/', auth, async (req: AuthRequest, res) => {
 });
 
 // PUT /api/services/:id
-servicesRouter.put('/:id', auth, async (req: AuthRequest, res) => {
+servicesRouter.put('/:id', async (req: AuthRequest, res) => {
   try {
-    const businessId = req.user!.businessId!;
+    const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
     const { name, description, durationMinutes, price, isActive } = req.body;
 

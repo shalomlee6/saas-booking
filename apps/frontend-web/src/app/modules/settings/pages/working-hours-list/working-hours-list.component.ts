@@ -163,16 +163,22 @@ export class WorkingHoursListComponent implements OnInit {
   readonly overrideConflictWarningText = computed(() => this.overrideConflictWarning());
 
   /**
-   * Returns a CSS modifier class for the date-template dot, or null when no override exists.
-   * PrimeNG passes { day, month (0-based), year } to the date template.
+   * Calendar-date template lookup keyed by "YYYY-M-D" where month is 0-based
+   * to match PrimeNG's date-template object shape.
    */
-  getDateOverrideDot(date: { day: number; month: number; year: number }): string | null {
-    const d = new Date(date.year, date.month, date.day);
-    const key = formatDateForApi(d);
-    const ov = this.overridesByDate().get(key);
-    if (!ov) return null;
-    return ov.type === 'closed' ? 'wh-cal-day-dot--closed' : 'wh-cal-day-dot--custom';
-  }
+  readonly overrideDotClassByCellKey = computed<Record<string, string>>(() => {
+    const byDate = this.overridesByDate();
+    const out: Record<string, string> = {};
+    byDate.forEach((ov, isoDate) => {
+      const [yearStr, monthStr, dayStr] = isoDate.split('-');
+      const year = Number(yearStr);
+      const month = Number(monthStr) - 1;
+      const day = Number(dayStr);
+      const key = `${year}-${month}-${day}`;
+      out[key] = ov.type === 'closed' ? 'wh-cal-day-dot--closed' : 'wh-cal-day-dot--custom';
+    });
+    return out;
+  });
 
   readonly editDayHeader = computed(() => {
     const idx = this.editingDayIndex();

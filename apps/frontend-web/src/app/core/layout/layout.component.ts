@@ -128,6 +128,50 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return slug ? `/b/${encodeURIComponent(slug)}/login` : '#';
   });
 
+  readonly linkOptsExact = LINK_OPTS_EXACT;
+  readonly linkOptsPrefix = LINK_OPTS_PREFIX;
+
+  readonly themeToggleLabel = computed(() =>
+    this.themeService.currentMode() === 'light' ? 'Dark' : 'Light'
+  );
+
+  readonly themeToggleAriaLabel = computed(() =>
+    this.themeService.currentMode() === 'light'
+      ? 'Switch to dark mode'
+      : 'Switch to light mode'
+  );
+
+  /** Consolidated template VM to avoid repeated signal/computed calls in bindings. */
+  readonly layoutVm = computed(() => {
+    const isMobile = this.isMobile();
+    const isSidebarCollapsed = this.isSidebarCollapsed();
+    const isMobileMenuOpen = this.isMobileMenuOpen();
+    const isImpersonating = this.isImpersonating();
+    const isSuperAdmin = this.isSuperAdmin();
+    const business = this.business();
+    const user = this.user();
+
+    return {
+      isMobile,
+      isSidebarCollapsed,
+      isMobileMenuOpen,
+      isImpersonating,
+      isSuperAdmin,
+      business,
+      user,
+      activeBusinessName: this.activeBusinessName(),
+      menuToggleIcon: this.menuToggleIcon(),
+      menuAriaLabel: this.menuAriaLabel(),
+      servicesNavLink: this.servicesNavLink(),
+      customersNavLink: this.customersNavLink(),
+      customersNavLabel: this.customersNavLabel(),
+      customersNavLinkActiveOptions: this.customersNavLinkActiveOptions(),
+      customerSiteUrl: this.customerSiteUrl(),
+      themeToggleLabel: this.themeToggleLabel(),
+      themeToggleAriaLabel: this.themeToggleAriaLabel(),
+    };
+  });
+
   toggleTheme(): void {
     const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';
     this.themeService.setModeAndReapply(next);

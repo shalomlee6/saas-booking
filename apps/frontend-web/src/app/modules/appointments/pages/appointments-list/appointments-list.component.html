@@ -4,6 +4,7 @@
   <!--  DESKTOP / TABLET VIEW  (≥ 768px)                                      -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   @if (!isMobile()) {
+    @if (desktopVm(); as vm) {
     <!-- Single-row compact toolbar -->
     <header class="apt-toolbar">
       <div class="apt-toolbar-start">
@@ -14,11 +15,11 @@
             type="button"
             icon="pi pi-chevron-left"
             class="p-button-text p-button-sm apt-nav-btn"
-            [disabled]="isAtToday()"
+            [disabled]="vm.isAtToday"
             (click)="prevRange()"
             aria-label="Previous range"
           ></button>
-          <span class="apt-date-range">{{ visibleDateRangeLabel() }}</span>
+          <span class="apt-date-range">{{ vm.dateRangeLabel }}</span>
           <button
             pButton
             type="button"
@@ -35,20 +36,20 @@
           type="text"
           class="apt-search"
           placeholder="Search by customer, service…"
-          [ngModel]="searchQuery()"
+          [ngModel]="vm.searchQuery"
           (ngModelChange)="onSearchInput($event)"
         />
         <div class="apt-view-toggle">
           <button
             type="button"
             class="apt-view-btn"
-            [class.apt-view-btn--active]="viewMode() === 'day'"
+            [class.apt-view-btn--active]="vm.isDayMode"
             (click)="setViewMode('day')"
           >Day</button>
           <button
             type="button"
             class="apt-view-btn"
-            [class.apt-view-btn--active]="viewMode() === 'week'"
+            [class.apt-view-btn--active]="vm.isWeekMode"
             (click)="setViewMode('week')"
           >Week</button>
         </div>
@@ -61,18 +62,18 @@
 
     <!-- Calendar card -->
     <div class="apt-calendar-card">
-      @if (error()) {
+      @if (vm.error) {
         <p class="appointments-error">
-          {{ error() }}
+          {{ vm.error }}
           <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
         </p>
       }
 
-      @if (loading()) {
+      @if (vm.loading) {
         <div class="appointments-loading">Loading appointments…</div>
       }
 
-      @if (overlayOpen(); as overlay) {
+      @if (vm.overlay; as overlay) {
         <app-appointment-create-overlay
           [open]="true"
           [date]="overlay.date"
@@ -82,15 +83,15 @@
         />
       }
 
-      @if (!loading()) {
+      @if (!vm.loading) {
         <div
           class="calendar-shell"
-          [style.--day-count]="visibleDaysCount()"
+          [style.--day-count]="vm.visibleDaysCount"
         >
           <!-- Sticky header row -->
           <div class="calendar-header appointments-days">
             <div class="calendar-header-time"></div>
-            @for (day of visibleDays(); track day.key) {
+            @for (day of vm.visibleDays; track day.key) {
               <div
                 class="calendar-header-day"
                 [class.calendar-header-day--today]="day.isToday"
@@ -106,11 +107,11 @@
             class="calendar-scroll"
             [style.--grid-body-height]="gridBodyHeightPx + 'px'"
             [style.--slot-height]="slotHeightPx + 'px'"
-            [style.--day-count]="visibleDaysCount()"
+            [style.--day-count]="vm.visibleDaysCount"
           >
             <div class="calendar-body">
               <div class="calendar-time-col">
-                @for (row of hourLabelsWithStyle(); track $index) {
+                @for (row of vm.hourLabels; track $index) {
                   <div
                     class="calendar-time-slot"
                     [class.calendar-time-slot--half-hour]="!row.isFullHour"
@@ -119,7 +120,7 @@
               </div>
 
               <div class="calendar-days">
-                @for (day of visibleDays(); track day.key) {
+                @for (day of vm.visibleDays; track day.key) {
                   <div
                     class="calendar-day-col"
                     [class.calendar-day-col--today]="day.isToday"
@@ -170,22 +171,23 @@
       }
 
       <!-- Compact appointment list below the calendar -->
-      @if (!loading() && appointmentCards().length > 0) {
+      @if (vm.showCards) {
         <section class="appointments-cards-section">
           <h2 class="appointments-cards-title">תורים</h2>
           <div class="appointments-cards-list">
-            @for (vm of appointmentCards(); track vm.apt._id) {
-              <div class="appointment-card" (click)="openAppointment(vm.apt)">
-                <div class="appointment-card-time">{{ vm.apt.start | date:'HH:mm' }} – {{ vm.apt.end | date:'HH:mm' }}</div>
-                <div class="appointment-card-customer">{{ vm.customerDisplay }}</div>
-                <div class="appointment-card-service">{{ vm.serviceDisplay }}</div>
-                <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
+            @for (card of vm.cards; track card.apt._id) {
+              <div class="appointment-card" (click)="openAppointment(card.apt)">
+                <div class="appointment-card-time">{{ card.apt.start | date:'HH:mm' }} – {{ card.apt.end | date:'HH:mm' }}</div>
+                <div class="appointment-card-customer">{{ card.customerDisplay }}</div>
+                <div class="appointment-card-service">{{ card.serviceDisplay }}</div>
+                <p-tag [value]="card.apt.status" [severity]="card.severity" />
               </div>
             }
           </div>
         </section>
       }
     </div>
+    }
   }
 
 
@@ -193,12 +195,13 @@
   <!--  MOBILE VIEW  (< 768px) — 3-Day Stacked View                           -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   @if (isMobile()) {
+    @if (mobileVm(); as vm) {
 
     <!-- Mobile top bar (FAB handles "New Appointment" — no duplicate button here) -->
     <div class="apt-mobile-bar">
       <h1 class="apt-mobile-title">Appointments</h1>
       <div class="apt-mobile-bar-actions">
-        @if (!isAtToday()) {
+        @if (!vm.isAtToday) {
           <button type="button" class="apt-today-chip" (click)="goToToday()">Today</button>
         }
       </div>
@@ -222,7 +225,7 @@
         (click)="openDatePicker()"
         aria-label="Pick date"
       >
-        <span>{{ visibleDateRangeLabel() }}</span>
+        <span>{{ vm.dateRangeLabel }}</span>
         <i class="pi pi-calendar-clock" aria-hidden="true"></i>
       </button>
 
@@ -238,7 +241,7 @@
 
     <!-- Date picker bottom-sheet drawer -->
     <p-drawer
-      [visible]="datePickerOpen()"
+      [visible]="vm.datePickerOpen"
       (visibleChange)="datePickerOpen.set($event)"
       position="bottom"
       styleClass="apt-date-picker-drawer"
@@ -261,15 +264,15 @@
     </p-drawer>
 
     <!-- Error state -->
-    @if (error()) {
+    @if (vm.error) {
       <p class="appointments-error apt-mobile-error">
-        {{ error() }}
+        {{ vm.error }}
         <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
       </p>
     }
 
     <!-- Create overlay -->
-    @if (overlayOpen(); as overlay) {
+    @if (vm.overlay; as overlay) {
       <app-appointment-create-overlay
         [open]="true"
         [date]="overlay.date"
@@ -281,15 +284,15 @@
 
     <!-- 3-day stacked sections -->
     <div class="apt-3day-view">
-      @if (loading()) {
+      @if (vm.loading) {
         <div class="apt-3day-loading">
           <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
           Loading…
         </div>
       }
 
-      @if (!loading()) {
-        @for (group of mobileDayGroups(); track group.dayKey) {
+      @if (!vm.loading) {
+        @for (group of vm.dayGroups; track group.dayKey) {
           <div class="apt-3day-section">
 
             <!-- Sticky day header -->
@@ -314,7 +317,7 @@
                   class="apt-3day-card"
                   [class]="block.statusClass"
                   [style.--block-border]="block.borderColor"
-                  [attr.data-upcoming-apt]="block.appointment._id === firstUpcomingKey() ? '' : null"
+                  [attr.data-upcoming-apt]="block.appointment._id === vm.firstUpcomingKey ? '' : null"
                   (click)="openAppointment(block.appointment)"
                 >
                   <div class="apt-3day-card-time">{{ block.timeLabel }}</div>
@@ -339,14 +342,16 @@
     >
       <i class="pi pi-plus" aria-hidden="true"></i>
     </a>
+    }
   }
 
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!--  APPOINTMENT DETAIL PANEL (shared between desktop & mobile)            -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
-  @if (selectedAptVm(); as vm) {
-    @if (!isMobile()) {
+  @if (detailPanelVm(); as detail) {
+    @if (detail.selected; as vm) {
+    @if (!detail.isMobile) {
       <p-dialog
         header="פרטי תור"
         [draggable]="false"
@@ -387,7 +392,7 @@
       </p-dialog>
     }
 
-    @if (isMobile()) {
+    @if (detail.isMobile) {
       <p-drawer
         [visible]="true"
         position="bottom"
@@ -423,6 +428,7 @@
           </div>
         </div>
       </p-drawer>
+    }
     }
   }
 </div>

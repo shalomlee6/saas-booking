@@ -32,3 +32,6 @@ export const createFailure = createAction(
   '[Appointments] Create Failure',
   props<{ error: string }>()
 );
+
+/** Clears create-time error so reopening the create overlay does not show a stale message. */
+export const clearCreateError = createAction('[Appointments] Clear Create Error');

@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
-import { catchError, map, mergeMap, of, switchMap } from 'rxjs';
+import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
 import { AppointmentsApiService } from '../services/appointments-api.service';
 import * as AppointmentsActions from './appointments.actions';
 
@@ -30,7 +30,8 @@ export const createAppointment$ = createEffect(
   (actions$ = inject(Actions), api = inject(AppointmentsApiService)) =>
     actions$.pipe(
       ofType(AppointmentsActions.create),
-      mergeMap(({ dto }) =>
+      // Ignore further create actions until the current request finishes (no parallel POSTs).
+      exhaustMap(({ dto }) =>
         api.create(dto).pipe(
           map((item) => AppointmentsActions.createSuccess({ item })),
           catchError((err) =>

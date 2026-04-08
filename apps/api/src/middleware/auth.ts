@@ -5,6 +5,8 @@ import { IBusinessSettings } from '../models/BusinessSettings';
 export interface AuthRequest extends Request {
   user?: AuthUser;
   businessSettings?: IBusinessSettings;
+  /** Set by `requireBusinessContext` for tenant-scoped routes */
+  effectiveBusinessId?: string;
 }
 
 export interface AuthUser {

@@ -1,19 +1,18 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { Customer } from '../models/Customer';
 
 export const customersRouter = Router();
 
-// GET /api/customers
-customersRouter.get('/', auth, async (req: AuthRequest, res) => {
-  try {
-    const businessId = resolveBusinessIdFromReq(req) || req.user!.businessId!;
-    const search = (req.query.search as string) || '';
+customersRouter.use(auth);
+customersRouter.use(requireBusinessContext);
 
-    if (!businessId) {
-      return res.status(400).json({ message: 'businessId is required' });
-    }
+// GET /api/customers
+customersRouter.get('/', async (req: AuthRequest, res) => {
+  try {
+    const businessId = req.effectiveBusinessId!;
+    const search = (req.query.search as string) || '';
 
     const filter: Record<string, unknown> = { businessId };
     if (search) {
@@ -35,14 +34,10 @@ customersRouter.get('/', auth, async (req: AuthRequest, res) => {
 });
 
 // POST /api/customers
-customersRouter.post('/', auth, async (req: AuthRequest, res) => {
+customersRouter.post('/', async (req: AuthRequest, res) => {
   try {
-    const businessId = resolveBusinessIdFromReq(req);
+    const businessId = req.effectiveBusinessId!;
     const { name, phone, email, notes } = req.body;
-
-    if (!businessId) {
-      return res.status(400).json({ message: 'businessId is required' });
-    }
 
     if (!name || !phone) {
       return res
@@ -66,9 +61,9 @@ customersRouter.post('/', auth, async (req: AuthRequest, res) => {
 });
 
 // GET /api/customers/:id
-customersRouter.get('/:id', auth, async (req: AuthRequest, res) => {
+customersRouter.get('/:id', async (req: AuthRequest, res) => {
   try {
-    const businessId = req.user!.businessId!;
+    const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
 
     const customer = await Customer.findOne({ _id: id, businessId });
@@ -85,9 +80,9 @@ customersRouter.get('/:id', auth, async (req: AuthRequest, res) => {
 });
 
 // PUT /api/customers/:id
-customersRouter.put('/:id', auth, async (req: AuthRequest, res) => {
+customersRouter.put('/:id', async (req: AuthRequest, res) => {
   try {
-    const businessId = req.user!.businessId!;
+    const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
     const { name, phone, email, notes } = req.body;
 

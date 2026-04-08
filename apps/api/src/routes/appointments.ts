@@ -1,22 +1,20 @@
 import { Router } from 'express';
+import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
-import { DateTime } from 'luxon';
+import { requireBusinessContext } from '../middleware/requireBusinessContext';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   getAppointmentsList,
   getBusinessAppointmentsForWeek,
   getAvailableSlots,
 } from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
-import {
-  createAppointmentAtomic,
-  AppointmentError,
-  assertNoOverlap,
-} from '../services/createAppointmentAtomic';
+import { createAppointmentAtomic, assertNoOverlap } from '../services/createAppointmentAtomic';
 
 export const appointmentsRouter = Router();
 
-// Apply auth middleware to all routes
 appointmentsRouter.use(auth);
+appointmentsRouter.use(requireBusinessContext);
 
 // GET /api/appointments/week
 appointmentsRouter.get('/week', getBusinessAppointmentsForWeek);
@@ -32,9 +30,10 @@ function hasTimezoneOffset(iso: string): boolean {
 }
 
 // POST /api/appointments
-appointmentsRouter.post('/', async (req: AuthRequest, res) => {
-  try {
-    const businessId = req.user!.businessId!;
+appointmentsRouter.post(
+  '/',
+  asyncHandler(async (req: AuthRequest, res) => {
+    const businessId = req.effectiveBusinessId!;
     const { customerId, serviceId, start, end, notes } = req.body;
 
     if (!customerId || !serviceId || !start || !end) {
@@ -43,7 +42,6 @@ appointmentsRouter.post('/', async (req: AuthRequest, res) => {
       });
     }
 
-    // Enforce explicit timezone offset on start/end
     if (typeof start !== 'string' || !hasTimezoneOffset(start)) {
       return res.status(400).json({
         message:
@@ -60,42 +58,28 @@ appointmentsRouter.post('/', async (req: AuthRequest, res) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
 
-    try {
-      const appointment = await createAppointmentAtomic(
-        {
-          businessId,
-          serviceId,
-          customerId,
-          start: startDate,
-          end: endDate,
-          source: 'owner',
-          notes,
-        } as any
-      );
+    const appointment = await createAppointmentAtomic({
+      businessId: new Types.ObjectId(businessId),
+      serviceId,
+      customerId,
+      start: startDate,
+      end: endDate,
+      source: 'owner',
+      notes,
+    });
 
-      return res.status(201).json(appointment);
-    } catch (err: any) {
-      if (err instanceof AppointmentError) {
-        const body: any = { message: err.message };
-        if (err.code) body.code = err.code;
-        return res.status(err.status).json(body);
-      }
-      throw err;
-    }
-  } catch (err) {
-    console.error('Error POST /appointments:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+    return res.status(201).json(appointment);
+  })
+);
 
 // PUT /api/appointments/:id
-appointmentsRouter.put('/:id', async (req: AuthRequest, res) => {
-  try {
-    const businessId = req.user!.businessId!;
+appointmentsRouter.put(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res) => {
+    const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
     const { start, end, status, notes } = req.body;
 
-    // Validate timezone offsets if new start/end provided
     if (start !== undefined) {
       if (typeof start !== 'string' || !hasTimezoneOffset(start)) {
         return res.status(400).json({
@@ -131,19 +115,10 @@ appointmentsRouter.put('/:id', async (req: AuthRequest, res) => {
     const timesChanged = start !== undefined || end !== undefined;
 
     if (timesChanged) {
-      try {
-        await assertNoOverlap(businessId as any, newStart, newEnd, id);
-      } catch (err: any) {
-        if (err instanceof AppointmentError) {
-          const body: any = { message: err.message };
-          if (err.code) body.code = err.code;
-          return res.status(err.status).json(body);
-        }
-        throw err;
-      }
+      await assertNoOverlap(new Types.ObjectId(businessId), newStart, newEnd, id);
     }
 
-    const update: any = {};
+    const update: Record<string, unknown> = {};
     if (timesChanged) {
       update.start = newStart;
       update.end = newEnd;
@@ -166,16 +141,14 @@ appointmentsRouter.put('/:id', async (req: AuthRequest, res) => {
     }
 
     res.json(appointment);
-  } catch (err) {
-    console.error('Error PUT /appointments/:id:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  })
+);
 
 // DELETE /api/appointments/:id (ב-MVP: להפוך ל-cancelled)
-appointmentsRouter.delete('/:id', async (req: AuthRequest, res) => {
-  try {
-    const businessId = req.user!.businessId!;
+appointmentsRouter.delete(
+  '/:id',
+  asyncHandler(async (req: AuthRequest, res) => {
+    const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
 
     const appointment = await Appointment.findOneAndUpdate(
@@ -189,26 +162,5 @@ appointmentsRouter.delete('/:id', async (req: AuthRequest, res) => {
     }
 
     res.json(appointment);
-  } catch (err) {
-    console.error('Error DELETE /appointments/:id:', err);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-
-/** Parse dateStr (YYYY-MM-DD) + timeStr (HH:mm) in business timezone and return UTC Date */
-function toUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
-  const [h, m] = timeStr.split(':').map((s) => Number(s));
-  const local = DateTime.fromISO(dateStr, { zone: timezone }).set({
-    hour: h,
-    minute: m,
-    second: 0,
-    millisecond: 0,
-  });
-
-  if (!local.isValid) {
-    throw new Error(`Invalid date/time: ${dateStr} ${timeStr} (${timezone})`);
-  }
-
-  return local.toUTC().toJSDate();
-}
+  })
+);

@@ -3,14 +3,14 @@ import { AuthRequest } from '../middleware/auth';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { Business } from '../models/Business';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { Types } from 'mongoose';
 
 export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<any> {
   try {
     if (!req.businessSettings) {
       // Should not happen if middleware runs, but handle gracefully
-      const businessId = resolveBusinessIdFromReq(req);
+      const businessId = getEffectiveBusinessId(req);
       if (!businessId) {
         return res.status(400).json({ message: 'Business ID not found' });
       }
@@ -32,7 +32,7 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     if (req.businessSettings) {
       businessId = req.businessSettings.businessId.toString();
     } else {
-      businessId = resolveBusinessIdFromReq(req);
+      businessId = getEffectiveBusinessId(req);
     }
 
     if (!businessId) {

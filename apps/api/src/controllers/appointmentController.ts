@@ -5,7 +5,7 @@ import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { defaultOpeningHours } from '../models/BusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
@@ -35,7 +35,7 @@ function utcToDateStr(date: Date, timezone: string): string {
 /** GET /api/appointments - list for owner dashboard; flattened DTO, sort start ASC */
 export async function getAppointmentsList(req: AuthRequest, res: Response) {
   try {
-    const businessId = resolveBusinessIdFromReq(req);
+    const businessId = getEffectiveBusinessId(req);
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });
     }
@@ -84,7 +84,7 @@ export async function getBusinessAppointmentsForWeek(req: AuthRequest, res: Resp
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const businessId = resolveBusinessIdFromReq(req);
+    const businessId = getEffectiveBusinessId(req);
 
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });
@@ -149,7 +149,7 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const businessId = resolveBusinessIdFromReq(req);
+    const businessId = getEffectiveBusinessId(req);
 
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });

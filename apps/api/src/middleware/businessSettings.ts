@@ -2,7 +2,7 @@ import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
 import { Business } from '../models/Business';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 
 export async function loadBusinessSettings(
   req: AuthRequest,
@@ -10,9 +10,8 @@ export async function loadBusinessSettings(
   next: NextFunction
 ): Promise<void> {
   try {
-    let businessId = resolveBusinessIdFromReq(req);
+    let businessId = getEffectiveBusinessId(req);
 
-    // Fallback: if no businessId from resolver, try to find by ownerId
     if (!businessId && req.user?.role === 'owner' && req.user?.userId) {
       const business = await Business.findOne({ ownerId: req.user.userId });
       if (business) {

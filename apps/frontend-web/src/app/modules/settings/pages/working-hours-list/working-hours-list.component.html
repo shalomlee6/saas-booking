@@ -63,7 +63,7 @@
                 <ng-template pTemplate="date" let-date>
                   <span class="wh-cal-day-cell">
                     <span class="wh-cal-day-num">{{ date.day }}</span>
-                    @if (getDateOverrideDot(date); as dotClass) {
+                    @if (overrideDotClassByCellKey()[date.year + '-' + date.month + '-' + date.day]; as dotClass) {
                       <span class="wh-cal-day-dot" [ngClass]="dotClass"></span>
                     }
                   </span>

@@ -90,6 +90,7 @@ export class AppointmentCreateOverlayComponent {
   constructor() {
     effect(() => {
       if (this.openSignal()) {
+        this.store.dispatch(AppointmentsActions.clearCreateError());
         this.loadOptions();
         this.patchFormFromInputs();
       }

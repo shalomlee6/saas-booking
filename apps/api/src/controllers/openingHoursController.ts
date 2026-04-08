@@ -1,24 +1,14 @@
 import { Response } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
-import { Business } from '../models/Business';
 import { BusinessSettings } from '../models/BusinessSettings';
 import {
   ensureBusinessSettings,
 } from '../utils/ensureBusinessSettings';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import type { IOpeningHours, IOpeningHoursDay, IOpeningHoursRange } from '../models/BusinessSettings';
 
 const HHMM_REGEX = /^([01]?\d|2[0-3]):[0-5]\d$/;
-
-function resolveOwnerBusinessId(req: AuthRequest): Promise<string | null> {
-  let businessId = resolveBusinessIdFromReq(req);
-  if (businessId) return Promise.resolve(businessId);
-  if (req.user?.role !== 'owner' || !req.user?.userId) return Promise.resolve(null);
-  return Business.findOne({ ownerId: req.user.userId }).then((b) =>
-    b ? b._id.toString() : null
-  );
-}
 
 function validateOpeningHoursPayload(body: unknown): { valid: boolean; message?: string; data?: IOpeningHours } {
   if (!body || typeof body !== 'object' || !('openingHours' in body)) {
@@ -110,7 +100,7 @@ function validateOpeningHoursPayload(body: unknown): { valid: boolean; message?:
  */
 export async function patchOpeningHours(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const businessId = await resolveOwnerBusinessId(req);
+    const businessId = getEffectiveBusinessId(req);
     if (!businessId) {
       res.status(403).json({ message: 'Forbidden: business not found for user' });
       return;

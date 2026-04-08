@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
+import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { Business } from '../models/Business';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { patchOpeningHours } from '../controllers/openingHoursController';
 import {
   getOverrides,
@@ -27,13 +29,13 @@ businessRouter.get('/me', auth, async (req: AuthRequest, res) => {
   }
 });
 
-// PATCH /api/business/ui – owner updates own business UI (use req.user.businessId only)
-businessRouter.patch('/ui', auth, async (req: AuthRequest, res) => {
+// PATCH /api/business/ui – owner updates own business UI (tenant from JWT / impersonation)
+businessRouter.patch('/ui', auth, requireBusinessContext, async (req: AuthRequest, res) => {
   try {
-    if (req.user!.role !== 'owner' || !req.user!.businessId) {
+    if (req.user!.role !== 'owner') {
       return res.status(403).json({ message: 'Only business owners can update their business UI' });
     }
-    const businessId = req.user!.businessId;
+    const businessId = getEffectiveBusinessId(req)!;
     const result = validateBusinessUiBody(req.body);
     if (!result.valid) {
       return res.status(400).json({ message: result.message });
@@ -57,12 +59,12 @@ businessRouter.patch('/ui', auth, async (req: AuthRequest, res) => {
 });
 
 // PATCH /api/business/settings/opening-hours – default weekly schedule
-businessRouter.patch('/settings/opening-hours', auth, patchOpeningHours);
+businessRouter.patch('/settings/opening-hours', auth, requireBusinessContext, patchOpeningHours);
 
 // Growth insights (revenue, top customers, etc.)
-businessRouter.get('/insights', auth, getBusinessInsights);
+businessRouter.get('/insights', auth, requireBusinessContext, getBusinessInsights);
 
 // Availability overrides (date-specific exceptions)
-businessRouter.get('/overrides', auth, getOverrides);
-businessRouter.post('/overrides', auth, postOverride);
-businessRouter.delete('/overrides/:id', auth, deleteOverride);
+businessRouter.get('/overrides', auth, requireBusinessContext, getOverrides);
+businessRouter.post('/overrides', auth, requireBusinessContext, postOverride);
+businessRouter.delete('/overrides/:id', auth, requireBusinessContext, deleteOverride);

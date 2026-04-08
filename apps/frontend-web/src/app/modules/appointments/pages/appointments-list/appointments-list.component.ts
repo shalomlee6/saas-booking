@@ -516,6 +516,46 @@ export class AppointmentsListComponent implements OnInit {
 
   readonly overlayOpen = signal<{ date: string; time: string } | null>(null);
 
+  /** Desktop/template VM to minimize repeated signal reads in bindings. */
+  readonly desktopVm = computed(() => {
+    const loading = this.loading();
+    const overlay = this.overlayOpen();
+    const cards = this.appointmentCards();
+    return {
+      dateRangeLabel: this.visibleDateRangeLabel(),
+      searchQuery: this.searchQuery(),
+      isDayMode: this.viewMode() === 'day',
+      isWeekMode: this.viewMode() === 'week',
+      isAtToday: this.isAtToday(),
+      error: this.error(),
+      loading,
+      overlay,
+      visibleDaysCount: this.visibleDaysCount(),
+      visibleDays: this.visibleDays(),
+      hourLabels: this.hourLabelsWithStyle(),
+      cards,
+      showCards: !loading && cards.length > 0,
+    };
+  });
+
+  /** Mobile/template VM to minimize repeated signal reads in bindings. */
+  readonly mobileVm = computed(() => ({
+    isAtToday: this.isAtToday(),
+    dateRangeLabel: this.visibleDateRangeLabel(),
+    datePickerOpen: this.datePickerOpen(),
+    error: this.error(),
+    overlay: this.overlayOpen(),
+    loading: this.loading(),
+    dayGroups: this.mobileDayGroups(),
+    firstUpcomingKey: this.firstUpcomingKey(),
+  }));
+
+  /** Shared details panel VM for desktop dialog / mobile drawer. */
+  readonly detailPanelVm = computed(() => ({
+    isMobile: this.isMobile(),
+    selected: this.selectedAptVm(),
+  }));
+
   // ─── Mobile date picker ──────────────────────────────────────────────────
   /** Controls the bottom-sheet date picker drawer on mobile. */
   readonly datePickerOpen = signal(false);

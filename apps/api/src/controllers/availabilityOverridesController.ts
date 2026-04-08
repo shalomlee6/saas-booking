@@ -1,27 +1,18 @@
 import { Response } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
-import { Business } from '../models/Business';
 import { AvailabilityOverride } from '../models/AvailabilityOverride';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM_REGEX = /^([01]?\d|2[0-3]):[0-5]\d$/;
-
-async function resolveOwnerBusinessId(req: AuthRequest): Promise<string | null> {
-  let businessId = resolveBusinessIdFromReq(req);
-  if (businessId) return businessId;
-  if (req.user?.role !== 'owner' || !req.user?.userId) return null;
-  const business = await Business.findOne({ ownerId: req.user.userId });
-  return business ? business._id.toString() : null;
-}
 
 /**
  * GET /api/business/overrides?from=YYYY-MM-DD&to=YYYY-MM-DD
  */
 export async function getOverrides(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const businessId = await resolveOwnerBusinessId(req);
+    const businessId = getEffectiveBusinessId(req);
     if (!businessId) {
       res.status(403).json({ message: 'Forbidden: business not found for user' });
       return;
@@ -67,7 +58,7 @@ export async function getOverrides(req: AuthRequest, res: Response): Promise<voi
  */
 export async function postOverride(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const businessId = await resolveOwnerBusinessId(req);
+    const businessId = getEffectiveBusinessId(req);
     if (!businessId) {
       res.status(403).json({ message: 'Forbidden: business not found for user' });
       return;
@@ -155,7 +146,7 @@ export async function postOverride(req: AuthRequest, res: Response): Promise<voi
  */
 export async function deleteOverride(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const businessId = await resolveOwnerBusinessId(req);
+    const businessId = getEffectiveBusinessId(req);
     if (!businessId) {
       res.status(403).json({ message: 'Forbidden: business not found for user' });
       return;

@@ -1,15 +1,16 @@
 <p-toast />
+@if (layoutVm(); as vm) {
 <div
   class="layout"
-  [class.layout--impersonating]="isImpersonating()"
-  [class.layout--sidebar-collapsed]="!isMobile() && isSidebarCollapsed()"
-  [class.layout--mobile-drawer-open]="isMobile() && isMobileMenuOpen()"
+  [class.layout--impersonating]="vm.isImpersonating"
+  [class.layout--sidebar-collapsed]="!vm.isMobile && vm.isSidebarCollapsed"
+  [class.layout--mobile-drawer-open]="vm.isMobile && vm.isMobileMenuOpen"
 >
   <div class="layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
   <div class="layout-sidebar">
     <div class="layout-sidebar-header">
-      <span class="layout-sidebar-logo" [title]="isSidebarCollapsed() ? 'SaaS' : null">
-        {{ isSidebarCollapsed() ? 'S' : 'SaaS' }}
+      <span class="layout-sidebar-logo" [title]="vm.isSidebarCollapsed ? 'SaaS' : null">
+        {{ vm.isSidebarCollapsed ? 'S' : 'SaaS' }}
       </span>
     </div>
 
@@ -19,7 +20,7 @@
         <a
           routerLink="/dashboard"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
+          [routerLinkActiveOptions]="linkOptsExact"
           class="layout-sidebar-link"
           title="Dashboard"
           (click)="closeMobileMenu()"
@@ -30,7 +31,7 @@
         <a
           routerLink="/appointments"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="{ exact: false }"
+          [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
           title="Appointments"
           (click)="closeMobileMenu()"
@@ -39,9 +40,9 @@
           <span class="layout-sidebar-link-text">Appointments</span>
         </a>
         <a
-          [routerLink]="servicesNavLink()"
+          [routerLink]="vm.servicesNavLink"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="{ exact: false }"
+          [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
           [title]="'Services'"
           (click)="closeMobileMenu()"
@@ -50,21 +51,21 @@
           <span class="layout-sidebar-link-text">Services</span>
         </a>
         <a
-          [routerLink]="customersNavLink()"
+          [routerLink]="vm.customersNavLink"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="customersNavLinkActiveOptions()"
+          [routerLinkActiveOptions]="vm.customersNavLinkActiveOptions"
           class="layout-sidebar-link"
-          [title]="customersNavLabel()"
+          [title]="vm.customersNavLabel"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-users" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">{{ customersNavLabel() }}</span>
+          <span class="layout-sidebar-link-text">{{ vm.customersNavLabel }}</span>
         </a>
-        @if (!isSuperAdmin() && user()?.businessId) {
+        @if (!vm.isSuperAdmin && vm.user?.businessId) {
           <a
             routerLink="/settings/theme"
             routerLinkActive="layout-sidebar-link-active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [routerLinkActiveOptions]="linkOptsExact"
             class="layout-sidebar-link"
             title="Theme"
             (click)="closeMobileMenu()"
@@ -82,11 +83,11 @@
             <i class="layout-sidebar-link-icon pi pi-clock" aria-hidden="true"></i>
             <span class="layout-sidebar-link-text">Working hours</span>
           </a>
-          @if (business()?.slug) {
+          @if (vm.business?.slug) {
             <a
               routerLink="/preview/customer-site"
               routerLinkActive="layout-sidebar-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
+              [routerLinkActiveOptions]="linkOptsExact"
               class="layout-sidebar-link"
               title="Preview customer site"
               (click)="closeMobileMenu()"
@@ -97,9 +98,9 @@
           }
         }
       </nav>
-      @if (isImpersonating()) {
+      @if (vm.isImpersonating) {
         <div class="layout-sidebar-impersonation-badge">
-          Viewing as: {{ business()?.name ?? '—' }}
+          Viewing as: {{ vm.business?.name ?? '—' }}
         </div>
       }
       <a
@@ -116,12 +117,12 @@
 
   <header class="layout-topbar">
     <p-button
-      [icon]="menuToggleIcon()"
+      [icon]="vm.menuToggleIcon"
       [rounded]="true"
       [text]="true"
       severity="secondary"
-      [attr.aria-label]="menuAriaLabel()"
-      [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
+      [attr.aria-label]="vm.menuAriaLabel"
+      [attr.aria-expanded]="vm.isMobile ? vm.isMobileMenuOpen : null"
       (onClick)="toggleSidebar()"
       styleClass="layout-topbar-menu-btn layout-topbar-menu-btn-p"
     />
@@ -130,11 +131,11 @@
       <!-- TODO: wire up global search or remove this element -->
       <input type="text" class="layout-topbar-search" placeholder="Search..." disabled aria-hidden="true" />
     </div>
-    @if (!isMobile()) {
+    @if (!vm.isMobile) {
       <div class="layout-topbar-actions">
-        @if (business()?.slug) {
+        @if (vm.business?.slug) {
           <a
-            [href]="customerSiteUrl()"
+            [href]="vm.customerSiteUrl"
             target="_blank"
             rel="noopener noreferrer"
             class="layout-topbar-customer-site"
@@ -142,44 +143,44 @@
           >
             Customer Site
           </a>
-        } @else if (business() && !isSuperAdmin()) {
+        } @else if (vm.business && !vm.isSuperAdmin) {
           <span class="layout-topbar-customer-site-warning" title="Add a slug in settings to enable the customer site">
             Customer Site (no slug)
           </span>
         }
-        @if (isImpersonating()) {
+        @if (vm.isImpersonating) {
           <span class="layout-topbar-impersonation-badge">Impersonating</span>
         }
-        @if (isSuperAdmin()) {
+        @if (vm.isSuperAdmin) {
           <button
             type="button"
             class="layout-theme-toggle"
-            [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
+            [attr.aria-label]="vm.themeToggleAriaLabel"
             (click)="toggleTheme()"
           >
-            {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
+            {{ vm.themeToggleLabel }}
           </button>
         }
         <span class="layout-topbar-icon" aria-hidden="true"></span>
         <span class="layout-topbar-icon" aria-hidden="true"></span>
         <span class="layout-topbar-user">
-          @if (activeBusinessName(); as bizName) {
+          @if (vm.activeBusinessName; as bizName) {
             <span class="layout-topbar-business-name">{{ bizName }}</span>
             <span class="layout-topbar-user-sep">·</span>
           }
-          {{ user()?.email ?? 'User' }}
+          {{ vm.user?.email ?? 'User' }}
         </span>
       </div>
     }
   </header>
 
   <main class="layout-main">
-    @if (isImpersonating()) {
+    @if (vm.isImpersonating) {
       <div class="layout-impersonation-banner">
         <span class="layout-impersonation-banner-text">
-          Impersonating: {{ business()?.name ?? 'Business' }}
-          @if (business()?.ownerEmail) {
-            ({{ business()?.ownerEmail }})
+          Impersonating: {{ vm.business?.name ?? 'Business' }}
+          @if (vm.business?.ownerEmail) {
+            ({{ vm.business?.ownerEmail }})
           }
         </span>
         <button type="button" class="layout-impersonation-banner-btn" (click)="exitImpersonation()">
@@ -190,3 +191,4 @@
     <router-outlet></router-outlet>
   </main>
 </div>
+}

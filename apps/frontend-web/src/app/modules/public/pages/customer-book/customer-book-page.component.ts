@@ -4,13 +4,18 @@ import {
   OnInit,
   computed,
   signal,
+  DestroyRef,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SkeletonModule } from 'primeng/skeleton';
+import { Subject, EMPTY, fromEvent, interval, filter, switchMap, catchError } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   PublicApiService,
   type PublicBusinessForBooking,
@@ -35,6 +40,13 @@ const STEP_NAV_LABELS: Record<BookStep, string> = {
   3: 'אישור',
 };
 
+/** Local calendar day at 00:00 — used for minDate and midnight refresh. */
+function startOfDay(d: Date): Date {
+  const out = new Date(d);
+  out.setHours(0, 0, 0, 0);
+  return out;
+}
+
 @Component({
   selector: 'app-customer-book-page',
   standalone: true,
@@ -54,6 +66,18 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly publicApi = inject(PublicApiService);
   private readonly messageService = inject(MessageService);
   private readonly session = inject(PublicSessionService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly doc = inject(DOCUMENT);
+
+  /** Latest-wins slot loads: each new emission cancels the previous HTTP call. */
+  private readonly loadSlotsTrigger = new Subject<{
+    businessId: string;
+    serviceId: string;
+    dateStr: string;
+  }>();
+
+  /** Refreshed on visibility, timer, and init so “today” advances after midnight. */
+  private readonly minDateForCalendar = signal<Date>(startOfDay(new Date()));
 
   // ── Data signals ───────────────────────────────────────────────────────────
   readonly business = signal<PublicBusinessForBooking | null>(null);
@@ -92,7 +116,7 @@ export class CustomerBookPageComponent implements OnInit {
   );
 
   // ── Derived computeds ─────────────────────────────────────────────────────
-  readonly minDate = computed(() => new Date());
+  readonly minDate = this.minDateForCalendar.asReadonly();
   readonly isLoggedIn = computed(() => this.session.hasSessionFor(this.slug()));
 
   readonly loadingStep1 = computed(
@@ -140,6 +164,9 @@ export class CustomerBookPageComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.wireSlotsLoadPipeline();
+    this.wireMinDateRefresh();
+
     const slug = this.slug();
     if (!slug) {
       this.loadingBusiness.set(false);
@@ -149,6 +176,74 @@ export class CustomerBookPageComponent implements OnInit {
     }
     this.loadBusiness(slug);
     this.loadServices(slug);
+  }
+
+  /**
+   * Cancels in-flight availability requests when the user picks another date
+   * (switchMap); only the latest response updates the UI.
+   */
+  private wireSlotsLoadPipeline(): void {
+    this.loadSlotsTrigger
+      .pipe(
+        switchMap((params) => {
+          this.loadingSlots.set(true);
+          this.slotsError.set(false);
+          return this.publicApi
+            .getAvailabilityByBusinessId(
+              params.businessId,
+              params.serviceId,
+              params.dateStr
+            )
+            .pipe(
+              catchError((err: unknown) => {
+                this.loadingSlots.set(false);
+                this.slotsError.set(true);
+                const detail = this.extractHttpErrorMessage(err);
+                this.showError(detail ?? 'שגיאה בטעינת השעות');
+                return EMPTY;
+              })
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((res) => {
+        this.slots.set(res.slots);
+        this.selectedSlot.set(null);
+        this.loadingSlots.set(false);
+      });
+  }
+
+  /** Keeps calendar “today” correct across midnight and when returning to the tab. */
+  private wireMinDateRefresh(): void {
+    const bump = (): void => {
+      this.minDateForCalendar.set(startOfDay(new Date()));
+    };
+    bump();
+    fromEvent(this.doc, 'visibilitychange')
+      .pipe(
+        filter(() => this.doc.visibilityState === 'visible'),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => bump());
+    interval(60_000)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => bump());
+  }
+
+  private extractHttpErrorMessage(err: unknown): string | null {
+    if (err instanceof HttpErrorResponse) {
+      const body = err.error;
+      if (
+        body &&
+        typeof body === 'object' &&
+        body !== null &&
+        'message' in body
+      ) {
+        const m = (body as { message: unknown }).message;
+        return typeof m === 'string' && m.length > 0 ? m : null;
+      }
+    }
+    return null;
   }
 
   // ── Step navigation ────────────────────────────────────────────────────────
@@ -321,20 +416,7 @@ export class CustomerBookPageComponent implements OnInit {
   }
 
   private loadSlots(businessId: string, serviceId: string, dateStr: string): void {
-    this.loadingSlots.set(true);
-    this.slotsError.set(false);
-    this.publicApi.getAvailabilityByBusinessId(businessId, serviceId, dateStr).subscribe({
-      next: (res) => {
-        this.slots.set(res.slots);
-        this.selectedSlot.set(null);
-        this.loadingSlots.set(false);
-      },
-      error: (err) => {
-        this.loadingSlots.set(false);
-        this.slotsError.set(true);
-        this.showError(err?.error?.message ?? 'שגיאה בטעינת השעות');
-      },
-    });
+    this.loadSlotsTrigger.next({ businessId, serviceId, dateStr });
   }
 
   private showError(message: string): void {

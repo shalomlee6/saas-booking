@@ -56,5 +56,9 @@ export const appointmentsReducer = createReducer(
     ...state,
     creating: false,
     error,
+  })),
+  on(AppointmentsActions.clearCreateError, (state) => ({
+    ...state,
+    error: null,
   }))
 );

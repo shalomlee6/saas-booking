@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
-import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
+import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import mongoose from 'mongoose';
 
 /**
@@ -11,7 +11,7 @@ import mongoose from 'mongoose';
  */
 export async function getBusinessInsights(req: AuthRequest, res: Response) {
   try {
-    const businessId = resolveBusinessIdFromReq(req);
+    const businessId = getEffectiveBusinessId(req);
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });
     }

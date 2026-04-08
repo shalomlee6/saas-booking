@@ -11,6 +11,7 @@ import { publicRouter } from './routes/public';
 import { settingsRouter } from './routes/settings';
 import { adminRouter } from './routes/admin';
 import cookieParser from 'cookie-parser';
+import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -39,7 +40,11 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'saas-booking-api' });
 });
 
+app.use((_req, res) => {
+  res.status(404).json({ message: 'Not found' });
+});
 
+app.use(errorHandler);
 
 async function bootstrap() {
   if (!MONGO_URI) {
