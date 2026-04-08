@@ -39,9 +39,10 @@ export async function getAppointmentsList(req: AuthRequest, res: Response) {
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });
     }
-    const start = req.query.from ? new Date(String(req.query.from)) : new Date();
-    const end = req.query.to
-      ? new Date(String(req.query.to))
+    const q = req.query as { from?: string; to?: string };
+    const start = q.from ? new Date(q.from) : new Date();
+    const end = q.to
+      ? new Date(q.to)
       : new Date(start.getTime() + 24 * 60 * 60 * 1000);
 
     const appointments = await Appointment.find({
@@ -155,11 +156,11 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ message: 'businessId is required' });
     }
 
-    const { serviceId, customerId, weekStart } = req.query;
-
-    if (!serviceId || !customerId) {
-      return res.status(400).json({ message: 'serviceId and customerId are required' });
-    }
+    const { serviceId, customerId, weekStart } = req.query as {
+      serviceId: string;
+      customerId: string;
+      weekStart?: string;
+    };
 
     // Load customer and service
     const customer = await Customer.findOne({ _id: customerId, businessId });
@@ -191,10 +192,7 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
     // (midnight→midnight) are correct for the owner's locale.
     let weekStartStr: string;
     if (weekStart) {
-      const parsedDate = new Date(String(weekStart));
-      if (isNaN(parsedDate.getTime())) {
-        return res.status(400).json({ message: 'Invalid weekStart date format' });
-      }
+      const parsedDate = new Date(weekStart);
       weekStartStr = utcToDateStr(parsedDate, timezone);
     } else {
       weekStartStr = utcToDateStr(new Date(), timezone);

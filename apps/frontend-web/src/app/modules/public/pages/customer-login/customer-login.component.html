@@ -48,7 +48,7 @@
       <button
         type="submit"
         class="customer-login-cta"
-        [disabled]="formStep1.invalid || loading()"
+        [disabled]="loading()"
       >
         {{ loading() ? 'Sending…' : 'Continue' }}
       </button>
@@ -80,7 +80,7 @@
       <button
         type="submit"
         class="customer-login-cta"
-        [disabled]="formStep2.invalid || loading()"
+        [disabled]="loading()"
       >
         {{ loading() ? 'Verifying…' : 'Verify' }}
       </button>

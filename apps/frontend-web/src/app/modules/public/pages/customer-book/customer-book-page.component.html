@@ -121,22 +121,27 @@
             </div>
 
             @if (loadingSlots()) {
-              <div class="book-slots-grid">
+              <div class="book-slots-grid" aria-busy="true" aria-live="polite">
+                <span class="book-slots-loading-hint">טוענת שעות…</span>
                 @for (i of [1, 2, 3, 4, 5, 6]; track i) {
                   <p-skeleton width="100%" height="52px" borderRadius="9999px" />
                 }
               </div>
             } @else if (slotsError()) {
-              <div class="book-notice-state">
-                <p>לא ניתן לטעון שעות</p>
+              <div class="book-notice-state book-notice-state-error" role="alert">
+                <p class="book-notice-title">לא ניתן לטעון שעות</p>
+                @if (slotsErrorDetail(); as errDetail) {
+                  <p class="book-notice-detail">{{ errDetail }}</p>
+                }
                 <button type="button" class="book-text-btn" (click)="retryLoadSlots()">
                   <i class="pi pi-refresh" aria-hidden="true"></i>
                   נסי שוב
                 </button>
               </div>
             } @else if (slots().length === 0) {
-              <div class="book-notice-state">
-                <p>אין שעות פנויות ביום זה</p>
+              <div class="book-notice-state book-notice-state-empty">
+                <p class="book-notice-title">אין שעות פנויות ביום הזה</p>
+                <p class="book-notice-detail">נסי יום אחר או חזרי מאוחר יותר.</p>
                 <button type="button" class="book-text-btn" (click)="goToDateStep()">
                   בחרי תאריך אחר
                 </button>

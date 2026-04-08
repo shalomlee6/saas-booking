@@ -1,21 +1,22 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { BusinessSettings } from '../models/BusinessSettings';
-import { Business } from '../models/Business';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
+import type { UpdateBusinessSettingsBody } from '../validation/schemas/businessSettings';
 import { Types } from 'mongoose';
 
-export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<any> {
+export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<void> {
   try {
     if (!req.businessSettings) {
-      // Should not happen if middleware runs, but handle gracefully
       const businessId = getEffectiveBusinessId(req);
       if (!businessId) {
-        return res.status(400).json({ message: 'Business ID not found' });
+        res.status(400).json({ message: 'Business ID not found' });
+        return;
       }
       const settings = await ensureBusinessSettings(businessId);
-      return res.json(settings);
+      res.json(settings);
+      return;
     }
 
     res.json(req.businessSettings);
@@ -25,7 +26,7 @@ export async function getMyBusinessSettings(req: AuthRequest, res: Response): Pr
   }
 }
 
-export async function updateMyBusinessSettings(req: AuthRequest, res: Response): Promise<any> {
+export async function updateMyBusinessSettings(req: AuthRequest, res: Response): Promise<void> {
   try {
     let businessId: string | undefined;
 
@@ -36,67 +37,78 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     }
 
     if (!businessId) {
-      return res.status(400).json({ message: 'Business ID not found' });
+      res.status(400).json({ message: 'Business ID not found' });
+      return;
     }
 
-    // Ensure settings exist
     await ensureBusinessSettings(businessId);
 
     const businessIdObj = new Types.ObjectId(businessId);
+    const body = req.body as UpdateBusinessSettingsBody;
 
-    const { plan, theme, features, localization } = req.body;
+    const updateData: Record<string, unknown> = {};
 
-    const updateData: any = {};
-
-    // Validate and update plan
-    if (plan && ['free', 'normal', 'premium'].includes(plan)) {
-      updateData.plan = plan;
+    if (body.plan !== undefined) {
+      updateData.plan = body.plan;
     }
 
-    // Validate and update theme (partial update)
-    if (theme) {
-      updateData.theme = {};
-      if (theme.colors) {
-        updateData.theme.colors = {};
-        if (typeof theme.colors.primary === 'string') updateData.theme.colors.primary = theme.colors.primary;
-        if (typeof theme.colors.secondary === 'string') updateData.theme.colors.secondary = theme.colors.secondary;
-        if (typeof theme.colors.accent === 'string') updateData.theme.colors.accent = theme.colors.accent;
-        if (typeof theme.colors.background === 'string') updateData.theme.colors.background = theme.colors.background;
-        if (typeof theme.colors.text === 'string') updateData.theme.colors.text = theme.colors.text;
+    if (body.theme) {
+      const theme: Record<string, unknown> = {};
+      if (body.theme.colors) {
+        const colors: Record<string, unknown> = {};
+        const c = body.theme.colors;
+        if (c.primary !== undefined) colors.primary = c.primary;
+        if (c.secondary !== undefined) colors.secondary = c.secondary;
+        if (c.accent !== undefined) colors.accent = c.accent;
+        if (c.background !== undefined) colors.background = c.background;
+        if (c.text !== undefined) colors.text = c.text;
+        if (Object.keys(colors).length) theme.colors = colors;
       }
-      if (theme.logoUrl !== undefined) {
-        updateData.theme.logoUrl = theme.logoUrl === null ? null : String(theme.logoUrl);
+      if (body.theme.logoUrl !== undefined) {
+        theme.logoUrl = body.theme.logoUrl;
       }
-      if (typeof theme.fontFamily === 'string') {
-        updateData.theme.fontFamily = theme.fontFamily;
+      if (body.theme.fontFamily !== undefined) {
+        theme.fontFamily = body.theme.fontFamily;
       }
-    }
-
-    // Validate and update features (partial update)
-    if (features) {
-      updateData.features = {};
-      if (typeof features.bookingEnabled === 'boolean') updateData.features.bookingEnabled = features.bookingEnabled;
-      if (typeof features.paymentsEnabled === 'boolean') updateData.features.paymentsEnabled = features.paymentsEnabled;
-      if (typeof features.marketingModule === 'boolean') updateData.features.marketingModule = features.marketingModule;
-      if (typeof features.chatModule === 'boolean') updateData.features.chatModule = features.chatModule;
-      if (typeof features.waitlistEnabled === 'boolean') updateData.features.waitlistEnabled = features.waitlistEnabled;
-    }
-
-    // Validate and update localization (partial update)
-    if (localization) {
-      updateData.localization = {};
-      if (['he', 'en'].includes(localization.language)) {
-        updateData.localization.language = localization.language;
-      }
-      if (typeof localization.timezone === 'string') {
-        updateData.localization.timezone = localization.timezone;
-      }
-      if (typeof localization.currency === 'string') {
-        updateData.localization.currency = localization.currency;
+      if (Object.keys(theme).length) {
+        updateData.theme = theme;
       }
     }
 
-    // Use $set for partial updates
+    if (body.features) {
+      const features: Record<string, unknown> = {};
+      const f = body.features;
+      if (f.bookingEnabled !== undefined) features.bookingEnabled = f.bookingEnabled;
+      if (f.paymentsEnabled !== undefined) features.paymentsEnabled = f.paymentsEnabled;
+      if (f.marketingModule !== undefined) features.marketingModule = f.marketingModule;
+      if (f.chatModule !== undefined) features.chatModule = f.chatModule;
+      if (f.waitlistEnabled !== undefined) features.waitlistEnabled = f.waitlistEnabled;
+      if (Object.keys(features).length) {
+        updateData.features = features;
+      }
+    }
+
+    if (body.localization) {
+      const loc: Record<string, unknown> = {};
+      const l = body.localization;
+      if (l.language !== undefined) loc.language = l.language;
+      if (l.timezone !== undefined) loc.timezone = l.timezone;
+      if (l.currency !== undefined) loc.currency = l.currency;
+      if (Object.keys(loc).length) {
+        updateData.localization = loc;
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      const current = await BusinessSettings.findOne({ businessId: businessIdObj });
+      if (!current) {
+        res.status(404).json({ message: 'Settings not found' });
+        return;
+      }
+      res.json(current);
+      return;
+    }
+
     const updated = await BusinessSettings.findOneAndUpdate(
       { businessId: businessIdObj },
       { $set: updateData },
@@ -104,7 +116,8 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     );
 
     if (!updated) {
-      return res.status(404).json({ message: 'Settings not found' });
+      res.status(404).json({ message: 'Settings not found' });
+      return;
     }
 
     res.json(updated);
@@ -113,4 +126,3 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     res.status(500).json({ message: 'Internal server error' });
   }
 }
-

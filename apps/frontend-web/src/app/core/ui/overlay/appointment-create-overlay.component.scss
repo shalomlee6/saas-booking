@@ -183,3 +183,14 @@
   color: var(--text-primary);
   border-color: var(--text-muted);
 }
+
+.overlay-options-error {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.overlay-btn-inline {
+  align-self: stretch;
+}

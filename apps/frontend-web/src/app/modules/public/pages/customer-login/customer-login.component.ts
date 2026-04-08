@@ -10,6 +10,10 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import type { PublicBusiness } from '../../services/public-api.service';
 import { PublicApiService } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
+import {
+  formatParsedErrorForUi,
+  parseHttpClientError,
+} from '../../../../shared/utils/http-field-errors.util';
 
 @Component({
   selector: 'app-customer-login',
@@ -84,8 +88,12 @@ export class CustomerLoginComponent implements OnInit {
   }
 
   continue(): void {
-    if (this.formStep1.invalid || this.loading()) return;
+    if (this.loading()) return;
     this.formStep1.markAllAsTouched();
+    if (this.formStep1.invalid) {
+      this.error.set(null);
+      return;
+    }
     this.error.set(null);
     this.loading.set(true);
     const slug = this.slug();
@@ -100,14 +108,21 @@ export class CustomerLoginComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err?.error?.message ?? 'Something went wrong. Try again.');
+        this.error.set(
+          formatParsedErrorForUi(parseHttpClientError(err)) ??
+            'Something went wrong. Try again.'
+        );
       },
     });
   }
 
   verify(): void {
-    if (this.formStep2.invalid || this.loading()) return;
+    if (this.loading()) return;
     this.formStep2.markAllAsTouched();
+    if (this.formStep2.invalid) {
+      this.error.set(null);
+      return;
+    }
     this.error.set(null);
     this.loading.set(true);
     const slug = this.slug();
@@ -126,7 +141,10 @@ export class CustomerLoginComponent implements OnInit {
       },
       error: (err) => {
         this.loading.set(false);
-        this.error.set(err?.error?.message ?? 'Invalid code. Try again.');
+        this.error.set(
+          formatParsedErrorForUi(parseHttpClientError(err)) ??
+            'Invalid code. Try again.'
+        );
       },
     });
   }

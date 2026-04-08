@@ -95,12 +95,12 @@ export async function getPublicServices(req: Request, res: Response) {
 // GET /api/public/:businessSlug/available-slots
 export async function getPublicAvailableSlots(req: Request, res: Response) {
   try {
-    const { businessSlug } = req.params;
-    const { serviceId, customerId, weekStart } = req.query;
-
-    if (!serviceId) {
-      return res.status(400).json({ message: 'serviceId is required' });
-    }
+    const { businessSlug } = req.params as { businessSlug: string };
+    const { serviceId, customerId, weekStart } = req.query as {
+      serviceId: string;
+      customerId?: string;
+      weekStart?: string;
+    };
 
     // Resolve business
     const business = await Business.findOne({ slug: businessSlug });
@@ -150,10 +150,7 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
     // (midnight→midnight) are correct for the business locale.
     let weekStartStr: string;
     if (weekStart) {
-      const parsedDate = new Date(String(weekStart));
-      if (isNaN(parsedDate.getTime())) {
-        return res.status(400).json({ message: 'Invalid weekStart date format' });
-      }
+      const parsedDate = new Date(weekStart);
       weekStartStr = utcToDateStr(parsedDate, timezone);
     } else {
       weekStartStr = utcToDateStr(new Date(), timezone);
@@ -227,8 +224,13 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
 // POST /api/public/:businessSlug/appointments
 export async function createPublicAppointment(req: Request, res: Response) {
   try {
-    const { businessSlug } = req.params;
-    const { serviceId, customerId, start, end } = req.body;
+    const { businessSlug } = req.params as { businessSlug: string };
+    const { serviceId, customerId, start, end } = req.body as {
+      serviceId: string;
+      customerId: string;
+      start: string;
+      end: string;
+    };
 
     // Verify client token
     const header = req.headers['authorization'];
@@ -265,13 +267,6 @@ export async function createPublicAppointment(req: Request, res: Response) {
       return res.status(403).json({ message: 'Business mismatch' });
     }
 
-    // Validate input
-    if (!serviceId || !customerId || !start || !end) {
-      return res.status(400).json({
-        message: 'serviceId, customerId, start and end are required',
-      });
-    }
-
     // Verify customer belongs to business and matches token
     if (decoded.customerId !== customerId) {
       return res.status(403).json({ message: 'Customer mismatch' });
@@ -288,17 +283,8 @@ export async function createPublicAppointment(req: Request, res: Response) {
       return res.status(404).json({ message: 'Service not found' });
     }
 
-    // Validate dates
     const startDate = new Date(start);
     const endDate = new Date(end);
-
-    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      return res.status(400).json({ message: 'Invalid date format' });
-    }
-
-    if (startDate >= endDate) {
-      return res.status(400).json({ message: 'start must be before end' });
-    }
 
     // Check for collisions with existing appointments
     const conflictingAppointment = await Appointment.findOne({

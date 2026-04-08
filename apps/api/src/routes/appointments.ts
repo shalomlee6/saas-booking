@@ -3,6 +3,15 @@ import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { asyncHandler } from '../utils/asyncHandler';
+import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
+import {
+  appointmentCreateBodySchema,
+  appointmentIdParamsSchema,
+  appointmentUpdateBodySchema,
+  appointmentsListQuerySchema,
+  appointmentsWeekQuerySchema,
+  availableSlotsQuerySchema,
+} from '../validation/schemas/appointments';
 import {
   getAppointmentsList,
   getBusinessAppointmentsForWeek,
@@ -16,54 +25,44 @@ export const appointmentsRouter = Router();
 appointmentsRouter.use(auth);
 appointmentsRouter.use(requireBusinessContext);
 
-// GET /api/appointments/week
-appointmentsRouter.get('/week', getBusinessAppointmentsForWeek);
+appointmentsRouter.get(
+  '/week',
+  validateQuery(appointmentsWeekQuerySchema),
+  getBusinessAppointmentsForWeek
+);
 
-// GET /api/appointments/available-slots?serviceId=...&customerId=...&weekStart=...
-appointmentsRouter.get('/available-slots', getAvailableSlots);
+appointmentsRouter.get(
+  '/available-slots',
+  validateQuery(availableSlotsQuerySchema),
+  getAvailableSlots
+);
 
-// GET /api/appointments?from=2025-01-01&to=2025-01-02
-appointmentsRouter.get('/', getAppointmentsList);
-
-function hasTimezoneOffset(iso: string): boolean {
-  return /Z$|[+-]\d{2}:\d{2}$/.test(iso);
-}
+appointmentsRouter.get(
+  '/',
+  validateQuery(appointmentsListQuerySchema),
+  getAppointmentsList
+);
 
 // POST /api/appointments
 appointmentsRouter.post(
   '/',
+  validateBody(appointmentCreateBodySchema),
   asyncHandler(async (req: AuthRequest, res) => {
     const businessId = req.effectiveBusinessId!;
-    const { customerId, serviceId, start, end, notes } = req.body;
-
-    if (!customerId || !serviceId || !start || !end) {
-      return res.status(400).json({
-        message: 'customerId, serviceId, start and end are required',
-      });
-    }
-
-    if (typeof start !== 'string' || !hasTimezoneOffset(start)) {
-      return res.status(400).json({
-        message:
-          'start must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T13:00:00+02:00 or 2026-02-26T11:00:00Z)',
-      });
-    }
-    if (typeof end !== 'string' || !hasTimezoneOffset(end)) {
-      return res.status(400).json({
-        message:
-          'end must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T14:00:00+02:00 or 2026-02-26T12:00:00Z)',
-      });
-    }
-
-    const startDate = new Date(start);
-    const endDate = new Date(end);
+    const { customerId, serviceId, start, end, notes } = req.body as {
+      customerId: string;
+      serviceId: string;
+      start: string;
+      end: string;
+      notes?: string;
+    };
 
     const appointment = await createAppointmentAtomic({
       businessId: new Types.ObjectId(businessId),
       serviceId,
       customerId,
-      start: startDate,
-      end: endDate,
+      start: new Date(start),
+      end: new Date(end),
       source: 'owner',
       notes,
     });
@@ -75,27 +74,17 @@ appointmentsRouter.post(
 // PUT /api/appointments/:id
 appointmentsRouter.put(
   '/:id',
+  validateParams(appointmentIdParamsSchema),
+  validateBody(appointmentUpdateBodySchema),
   asyncHandler(async (req: AuthRequest, res) => {
     const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
-    const { start, end, status, notes } = req.body;
-
-    if (start !== undefined) {
-      if (typeof start !== 'string' || !hasTimezoneOffset(start)) {
-        return res.status(400).json({
-          message:
-            'start must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T13:00:00+02:00 or 2026-02-26T11:00:00Z)',
-        });
-      }
-    }
-    if (end !== undefined) {
-      if (typeof end !== 'string' || !hasTimezoneOffset(end)) {
-        return res.status(400).json({
-          message:
-            'end must be an ISO 8601 string with timezone offset (e.g. 2026-02-26T14:00:00+02:00 or 2026-02-26T12:00:00Z)',
-        });
-      }
-    }
+    const { start, end, status, notes } = req.body as {
+      start?: string;
+      end?: string;
+      status?: string;
+      notes?: string;
+    };
 
     const existing = await Appointment.findOne({ _id: id, businessId });
     if (!existing) {
@@ -147,6 +136,7 @@ appointmentsRouter.put(
 // DELETE /api/appointments/:id (ב-MVP: להפוך ל-cancelled)
 appointmentsRouter.delete(
   '/:id',
+  validateParams(appointmentIdParamsSchema),
   asyncHandler(async (req: AuthRequest, res) => {
     const businessId = req.effectiveBusinessId!;
     const { id } = req.params;

@@ -7,7 +7,6 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
@@ -24,6 +23,10 @@ import {
 } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
+import {
+  formatParsedErrorForUi,
+  parseHttpClientError,
+} from '../../../../shared/utils/http-field-errors.util';
 
 /** 3-step flow: 1=service, 2=date+time, 3=confirm */
 type BookStep = 1 | 2 | 3;
@@ -96,6 +99,8 @@ export class CustomerBookPageComponent implements OnInit {
   readonly loadingServices = signal(true);
   readonly loadingSlots = signal(false);
   readonly slotsError = signal(false);
+  /** Inline copy for slot load failures (toast not used here to avoid duplicate surfaces). */
+  readonly slotsErrorDetail = signal<string | null>(null);
   readonly submitting = signal(false);
 
   // ── Step navigation ────────────────────────────────────────────────────────
@@ -188,6 +193,7 @@ export class CustomerBookPageComponent implements OnInit {
         switchMap((params) => {
           this.loadingSlots.set(true);
           this.slotsError.set(false);
+          this.slotsErrorDetail.set(null);
           return this.publicApi
             .getAvailabilityByBusinessId(
               params.businessId,
@@ -198,8 +204,10 @@ export class CustomerBookPageComponent implements OnInit {
               catchError((err: unknown) => {
                 this.loadingSlots.set(false);
                 this.slotsError.set(true);
-                const detail = this.extractHttpErrorMessage(err);
-                this.showError(detail ?? 'שגיאה בטעינת השעות');
+                this.slotsErrorDetail.set(
+                  formatParsedErrorForUi(parseHttpClientError(err)) ??
+                    'שגיאה בטעינת השעות'
+                );
                 return EMPTY;
               })
             );
@@ -209,6 +217,7 @@ export class CustomerBookPageComponent implements OnInit {
       .subscribe((res) => {
         this.slots.set(res.slots);
         this.selectedSlot.set(null);
+        this.slotsErrorDetail.set(null);
         this.loadingSlots.set(false);
       });
   }
@@ -230,21 +239,6 @@ export class CustomerBookPageComponent implements OnInit {
       .subscribe(() => bump());
   }
 
-  private extractHttpErrorMessage(err: unknown): string | null {
-    if (err instanceof HttpErrorResponse) {
-      const body = err.error;
-      if (
-        body &&
-        typeof body === 'object' &&
-        body !== null &&
-        'message' in body
-      ) {
-        const m = (body as { message: unknown }).message;
-        return typeof m === 'string' && m.length > 0 ? m : null;
-      }
-    }
-    return null;
-  }
 
   // ── Step navigation ────────────────────────────────────────────────────────
 
@@ -266,6 +260,7 @@ export class CustomerBookPageComponent implements OnInit {
       this.slots.set([]);
       this.selectedSlot.set(null);
       this.slotsError.set(false);
+      this.slotsErrorDetail.set(null);
     }
     this.selectedService.set(svc);
     // Brief pause so the card selection animation is visible, then advance.
@@ -281,6 +276,7 @@ export class CustomerBookPageComponent implements OnInit {
     this.slots.set([]);
     this.selectedSlot.set(null);
     this.slotsError.set(false);
+    this.slotsErrorDetail.set(null);
     this.loadSlots(b.id, svc.id, dateStr);
   }
 
@@ -306,6 +302,7 @@ export class CustomerBookPageComponent implements OnInit {
     this.slots.set([]);
     this.selectedSlot.set(null);
     this.slotsError.set(false);
+    this.slotsErrorDetail.set(null);
   }
 
   // ── Booking submission ─────────────────────────────────────────────────────
@@ -371,7 +368,10 @@ export class CustomerBookPageComponent implements OnInit {
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
         } else {
-          this.showError(err?.error?.message ?? 'שגיאה באישור התור');
+          this.showError(
+            formatParsedErrorForUi(parseHttpClientError(err)) ??
+              'שגיאה באישור התור'
+          );
           // Destroy and recreate hold-to-confirm so the ring resets.
           this.showHoldButton.set(false);
           setTimeout(() => this.showHoldButton.set(true), 50);

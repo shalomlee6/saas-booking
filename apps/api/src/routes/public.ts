@@ -16,32 +16,74 @@ import {
 } from '../controllers/publicBookingController';
 import { requestOtp, verifyOtp } from '../controllers/publicAuthController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
+import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
+import {
+  legacyAvailableSlotsQuerySchema,
+  legacyBusinessSlugParamsSchema,
+  legacyPublicCreateAppointmentBodySchema,
+  publicAvailabilityQuerySchema,
+  publicCancelAppointmentBodySchema,
+  publicCancelAppointmentParamsSchema,
+  publicCreateAppointmentBodySchema,
+  slugAvailabilityQuerySchema,
+  slugParamsSchema,
+} from '../validation/schemas/publicBooking';
 
 export const publicRouter = Router();
 
 // --- Public booking API (used by customer UI at /b/:slug/book)
-// GET /api/public/availability?businessId=...&serviceId=...&date=YYYY-MM-DD (real availability)
-publicRouter.get('/availability', getPublicAvailability);
-// GET /api/public/businesses/:slug
-publicRouter.get('/businesses/:slug', getPublicBusinessBySlug);
-// GET /api/public/businesses/:slug/services
-publicRouter.get('/businesses/:slug/services', getPublicServicesBooking);
-// GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD
-publicRouter.get('/businesses/:slug/availability', getAvailability);
-// POST /api/public/appointments (optional Bearer = customer; else guest with customerName required)
-publicRouter.post('/appointments', optionalPublicCustomer, createPublicAppointmentBooking);
-// GET /api/public/appointments/upcoming (optional Bearer; returns null when guest/unauthenticated)
+publicRouter.get(
+  '/availability',
+  validateQuery(publicAvailabilityQuerySchema),
+  getPublicAvailability
+);
+publicRouter.get(
+  '/businesses/:slug',
+  validateParams(slugParamsSchema),
+  getPublicBusinessBySlug
+);
+publicRouter.get(
+  '/businesses/:slug/services',
+  validateParams(slugParamsSchema),
+  getPublicServicesBooking
+);
+publicRouter.get(
+  '/businesses/:slug/availability',
+  validateParams(slugParamsSchema),
+  validateQuery(slugAvailabilityQuerySchema),
+  getAvailability
+);
+publicRouter.post(
+  '/appointments',
+  validateBody(publicCreateAppointmentBodySchema),
+  optionalPublicCustomer,
+  createPublicAppointmentBooking
+);
 publicRouter.get('/appointments/upcoming', optionalPublicCustomer, getUpcomingCustomerAppointment);
-// DELETE /api/public/appointments/:appointmentId (requires valid customer Bearer JWT)
-publicRouter.delete('/appointments/:appointmentId', optionalPublicCustomer, cancelCustomerAppointment);
+publicRouter.delete(
+  '/appointments/:appointmentId',
+  validateParams(publicCancelAppointmentParamsSchema),
+  validateBody(publicCancelAppointmentBodySchema),
+  optionalPublicCustomer,
+  cancelCustomerAppointment
+);
 
 // --- Legacy public routes (dashboard / auth)
-publicRouter.get('/:businessSlug/business', getPublicBusiness);
-publicRouter.get('/:businessSlug/services', getPublicServices);
-publicRouter.get('/:businessSlug/available-slots', getPublicAvailableSlots);
-publicRouter.post('/:businessSlug/appointments', createPublicAppointment);
+publicRouter.get('/:businessSlug/business', validateParams(legacyBusinessSlugParamsSchema), getPublicBusiness);
+publicRouter.get('/:businessSlug/services', validateParams(legacyBusinessSlugParamsSchema), getPublicServices);
+publicRouter.get(
+  '/:businessSlug/available-slots',
+  validateParams(legacyBusinessSlugParamsSchema),
+  validateQuery(legacyAvailableSlotsQuerySchema),
+  getPublicAvailableSlots
+);
+publicRouter.post(
+  '/:businessSlug/appointments',
+  validateParams(legacyBusinessSlugParamsSchema),
+  validateBody(legacyPublicCreateAppointmentBodySchema),
+  createPublicAppointment
+);
 
 // OTP auth endpoints (dev stub)
 publicRouter.post('/:businessSlug/auth/request-otp', requestOtp);
 publicRouter.post('/:businessSlug/auth/verify-otp', verifyOtp);
-

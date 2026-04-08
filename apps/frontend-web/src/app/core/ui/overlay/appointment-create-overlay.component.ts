@@ -28,6 +28,10 @@ import {
 } from '../../../modules/appointments/state/appointments.selectors';
 import type { CreateAppointmentDto } from '../../../modules/appointments/dto/create-appointment.dto';
 import { DEFAULT_APPOINTMENT_DURATION_MINUTES } from '../../../modules/appointments/utils/calendar.utils';
+import {
+  formatParsedErrorForUi,
+  parseHttpClientError,
+} from '../../../shared/utils/http-field-errors.util';
 
 export interface CustomerOption {
   _id: string;
@@ -112,9 +116,8 @@ export class AppointmentCreateOverlayComponent {
       })
       .catch((err: unknown) => {
         this.optionsError.set(
-          err && typeof err === 'object' && 'message' in err
-            ? String((err as { message: unknown }).message)
-            : 'Failed to load options'
+          formatParsedErrorForUi(parseHttpClientError(err)) ??
+            'Failed to load options'
         );
       })
       .finally(() => this.loadingOptions.set(false));
@@ -135,11 +138,19 @@ export class AppointmentCreateOverlayComponent {
     this.closed.emit();
   }
 
+  /** Reload customers/services after a load failure (same pipeline as open). */
+  retryLoadOptions(): void {
+    this.loadOptions();
+  }
+
   private pendingCreate = false;
 
   onSubmit(): void {
-    if (this.form.invalid || this.creating() || this.pendingCreate) {
-      this.form.markAllAsTouched();
+    if (this.creating() || this.pendingCreate) {
+      return;
+    }
+    this.form.markAllAsTouched();
+    if (this.form.invalid) {
       return;
     }
     const d = this.date;

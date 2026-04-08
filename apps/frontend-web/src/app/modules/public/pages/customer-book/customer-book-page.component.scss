@@ -486,6 +486,15 @@
 }
 
 // ─── Empty / error notices ────────────────────────────────────────────────────
+.book-slots-loading-hint {
+  width: 100%;
+  margin: 0 0 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--book-text-soft);
+  text-align: center;
+}
+
 .book-notice-state {
   display: flex;
   flex-direction: column;
@@ -496,12 +505,30 @@
   background: var(--book-card);
   border-radius: 16px;
   border: 1px dashed var(--book-border);
+}
 
-  p {
-    margin: 0;
-    font-size: 0.9375rem;
-    color: var(--book-text-soft);
-  }
+.book-notice-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--book-text);
+}
+
+.book-notice-detail {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--book-text-soft);
+  max-width: 280px;
+}
+
+.book-notice-state-error {
+  border-color: color-mix(in srgb, #c45c6a 35%, var(--book-border));
+  background: color-mix(in srgb, #fdeef0 55%, var(--book-card));
+}
+
+.book-notice-state-empty {
+  border-style: solid;
 }
 
 .book-text-btn {

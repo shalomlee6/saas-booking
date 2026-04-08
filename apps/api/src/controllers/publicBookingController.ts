@@ -227,18 +227,11 @@ export async function getAvailabilityForBusiness(
 // --- GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD
 export async function getAvailability(req: Request, res: Response) {
   try {
-    const { slug } = req.params;
-    const { serviceId, date: dateStr } = req.query;
-
-    if (!serviceId || typeof serviceId !== 'string') {
-      return res.status(400).json({ message: 'serviceId is required' });
-    }
-    if (!dateStr || typeof dateStr !== 'string') {
-      return res.status(400).json({ message: 'date is required (YYYY-MM-DD)' });
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return res.status(400).json({ message: 'date must be YYYY-MM-DD' });
-    }
+    const { slug } = req.params as { slug: string };
+    const { serviceId, date: dateStr } = req.query as {
+      serviceId: string;
+      date: string;
+    };
 
     const business = await Business.findOne({ slug });
     if (!business) {
@@ -259,20 +252,11 @@ export async function getAvailability(req: Request, res: Response) {
 // --- GET /api/public/availability?businessId=...&serviceId=...&date=YYYY-MM-DD
 export async function getPublicAvailability(req: Request, res: Response) {
   try {
-    const { businessId, serviceId, date: dateStr } = req.query;
-
-    if (!businessId || typeof businessId !== 'string') {
-      return res.status(400).json({ message: 'businessId is required' });
-    }
-    if (!serviceId || typeof serviceId !== 'string') {
-      return res.status(400).json({ message: 'serviceId is required' });
-    }
-    if (!dateStr || typeof dateStr !== 'string') {
-      return res.status(400).json({ message: 'date is required (YYYY-MM-DD)' });
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return res.status(400).json({ message: 'date must be YYYY-MM-DD' });
-    }
+    const { businessId, serviceId, date: dateStr } = req.query as {
+      businessId: string;
+      serviceId: string;
+      date: string;
+    };
 
     const business = await Business.findById(businessId);
     if (!business) {
@@ -308,25 +292,12 @@ export async function createPublicAppointment(req: Request, res: Response) {
     };
 
     const { serviceId, date: dateStr, time: timeStr } = body;
-    if (!serviceId || !dateStr || !timeStr) {
-      return res.status(400).json({
-        message: 'serviceId, date (YYYY-MM-DD) and time (HH:mm) are required',
-      });
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-      return res.status(400).json({ message: 'date must be YYYY-MM-DD' });
-    }
-    if (!/^\d{1,2}:\d{2}$/.test(timeStr)) {
-      return res.status(400).json({ message: 'time must be HH:mm' });
-    }
 
     let business;
     if (body.slug) {
       business = await Business.findOne({ slug: body.slug });
-    } else if (body.businessId) {
-      business = await Business.findById(body.businessId);
     } else {
-      return res.status(400).json({ message: 'slug or businessId is required' });
+      business = await Business.findById(body.businessId!);
     }
 
     if (!business) {
@@ -508,14 +479,10 @@ export async function cancelCustomerAppointment(req: Request, res: Response) {
       return res.status(401).json({ message: 'Authentication required' });
     }
 
-    const { appointmentId } = req.params;
-    const { cancellationReason } = req.body as { cancellationReason?: string };
-
-    // Validate reason (defence-in-depth; frontend also enforces this).
-    const trimmedReason = (cancellationReason ?? '').trim();
-    if (!trimmedReason) {
-      return res.status(400).json({ message: 'cancellationReason is required' });
-    }
+    const { appointmentId } = req.params as { appointmentId: string };
+    const { cancellationReason: trimmedReason } = req.body as {
+      cancellationReason: string;
+    };
 
     // Load the appointment, enforcing both customer AND business ownership.
     const apt = await Appointment.findOne({

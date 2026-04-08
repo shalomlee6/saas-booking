@@ -26,69 +26,78 @@
         novalidate
       >
         @if (loadingOptions()) {
-          <p class="overlay-loading">Loading options…</p>
-        }
-        @if (optionsError()) {
-          <p class="overlay-error">{{ optionsError() }}</p>
-        }
-        <div class="overlay-field">
-          <label for="overlay-customer">Customer</label>
-          <select
-            id="overlay-customer"
-            formControlName="customerId"
-            class="overlay-input"
-            [class.overlay-input-invalid]="customerId?.invalid && (customerId?.touched || customerId?.dirty)"
-          >
-            <option value="">Select customer</option>
-            @for (c of customers(); track c._id) {
-              <option [value]="c._id">{{ c.name ?? c._id }}</option>
+          <p class="overlay-loading" aria-busy="true">Loading options…</p>
+        } @else if (optionsError(); as optErr) {
+          <div class="overlay-options-error" role="alert">
+            <p class="overlay-error">{{ optErr }}</p>
+            <button
+              type="button"
+              class="overlay-btn overlay-btn-primary overlay-btn-inline"
+              (click)="retryLoadOptions()"
+            >
+              Retry
+            </button>
+          </div>
+        } @else {
+          <div class="overlay-field">
+            <label for="overlay-customer">Customer</label>
+            <select
+              id="overlay-customer"
+              formControlName="customerId"
+              class="overlay-input"
+              [class.overlay-input-invalid]="customerId?.invalid && (customerId?.touched || customerId?.dirty)"
+            >
+              <option value="">Select customer</option>
+              @for (c of customers(); track c._id) {
+                <option [value]="c._id">{{ c.name ?? c._id }}</option>
+              }
+            </select>
+            @if (customerId?.invalid && (customerId?.touched || customerId?.dirty)) {
+              <span class="overlay-field-error">Required.</span>
             }
-          </select>
-          @if (customerId?.invalid && (customerId?.touched || customerId?.dirty)) {
-            <span class="overlay-field-error">Required.</span>
-          }
-        </div>
-        <div class="overlay-field">
-          <label for="overlay-service">Service</label>
-          <select
-            id="overlay-service"
-            formControlName="serviceId"
-            class="overlay-input"
-            [class.overlay-input-invalid]="serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)"
-          >
-            <option value="">Select service</option>
-            @for (s of services(); track s._id) {
-              <option [value]="s._id">{{ s.name ?? s._id }}</option>
+          </div>
+          <div class="overlay-field">
+            <label for="overlay-service">Service</label>
+            <select
+              id="overlay-service"
+              formControlName="serviceId"
+              class="overlay-input"
+              [class.overlay-input-invalid]="serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)"
+            >
+              <option value="">Select service</option>
+              @for (s of services(); track s._id) {
+                <option [value]="s._id">{{ s.name ?? s._id }}</option>
+              }
+            </select>
+            @if (serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)) {
+              <span class="overlay-field-error">Required.</span>
             }
-          </select>
-          @if (serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)) {
-            <span class="overlay-field-error">Required.</span>
+          </div>
+          <div class="overlay-field">
+            <label for="overlay-notes">Notes</label>
+            <textarea
+              id="overlay-notes"
+              formControlName="notes"
+              class="overlay-input overlay-textarea"
+              rows="2"
+            ></textarea>
+          </div>
+          @if (serverError()) {
+            <p class="overlay-error overlay-error-server">{{ serverError() }}</p>
           }
-        </div>
-        <div class="overlay-field">
-          <label for="overlay-notes">Notes</label>
-          <textarea
-            id="overlay-notes"
-            formControlName="notes"
-            class="overlay-input overlay-textarea"
-            rows="2"
-          ></textarea>
-        </div>
-        @if (serverError()) {
-          <p class="overlay-error overlay-error-server">{{ serverError() }}</p>
+          <div class="overlay-actions">
+            <button
+              type="submit"
+              class="overlay-btn overlay-btn-primary"
+              [disabled]="creating()"
+            >
+              {{ creating() ? 'Creating…' : 'Create' }}
+            </button>
+            <button type="button" class="overlay-btn overlay-btn-ghost" (click)="close()">
+              Cancel
+            </button>
+          </div>
         }
-        <div class="overlay-actions">
-          <button
-            type="submit"
-            class="overlay-btn overlay-btn-primary"
-            [disabled]="form.invalid || creating() || loadingOptions()"
-          >
-            {{ creating() ? 'Creating…' : 'Create' }}
-          </button>
-          <button type="button" class="overlay-btn overlay-btn-ghost" (click)="close()">
-            Cancel
-          </button>
-        </div>
       </form>
     </div>
   </div>
