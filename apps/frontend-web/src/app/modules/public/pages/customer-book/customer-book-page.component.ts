@@ -19,7 +19,6 @@ import {
   PublicApiService,
   type PublicBusinessForBooking,
   type PublicService,
-  type CreateAppointmentBody,
 } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
@@ -27,6 +26,10 @@ import {
   formatParsedErrorForUi,
   parseHttpClientError,
 } from '../../../../shared/utils/http-field-errors.util';
+import {
+  buildPublicCreateAppointmentBody,
+  toDateKeyLocal,
+} from '../../dto/public-booking-dto.adapter';
 
 /** 3-step flow: 1=service, 2=date+time, 3=confirm */
 type BookStep = 1 | 2 | 3;
@@ -131,13 +134,7 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDateStr = computed(() => {
     const d = this.selectedDate();
     if (!d) return '';
-    return (
-      d.getFullYear() +
-      '-' +
-      String(d.getMonth() + 1).padStart(2, '0') +
-      '-' +
-      String(d.getDate()).padStart(2, '0')
-    );
+    return toDateKeyLocal(d);
   });
 
   readonly formattedBookingDate = computed(() => {
@@ -320,16 +317,14 @@ export class CustomerBookPageComponent implements OnInit {
 
     this.submitting.set(true);
 
-    const body: CreateAppointmentBody = {
+    const body = buildPublicCreateAppointmentBody({
       businessId: b.id,
       serviceId: svc.id,
       date: dateStr,
       time,
-    };
-    if (!loggedIn) {
-      body.customerName = name;
-      body.customerPhone = this.guestPhone().trim() || undefined;
-    }
+      customerName: !loggedIn ? name : undefined,
+      customerPhone: !loggedIn ? this.guestPhone() : undefined,
+    });
 
     this.publicApi.createAppointment(body).subscribe({
       next: (res) => {

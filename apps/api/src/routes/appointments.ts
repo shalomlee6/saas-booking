@@ -19,6 +19,7 @@ import {
 } from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
 import { createAppointmentAtomic, assertNoOverlap } from '../services/createAppointmentAtomic';
+import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 
 export const appointmentsRouter = Router();
 
@@ -67,7 +68,7 @@ appointmentsRouter.post(
       notes,
     });
 
-    return res.status(201).json(appointment);
+    return res.status(201).json(appointmentDocumentToResponseDto(appointment));
   })
 );
 
@@ -104,6 +105,18 @@ appointmentsRouter.put(
     const timesChanged = start !== undefined || end !== undefined;
 
     if (timesChanged) {
+      if (newStart.getTime() >= newEnd.getTime()) {
+        return res.status(400).json({
+          message: 'Validation failed',
+          errors: [
+            {
+              path: 'end',
+              message: 'end must be after start',
+              code: 'custom',
+            },
+          ],
+        });
+      }
       await assertNoOverlap(new Types.ObjectId(businessId), newStart, newEnd, id);
     }
 
@@ -129,7 +142,7 @@ appointmentsRouter.put(
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    res.json(appointment);
+    res.json(appointmentDocumentToResponseDto(appointment));
   })
 );
 
@@ -151,6 +164,6 @@ appointmentsRouter.delete(
       return res.status(404).json({ message: 'Appointment not found' });
     }
 
-    res.json(appointment);
+    res.json(appointmentDocumentToResponseDto(appointment));
   })
 );

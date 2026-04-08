@@ -47,14 +47,10 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
   }
 }
 
-// POST /api/admin/businesses
+// POST /api/admin/businesses — body validated by createAdminBusinessBodySchema (unknown keys stripped)
 export async function createAdminBusiness(req: AuthRequest, res: Response): Promise<any> {
   try {
-    const { name } = req.body;
-
-    if (!name || typeof name !== 'string') {
-      return res.status(400).json({ message: 'name is required' });
-    }
+    const { name } = req.body as { name: string };
 
     // Generate unique slug
     const baseSlug = generateSlug(name);

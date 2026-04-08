@@ -3,6 +3,10 @@ import { Observable, BehaviorSubject, switchMap, map, shareReplay } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import type { Appointment, AppointmentListItem } from '../model/appointment';
 import type { CreateAppointmentDto } from '../dto/create-appointment.dto';
+import {
+  buildUpdateAppointmentDto,
+  mapAppointmentDtoToModel,
+} from '../dto/appointment-dto-adapter';
 
 export interface AppointmentsListParams {
   from?: string;
@@ -38,34 +42,8 @@ export class AppointmentsApiService {
       if (params.to) q.set('to', params.to);
       path += `?${q.toString()}`;
     }
-    let invalidDateLogged = false;
     return this.api.get<AppointmentListItem[]>(path).pipe(
-      map((dtos) =>
-        dtos
-          .map((d) => {
-            const start = new Date(d.start as string | number | Date);
-            const end = new Date(d.end as string | number | Date);
-            if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-              if (!invalidDateLogged) {
-                console.warn('[AppointmentsApiService] Skipping appointment with invalid start/end', d);
-                invalidDateLogged = true;
-              }
-              return null;
-            }
-            return {
-              _id: d.appointmentId,
-              start,
-              end,
-              status: d.status,
-              price: d.price,
-              durationMinutes: d.durationMinutes,
-              serviceName: d.serviceName,
-              customerName: d.customerName,
-              customerPhone: d.customerPhone ?? undefined,
-            } as Appointment;
-          })
-          .filter((a): a is Appointment => a != null)
-      )
+      map((dtos) => dtos.map((d) => mapAppointmentDtoToModel(d)).filter((a): a is Appointment => a != null))
     );
   }
 
@@ -76,7 +54,7 @@ export class AppointmentsApiService {
 
   /** PUT /api/appointments/:id */
   update(id: string, body: Partial<{ start: string; end: string; status: string; notes: string }>): Observable<Appointment> {
-    return this.api.put<Appointment>(`appointments/${id}`, body);
+    return this.api.put<Appointment>(`appointments/${id}`, buildUpdateAppointmentDto(body));
   }
 
   /** DELETE /api/appointments/:id (cancels) */

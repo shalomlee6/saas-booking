@@ -2,6 +2,7 @@ import { z } from 'zod';
 import {
   businessSlugParam,
   hhMm,
+  iso8601CalendarDayOrInstant,
   iso8601DateTimeWithOffset,
   mongoObjectIdString,
   yyyyMmDd,
@@ -13,20 +14,20 @@ export const publicAvailabilityQuerySchema = z
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
   })
-  .strict();
+  .strip();
 
 export const slugAvailabilityQuerySchema = z
   .object({
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
   })
-  .strict();
+  .strip();
 
 export const slugParamsSchema = z
   .object({
     slug: businessSlugParam,
   })
-  .strict();
+  .strip();
 
 /** POST /api/public/appointments */
 export const publicCreateAppointmentBodySchema = z
@@ -45,7 +46,7 @@ export const publicCreateAppointmentBodySchema = z
     customerName: z.string().max(200).optional(),
     customerPhone: z.string().max(50).optional(),
   })
-  .strict()
+  .strip()
   .superRefine((data, ctx) => {
     const hasSlug = data.slug !== undefined;
     const hasBid = data.businessId !== undefined;
@@ -69,7 +70,7 @@ export const publicCancelAppointmentParamsSchema = z
   .object({
     appointmentId: mongoObjectIdString,
   })
-  .strict();
+  .strip();
 
 export const publicCancelAppointmentBodySchema = z
   .object({
@@ -79,32 +80,23 @@ export const publicCancelAppointmentBodySchema = z
       .transform((s) => s.trim())
       .refine((s) => s.length > 0, { message: 'cancellationReason is required' }),
   })
-  .strict();
+  .strip();
 
 /** Legacy POST /api/public/:businessSlug/appointments (Bearer client) */
 export const legacyBusinessSlugParamsSchema = z
   .object({
     businessSlug: businessSlugParam,
   })
-  .strict();
+  .strip();
 
 /** GET /api/public/:businessSlug/available-slots */
 export const legacyAvailableSlotsQuerySchema = z
   .object({
     serviceId: mongoObjectIdString,
     customerId: mongoObjectIdString.optional(),
-    weekStart: z.string().min(1).optional(),
+    weekStart: iso8601CalendarDayOrInstant.optional(),
   })
-  .strict()
-  .superRefine((q, ctx) => {
-    if (q.weekStart !== undefined && Number.isNaN(Date.parse(q.weekStart))) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['weekStart'],
-        message: 'Must be a valid ISO 8601 date string',
-      });
-    }
-  });
+  .strip();
 
 export const legacyPublicCreateAppointmentBodySchema = z
   .object({
@@ -113,7 +105,7 @@ export const legacyPublicCreateAppointmentBodySchema = z
     start: iso8601DateTimeWithOffset,
     end: iso8601DateTimeWithOffset,
   })
-  .strict()
+  .strip()
   .superRefine((data, ctx) => {
     if (new Date(data.start) >= new Date(data.end)) {
       ctx.addIssue({

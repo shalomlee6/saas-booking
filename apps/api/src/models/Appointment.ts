@@ -1,10 +1,11 @@
 import { Schema, model,Types, Document } from 'mongoose';
+import {
+  APPOINTMENT_SOURCES,
+  APPOINTMENT_STATUSES,
+  type AppointmentStatus,
+} from '../dto/enums';
 
-export type AppointmentStatus =
-  | 'pending'
-  | 'confirmed'
-  | 'completed'
-  | 'cancelled';
+export type { AppointmentStatus };
 
 export interface IAppointment extends Document {
   businessId: Types.ObjectId;
@@ -53,13 +54,13 @@ const AppointmentSchema = new Schema<IAppointment>(
     end: { type: Date, required: true },
     status: {
       type: String,
-      enum: ['pending', 'confirmed', 'completed', 'cancelled'],
+      enum: APPOINTMENT_STATUSES,
       default: 'confirmed',
       index: true,
     },
     source: {
       type: String,
-      enum: ['owner', 'client-online'],
+      enum: APPOINTMENT_SOURCES,
       default: 'owner',
     },
     notes: String,

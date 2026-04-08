@@ -74,6 +74,40 @@ export function businessDayStartUtc(dateStr: string, timezone: string): Date {
   return new Date(candidate.getTime() - remaining * 60_000);
 }
 
+/**
+ * UTC instant for a wall-clock calendar date + `HH:mm` in the business IANA timezone.
+ *
+ * Implementation scans UTC in 1-minute steps from business-local midnight through the next
+ * 36 hours and matches `getLocalParts` against the target. This handles DST transitions
+ * (skipped / repeated local times) using the zone rules surfaced by `Intl`.
+ *
+ * If the wall time does not exist (gap), returns null. If it is ambiguous (fall back), the
+ * earlier UTC instant (first occurrence) is returned.
+ */
+export function businessWallTimeToUtc(
+  dateStr: string,
+  timeStr: string,
+  timezone: string
+): Date | null {
+  const [hhRaw, mmRaw] = timeStr.trim().split(':');
+  const th = Number(hhRaw);
+  const tm = Number(mmRaw ?? '0');
+  if (!Number.isFinite(th) || !Number.isFinite(tm)) return null;
+  const targetMin = th * 60 + tm;
+
+  const dayStart = businessDayStartUtc(dateStr, timezone);
+  const endMs = dayStart.getTime() + 36 * 60 * 60 * 1000;
+
+  for (let t = dayStart.getTime(); t < endMs; t += 60 * 1000) {
+    const p = getLocalParts(new Date(t), timezone);
+    const key = `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
+    if (key === dateStr && p.hour * 60 + p.minute === targetMin) {
+      return new Date(t);
+    }
+  }
+  return null;
+}
+
 /** Hour range for the calendar grid (inclusive start, exclusive end would be 20). */
 export const CALENDAR_HOUR_START = 8;
 export const CALENDAR_HOUR_END = 20;

@@ -9,6 +9,7 @@ import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { defaultOpeningHours } from '../models/BusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
+import { toIsoUtcString } from '../dto/datetime';
 
 /** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
@@ -61,8 +62,8 @@ export async function getAppointmentsList(req: AuthRequest, res: Response) {
       const durationMinutes = apt.durationMinutes ?? service?.durationMinutes ?? undefined;
       return {
         appointmentId: apt._id.toString(),
-        start: apt.start,
-        end: apt.end,
+        start: toIsoUtcString(apt.start),
+        end: toIsoUtcString(apt.end),
         status: apt.status,
         price,
         durationMinutes,
@@ -116,8 +117,8 @@ export async function getBusinessAppointmentsForWeek(req: AuthRequest, res: Resp
 
       return {
         _id: apt._id.toString(),
-        start: apt.start.toISOString(),
-        end: apt.end.toISOString(),
+        start: toIsoUtcString(apt.start),
+        end: toIsoUtcString(apt.end),
         status: apt.status,
         customer: customerPopulated
           ? {
@@ -241,8 +242,8 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
 
           if (!isSlotOccupied(slotStart, slotEnd)) {
             availableSlots.push({
-              start: slotStart.toISOString(),
-              end: slotEnd.toISOString(),
+              start: toIsoUtcString(slotStart),
+              end: toIsoUtcString(slotEnd),
             });
           }
           minutes += slotStep;

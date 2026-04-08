@@ -21,6 +21,7 @@ import {
 import { toSignal } from '@angular/core/rxjs-interop';
 import { take, forkJoin, lastValueFrom } from 'rxjs';
 import { ApiService } from '../../api/api.service';
+import { AuthService } from '../../auth/auth.service';
 import * as AppointmentsActions from '../../../modules/appointments/state/appointments.actions';
 import {
   selectError,
@@ -28,6 +29,7 @@ import {
 } from '../../../modules/appointments/state/appointments.selectors';
 import type { CreateAppointmentDto } from '../../../modules/appointments/dto/create-appointment.dto';
 import { DEFAULT_APPOINTMENT_DURATION_MINUTES } from '../../../modules/appointments/utils/calendar.utils';
+import { buildCreateAppointmentDtoFromDateTime } from '../../../modules/appointments/dto/appointment-dto-adapter';
 import {
   formatParsedErrorForUi,
   parseHttpClientError,
@@ -54,6 +56,7 @@ export class AppointmentCreateOverlayComponent {
   private readonly store = inject(Store);
   private readonly actions = inject(Actions);
   private readonly api = inject(ApiService);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -156,22 +159,16 @@ export class AppointmentCreateOverlayComponent {
     const d = this.date;
     const t = this.time;
     if (!d || !t) return;
-    const startStr = `${d}T${t}`;
-    const startDate = new Date(startStr);
-    if (isNaN(startDate.getTime())) return;
-    const endDate = new Date(
-      startDate.getTime() + DEFAULT_APPOINTMENT_DURATION_MINUTES * 60 * 1000
-    );
-
-    const dto: CreateAppointmentDto = {
-      customerId: this.form.get('customerId')?.value?.trim() ?? '',
-      serviceId: this.form.get('serviceId')?.value?.trim() ?? '',
-      start: startDate.toISOString(),
-      end: endDate.toISOString(),
-      time: t,
+    const dto: CreateAppointmentDto | null = buildCreateAppointmentDtoFromDateTime({
+      customerId: this.form.get('customerId')?.value ?? '',
+      serviceId: this.form.get('serviceId')?.value ?? '',
       date: d,
-      notes: this.form.get('notes')?.value?.trim() || undefined,
-    };
+      time: t,
+      durationMinutes: DEFAULT_APPOINTMENT_DURATION_MINUTES,
+      notes: this.form.get('notes')?.value ?? '',
+      businessTimezone: this.auth.businessTimezone(),
+    });
+    if (!dto) return;
     this.pendingCreate = true;
     this.store.dispatch(AppointmentsActions.create({ dto }));
     this.actions

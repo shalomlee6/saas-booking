@@ -8,6 +8,8 @@ import {
   adminStopImpersonate,
   adminUpdateBusinessUi,
 } from '../controllers/adminController';
+import { validateBody } from '../middleware/validateRequest';
+import { createAdminBusinessBodySchema } from '../validation/schemas/admin';
 
 export const adminRouter = Router();
 
@@ -16,7 +18,7 @@ adminRouter.use(auth);
 adminRouter.use(requireSuperAdmin);
 
 adminRouter.get('/businesses', getAdminBusinesses);
-adminRouter.post('/businesses', createAdminBusiness);
+adminRouter.post('/businesses', validateBody(createAdminBusinessBodySchema), createAdminBusiness);
 adminRouter.post('/impersonate', adminImpersonate);
 adminRouter.post('/stop-impersonate', adminStopImpersonate);
 adminRouter.patch('/businesses/:id/ui', adminUpdateBusinessUi);

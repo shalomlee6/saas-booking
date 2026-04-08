@@ -7,6 +7,7 @@ import { Appointment } from '../models/Appointment';
 import { defaultOpeningHours } from '../models/BusinessSettings';
 import jwt from 'jsonwebtoken';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { toIsoUtcString } from '../dto/datetime';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 
 /** Convert YYYY-MM-DD + HH:mm in a timezone to a UTC Date. */
@@ -199,8 +200,8 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
 
           if (!isSlotOccupied(slotStart, slotEnd)) {
             availableSlots.push({
-              start: slotStart.toISOString(),
-              end: slotEnd.toISOString(),
+              start: toIsoUtcString(slotStart),
+              end: toIsoUtcString(slotEnd),
               isAvailable: true,
             });
           }

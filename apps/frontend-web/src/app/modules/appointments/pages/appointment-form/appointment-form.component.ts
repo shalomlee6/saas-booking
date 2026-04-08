@@ -9,6 +9,8 @@ import {
 } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { CreateAppointmentDto } from '../../dto/create-appointment.dto';
+import { buildCreateAppointmentDtoFromRange } from '../../dto/appointment-dto-adapter';
+import { AuthService } from '../../../../core/auth/auth.service';
 import * as AppointmentsActions from '../../state/appointments.actions';
 import {
   selectError,
@@ -29,6 +31,7 @@ export class AppointmentFormComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly store = inject(Store);
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
 
   readonly creating = toSignal(this.store.select(selectCreating), {
     initialValue: false,
@@ -90,24 +93,21 @@ export class AppointmentFormComponent implements OnInit {
     return this.form.get('end');
   }
 
-  private toISO(value: string): string {
-    if (!value) return '';
-    return new Date(value).toISOString();
-  }
-
   onSubmit(): void {
     if (this.form.invalid || this.creating()) {
       this.form.markAllAsTouched();
       return;
     }
 
-    const dto: CreateAppointmentDto = {
-      customerId: this.form.get('customerId')?.value?.trim(),
-      serviceId: this.form.get('serviceId')?.value?.trim(),
-      start: this.toISO(this.form.get('start')?.value),
-      end: this.toISO(this.form.get('end')?.value),
-      notes: this.form.get('notes')?.value?.trim() || undefined,
-    };
+    const dto: CreateAppointmentDto | null = buildCreateAppointmentDtoFromRange({
+      customerId: this.form.get('customerId')?.value ?? '',
+      serviceId: this.form.get('serviceId')?.value ?? '',
+      startLocal: this.form.get('start')?.value ?? '',
+      endLocal: this.form.get('end')?.value ?? '',
+      notes: this.form.get('notes')?.value ?? '',
+      businessTimezone: this.auth.businessTimezone(),
+    });
+    if (!dto) return;
 
     this.store.dispatch(AppointmentsActions.create({ dto }));
   }

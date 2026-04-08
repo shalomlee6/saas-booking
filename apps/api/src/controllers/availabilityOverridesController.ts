@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import { AvailabilityOverride } from '../models/AvailabilityOverride';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
+import { AVAILABILITY_OVERRIDE_TYPES } from '../dto/enums';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM_REGEX = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -69,7 +70,7 @@ export async function postOverride(req: AuthRequest, res: Response): Promise<voi
       res.status(400).json({ message: 'date must be YYYY-MM-DD' });
       return;
     }
-    if (!type || (type !== 'closed' && type !== 'custom')) {
+    if (!type || !(AVAILABILITY_OVERRIDE_TYPES as readonly string[]).includes(type)) {
       res.status(400).json({ message: 'type must be "closed" or "custom"' });
       return;
     }

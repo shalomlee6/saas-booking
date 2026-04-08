@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { settingsLanguageZod, settingsPlanZod } from '../../dto/enums';
 
 const themeColorsSchema = z
   .object({
@@ -33,7 +34,7 @@ const featuresSchema = z
 
 const localizationSchema = z
   .object({
-    language: z.enum(['he', 'en']).optional(),
+    language: settingsLanguageZod.optional(),
     timezone: z.string().optional(),
     currency: z.string().optional(),
   })
@@ -43,7 +44,7 @@ const localizationSchema = z
 /** PUT /api/settings/me/settings — partial document; unknown keys rejected */
 export const updateBusinessSettingsBodySchema = z
   .object({
-    plan: z.enum(['free', 'normal', 'premium']).optional(),
+    plan: settingsPlanZod.optional(),
     theme: themeSchema,
     features: featuresSchema,
     localization: localizationSchema,

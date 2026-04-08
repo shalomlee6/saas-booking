@@ -1,8 +1,9 @@
 import mongoose, { Types, type ClientSession } from 'mongoose';
 import { Appointment, type IAppointment } from '../models/Appointment';
 import { Service } from '../models/Service';
+import type { AppointmentSource } from '../dto/enums';
 
-export type AppointmentSource = 'owner' | 'client-online';
+export type { AppointmentSource };
 
 // TODO => 
 // NOTE:
