@@ -1,5 +1,6 @@
 import mongoose, { Types, type ClientSession } from 'mongoose';
 import { Appointment, type IAppointment } from '../models/Appointment';
+import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import type { AppointmentSource } from '../dto/enums';
 import { AppointmentError } from './appointmentErrors';
@@ -27,6 +28,8 @@ export interface CreateAppointmentPayload {
 export interface CreateAppointmentOptions {
   /** If true, require customerId to be present */
   requireCustomerId?: boolean;
+  /** If true, ensure provided customerId belongs to this business */
+  validateCustomerOwnership?: boolean;
   /** When updating an appointment, exclude this id from overlap check */
   excludeAppointmentId?: Types.ObjectId | string;
 }
@@ -78,7 +81,7 @@ export async function createAppointmentAtomic(
   options: CreateAppointmentOptions = {}
 ): Promise<IAppointment> {
   const { businessId, serviceId, start, end, source } = payload;
-  const { requireCustomerId } = options;
+  const { requireCustomerId, validateCustomerOwnership = true } = options;
 
   if (!businessId) {
     throw new AppointmentError(400, 'businessId is required');
@@ -115,6 +118,20 @@ export async function createAppointmentAtomic(
 
     if (!service) {
       throw new AppointmentError(404, 'Service not found');
+    }
+
+    if (payload.customerId && validateCustomerOwnership) {
+      const customerQuery = Customer.findOne({
+        _id: payload.customerId,
+        businessId,
+      }).select('_id');
+      if (session) {
+        customerQuery.session(session);
+      }
+      const customer = await customerQuery.lean();
+      if (!customer) {
+        throw new AppointmentError(404, 'Customer not found');
+      }
     }
 
     await assertAppointmentWithinSchedule(businessId, start, end);

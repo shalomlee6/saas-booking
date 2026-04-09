@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
+import { friendlyOwnerAppointmentError } from '../../../shared/utils/http-field-errors.util';
 import { AppointmentsApiService } from '../services/appointments-api.service';
 import * as AppointmentsActions from './appointments.actions';
 
@@ -16,7 +17,7 @@ export const loadAppointments$ = createEffect(
           catchError((err) =>
             of(
               AppointmentsActions.loadFailure({
-                error: err?.error?.message || 'Failed to load appointments',
+                error: friendlyOwnerAppointmentError(err),
               })
             )
           )
@@ -37,7 +38,7 @@ export const createAppointment$ = createEffect(
           catchError((err) =>
             of(
               AppointmentsActions.createFailure({
-                error: err?.error?.message || 'Failed to create appointment',
+                error: friendlyOwnerAppointmentError(err),
               })
             )
           )

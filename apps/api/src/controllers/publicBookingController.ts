@@ -140,6 +140,9 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   let resolvedCustomerPhone: string | undefined;
 
   if (publicCustomer) {
+    if (body.slug && publicCustomer.slug && publicCustomer.slug !== body.slug) {
+      throw new ForbiddenError('Business mismatch');
+    }
     if (publicCustomer.businessId !== businessId.toString()) {
       throw new ForbiddenError('Business mismatch');
     }

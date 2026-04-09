@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
+import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
 import { asyncHandler } from '../utils/asyncHandler';
 import {
@@ -19,6 +20,7 @@ import {
 export const customersRouter = Router();
 
 customersRouter.use(auth);
+customersRouter.use(requireBackofficeRole);
 customersRouter.use(requireBusinessContext);
 
 customersRouter.get(

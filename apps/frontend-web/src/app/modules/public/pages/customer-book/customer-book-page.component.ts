@@ -24,6 +24,7 @@ import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
 import {
   formatParsedErrorForUi,
+  friendlyPublicBookingError,
   parseHttpClientError,
 } from '../../../../shared/utils/http-field-errors.util';
 import {
@@ -363,10 +364,7 @@ export class CustomerBookPageComponent implements OnInit {
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
         } else {
-          this.showError(
-            formatParsedErrorForUi(parseHttpClientError(err)) ??
-              'שגיאה באישור התור'
-          );
+          this.showError(friendlyPublicBookingError(err));
           // Destroy and recreate hold-to-confirm so the ring resets.
           this.showHoldButton.set(false);
           setTimeout(() => this.showHoldButton.set(true), 50);

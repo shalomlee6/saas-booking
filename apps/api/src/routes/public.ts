@@ -90,5 +90,13 @@ publicRouter.post(
 );
 
 // OTP auth endpoints (dev stub)
-publicRouter.post('/:businessSlug/auth/request-otp', requestOtp);
-publicRouter.post('/:businessSlug/auth/verify-otp', verifyOtp);
+publicRouter.post(
+  '/:businessSlug/auth/request-otp',
+  validateParams(legacyBusinessSlugParamsSchema),
+  requestOtp
+);
+publicRouter.post(
+  '/:businessSlug/auth/verify-otp',
+  validateParams(legacyBusinessSlugParamsSchema),
+  verifyOtp
+);

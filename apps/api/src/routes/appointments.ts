@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
+import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
 import { asyncHandler } from '../utils/asyncHandler';
 import { NotFoundError, ValidationError } from '../errors/httpErrors';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
@@ -20,7 +21,6 @@ import {
 } from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
 import {
-  AppointmentError,
   createAppointmentAtomic,
   assertNoOverlap,
 } from '../services/createAppointmentAtomic';
@@ -30,6 +30,7 @@ import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 export const appointmentsRouter = Router();
 
 appointmentsRouter.use(auth);
+appointmentsRouter.use(requireBackofficeRole);
 appointmentsRouter.use(requireBusinessContext);
 
 appointmentsRouter.get(
