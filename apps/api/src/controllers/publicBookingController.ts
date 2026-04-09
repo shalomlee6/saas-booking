@@ -1,17 +1,18 @@
 import { Request, Response } from 'express';
 import { Types } from 'mongoose';
-import { DateTime } from 'luxon';
 import { Business } from '../models/Business';
 import { BusinessSettings, defaultOpeningHours } from '../models/BusinessSettings';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
-import { AvailabilityOverride } from '../models/AvailabilityOverride';
 import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
-import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
-import { isOverlapping } from '../utils/timeOverlap';
 import { createAppointmentAtomic, AppointmentError } from '../services/createAppointmentAtomic';
+import {
+  AvailabilityError,
+  getAvailabilityForBusiness,
+} from '../services/publicAvailabilityService';
+import { toUtcDate } from '../services/publicBookingTime';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -76,154 +77,8 @@ export async function getPublicServices(req: Request, res: Response) {
   }
 }
 
-/**
- * Slot starts (HH:mm) that fit fully inside merged working ranges (opening hours + overrides).
- */
-function buildSlotsFromMergedRanges(
-  ranges: Array<{ start: string; end: string }>,
-  durationMinutes: number,
-  slotStep: number
-): string[] {
-  const out: string[] = [];
-  for (const range of ranges) {
-    const [startH, startM] = range.start.split(':').map(Number);
-    const [endH, endM] = range.end.split(':').map(Number);
-    let minutes = (startH ?? 0) * 60 + (startM ?? 0);
-    const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
-    while (minutes + durationMinutes <= endMinutes) {
-      const h = Math.floor(minutes / 60);
-      const m = minutes % 60;
-      out.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-      minutes += slotStep;
-    }
-  }
-  return out;
-}
-
-/** Parse dateStr (YYYY-MM-DD) + timeStr (HH:mm or H:mm) in timezone to UTC Date */
-function toUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
-  const [h, m] = timeStr.split(':').map((s) => Number(s));
-  const local = DateTime.fromISO(dateStr, { zone: timezone }).set({
-    hour: h,
-    minute: m,
-    second: 0,
-    millisecond: 0,
-  });
-
-  if (!local.isValid) {
-    throw new Error(`Invalid date/time: ${dateStr} ${timeStr} (${timezone})`);
-  }
-
-  return local.toUTC().toJSDate();
-}
-
-/** Error used by getAvailabilityForBusiness for 403/404 */
-class AvailabilityError extends Error {
-  constructor(public status: number, message: string) {
-    super(message);
-    this.name = 'AvailabilityError';
-  }
-}
-
-/**
- * Shared availability logic: openingHours + service duration + existing appointments.
- * Uses Luxon for timezone-safe day boundaries (Asia/Jerusalem default).
- * Overlap rule: slotStart < apptEnd AND slotEnd > apptStart (exclusive end).
- */
-export async function getAvailabilityForBusiness(
-  businessId: Types.ObjectId,
-  serviceId: string,
-  dateStr: string
-): Promise<{ date: string; slots: string[] }> {
-  const settings = await ensureBusinessSettings(businessId);
-  if (!settings.features?.bookingEnabled) {
-    throw new AvailabilityError(403, 'Booking is disabled for this business');
-  }
-
-  const service = await Service.findOne({ _id: serviceId, businessId });
-  if (!service) {
-    throw new AvailabilityError(404, 'Service not found');
-  }
-
-  const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
-  const openingHours = settings.openingHours?.days?.length
-    ? settings.openingHours!
-    : defaultOpeningHours;
-
-  // Day boundaries in business timezone (luxon): dayStart = date 00:00, dayEnd = (date+1) 00:00 (exclusive)
-  const dayStart = DateTime.fromISO(dateStr, { zone: timezone }).startOf('day');
-  const dayEnd = dayStart.plus({ days: 1 });
-  const dayStartUtcDate = dayStart.toUTC().toJSDate();
-  const dayEndUtcDate = dayEnd.toUTC().toJSDate();
-
-
-  const existing = await Appointment.find({
-    businessId,
-    // NOTE: we intentionally do NOT filter by serviceId here:
-    // any confirmed/pending appointment should block the time slot.
-    status: { $in: ['confirmed', 'pending'] },
-    start: { $lt: dayEndUtcDate },
-    end: { $gt: dayStartUtcDate },
-  })
-    .select('start end status')
-    .lean();
-
-
-  const durationMinutes = service.durationMinutes ?? 30;
-  const slotStep = openingHours.slotStepMinutes ?? 30;
-
-  const overrideDoc = await AvailabilityOverride.findOne({ businessId, date: dateStr })
-    .select('type ranges')
-    .lean();
-  const mergedRanges = applyOpeningHoursWithOverrides(
-    dateStr,
-    openingHours,
-    overrideDoc
-      ? {
-          type: overrideDoc.type as 'closed' | 'custom',
-          ranges: overrideDoc.ranges ?? [],
-        }
-      : null
-  );
-  const candidateSlots = buildSlotsFromMergedRanges(mergedRanges, durationMinutes, slotStep);
-
-  const available: string[] = [];
-  for (const timeStr of candidateSlots) {
-    const [hourStr, minuteStr] = timeStr.split(':');
-    const hour = parseInt(hourStr, 10);
-    const minute = parseInt(minuteStr, 10);
-
-    // Slot start in business timezone on that date
-    const slotStartLocal = dayStart.set({
-      hour,
-      minute,
-      second: 0,
-      millisecond: 0,
-    });
-
-    // Convert slot range to UTC epoch milliseconds
-    const slotStartMs = slotStartLocal.toUTC().toMillis();
-    const slotEndMs = slotStartLocal
-      .plus({ minutes: durationMinutes })
-      .toUTC()
-      .toMillis();
-
-    let overlaps = false;
-
-    for (const apt of existing as { start: Date; end: Date }[]) {
-      const apptStartMs = DateTime.fromJSDate(apt.start).toUTC().toMillis();
-      const apptEndMs = DateTime.fromJSDate(apt.end).toUTC().toMillis();
-      if (slotStartMs < apptEndMs && slotEndMs > apptStartMs) {
-        overlaps = true;
-        break;
-      }
-    }
-
-    if (!overlaps) available.push(timeStr);
-  }
-
-  return { date: dateStr, slots: available };
-}
+// Re-export for tests or callers that imported from the controller.
+export { getAvailabilityForBusiness } from '../services/publicAvailabilityService';
 
 // --- GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD
 export async function getAvailability(req: Request, res: Response) {
