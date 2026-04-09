@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
-import { AppointmentError } from '../services/createAppointmentAtomic';
+import { AppointmentError } from '../services/appointmentErrors';
 
 /**
  * Express error-handling middleware. Mount last, after all routes.

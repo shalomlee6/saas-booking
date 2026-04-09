@@ -4,6 +4,8 @@ import { Business } from '../models/Business';
 import { Service } from '../models/Service';
 import { Customer } from '../models/Customer';
 import { Appointment } from '../models/Appointment';
+import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
+import { AppointmentError } from '../services/appointmentErrors';
 import { defaultOpeningHours } from '../models/BusinessSettings';
 import jwt from 'jsonwebtoken';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
@@ -278,42 +280,34 @@ export async function createPublicAppointment(req: Request, res: Response) {
       return res.status(404).json({ message: 'Customer not found' });
     }
 
-    // Verify service belongs to business
-    const service = await Service.findOne({ _id: serviceId, businessId });
-    if (!service) {
-      return res.status(404).json({ message: 'Service not found' });
-    }
-
     const startDate = new Date(start);
     const endDate = new Date(end);
 
-    // Check for collisions with existing appointments
-    const conflictingAppointment = await Appointment.findOne({
-      businessId,
-      start: { $lt: endDate },
-      end: { $gt: startDate },
-      status: { $ne: 'cancelled' },
-    });
+    try {
+      const appointment = await createAppointmentAtomic(
+        {
+          businessId,
+          serviceId,
+          customerId,
+          start: startDate,
+          end: endDate,
+          source: 'client-online',
+        },
+        { requireCustomerId: true }
+      );
 
-    if (conflictingAppointment) {
-      return res.status(409).json({ message: 'Time slot is already booked' });
+      return res.status(201).json({
+        appointmentId: appointment._id.toString(),
+        status: appointment.status,
+      });
+    } catch (e) {
+      if (e instanceof AppointmentError) {
+        const body: Record<string, unknown> = { message: e.message };
+        if (e.code) body.code = e.code;
+        return res.status(e.status).json(body);
+      }
+      throw e;
     }
-
-    // Create appointment
-    const appointment = await Appointment.create({
-      businessId,
-      customerId,
-      serviceId,
-      start: startDate,
-      end: endDate,
-      status: 'confirmed',
-      source: 'client-online',
-    });
-
-    return res.status(201).json({
-      appointmentId: appointment._id.toString(),
-      status: appointment.status,
-    });
   } catch (err) {
     console.error('Error POST /public/:businessSlug/appointments:', err);
     return res.status(500).json({ message: 'Internal server error' });

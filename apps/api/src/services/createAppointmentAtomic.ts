@@ -2,10 +2,13 @@ import mongoose, { Types, type ClientSession } from 'mongoose';
 import { Appointment, type IAppointment } from '../models/Appointment';
 import { Service } from '../models/Service';
 import type { AppointmentSource } from '../dto/enums';
+import { AppointmentError } from './appointmentErrors';
+import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
 
 export type { AppointmentSource };
+export { AppointmentError } from './appointmentErrors';
 
-// TODO => 
+// TODO =>
 // NOTE:
 // In production MongoDB must run as a replica set.
 // Fallback without transaction is for local development only.
@@ -26,17 +29,6 @@ export interface CreateAppointmentOptions {
   requireCustomerId?: boolean;
   /** When updating an appointment, exclude this id from overlap check */
   excludeAppointmentId?: Types.ObjectId | string;
-}
-
-export class AppointmentError extends Error {
-  status: number;
-  code?: string;
-
-  constructor(status: number, message: string, code?: string) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
 }
 
 /**
@@ -124,6 +116,8 @@ export async function createAppointmentAtomic(
     if (!service) {
       throw new AppointmentError(404, 'Service not found');
     }
+
+    await assertAppointmentWithinSchedule(businessId, start, end);
 
     await assertNoOverlap(
       businessId,

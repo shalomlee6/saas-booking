@@ -2,12 +2,14 @@ import { Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { DateTime } from 'luxon';
 import { Business } from '../models/Business';
-import { BusinessSettings, defaultOpeningHours, IOpeningHours } from '../models/BusinessSettings';
+import { BusinessSettings, defaultOpeningHours } from '../models/BusinessSettings';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
+import { AvailabilityOverride } from '../models/AvailabilityOverride';
 import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { isOverlapping } from '../utils/timeOverlap';
 import { createAppointmentAtomic, AppointmentError } from '../services/createAppointmentAtomic';
 
@@ -75,40 +77,24 @@ export async function getPublicServices(req: Request, res: Response) {
 }
 
 /**
- * Build list of valid slot start times "HH:mm" for a given day.
- *
- * A slot is only emitted when the FULL service fits inside the working range:
- *   slotStart + durationMinutes <= rangeEnd
- *
- * This prevents slots like 17:30 from appearing when the service is 90 min
- * and the business closes at 18:00 (17:30 + 90 = 19:00 > 18:00).
+ * Slot starts (HH:mm) that fit fully inside merged working ranges (opening hours + overrides).
  */
-function buildCandidateSlots(
-  dateStr: string,
-  timezone: string,
-  openingHours: IOpeningHours,
-  durationMinutes: number
+function buildSlotsFromMergedRanges(
+  ranges: Array<{ start: string; end: string }>,
+  durationMinutes: number,
+  slotStep: number
 ): string[] {
-  const dt = DateTime.fromISO(dateStr, { zone: timezone });
-  if (!dt.isValid) return [];
-  const dayOfWeek = dt.weekday === 7 ? 0 : dt.weekday;
-  const dayConfig = openingHours.days?.find((d) => d.day === dayOfWeek);
-  if (!dayConfig || !dayConfig.isOpen || !dayConfig.ranges?.length) return [];
-
-  const step = openingHours.slotStepMinutes ?? 30;
   const out: string[] = [];
-
-  for (const range of dayConfig.ranges) {
+  for (const range of ranges) {
     const [startH, startM] = range.start.split(':').map(Number);
     const [endH, endM] = range.end.split(':').map(Number);
-    let minutes = startH * 60 + startM;
-    const endMinutes = endH * 60 + endM;
-    // Full-fit check: the entire service duration must complete before range end.
+    let minutes = (startH ?? 0) * 60 + (startM ?? 0);
+    const endMinutes = (endH ?? 0) * 60 + (endM ?? 0);
     while (minutes + durationMinutes <= endMinutes) {
       const h = Math.floor(minutes / 60);
       const m = minutes % 60;
       out.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-      minutes += step;
+      minutes += slotStep;
     }
   }
   return out;
@@ -184,7 +170,22 @@ export async function getAvailabilityForBusiness(
 
 
   const durationMinutes = service.durationMinutes ?? 30;
-  const candidateSlots = buildCandidateSlots(dateStr, timezone, openingHours, durationMinutes);
+  const slotStep = openingHours.slotStepMinutes ?? 30;
+
+  const overrideDoc = await AvailabilityOverride.findOne({ businessId, date: dateStr })
+    .select('type ranges')
+    .lean();
+  const mergedRanges = applyOpeningHoursWithOverrides(
+    dateStr,
+    openingHours,
+    overrideDoc
+      ? {
+          type: overrideDoc.type as 'closed' | 'custom',
+          ranges: overrideDoc.ranges ?? [],
+        }
+      : null
+  );
+  const candidateSlots = buildSlotsFromMergedRanges(mergedRanges, durationMinutes, slotStep);
 
   const available: string[] = [];
   for (const timeStr of candidateSlots) {

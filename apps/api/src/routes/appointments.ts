@@ -18,7 +18,12 @@ import {
   getAvailableSlots,
 } from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
-import { createAppointmentAtomic, assertNoOverlap } from '../services/createAppointmentAtomic';
+import {
+  AppointmentError,
+  createAppointmentAtomic,
+  assertNoOverlap,
+} from '../services/createAppointmentAtomic';
+import { assertAppointmentWithinSchedule } from '../services/appointmentScheduleRules';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 
 export const appointmentsRouter = Router();
@@ -116,6 +121,16 @@ appointmentsRouter.put(
             },
           ],
         });
+      }
+      try {
+        await assertAppointmentWithinSchedule(new Types.ObjectId(businessId), newStart, newEnd);
+      } catch (e) {
+        if (e instanceof AppointmentError) {
+          const body: Record<string, unknown> = { message: e.message };
+          if (e.code) body.code = e.code;
+          return res.status(e.status).json(body);
+        }
+        throw e;
       }
       await assertNoOverlap(new Types.ObjectId(businessId), newStart, newEnd, id);
     }

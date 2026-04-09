@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { DateTime } from 'luxon';
 import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
+import { AvailabilityOverride } from '../models/AvailabilityOverride';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
@@ -217,14 +218,33 @@ export const getAvailableSlots = async (req: AuthRequest, res: Response) => {
 
     const availableSlots: { start: string; end: string }[] = [];
 
-    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-      const dateStr = utcToDateStr(
-        weekStartDt.plus({ days: dayOffset }).toJSDate(),
-        timezone
+    const weekDateStrs: string[] = [];
+    for (let d = 0; d < 7; d++) {
+      weekDateStrs.push(
+        utcToDateStr(weekStartDt.plus({ days: d }).toJSDate(), timezone)
       );
+    }
+    const overrideDocs = await AvailabilityOverride.find({
+      businessId: new Types.ObjectId(String(businessId)),
+      date: { $in: weekDateStrs },
+    })
+      .select('date type ranges')
+      .lean();
+    const overrideByDate = new Map(
+      overrideDocs.map((o) => [
+        o.date,
+        { type: o.type as 'closed' | 'custom', ranges: o.ranges },
+      ])
+    );
 
-      // Real working ranges for this date (respects openingHours, closed days, etc.).
-      const ranges = applyOpeningHoursWithOverrides(dateStr, openingHours, null);
+    for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+      const dateStr = weekDateStrs[dayOffset];
+
+      const ranges = applyOpeningHoursWithOverrides(
+        dateStr,
+        openingHours,
+        overrideByDate.get(dateStr) ?? null
+      );
       if (!ranges.length) continue;
 
       for (const range of ranges) {
