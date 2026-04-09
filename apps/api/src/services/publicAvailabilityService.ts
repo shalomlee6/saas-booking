@@ -7,17 +7,7 @@ import { Service } from '../models/Service';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { buildSlotsFromMergedRanges } from './publicBookingTime';
-
-/** Used by public availability GET handlers (403/404). */
-export class AvailabilityError extends Error {
-  constructor(
-    public status: number,
-    message: string
-  ) {
-    super(message);
-    this.name = 'AvailabilityError';
-  }
-}
+import { ForbiddenError, NotFoundError } from '../errors/httpErrors';
 
 /**
  * Shared availability logic: openingHours + overrides + existing appointments.
@@ -30,12 +20,12 @@ export async function getAvailabilityForBusiness(
 ): Promise<{ date: string; slots: string[] }> {
   const settings = await ensureBusinessSettings(businessId);
   if (!settings.features?.bookingEnabled) {
-    throw new AvailabilityError(403, 'Booking is disabled for this business');
+    throw new ForbiddenError('Booking is disabled for this business');
   }
 
   const service = await Service.findOne({ _id: serviceId, businessId });
   if (!service) {
-    throw new AvailabilityError(404, 'Service not found');
+    throw new NotFoundError('Service not found');
   }
 
   const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';

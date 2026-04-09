@@ -8,6 +8,7 @@ import { Service } from '../models/Service';
 import { toIsoUtcString } from '../dto/datetime';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
+import { NotFoundError } from '../errors/httpErrors';
 
 /** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
@@ -31,28 +32,24 @@ function utcToDateStr(date: Date, timezone: string): string {
   }).format(date);
 }
 
-export type OwnerAvailableSlotsResult =
-  | { ok: true; slots: { start: string; end: string }[] }
-  | { ok: false; notFound: 'customer' | 'service' };
-
 /**
  * Owner dashboard: available slots for a customer+service over a 7-day window (opening hours + overrides, minus existing appointments).
  */
 export async function computeOwnerAvailableSlots(
   businessId: string,
   params: { serviceId: string; customerId: string; weekStart?: string }
-): Promise<OwnerAvailableSlotsResult> {
+): Promise<{ start: string; end: string }[]> {
   const { serviceId, customerId, weekStart } = params;
 
   const customer = await Customer.findOne({ _id: customerId, businessId });
   const service = await Service.findOne({ _id: serviceId, businessId });
 
   if (!customer) {
-    return { ok: false, notFound: 'customer' };
+    throw new NotFoundError('Customer not found');
   }
 
   if (!service) {
-    return { ok: false, notFound: 'service' };
+    throw new NotFoundError('Service not found');
   }
 
   let durationMinutes =
@@ -137,5 +134,5 @@ export async function computeOwnerAvailableSlots(
     }
   }
 
-  return { ok: true, slots: availableSlots };
+  return availableSlots;
 }

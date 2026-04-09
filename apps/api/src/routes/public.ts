@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   getPublicBusiness,
   getPublicServices,
@@ -35,37 +36,41 @@ export const publicRouter = Router();
 publicRouter.get(
   '/availability',
   validateQuery(publicAvailabilityQuerySchema),
-  getPublicAvailability
+  asyncHandler(getPublicAvailability)
 );
 publicRouter.get(
   '/businesses/:slug',
   validateParams(slugParamsSchema),
-  getPublicBusinessBySlug
+  asyncHandler(getPublicBusinessBySlug)
 );
 publicRouter.get(
   '/businesses/:slug/services',
   validateParams(slugParamsSchema),
-  getPublicServicesBooking
+  asyncHandler(getPublicServicesBooking)
 );
 publicRouter.get(
   '/businesses/:slug/availability',
   validateParams(slugParamsSchema),
   validateQuery(slugAvailabilityQuerySchema),
-  getAvailability
+  asyncHandler(getAvailability)
 );
 publicRouter.post(
   '/appointments',
   validateBody(publicCreateAppointmentBodySchema),
   optionalPublicCustomer,
-  createPublicAppointmentBooking
+  asyncHandler(createPublicAppointmentBooking)
 );
-publicRouter.get('/appointments/upcoming', optionalPublicCustomer, getUpcomingCustomerAppointment);
+publicRouter.get(
+  '/appointments/upcoming',
+  optionalPublicCustomer,
+  asyncHandler(getUpcomingCustomerAppointment)
+);
 publicRouter.delete(
   '/appointments/:appointmentId',
   validateParams(publicCancelAppointmentParamsSchema),
   validateBody(publicCancelAppointmentBodySchema),
   optionalPublicCustomer,
-  cancelCustomerAppointment
+  asyncHandler(cancelCustomerAppointment)
 );
 
 // --- Legacy public routes (dashboard / auth)

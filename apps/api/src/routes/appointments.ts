@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { asyncHandler } from '../utils/asyncHandler';
+import { NotFoundError, ValidationError } from '../errors/httpErrors';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
 import {
   appointmentCreateBodySchema,
@@ -34,19 +35,19 @@ appointmentsRouter.use(requireBusinessContext);
 appointmentsRouter.get(
   '/week',
   validateQuery(appointmentsWeekQuerySchema),
-  getBusinessAppointmentsForWeek
+  asyncHandler(getBusinessAppointmentsForWeek)
 );
 
 appointmentsRouter.get(
   '/available-slots',
   validateQuery(availableSlotsQuerySchema),
-  getAvailableSlots
+  asyncHandler(getAvailableSlots)
 );
 
 appointmentsRouter.get(
   '/',
   validateQuery(appointmentsListQuerySchema),
-  getAppointmentsList
+  asyncHandler(getAppointmentsList)
 );
 
 // POST /api/appointments
@@ -94,7 +95,7 @@ appointmentsRouter.put(
 
     const existing = await Appointment.findOne({ _id: id, businessId });
     if (!existing) {
-      return res.status(404).json({ message: 'Appointment not found' });
+      throw new NotFoundError('Appointment not found');
     }
 
     let newStart = existing.start;
@@ -111,27 +112,15 @@ appointmentsRouter.put(
 
     if (timesChanged) {
       if (newStart.getTime() >= newEnd.getTime()) {
-        return res.status(400).json({
-          message: 'Validation failed',
-          errors: [
-            {
-              path: 'end',
-              message: 'end must be after start',
-              code: 'custom',
-            },
-          ],
-        });
+        throw new ValidationError('Validation failed', [
+          {
+            path: 'end',
+            message: 'end must be after start',
+            code: 'custom',
+          },
+        ]);
       }
-      try {
-        await assertAppointmentWithinSchedule(new Types.ObjectId(businessId), newStart, newEnd);
-      } catch (e) {
-        if (e instanceof AppointmentError) {
-          const body: Record<string, unknown> = { message: e.message };
-          if (e.code) body.code = e.code;
-          return res.status(e.status).json(body);
-        }
-        throw e;
-      }
+      await assertAppointmentWithinSchedule(new Types.ObjectId(businessId), newStart, newEnd);
       await assertNoOverlap(new Types.ObjectId(businessId), newStart, newEnd, id);
     }
 
@@ -154,7 +143,7 @@ appointmentsRouter.put(
     );
 
     if (!appointment) {
-      return res.status(404).json({ message: 'Appointment not found' });
+      throw new NotFoundError('Appointment not found');
     }
 
     res.json(appointmentDocumentToResponseDto(appointment));
@@ -176,7 +165,7 @@ appointmentsRouter.delete(
     );
 
     if (!appointment) {
-      return res.status(404).json({ message: 'Appointment not found' });
+      throw new NotFoundError('Appointment not found');
     }
 
     res.json(appointmentDocumentToResponseDto(appointment));

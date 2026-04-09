@@ -5,16 +5,23 @@ import { validateBody } from '../middleware/validateRequest';
 import { loadBusinessSettings } from '../middleware/businessSettings';
 import { getMyBusinessSettings, updateMyBusinessSettings } from '../controllers/businessSettingsController';
 import { updateBusinessSettingsBodySchema } from '../validation/schemas/businessSettings';
+import { asyncHandler } from '../utils/asyncHandler';
 
 export const settingsRouter = Router();
 
-settingsRouter.get('/me/settings', auth, requireBusinessContext, loadBusinessSettings, getMyBusinessSettings);
+settingsRouter.get(
+  '/me/settings',
+  auth,
+  requireBusinessContext,
+  loadBusinessSettings,
+  asyncHandler(getMyBusinessSettings)
+);
 settingsRouter.put(
   '/me/settings',
   auth,
   requireBusinessContext,
   validateBody(updateBusinessSettingsBodySchema),
   loadBusinessSettings,
-  updateMyBusinessSettings
+  asyncHandler(updateMyBusinessSettings)
 );
 
