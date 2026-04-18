@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { delay } from 'rxjs/operators';
+import { catchError, delay, map } from 'rxjs/operators';
 import { ApiService } from '../../../core/api/api.service';
 import { environment } from '../../../../environments/environment';
 
@@ -81,6 +82,23 @@ export interface VerifyOtpResponse {
   customerPhone?: string;
 }
 
+/** GET /api/public/auth/me — authenticated public customer profile */
+export interface PublicAuthMeResponse {
+  id: string;
+  businessId: string;
+  slug: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+}
+
+export type PublicAuthMeResult =
+  | { kind: 'ok'; me: PublicAuthMeResponse }
+  | { kind: 'unauthorized' }
+  | { kind: 'error' };
+
 @Injectable({ providedIn: 'root' })
 export class PublicApiService {
   private readonly api = inject(ApiService);
@@ -103,6 +121,23 @@ export class PublicApiService {
     return this.api.post<VerifyOtpResponse>(
       `public/${encodeURIComponent(businessSlug)}/auth/verify-otp`,
       body
+    );
+  }
+
+  /**
+   * GET /api/public/auth/me
+   * Uses Bearer (sessionStorage) and/or HTTP-only cookie (withCredentials).
+   */
+  getPublicAuthMe(): Observable<PublicAuthMeResult> {
+    return this.api.get<PublicAuthMeResponse>('public/auth/me').pipe(
+      map((me) => ({ kind: 'ok' as const, me })),
+      catchError((err: unknown) => {
+        const status = err instanceof HttpErrorResponse ? err.status : 0;
+        if (status === 401) {
+          return of({ kind: 'unauthorized' as const });
+        }
+        return of({ kind: 'error' as const });
+      })
     );
   }
 

@@ -2,25 +2,22 @@ import type { Response, NextFunction } from 'express';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
 import { getPublicCustomerJwtFromRequest, verifyPublicCustomerJwt } from '../utils/publicCustomerSession';
 
-export type { PublicCustomer, RequestWithPublicCustomer } from '../types/publicCustomer';
-
 /**
- * Optional auth for public booking: Bearer token or HTTP-only session cookie from verify-otp.
- * If present and valid with role === 'customer', attaches req.publicCustomer. Never 401s.
+ * Requires a valid public customer session (Bearer or HTTP-only cookie from verify-otp).
  */
-export function optionalPublicCustomer(
+export function requirePublicCustomer(
   req: RequestWithPublicCustomer,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): void {
   const token = getPublicCustomerJwtFromRequest(req);
   if (!token) {
-    next();
+    res.status(401).json({ message: 'Authentication required' });
     return;
   }
   const session = verifyPublicCustomerJwt(token);
   if (!session) {
-    next();
+    res.status(401).json({ message: 'Authentication required' });
     return;
   }
   req.publicCustomer = session;

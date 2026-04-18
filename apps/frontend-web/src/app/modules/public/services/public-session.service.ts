@@ -1,4 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
+import type { PublicAuthMeResponse } from './public-api.service';
 
 const STORAGE_KEY_TOKEN = 'public_client_token';
 const STORAGE_KEY_SLUG = 'public_client_business_slug';
@@ -98,5 +99,21 @@ export class PublicSessionService {
     const t = this.tokenSignal();
     const s = this.slugSignal();
     return !!t && !!s && s === slug;
+  }
+
+  /**
+   * Refreshes display fields from GET /api/public/auth/me.
+   * Requires an existing Bearer token in session (same flow as verify-otp).
+   */
+  applyPublicAuthMe(me: PublicAuthMeResponse): void {
+    const token = this.getToken();
+    if (!token) {
+      return;
+    }
+    const displayName =
+      (me.name && me.name.trim()) ||
+      [me.firstName, me.lastName].filter(Boolean).join(' ').trim() ||
+      undefined;
+    this.setSession(token, me.slug, me.id, displayName);
   }
 }

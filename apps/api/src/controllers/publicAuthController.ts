@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { Business } from '../models/Business';
 import { Customer } from '../models/Customer';
 import jwt from 'jsonwebtoken';
+import type { RequestWithPublicCustomer } from '../types/publicCustomer';
+import { setPublicCustomerSessionCookie } from '../utils/publicCustomerSession';
 
 // In-memory OTP storage (dev only)
 // In production, use Redis or similar
@@ -164,6 +166,8 @@ export async function verifyOtp(req: Request, res: Response) {
       { expiresIn: '30d' }
     );
 
+    setPublicCustomerSessionCookie(res, token);
+
     return res.json({
       token,
       customerId: customer._id.toString(),
@@ -175,5 +179,30 @@ export async function verifyOtp(req: Request, res: Response) {
     console.error('Error POST /public/:businessSlug/auth/verify-otp:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
+}
+
+/** GET /api/public/auth/me — session from Bearer or HTTP-only cookie */
+export async function getPublicAuthMe(req: RequestWithPublicCustomer, res: Response): Promise<void> {
+  const pc = req.publicCustomer!;
+  const customer = await Customer.findOne({
+    _id: pc.customerId,
+    businessId: pc.businessId,
+  }).lean();
+
+  if (!customer) {
+    res.status(401).json({ message: 'Authentication required' });
+    return;
+  }
+
+  res.json({
+    id: customer._id.toString(),
+    businessId: String(customer.businessId),
+    slug: pc.slug,
+    name: customer.name,
+    firstName: customer.firstName ?? undefined,
+    lastName: customer.lastName ?? undefined,
+    phone: customer.phone,
+    email: customer.email ?? undefined,
+  });
 }
 
