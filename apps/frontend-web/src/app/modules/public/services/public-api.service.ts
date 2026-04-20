@@ -22,6 +22,12 @@ export interface PublicBusinessForBooking {
   openingHours: Record<string, { open: string; close: string } | null>;
   media: { photos: string[]; videoUrl?: string };
   cancellationNoticeHe: string;
+  /** From GET /api/public/businesses/:slug — used for public booking date keys. */
+  localization?: {
+    timezone?: string;
+    language?: string;
+    currency?: string;
+  };
 }
 
 export interface PublicService {
@@ -165,6 +171,7 @@ export class PublicApiService {
         },
         cancellationNoticeHe:
           'יש להודיע מראש על ביטול התור. ביטול פחות מ-24 שעות מראש עשוי לחייב בתשלום.',
+        localization: { timezone: 'Asia/Jerusalem', language: 'he', currency: 'ILS' },
       };
       return of(mock).pipe(delay(400));
     }

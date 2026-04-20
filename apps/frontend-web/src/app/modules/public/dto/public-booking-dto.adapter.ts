@@ -1,13 +1,12 @@
+import { toDateKey } from '../../appointments/utils/calendar.utils';
 import type { CreateAppointmentBody } from '../services/public-api.service';
 
-export function toDateKeyLocal(d: Date): string {
-  return (
-    d.getFullYear() +
-    '-' +
-    String(d.getMonth() + 1).padStart(2, '0') +
-    '-' +
-    String(d.getDate()).padStart(2, '0')
-  );
+/**
+ * YYYY-MM-DD for `d` in the business IANA timezone (not the browser's local calendar).
+ * Aligns with availability and server booking rules.
+ */
+export function toDateKeyInBusinessTimezone(d: Date, timeZone: string): string {
+  return toDateKey(d, timeZone);
 }
 
 /**

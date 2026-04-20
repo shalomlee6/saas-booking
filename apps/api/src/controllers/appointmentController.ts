@@ -14,14 +14,43 @@ function requireBusinessId(req: AuthRequest): string {
   return businessId;
 }
 
+/** Inclusive calendar days after `start` covered by [start, end) when end = addDays(start, span + 1). */
+const DEFAULT_LIST_SPAN_DAYS = 30;
+
+function startOfLocalDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+function addCalendarDays(base: Date, days: number): Date {
+  const out = new Date(base);
+  out.setDate(out.getDate() + days);
+  return out;
+}
+
 /** GET /api/appointments - list for owner dashboard; flattened DTO, sort start ASC */
 export async function getAppointmentsList(req: AuthRequest, res: Response): Promise<void> {
   const businessId = requireBusinessId(req);
   const q = req.query as { from?: string; to?: string };
-  const start = q.from ? new Date(q.from) : new Date();
-  const end = q.to
-    ? new Date(q.to)
-    : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+
+  const defaultStart = startOfLocalDay(new Date());
+  const defaultEnd = addCalendarDays(defaultStart, DEFAULT_LIST_SPAN_DAYS + 1);
+
+  let start: Date;
+  let end: Date;
+
+  if (q.from && q.to) {
+    start = new Date(q.from);
+    end = new Date(q.to);
+  } else if (q.from) {
+    start = new Date(q.from);
+    end = addCalendarDays(start, DEFAULT_LIST_SPAN_DAYS + 1);
+  } else if (q.to) {
+    end = new Date(q.to);
+    start = addCalendarDays(end, -(DEFAULT_LIST_SPAN_DAYS + 1));
+  } else {
+    start = defaultStart;
+    end = defaultEnd;
+  }
 
   const appointments = await Appointment.find({
     businessId,

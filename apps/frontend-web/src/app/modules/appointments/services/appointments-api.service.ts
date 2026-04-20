@@ -20,9 +20,10 @@ export class AppointmentsApiService {
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
 
   /**
-   * Reactive stream: re-fetches when refresh() is called. Default params for dashboard.
-   * shareReplay(1) ensures multiple subscribers (e.g. dashboard + growth-brain) share
-   * a single HTTP request instead of each triggering their own.
+   * Reactive stream: re-fetches when refresh() is called.
+   * Uses GET /api/appointments with no query: server defaults to **start of today → +30 calendar days**
+   * (see `getAppointmentsList` in the API).
+   * Pass `{ from, to }` to `list()` for a custom window.
    */
   readonly appointments$ = this.refresh$.pipe(
     switchMap(() => this.list({})),

@@ -408,8 +408,8 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
-  --grid-body-height: 720px;
-  --slot-height: 30px;
+  --grid-body-height: 1440px;
+  --slot-height: 60px;
 }
 
 .calendar-header-time {
@@ -473,14 +473,14 @@
   height: var(--slot-height);
   flex-shrink: 0;
   padding-right: 0.375rem;
-  font-size: 0.625rem;  // was 0.6875rem — compact time labels
+  font-size: 0.75rem;
   color: var(--text-primary);
   text-align: right;
   line-height: var(--slot-height);
 }
 
 .calendar-time-slot--half-hour {
-  font-size: 0.625rem;
+  font-size: 0.6875rem;
   opacity: 0.85;
   color: var(--text-primary);
 
@@ -610,12 +610,13 @@
   left: 3px;
   right: 3px;
   overflow: hidden;
-  border-radius: 8px;    // was 10px
-  padding: 4px 6px;      // was 6px 8px
-  font-size: 11px;       // was 12px
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.25;
   display: flex;
   flex-direction: column;
-  gap: 1px;              // was 2px
+  gap: 2px;
   cursor: default;
   box-sizing: border-box;
   background: var(--block-bg, var(--bg-card));
@@ -630,8 +631,7 @@
 
   &.calendar-block-clickable {
     cursor: pointer;
-    // Height is driven by JS (calendar.utils CALENDAR_MIN_BLOCK_HEIGHT_PX = 24).
-    // No CSS min-height override so blocks never visually overflow their time slot.
+    // Block height from calendar.utils (duration × CALENDAR_PIXELS_PER_MINUTE, min CALENDAR_MIN_BLOCK_HEIGHT_PX).
     &:hover {
       filter: brightness(0.97);
     }

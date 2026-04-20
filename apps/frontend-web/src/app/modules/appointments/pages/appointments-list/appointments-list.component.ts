@@ -20,6 +20,7 @@ import {
   selectError,
 } from '../../state/appointments.selectors';
 import {
+  /** Grid + slot heights derived from `CALENDAR_PIXELS_PER_MINUTE` in calendar.utils.ts */
   GRID_BODY_HEIGHT_PX,
   CALENDAR_SLOT_HEIGHT_PX,
   CALENDAR_HOUR_START,

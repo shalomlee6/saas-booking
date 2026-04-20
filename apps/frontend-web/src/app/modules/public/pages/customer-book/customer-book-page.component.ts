@@ -29,8 +29,10 @@ import {
 } from '../../../../shared/utils/http-field-errors.util';
 import {
   buildPublicCreateAppointmentBody,
-  toDateKeyLocal,
+  toDateKeyInBusinessTimezone,
 } from '../../dto/public-booking-dto.adapter';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
 /** 3-step flow: 1=service, 2=date+time, 3=confirm */
 type BookStep = 1 | 2 | 3;
@@ -73,6 +75,7 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly publicApi = inject(PublicApiService);
   private readonly messageService = inject(MessageService);
   private readonly session = inject(PublicSessionService);
+  private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);
 
@@ -120,9 +123,7 @@ export class CustomerBookPageComponent implements OnInit {
   readonly stepNavLabels = STEP_NAV_LABELS;
 
   // ── Route ─────────────────────────────────────────────────────────────────
-  readonly slug = computed(() =>
-    this.route.parent?.parent?.snapshot.paramMap.get('slug') ?? ''
-  );
+  readonly slug = computed(() => readBusinessSlugFromPathFromRoot(this.route));
 
   // ── Derived computeds ─────────────────────────────────────────────────────
   readonly minDate = this.minDateForCalendar.asReadonly();
@@ -135,7 +136,9 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDateStr = computed(() => {
     const d = this.selectedDate();
     if (!d) return '';
-    return toDateKeyLocal(d);
+    const tz =
+      this.business()?.localization?.timezone ?? this.auth.businessTimezone();
+    return toDateKeyInBusinessTimezone(d, tz);
   });
 
   readonly formattedBookingDate = computed(() => {
