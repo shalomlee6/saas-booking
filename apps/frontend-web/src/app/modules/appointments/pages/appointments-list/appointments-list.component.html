@@ -72,6 +72,14 @@
         <div class="appointments-loading">Loading appointments…</div>
       }
 
+      @if (vm.showEmptyCalendar) {
+        <div class="apt-week-empty" role="status">
+          <i class="pi pi-calendar apt-week-empty-icon" aria-hidden="true"></i>
+          <p class="apt-week-empty-text">אין תורים השבוע</p>
+          <a routerLink="/appointments/new" class="apt-btn-primary apt-week-empty-cta">צור תור ראשון</a>
+        </div>
+      }
+
       @if (vm.overlay; as overlay) {
         <app-appointment-create-overlay
           [open]="true"

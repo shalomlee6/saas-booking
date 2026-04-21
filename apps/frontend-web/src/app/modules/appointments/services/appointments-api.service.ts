@@ -68,9 +68,9 @@ export class AppointmentsApiService {
     return this.api.patch<Appointment>(`appointments/${id}`, body);
   }
 
-  /** DELETE /api/appointments/:id (cancels) */
-  cancel(id: string): Observable<unknown> {
-    return this.api.delete(`appointments/${id}`);
+  /** Soft-cancel: PATCH status to cancelled (preferred over DELETE). */
+  cancel(id: string): Observable<Appointment> {
+    return this.patchAppointment(id, { status: 'cancelled' });
   }
 }
 

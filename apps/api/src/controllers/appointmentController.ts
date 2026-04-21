@@ -36,7 +36,14 @@ function addCalendarDays(base: Date, days: number): Date {
 /** GET /api/appointments - list for owner dashboard; flattened DTO, sort start ASC */
 export async function getAppointmentsList(req: AuthRequest, res: Response): Promise<void> {
   const businessId = requireBusinessId(req);
-  const q = req.query as { from?: string; to?: string };
+  const q = req.query as {
+    from?: string;
+    to?: string;
+    startDate?: string;
+    endDate?: string;
+  };
+  const fromParam = q.from ?? q.startDate;
+  const toParam = q.to ?? q.endDate;
 
   const defaultStart = startOfLocalDay(new Date());
   const defaultEnd = addCalendarDays(defaultStart, DEFAULT_LIST_SPAN_DAYS + 1);
@@ -44,14 +51,14 @@ export async function getAppointmentsList(req: AuthRequest, res: Response): Prom
   let start: Date;
   let end: Date;
 
-  if (q.from && q.to) {
-    start = new Date(q.from);
-    end = new Date(q.to);
-  } else if (q.from) {
-    start = new Date(q.from);
+  if (fromParam && toParam) {
+    start = new Date(fromParam);
+    end = new Date(toParam);
+  } else if (fromParam) {
+    start = new Date(fromParam);
     end = addCalendarDays(start, DEFAULT_LIST_SPAN_DAYS + 1);
-  } else if (q.to) {
-    end = new Date(q.to);
+  } else if (toParam) {
+    end = new Date(toParam);
     start = addCalendarDays(end, -(DEFAULT_LIST_SPAN_DAYS + 1));
   } else {
     start = defaultStart;
@@ -88,20 +95,8 @@ export async function getAppointmentsList(req: AuthRequest, res: Response): Prom
   res.json(dtoArray);
 }
 
-/** GET /api/appointments/:id — single appointment for edit/detail (flattened + ids). */
-export async function getAppointmentById(req: AuthRequest, res: Response): Promise<void> {
-  const businessId = requireBusinessId(req);
-  const { id } = req.params as { id: string };
-
-  const apt = await Appointment.findOne({ _id: id, businessId })
-    .populate('customerId', 'name phone')
-    .populate('serviceId', 'name durationMinutes price')
-    .lean();
-
-  if (!apt) {
-    throw new NotFoundError('Appointment not found');
-  }
-
+/** Populated lean appointment → owner detail JSON (GET one, POST create response). */
+export function leanAppointmentToOwnerDetailDto(apt: Record<string, unknown>): Record<string, unknown> {
   const customer = apt.customerId as { _id?: Types.ObjectId; name?: string; phone?: string } | null;
   const service = apt.serviceId as {
     _id?: Types.ObjectId;
@@ -118,7 +113,7 @@ export async function getAppointmentById(req: AuthRequest, res: Response): Promi
     (customer?.phone as string | undefined) ??
     (typeof apt.customerPhone === 'string' ? apt.customerPhone : null);
 
-  res.json({
+  return {
     appointmentId: String(apt._id),
     customerId: customer?._id?.toString() ?? null,
     serviceId: service?._id?.toString() ?? String(apt.serviceId),
@@ -131,7 +126,24 @@ export async function getAppointmentById(req: AuthRequest, res: Response): Promi
     end: toIsoUtcString(apt.end as Date),
     status: apt.status,
     notes: apt.notes ?? null,
-  });
+  };
+}
+
+/** GET /api/appointments/:id — single appointment for edit/detail (flattened + ids). */
+export async function getAppointmentById(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = requireBusinessId(req);
+  const { id } = req.params as { id: string };
+
+  const apt = await Appointment.findOne({ _id: id, businessId })
+    .populate('customerId', 'name phone')
+    .populate('serviceId', 'name durationMinutes price')
+    .lean();
+
+  if (!apt) {
+    throw new NotFoundError('Appointment not found');
+  }
+
+  res.json(leanAppointmentToOwnerDetailDto(apt as Record<string, unknown>));
 }
 
 type PatchBody = {

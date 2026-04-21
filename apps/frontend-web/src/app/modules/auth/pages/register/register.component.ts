@@ -12,13 +12,13 @@ import { ApiService } from '../../../../core/api/api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 
 @Component({
-  selector: 'app-login',
+  selector: 'app-register',
   standalone: true,
   imports: [ReactiveFormsModule, RouterLink, ToastModule],
-  templateUrl: './login.component.html',
-  styleUrl: './login.component.scss',
+  templateUrl: './register.component.html',
+  styleUrl: '../login/login.component.scss',
 })
-export class LoginComponent {
+export class RegisterComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
@@ -63,7 +63,7 @@ export class LoginComponent {
       .post<{
         token?: string;
         user: { id: string; email: string; role: string; businessId?: string };
-      }>('auth/login', payload)
+      }>('auth/register', payload)
       .subscribe({
         next: (res) => {
           this.auth.recordSessionExpiryFromJwt(res.token);
@@ -74,7 +74,7 @@ export class LoginComponent {
             },
             error: () => {
               this.loading.set(false);
-              const msg = 'Session could not be loaded. Please try again.';
+              const msg = 'Account created but session could not be loaded. Try logging in.';
               this.errorMessage.set(msg);
               this.messageService.add({ severity: 'error', summary: 'שגיאה', detail: msg });
             },
@@ -84,9 +84,9 @@ export class LoginComponent {
           this.loading.set(false);
           const msg =
             err?.error?.message ||
-            'Login failed. Please check your credentials and try again.';
+            'Registration failed. Please check your details and try again.';
           this.errorMessage.set(msg);
-          this.messageService.add({ severity: 'error', summary: 'התחברות נכשלה', detail: msg });
+          this.messageService.add({ severity: 'error', summary: 'הרשמה נכשלה', detail: msg });
         },
       });
   }

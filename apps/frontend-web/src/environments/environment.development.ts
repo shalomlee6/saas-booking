@@ -4,4 +4,5 @@ export const environment = {
   useMocks: false,
   /** Set to true to mock public booking API (business, services, availability, appointments) without backend. */
   mockPublicApi: false,
+  apiUrl: '',
 };

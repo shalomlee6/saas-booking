@@ -105,12 +105,16 @@ export const appointmentsListQuerySchema = z
   .object({
     from: iso8601CalendarDayOrInstant.optional(),
     to: iso8601CalendarDayOrInstant.optional(),
+    startDate: iso8601CalendarDayOrInstant.optional(),
+    endDate: iso8601CalendarDayOrInstant.optional(),
   })
   .strict()
   .superRefine((q, ctx) => {
-    if (q.from !== undefined && q.to !== undefined) {
-      const a = new Date(q.from).getTime();
-      const b = new Date(q.to).getTime();
+    const from = q.from ?? q.startDate;
+    const to = q.to ?? q.endDate;
+    if (from !== undefined && to !== undefined) {
+      const a = new Date(from).getTime();
+      const b = new Date(to).getTime();
       if (a >= b) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

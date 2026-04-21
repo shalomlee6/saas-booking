@@ -231,6 +231,15 @@ $breakpoint:      1024px;
   width: 100%;
 }
 
+.layout-sidebar-logout-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+}
+
 // Impersonation badge in sidebar
 .layout-sidebar-impersonation-badge {
   margin: 0.5rem 0;

@@ -14,7 +14,7 @@ import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
-import { authInterceptor } from './core/api/http.config';
+import { authInterceptor, unauthorizedInterceptor } from './core/api/http.config';
 import { mockApiInterceptor } from './core/api/mock-api.interceptor';
 import { publicCustomerAuthInterceptor } from './modules/public/interceptors/public-customer-auth.interceptor';
 import { environment } from '../environments/environment';
@@ -53,8 +53,13 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withInterceptors(
         environment.useMocks
-          ? [mockApiInterceptor, publicCustomerAuthInterceptor, authInterceptor]
-          : [publicCustomerAuthInterceptor, authInterceptor]
+          ? [
+              mockApiInterceptor,
+              publicCustomerAuthInterceptor,
+              authInterceptor,
+              unauthorizedInterceptor,
+            ]
+          : [publicCustomerAuthInterceptor, authInterceptor, unauthorizedInterceptor]
       )
     ),
     provideRouter(routes),

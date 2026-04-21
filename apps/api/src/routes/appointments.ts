@@ -21,6 +21,7 @@ import {
   patchAppointmentById,
   getBusinessAppointmentsForWeek,
   getAvailableSlots,
+  leanAppointmentToOwnerDetailDto,
 } from '../controllers/appointmentController';
 import { Appointment } from '../models/Appointment';
 import {
@@ -92,6 +93,17 @@ appointmentsRouter.post(
       status: body.status,
     });
 
+    const populated = await Appointment.findOne({
+      _id: appointment._id,
+      businessId: new Types.ObjectId(businessId),
+    })
+      .populate('customerId', 'name phone')
+      .populate('serviceId', 'name durationMinutes price')
+      .lean();
+
+    if (populated) {
+      return res.status(201).json(leanAppointmentToOwnerDetailDto(populated as Record<string, unknown>));
+    }
     return res.status(201).json(appointmentDocumentToResponseDto(appointment));
   })
 );

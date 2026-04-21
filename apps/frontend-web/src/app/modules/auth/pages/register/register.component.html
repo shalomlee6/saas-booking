@@ -2,15 +2,15 @@
 <div class="login-page">
   <div class="login-card">
     <header class="login-card-header">
-      <h1 class="login-card-title">Welcome back</h1>
-      <p class="login-card-subtitle">Sign in to your account</p>
+      <h1 class="login-card-title">Create account</h1>
+      <p class="login-card-subtitle">Sign up for SaaS Booking</p>
     </header>
 
     <form class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
       <div class="login-form-field">
-        <label for="email">Email</label>
+        <label for="reg-email">Email</label>
         <input
-          id="email"
+          id="reg-email"
           type="email"
           formControlName="email"
           autocomplete="email"
@@ -18,17 +18,17 @@
           [class.login-input-invalid]="email?.invalid && (email?.touched || email?.dirty)"
         />
         @if (email?.invalid && (email?.touched || email?.dirty)) {
-        <p class="login-form-error">Please enter a valid email address.</p>
-      }
+          <p class="login-form-error">Please enter a valid email address.</p>
+        }
       </div>
 
       <div class="login-form-field">
-        <label for="password">Password</label>
+        <label for="reg-password">Password</label>
         <input
-          id="password"
+          id="reg-password"
           type="password"
           formControlName="password"
-          autocomplete="current-password"
+          autocomplete="new-password"
           class="login-input"
           [class.login-input-invalid]="password?.invalid && (password?.touched || password?.dirty)"
         />
@@ -42,28 +42,16 @@
         class="login-form-submit"
         [disabled]="form.invalid || loading()"
       >
-        @if (loading()) { Signing in… } @else { Login }
+        @if (loading()) { Creating… } @else { Register }
       </button>
-
-      <div class="login-form-forgot-wrap">
-        <button
-          type="button"
-          class="login-form-forgot"
-          disabled
-          title="Password reset is not available yet"
-          aria-label="Forgot password — not available yet"
-        >
-          Forgot password?
-        </button>
-      </div>
 
       @if (errorMessage()) {
         <p class="login-form-error login-form-error-global">{{ errorMessage() }}</p>
       }
 
       <p class="login-form-register-hint">
-        No account?
-        <a routerLink="/auth/register" class="login-form-register-link">Create one</a>
+        Already have an account?
+        <a routerLink="/auth/login" class="login-form-register-link">Sign in</a>
       </p>
     </form>
   </div>

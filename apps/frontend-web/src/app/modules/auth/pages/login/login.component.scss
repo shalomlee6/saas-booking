@@ -126,6 +126,23 @@
   cursor: not-allowed;
 }
 
+.login-form-register-hint {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.login-form-register-link {
+  color: var(--color-primary, #3787f6);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.login-form-register-link:hover {
+  text-decoration: underline;
+}
+
 .login-form-forgot-wrap {
   display: flex;
   justify-content: flex-end;

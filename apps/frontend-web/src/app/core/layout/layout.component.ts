@@ -6,7 +6,9 @@ import {
   OnInit,
   OnDestroy,
   HostListener,
+  effect,
 } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
@@ -30,10 +32,16 @@ const LINK_OPTS_PREFIX = { exact: false } as const;
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private readonly doc = inject(DOCUMENT);
+  private readonly title = inject(Title);
   readonly themeService = inject(ThemeService);
   readonly auth = inject(AuthService);
   private readonly adminApi = inject(AdminApiService);
   private readonly router = inject(Router);
+
+  private readonly _titleSync = effect(() => {
+    const name = this.auth.business()?.name?.trim();
+    this.title.setTitle(name ? `${name} · SaaS Booking` : 'SaaS Booking');
+  });
 
   readonly user = this.auth.user;
   readonly business = this.auth.business;
@@ -175,6 +183,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
   toggleTheme(): void {
     const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';
     this.themeService.setModeAndReapply(next);
+  }
+
+  onLogout(): void {
+    this.closeMobileMenu();
+    this.auth.logout();
   }
 
   exitImpersonation(): void {

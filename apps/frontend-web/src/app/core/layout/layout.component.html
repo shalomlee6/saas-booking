@@ -129,16 +129,15 @@
     </aside>
 
     <div class="layout-sidebar-footer">
-      <!-- BUG FIX: was /auth/login -->
-      <a
-        routerLink="/auth/logout"
-        class="layout-sidebar-link layout-sidebar-link-footer"
+      <button
+        type="button"
+        class="layout-sidebar-link layout-sidebar-link-footer layout-sidebar-logout-btn"
         [attr.aria-label]="isSidebarCollapsed() ? 'Logout' : null"
-        (click)="closeMobileMenu()"
+        (click)="onLogout()"
       >
         <i class="layout-sidebar-link-icon pi pi-sign-out" aria-hidden="true"></i>
         <span class="layout-sidebar-link-text">Logout</span>
-      </a>
+      </button>
     </div>
   </div>
 

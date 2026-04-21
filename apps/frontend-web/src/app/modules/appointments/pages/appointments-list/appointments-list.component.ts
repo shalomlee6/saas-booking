@@ -46,6 +46,7 @@ import { DrawerModule } from 'primeng/drawer';
 import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
+import { MessageService } from 'primeng/api';
 
 type ViewMode = 'day' | 'week';
 
@@ -200,6 +201,7 @@ export class AppointmentsListComponent implements OnInit {
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly growthBrain = inject(GrowthBrainService);
   private readonly doc = inject(DOCUMENT);
+  private readonly messageService = inject(MessageService);
 
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
@@ -523,6 +525,7 @@ export class AppointmentsListComponent implements OnInit {
     const loading = this.loading();
     const overlay = this.overlayOpen();
     const cards = this.appointmentCards();
+    const emptyCalendar = !loading && this.filteredItems().length === 0;
     return {
       dateRangeLabel: this.visibleDateRangeLabel(),
       searchQuery: this.searchQuery(),
@@ -537,6 +540,7 @@ export class AppointmentsListComponent implements OnInit {
       hourLabels: this.hourLabelsWithStyle(),
       cards,
       showCards: !loading && cards.length > 0,
+      showEmptyCalendar: emptyCalendar,
     };
   });
 
@@ -729,7 +733,9 @@ export class AppointmentsListComponent implements OnInit {
     slot: { time: string; minutesFromMidnight: number; disabled: boolean }
   ): void {
     if (slot.disabled) return;
-    this.openOverlay(day.key, slot.time);
+    void this.router.navigate(['/appointments', 'new'], {
+      queryParams: { date: day.key, time: slot.time },
+    });
   }
 
   onAppointmentCreated(): void {
@@ -768,13 +774,18 @@ export class AppointmentsListComponent implements OnInit {
         this.loadForCurrentView();
         this.appointmentsApi.refresh();
         this.growthBrain.refresh();
+        this.messageService.add({
+          severity: 'success',
+          summary: '',
+          detail: 'התור בוטל',
+        });
       },
       error: (err) => {
-        // Surface the cancellation error — previously was silently swallowed.
         const msg: string =
           (err as { error?: { message?: string } })?.error?.message ??
           'Failed to cancel appointment. Please try again.';
         this.store.dispatch(AppointmentsActions.loadFailure({ error: msg }));
+        this.messageService.add({ severity: 'error', summary: 'שגיאה', detail: msg });
       },
     });
   }

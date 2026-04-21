@@ -1,8 +1,10 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Observable, tap, catchError, of, map } from 'rxjs';
 import { ApiService } from '../api/api.service';
 import type { BusinessUi } from '../config/theme.service';
 import { ThemeService } from '../config/theme.service';
+import { decodeJwtExpMs } from './jwt-session.util';
 
 export interface User {
   id: string;
@@ -58,6 +60,8 @@ export interface AuthMeResponse {
 
 const LS_IMPERSONATION_TOKEN = 'sb_impersonation_token';
 const LS_IMPERSONATION_BIZ_ID = 'sb_impersonation_business_id';
+/** Client hint: JWT exp in ms from last login/register response (cookie is source of truth). */
+const SS_SESSION_EXP_MS = 'sb_session_exp_ms';
 
 function lsGet(key: string): string | null {
   return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
@@ -67,6 +71,10 @@ function lsGet(key: string): string | null {
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly theme = inject(ThemeService);
+  private readonly router = inject(Router);
+
+  /** Prevents duplicate redirects when several API calls return 401 at once. */
+  private loggingOut = false;
 
   readonly user = signal<User | null>(null);
   readonly business = signal<AuthMeBusiness | null>(null);
@@ -120,6 +128,7 @@ export class AuthService {
         this.business.set(null);
         this.businessSettings.set(null);
         this.initialized.set(true);
+        this.clearSessionExpiryHint();
         return of(undefined);
       })
     );
@@ -127,6 +136,79 @@ export class AuthService {
 
   isLoggedIn(): boolean {
     return this.user() !== null;
+  }
+
+  /**
+   * When login/register returns a JWT in the body, store `exp` for guard checks.
+   * The session cookie remains the authoritative credential.
+   */
+  recordSessionExpiryFromJwt(token: string | null | undefined): void {
+    if (!token || typeof sessionStorage === 'undefined') return;
+    const expMs = decodeJwtExpMs(token);
+    if (expMs != null) {
+      sessionStorage.setItem(SS_SESSION_EXP_MS, String(expMs));
+    }
+  }
+
+  /** True when we have a stored exp and the browser clock is past it. */
+  isClientSessionExpired(): boolean {
+    if (typeof sessionStorage === 'undefined') return false;
+    const raw = sessionStorage.getItem(SS_SESSION_EXP_MS);
+    if (!raw) return false;
+    const exp = Number(raw);
+    if (!Number.isFinite(exp)) return false;
+    return Date.now() >= exp;
+  }
+
+  clearSessionExpiryHint(): void {
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem(SS_SESSION_EXP_MS);
+    }
+  }
+
+  private clearLocalSessionOnly(): void {
+    this.stopImpersonation();
+    this.user.set(null);
+    this.business.set(null);
+    this.businessSettings.set(null);
+    this.clearSessionExpiryHint();
+  }
+
+  /**
+   * Clears owner session state and navigates to login.
+   * Call after 401 or expired client hint.
+   */
+  handleUnauthorizedRedirect(): void {
+    if (this.loggingOut) return;
+    this.loggingOut = true;
+    this.clearLocalSessionOnly();
+    this.api.post('auth/logout', {}).subscribe({
+      next: () => {
+        this.loggingOut = false;
+        void this.router.navigate(['/auth/login']);
+      },
+      error: () => {
+        this.loggingOut = false;
+        void this.router.navigate(['/auth/login']);
+      },
+    });
+  }
+
+  /** Logout from sidebar: clear server cookie, local state, navigate to login. */
+  logout(): void {
+    if (this.loggingOut) return;
+    this.loggingOut = true;
+    this.clearLocalSessionOnly();
+    this.api.post('auth/logout', {}).subscribe({
+      next: () => {
+        this.loggingOut = false;
+        void this.router.navigate(['/auth/login']);
+      },
+      error: () => {
+        this.loggingOut = false;
+        void this.router.navigate(['/auth/login']);
+      },
+    });
   }
 
   isSuperAdmin(): boolean {
