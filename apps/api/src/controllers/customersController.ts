@@ -13,7 +13,18 @@ export async function listCustomers(req: AuthRequest, res: Response): Promise<vo
   const q = req.query as { search?: string };
   const search = q.search ?? '';
   const customers = await listCustomersForTenant(businessId, search);
-  res.json(customers);
+  res.json(
+    customers.map((c) => ({
+      _id: c._id,
+      fullName: c.name,
+      name: c.name,
+      phone: c.phone ?? '',
+      email: c.email ?? '',
+      notes: c.notes,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+    }))
+  );
 }
 
 export async function createCustomer(req: AuthRequest, res: Response): Promise<void> {

@@ -5,9 +5,33 @@ import { Customer } from '../models/Customer';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import mongoose from 'mongoose';
 
+type InsightsPeriod = 'week' | 'month' | 'year';
+
+function parseInsightsPeriod(query: unknown): InsightsPeriod {
+  const p = typeof query === 'string' ? query.toLowerCase() : '';
+  if (p === 'week' || p === 'month' || p === 'year') return p;
+  return 'month';
+}
+
+/** Start of the current calendar week (Sunday 00:00), month, or year in server local time. */
+function periodStart(period: InsightsPeriod): Date {
+  const now = new Date();
+  if (period === 'year') {
+    return new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+  }
+  if (period === 'month') {
+    return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+  }
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - d.getDay());
+  return d;
+}
+
 /**
  * GET /api/business/insights
  * Returns basic growth/revenue metrics for the owner dashboard.
+ * Query: `period=week|month|year` (default month) — filters revenue charts and in-period appointment counts.
  */
 export async function getBusinessInsights(req: AuthRequest, res: Response) {
   try {
@@ -16,24 +40,32 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: 'businessId is required' });
     }
     const businessIdObj = new mongoose.Types.ObjectId(businessId);
+    const period = parseInsightsPeriod(req.query?.period);
+    const rangeStart = periodStart(period);
+    const matchPeriod = {
+      businessId: businessIdObj,
+      status: { $ne: 'cancelled' },
+      start: { $gte: rangeStart },
+    };
 
     const sixtyDaysAgo = new Date();
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
 
-    const [revenueResult, revenueByServiceResult, revenueByWeekdayResult, appointmentsInWindow] = await Promise.all([
+    const [revenueResult, revenueByServiceResult, revenueByWeekdayResult, appointmentsInWindow, appointmentsCount] =
+      await Promise.all([
       Appointment.aggregate([
-        { $match: { businessId: businessIdObj, status: { $ne: 'cancelled' } } },
+        { $match: matchPeriod },
         { $group: { _id: null, total: { $sum: { $ifNull: ['$price', 0] } } } },
       ]),
       Appointment.aggregate([
-        { $match: { businessId: businessIdObj, status: { $ne: 'cancelled' } } },
+        { $match: matchPeriod },
         { $group: { _id: '$serviceId', total: { $sum: { $ifNull: ['$price', 0] } } } },
         { $lookup: { from: 'services', localField: '_id', foreignField: '_id', as: 'svc' } },
         { $unwind: { path: '$svc', preserveNullAndEmptyArrays: true } },
         { $project: { total: 1, serviceName: { $ifNull: ['$svc.name', ''] } } },
       ]),
       Appointment.aggregate([
-        { $match: { businessId: businessIdObj, status: { $ne: 'cancelled' } } },
+        { $match: matchPeriod },
         { $project: { weekday: { $dayOfWeek: '$start' }, price: { $ifNull: ['$price', 0] } } },
         { $group: { _id: '$weekday', total: { $sum: '$price' } } },
       ]),
@@ -43,6 +75,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
         status: { $ne: 'cancelled' },
         customerId: { $exists: true, $ne: null },
       }),
+      Appointment.countDocuments(matchPeriod),
     ]);
 
     const totalRevenue = revenueResult[0]?.total ?? 0;
@@ -60,7 +93,12 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     const inactiveCustomersCount = allCustomers.filter((c) => !activeCustomerIds.has(c._id.toString())).length;
 
     const topCustomersAgg = await Appointment.aggregate([
-      { $match: { businessId: businessIdObj, status: { $ne: 'cancelled' }, customerId: { $exists: true, $ne: null } } },
+      {
+        $match: {
+          ...matchPeriod,
+          customerId: { $exists: true, $ne: null },
+        },
+      },
       { $group: { _id: '$customerId', total: { $sum: { $ifNull: ['$price', 0] } } } },
       { $sort: { total: -1 } },
       { $limit: 5 },
@@ -79,6 +117,8 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       revenueByWeekday,
       inactiveCustomersCount,
       topCustomers,
+      appointmentsCount,
+      period,
     });
   } catch (err) {
     console.error('Error GET /business/insights:', err);

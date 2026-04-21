@@ -2,21 +2,24 @@ import { Component, inject } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { map, shareReplay } from 'rxjs';
-import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
 import { ChartModule } from 'primeng/chart';
+import { CardModule } from 'primeng/card';
 import { AppointmentsApiService } from '../../../appointments/services/appointments-api.service';
-import { GrowthBrainService } from '../../services/growth-brain.service';
+import {
+  GrowthBrainService,
+  type InsightsPeriod,
+} from '../../services/growth-brain.service';
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_LABELS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 const VIP_THRESHOLD = 500;
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    ButtonModule,
+    CardModule,
     TagModule,
     TableModule,
     ChartModule,
@@ -38,6 +41,12 @@ export class DashboardComponent {
     shareReplay(1)
   );
   readonly insights$ = this.growthBrain.insights$;
+  readonly selectedPeriod = this.growthBrain.selectedPeriod;
+
+  readonly chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+  };
 
   /** Chart data: revenue by weekday (Mongo $dayOfWeek 1=Sun .. 7=Sat) */
   readonly revenueByWeekdayChart$ = this.insights$.pipe(
@@ -49,7 +58,7 @@ export class DashboardComponent {
       });
       return {
         labels: WEEKDAY_LABELS,
-        datasets: [{ label: 'Revenue', data: totals }],
+        datasets: [{ label: 'הכנסות', data: totals }],
       };
     })
   );
@@ -60,10 +69,14 @@ export class DashboardComponent {
       const list = i.revenueByService ?? [];
       return {
         labels: list.map((r) => r.serviceName || '—'),
-        datasets: [{ label: 'Revenue', data: list.map((r) => r.total) }],
+        datasets: [{ label: 'הכנסות', data: list.map((r) => r.total) }],
       };
     })
   );
 
   readonly vipThreshold = VIP_THRESHOLD;
+
+  setPeriod(p: InsightsPeriod): void {
+    this.growthBrain.setPeriod(p);
+  }
 }

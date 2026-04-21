@@ -2,7 +2,7 @@ import mongoose, { Types, type ClientSession } from 'mongoose';
 import { Appointment, type IAppointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
-import type { AppointmentSource } from '../dto/enums';
+import type { AppointmentSource, AppointmentStatus } from '../dto/enums';
 import { AppointmentError } from './appointmentErrors';
 import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
 
@@ -23,6 +23,10 @@ export interface CreateAppointmentPayload {
   customerName?: string;
   customerPhone?: string;
   notes?: string;
+  /** When set, overrides the service catalog price. */
+  price?: number;
+  /** Defaults to `confirmed` when omitted or invalid. */
+  status?: AppointmentStatus;
 }
 
 export interface CreateAppointmentOptions {
@@ -144,6 +148,15 @@ export async function createAppointmentAtomic(
       session
     );
 
+    const resolvedPrice =
+      typeof payload.price === 'number' && !isNaN(payload.price)
+        ? payload.price
+        : service.price;
+    const resolvedStatus: AppointmentStatus =
+      payload.status === 'pending' || payload.status === 'confirmed'
+        ? payload.status
+        : 'confirmed';
+
     if (session) {
       const docs = await Appointment.create(
         [
@@ -153,11 +166,11 @@ export async function createAppointmentAtomic(
             customerId: payload.customerId,
             customerName: payload.customerName,
             customerPhone: payload.customerPhone,
-            price: service.price,
+            price: resolvedPrice,
             durationMinutes: service.durationMinutes ?? 30,
             start,
             end,
-            status: 'confirmed',
+            status: resolvedStatus,
             source,
             notes: payload.notes,
           },
@@ -173,11 +186,11 @@ export async function createAppointmentAtomic(
       customerId: payload.customerId,
       customerName: payload.customerName,
       customerPhone: payload.customerPhone,
-      price: service.price,
+      price: resolvedPrice,
       durationMinutes: service.durationMinutes ?? 30,
       start,
       end,
-      status: 'confirmed',
+      status: resolvedStatus,
       source,
       notes: payload.notes,
     });

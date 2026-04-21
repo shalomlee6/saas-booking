@@ -66,22 +66,30 @@ appointmentsRouter.post(
   validateBody(appointmentCreateBodySchema),
   asyncHandler(async (req: AuthRequest, res) => {
     const businessId = req.effectiveBusinessId!;
-    const { customerId, serviceId, start, end, notes } = req.body as {
+    const body = req.body as {
       customerId: string;
       serviceId: string;
-      start: string;
-      end: string;
+      start?: string;
+      end?: string;
+      startTime?: string;
+      endTime?: string;
       notes?: string;
+      price?: number;
+      status?: 'pending' | 'confirmed';
     };
+    const startStr = body.start ?? body.startTime;
+    const endStr = body.end ?? body.endTime;
 
     const appointment = await createAppointmentAtomic({
       businessId: new Types.ObjectId(businessId),
-      serviceId,
-      customerId,
-      start: new Date(start),
-      end: new Date(end),
+      serviceId: body.serviceId,
+      customerId: body.customerId,
+      start: new Date(startStr!),
+      end: new Date(endStr!),
       source: 'owner',
-      notes,
+      notes: body.notes,
+      price: body.price,
+      status: body.status,
     });
 
     return res.status(201).json(appointmentDocumentToResponseDto(appointment));

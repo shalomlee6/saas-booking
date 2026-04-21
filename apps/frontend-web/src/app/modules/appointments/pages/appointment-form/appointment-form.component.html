@@ -1,92 +1,157 @@
-<div class="appointment-form-page">
-  <h1 class="appointment-form-title">New Appointment</h1>
+<div class="appointment-form-page" dir="rtl">
+  <h1 class="appointment-form-title">תור חדש</h1>
 
-  <div class="appointment-form-card">
-    <form class="appointment-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
-      <div class="appointment-form-field">
-        <label for="customerId">Customer ID</label>
-        <input
-          id="customerId"
-          type="text"
-          formControlName="customerId"
-          class="appointment-form-input"
-          placeholder="e.g. 507f1f77bcf86cd799439011"
-          [class.appointment-form-input-invalid]="customerId?.invalid && (customerId?.touched || customerId?.dirty)"
-        />
-        @if (customerId?.invalid && (customerId?.touched || customerId?.dirty)) {
-          <p class="appointment-form-error">Customer ID is required.</p>
-        }
-      </div>
+  @if (loading()) {
+    <p class="appointment-form-loading">טוען…</p>
+  } @else {
+    <div class="appointment-form-card p-fluid">
+      <form class="formgrid grid" [formGroup]="form" (ngSubmit)="onSubmit()">
+        <div class="field col-12 md:col-6">
+          <label for="customer-ac" class="appointment-form-label">לקוח <span class="req">*</span></label>
+          <p-autocomplete
+            inputId="customer-ac"
+            formControlName="customer"
+            [suggestions]="filteredCustomers()"
+            (completeMethod)="filterCustomers($event)"
+            [dropdown]="true"
+            field="fullName"
+            [forceSelection]="true"
+            placeholder="חיפוש לפי שם או טלפון"
+            styleClass="w-full"
+            (onDropdownClick)="onCustomerDropdownClick()"
+          >
+            <ng-template let-c pTemplate="item">
+              <span>{{ displayCustomer(c) }}</span>
+            </ng-template>
+          </p-autocomplete>
+          @if (form.get('customer')?.invalid && form.get('customer')?.touched) {
+            <small class="appointment-form-error">שדה חובה</small>
+          }
+        </div>
 
-      <div class="appointment-form-field">
-        <label for="serviceId">Service ID</label>
-        <input
-          id="serviceId"
-          type="text"
-          formControlName="serviceId"
-          class="appointment-form-input"
-          placeholder="e.g. 507f1f77bcf86cd799439012"
-          [class.appointment-form-input-invalid]="serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)"
-        />
-        @if (serviceId?.invalid && (serviceId?.touched || serviceId?.dirty)) {
-          <p class="appointment-form-error">Service ID is required.</p>
-        }
-      </div>
+        <div class="field col-12 md:col-6">
+          <label for="serviceId" class="appointment-form-label">שירות <span class="req">*</span></label>
+          <p-select
+            inputId="serviceId"
+            formControlName="serviceId"
+            [options]="services()"
+            optionLabel="name"
+            optionValue="_id"
+            placeholder="בחרי שירות"
+            styleClass="w-full"
+            [showClear]="true"
+            (onChange)="onServiceChange()"
+          >
+            <ng-template let-svc pTemplate="item">
+              <span>{{ svc.name }} · {{ svc.durationMinutes }} דק׳ · {{ svc.price ?? 0 }} ₪</span>
+            </ng-template>
+          </p-select>
+          @if (form.get('serviceId')?.invalid && form.get('serviceId')?.touched) {
+            <small class="appointment-form-error">שדה חובה</small>
+          }
+        </div>
 
-      <div class="appointment-form-field">
-        <label for="start">Start time</label>
-        <input
-          id="start"
-          type="datetime-local"
-          formControlName="start"
-          class="appointment-form-input"
-          [class.appointment-form-input-invalid]="start?.invalid && (start?.touched || start?.dirty)"
-        />
-        @if (start?.invalid && (start?.touched || start?.dirty)) {
-          <p class="appointment-form-error">Start time is required.</p>
-        }
-      </div>
+        <div class="field col-12 md:col-6">
+          <label for="aptDate" class="appointment-form-label">תאריך <span class="req">*</span></label>
+          <p-datepicker
+            inputId="aptDate"
+            formControlName="date"
+            [showIcon]="true"
+            dateFormat="dd/mm/yy"
+            [minDate]="minDate"
+            styleClass="w-full"
+          />
+          @if (form.get('date')?.invalid && form.get('date')?.touched) {
+            <small class="appointment-form-error">שדה חובה</small>
+          }
+        </div>
 
-      <div class="appointment-form-field">
-        <label for="end">End time</label>
-        <input
-          id="end"
-          type="datetime-local"
-          formControlName="end"
-          class="appointment-form-input"
-          [class.appointment-form-input-invalid]="end?.invalid && (end?.touched || end?.dirty)"
-        />
-        @if (end?.invalid && (end?.touched || end?.dirty)) {
-          <p class="appointment-form-error">End time is required.</p>
-        }
-      </div>
+        <div class="field col-12 md:col-6">
+          <label for="startTime" class="appointment-form-label">שעת התחלה <span class="req">*</span></label>
+          <p-datepicker
+            inputId="startTime"
+            formControlName="startTime"
+            [timeOnly]="true"
+            hourFormat="24"
+            [stepMinute]="30"
+            styleClass="w-full"
+            (onSelect)="onStartTimeChange()"
+          />
+          @if (form.get('startTime')?.invalid && form.get('startTime')?.touched) {
+            <small class="appointment-form-error">שדה חובה</small>
+          }
+        </div>
 
-      <div class="appointment-form-field">
-        <label for="notes">Notes</label>
-        <textarea
-          id="notes"
-          formControlName="notes"
-          class="appointment-form-input appointment-form-textarea"
-          rows="3"
-        ></textarea>
-      </div>
+        <div class="field col-12 md:col-6">
+          <label for="endTime" class="appointment-form-label">שעת סיום <span class="req">*</span></label>
+          <p-datepicker
+            inputId="endTime"
+            formControlName="endTime"
+            [timeOnly]="true"
+            hourFormat="24"
+            [stepMinute]="30"
+            styleClass="w-full"
+          />
+          @if (form.get('endTime')?.invalid && form.get('endTime')?.touched) {
+            <small class="appointment-form-error">שדה חובה</small>
+          }
+        </div>
 
-      @if (serverError()) {
-        <p class="appointment-form-error appointment-form-error-server">
-          {{ serverError() }}
-        </p>
-      }
+        <div class="field col-12 md:col-6">
+          <label for="price" class="appointment-form-label">מחיר</label>
+          <p-inputNumber
+            inputId="price"
+            formControlName="price"
+            mode="decimal"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            suffix=" ₪"
+            styleClass="w-full"
+          />
+        </div>
 
-      <div class="appointment-form-actions">
-        <button
-          type="submit"
-          class="appointment-form-btn appointment-form-btn-primary"
-          [disabled]="form.invalid || creating()"
-        >
-          {{ creating() ? 'Creating…' : 'Create Appointment' }}
-        </button>
-        <a routerLink="/appointments" class="appointment-form-btn appointment-form-btn-ghost">Cancel</a>
-      </div>
-    </form>
-  </div>
+        <div class="field col-12">
+          <label for="status" class="appointment-form-label">סטטוס</label>
+          <p-select
+            inputId="status"
+            formControlName="status"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full"
+          />
+        </div>
+
+        <div class="field col-12">
+          <label for="notes" class="appointment-form-label">הערות</label>
+          <textarea
+            pTextarea
+            id="notes"
+            formControlName="notes"
+            rows="3"
+            class="w-full"
+            placeholder="אופציונלי"
+          ></textarea>
+        </div>
+
+        <div class="col-12 flex flex-column md:flex-row gap-2 appointment-form-actions">
+          <p-button
+            type="submit"
+            label="צור תור"
+            [loading]="saving()"
+            [disabled]="form.invalid || saving()"
+            styleClass="flex-1 appointment-form-btn-create"
+          />
+          <p-button
+            type="button"
+            label="ביטול"
+            [outlined]="true"
+            severity="secondary"
+            styleClass="flex-1 md:flex-initial appointment-form-btn-cancel"
+            (onClick)="cancel()"
+          />
+        </div>
+      </form>
+    </div>
+  }
 </div>

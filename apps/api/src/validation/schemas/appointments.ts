@@ -11,15 +11,33 @@ export const appointmentCreateBodySchema = z
   .object({
     customerId: mongoObjectIdString,
     serviceId: mongoObjectIdString,
-    start: iso8601DateTimeWithOffset,
-    end: iso8601DateTimeWithOffset,
+    start: iso8601DateTimeWithOffset.optional(),
+    end: iso8601DateTimeWithOffset.optional(),
+    startTime: iso8601DateTimeWithOffset.optional(),
+    endTime: iso8601DateTimeWithOffset.optional(),
     notes: z.string().max(10_000).optional(),
+    price: z.number().min(0).optional(),
+    status: z.enum(['pending', 'confirmed']).optional(),
   })
   .strip()
   .superRefine((data, ctx) => {
-    const a = new Date(data.start).getTime();
-    const b = new Date(data.end).getTime();
-    if (a >= b) {
+    const startRaw = data.start ?? data.startTime;
+    const endRaw = data.end ?? data.endTime;
+    if (!startRaw) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['start'],
+        message: 'start or startTime is required',
+      });
+    }
+    if (!endRaw) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['end'],
+        message: 'end or endTime is required',
+      });
+    }
+    if (startRaw && endRaw && new Date(startRaw) >= new Date(endRaw)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['end'],
