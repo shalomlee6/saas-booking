@@ -49,6 +49,30 @@ export const appointmentUpdateBodySchema = z
     }
   });
 
+/** PATCH /api/appointments/:id — partial update including customer/service reassignment. */
+export const appointmentPatchBodySchema = z
+  .object({
+    customerId: mongoObjectIdString.optional(),
+    serviceId: mongoObjectIdString.optional(),
+    start: iso8601DateTimeWithOffset.optional(),
+    end: iso8601DateTimeWithOffset.optional(),
+    price: z.number().min(0).optional(),
+    status: appointmentStatusZod.optional(),
+    notes: z.union([z.string().max(10_000), z.literal('')]).optional(),
+  })
+  .strip()
+  .superRefine((data, ctx) => {
+    if (data.start !== undefined && data.end !== undefined) {
+      if (new Date(data.start) >= new Date(data.end)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['end'],
+          message: 'end must be after start',
+        });
+      }
+    }
+  });
+
 export const appointmentIdParamsSchema = z
   .object({
     id: mongoObjectIdString,

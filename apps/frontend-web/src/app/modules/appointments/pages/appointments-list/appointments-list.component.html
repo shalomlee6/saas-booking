@@ -384,7 +384,7 @@
         </div>
         <ng-template pTemplate="footer">
           <div class="appointments-detail-footer">
-            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" />
+            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="onEditAppointment()" />
             <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" />
           </div>
         </ng-template>
@@ -422,7 +422,7 @@
             </span>
           </div>
           <div class="appointments-detail-actions">
-            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="closeDetail()" styleClass="appointments-detail-btn" />
+            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />
             <p-button label="ביטול תור" severity="danger" [outlined]="true" (onClick)="onDetailCancel()" styleClass="appointments-detail-btn" />
           </div>
         </div>

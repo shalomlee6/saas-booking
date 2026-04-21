@@ -22,8 +22,25 @@ let servicesStore: Record<string, unknown>[] | null = null;
 /** Cached customers from assets (read-only). */
 let initialCustomers: Record<string, unknown>[] | null = null;
 
-function isAppointmentsGet(req: HttpRequest<unknown>): boolean {
-  return req.method === 'GET' && req.url.includes('/api/appointments');
+/** GET /api/appointments (list only, no extra path segment). */
+function isAppointmentsGetList(req: HttpRequest<unknown>): boolean {
+  if (req.method !== 'GET') return false;
+  const u = req.url.split('?')[0];
+  return /\/api\/appointments\/?$/.test(u);
+}
+
+/** GET /api/appointments/:id (single document). */
+function isAppointmentsGetOne(req: HttpRequest<unknown>): boolean {
+  if (req.method !== 'GET') return false;
+  const u = req.url.split('?')[0];
+  const m = u.match(/\/api\/appointments\/([^/]+)$/);
+  if (!m) return false;
+  const seg = m[1];
+  return seg !== 'week' && seg !== 'available-slots';
+}
+
+function isAppointmentsPatch(req: HttpRequest<unknown>): boolean {
+  return req.method === 'PATCH' && /\/api\/appointments\/[^/]+$/.test(req.url.split('?')[0]);
 }
 
 function isAppointmentsPost(req: HttpRequest<unknown>): boolean {
@@ -330,7 +347,41 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   // ——— Appointments ———
-  if (isAppointmentsGet(req)) {
+  if (isAppointmentsGetOne(req)) {
+    const match = req.url.split('?')[0].match(/\/api\/appointments\/([^/]+)$/);
+    const id = match ? decodeURIComponent(match[1]) : '';
+    const imp = getImpersonationFromRequest(req);
+    return from(loadInitialAppointments()).pipe(
+      map((list) => {
+        const withIds = withMockBusinessIds(list);
+        const merged = [...withIds, ...sessionCreatedAppointments];
+        const filtered = imp
+          ? merged.filter((a) => String(a['businessId'] ?? '') === imp.impersonatingBusinessId)
+          : merged;
+        const row = filtered.find((a) => String(a['_id']) === id);
+        if (!row) {
+          return new HttpResponse({ status: 404, body: { message: 'Appointment not found' } });
+        }
+        const body = {
+          appointmentId: String(row['_id']),
+          customerId: row['customerId'] != null ? String(row['customerId']) : null,
+          serviceId: row['serviceId'] != null ? String(row['serviceId']) : '',
+          customerName: String(row['customerName'] ?? 'לקוח'),
+          customerPhone: (row['customerPhone'] as string | null) ?? null,
+          serviceName: String(row['serviceName'] ?? 'שירות'),
+          durationMinutes: Number(row['durationMinutes'] ?? 30),
+          price: typeof row['price'] === 'number' ? row['price'] : undefined,
+          start: String(row['start']),
+          end: String(row['end']),
+          status: String(row['status'] ?? 'confirmed'),
+          notes: (row['notes'] as string | null) ?? null,
+        };
+        return new HttpResponse({ status: 200, body });
+      })
+    );
+  }
+
+  if (isAppointmentsGetList(req)) {
     const imp = getImpersonationFromRequest(req);
     return from(loadInitialAppointments()).pipe(
       map((list) => {
@@ -347,6 +398,28 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         return new HttpResponse({ status: 200, body: filtered });
       })
     );
+  }
+
+  if (isAppointmentsPatch(req)) {
+    const match = req.url.split('?')[0].match(/\/api\/appointments\/([^/]+)$/);
+    const id = match ? decodeURIComponent(match[1]) : '';
+    const body = req.body as Record<string, unknown>;
+    const idx = sessionCreatedAppointments.findIndex((a) => String(a['_id']) === id);
+    if (idx >= 0) {
+      const cur = { ...sessionCreatedAppointments[idx] };
+      if (body['start']) cur['start'] = body['start'];
+      if (body['end']) cur['end'] = body['end'];
+      if (body['status']) cur['status'] = body['status'];
+      if (body['notes'] !== undefined) cur['notes'] = body['notes'];
+      if (body['customerId']) cur['customerId'] = body['customerId'];
+      if (body['serviceId']) cur['serviceId'] = body['serviceId'];
+      if (body['price'] !== undefined) cur['price'] = body['price'];
+      sessionCreatedAppointments[idx] = cur;
+      return from([new HttpResponse({ status: 200, body: cur })]);
+    }
+    return from([
+      new HttpResponse({ status: 404, body: { message: 'Appointment not found (mock)' } }),
+    ]);
   }
 
   if (isAppointmentsPost(req)) {

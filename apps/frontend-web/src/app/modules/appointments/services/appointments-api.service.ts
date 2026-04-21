@@ -58,8 +58,44 @@ export class AppointmentsApiService {
     return this.api.put<Appointment>(`appointments/${id}`, buildUpdateAppointmentDto(body));
   }
 
+  /** GET /api/appointments/:id — single appointment for edit screen */
+  getById(id: string): Observable<AppointmentDetailDto> {
+    return this.api.get<AppointmentDetailDto>(`appointments/${id}`);
+  }
+
+  /** PATCH /api/appointments/:id */
+  patchAppointment(id: string, body: PatchAppointmentBody): Observable<Appointment> {
+    return this.api.patch<Appointment>(`appointments/${id}`, body);
+  }
+
   /** DELETE /api/appointments/:id (cancels) */
   cancel(id: string): Observable<unknown> {
     return this.api.delete(`appointments/${id}`);
   }
+}
+
+/** Response shape from GET /api/appointments/:id */
+export interface AppointmentDetailDto {
+  appointmentId: string;
+  customerId: string | null;
+  serviceId: string;
+  customerName: string;
+  customerPhone: string | null;
+  serviceName: string;
+  durationMinutes: number;
+  price?: number;
+  start: string;
+  end: string;
+  status: string;
+  notes: string | null;
+}
+
+export interface PatchAppointmentBody {
+  customerId?: string;
+  serviceId?: string;
+  start?: string;
+  end?: string;
+  price?: number;
+  status?: string;
+  notes?: string;
 }

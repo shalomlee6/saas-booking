@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { DOCUMENT, DatePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
 import type { Appointment } from '../../model/appointment';
@@ -195,6 +195,7 @@ const TABLET_BREAKPOINT_PX = 1024;
 })
 export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
+  private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly growthBrain = inject(GrowthBrainService);
@@ -744,6 +745,14 @@ export class AppointmentsListComponent implements OnInit {
 
   closeDetail(): void {
     this.selectedAppointment.set(null);
+  }
+
+  onEditAppointment(): void {
+    const apt = this.selectedAppointment();
+    if (apt?._id) {
+      this.closeDetail();
+      this.router.navigate(['/appointments', apt._id, 'edit']);
+    }
   }
 
   onDetailVisibleChange(visible: boolean): void {

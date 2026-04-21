@@ -10,12 +10,15 @@ import {
   appointmentCreateBodySchema,
   appointmentIdParamsSchema,
   appointmentUpdateBodySchema,
+  appointmentPatchBodySchema,
   appointmentsListQuerySchema,
   appointmentsWeekQuerySchema,
   availableSlotsQuerySchema,
 } from '../validation/schemas/appointments';
 import {
   getAppointmentsList,
+  getAppointmentById,
+  patchAppointmentById,
   getBusinessAppointmentsForWeek,
   getAvailableSlots,
 } from '../controllers/appointmentController';
@@ -49,6 +52,12 @@ appointmentsRouter.get(
   '/',
   validateQuery(appointmentsListQuerySchema),
   asyncHandler(getAppointmentsList)
+);
+
+appointmentsRouter.get(
+  '/:id',
+  validateParams(appointmentIdParamsSchema),
+  asyncHandler(getAppointmentById)
 );
 
 // POST /api/appointments
@@ -149,6 +158,14 @@ appointmentsRouter.put(
 
     res.json(appointmentDocumentToResponseDto(appointment));
   })
+);
+
+// PATCH /api/appointments/:id — extended update (customer, service, times, price, …)
+appointmentsRouter.patch(
+  '/:id',
+  validateParams(appointmentIdParamsSchema),
+  validateBody(appointmentPatchBodySchema),
+  asyncHandler(patchAppointmentById)
 );
 
 // DELETE /api/appointments/:id (ב-MVP: להפוך ל-cancelled)

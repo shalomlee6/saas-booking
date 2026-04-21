@@ -15,4 +15,11 @@ export const APPOINTMENTS_ROUTES: Routes = [
         (m) => m.AppointmentFormComponent
       )
   },
+  {
+    path: ':id/edit',
+    loadComponent: () =>
+      import('./pages/edit-appointment/edit-appointment.component').then(
+        (m) => m.EditAppointmentComponent
+      )
+  },
 ];

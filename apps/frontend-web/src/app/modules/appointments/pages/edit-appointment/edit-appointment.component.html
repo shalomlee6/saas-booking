@@ -1,0 +1,148 @@
+<div class="edit-apt-page" dir="rtl">
+  @if (loading()) {
+    <div class="edit-apt-loading">
+      <p-progressSpinner strokeWidth="3" />
+      <span>טוען…</span>
+    </div>
+  } @else {
+    <header class="edit-apt-header">
+      <a routerLink="/appointments" class="edit-apt-back">
+        <i class="pi pi-arrow-right" aria-hidden="true"></i>
+        חזרה ליומן
+      </a>
+      <h1 class="edit-apt-title">עריכת תור</h1>
+    </header>
+
+    <form class="edit-apt-form" [formGroup]="form" (ngSubmit)="save()">
+      <div class="grid">
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="customerId">לקוח <span class="edit-apt-req">*</span></label>
+          <p-select
+            inputId="customerId"
+            formControlName="customerId"
+            [options]="customers()"
+            optionLabel="name"
+            optionValue="_id"
+            [filter]="true"
+            filterPlaceholder="חיפוש…"
+            placeholder="בחרי לקוח"
+            styleClass="w-full edit-apt-field"
+            [showClear]="true"
+          />
+          @if (form.get('customerId')?.invalid && form.get('customerId')?.touched) {
+            <small class="edit-apt-error">שדה חובה</small>
+          }
+        </div>
+
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="serviceId">שירות <span class="edit-apt-req">*</span></label>
+          <p-select
+            inputId="serviceId"
+            formControlName="serviceId"
+            [options]="services()"
+            optionLabel="name"
+            optionValue="_id"
+            [filter]="true"
+            placeholder="בחרי שירות"
+            styleClass="w-full edit-apt-field"
+            (onChange)="onServiceChange()"
+          />
+          @if (form.get('serviceId')?.invalid && form.get('serviceId')?.touched) {
+            <small class="edit-apt-error">שדה חובה</small>
+          }
+        </div>
+
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="aptDate">תאריך <span class="edit-apt-req">*</span></label>
+          <p-datepicker
+            inputId="aptDate"
+            formControlName="date"
+            [showIcon]="true"
+            dateFormat="dd/mm/yy"
+            styleClass="w-full edit-apt-field"
+          />
+        </div>
+
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="status">סטטוס <span class="edit-apt-req">*</span></label>
+          <p-select
+            inputId="status"
+            formControlName="status"
+            [options]="statusOptions"
+            optionLabel="label"
+            optionValue="value"
+            styleClass="w-full edit-apt-field"
+          />
+        </div>
+
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="startTime">שעת התחלה <span class="edit-apt-req">*</span></label>
+          <p-datepicker
+            inputId="startTime"
+            formControlName="startTime"
+            [timeOnly]="true"
+            hourFormat="24"
+            styleClass="w-full edit-apt-field"
+            (onSelect)="onStartTimeChange()"
+          />
+        </div>
+
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="endTime">שעת סיום <span class="edit-apt-req">*</span></label>
+          <p-datepicker
+            inputId="endTime"
+            formControlName="endTime"
+            [timeOnly]="true"
+            hourFormat="24"
+            styleClass="w-full edit-apt-field"
+          />
+        </div>
+
+        <div class="col-12 lg:col-6">
+          <label class="edit-apt-label" for="price">מחיר</label>
+          <p-inputNumber
+            inputId="price"
+            formControlName="price"
+            mode="decimal"
+            [minFractionDigits]="0"
+            [maxFractionDigits]="2"
+            suffix=" ₪"
+            styleClass="w-full edit-apt-field"
+          />
+        </div>
+
+        <div class="col-12">
+          <label class="edit-apt-label" for="notes">הערות</label>
+          <textarea
+            pTextarea
+            id="notes"
+            formControlName="notes"
+            rows="3"
+            class="w-full edit-apt-textarea"
+            placeholder="הערות (אופציונלי)"
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="edit-apt-actions">
+        <button
+          pButton
+          type="button"
+          class="edit-apt-btn-secondary"
+          label="ביטול"
+          [disabled]="saving()"
+          (click)="cancel()"
+        ></button>
+        <button
+          pButton
+          type="submit"
+          class="edit-apt-btn-primary"
+          label="שמור"
+          icon="pi pi-check"
+          [loading]="saving()"
+          [disabled]="saving()"
+        ></button>
+      </div>
+    </form>
+  }
+</div>
