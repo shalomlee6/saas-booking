@@ -1,0 +1,77 @@
+<p-toast />
+
+<div class="sa-page">
+  <header class="sa-page-head">
+    <h1 class="sa-page-title">Platform settings</h1>
+    <p class="sa-page-sub">Configuration applies across all tenants.</p>
+  </header>
+
+  @if (loading()) {
+    <p class="sa-muted">Loading…</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()">
+      <div class="sa-settings-grid">
+        <p-card header="General">
+          <div class="sa-field">
+            <label for="platformDisplayName">Platform display name</label>
+            <input
+              id="platformDisplayName"
+              type="text"
+              pInputText
+              formControlName="platformDisplayName"
+              class="w-full"
+            />
+          </div>
+          <div class="sa-field">
+            <label for="trialDays">Default trial duration (days)</label>
+            <p-inputNumber
+              inputId="trialDays"
+              formControlName="defaultTrialDurationDays"
+              [min]="0"
+              [max]="3650"
+              [showButtons]="true"
+              styleClass="w-full"
+            />
+          </div>
+        </p-card>
+
+        <p-card header="Operations">
+          <div class="sa-toggle-row">
+            <label for="maint">Maintenance mode</label>
+            <p-toggleSwitch inputId="maint" formControlName="maintenanceMode" />
+          </div>
+          <p class="sa-hint">When enabled, consider showing a banner in the owner app (future).</p>
+        </p-card>
+
+        <p-card header="Feature flags">
+          <div class="sa-toggle-row">
+            <span>Booking features</span>
+            <p-toggleSwitch formControlName="flagBooking" />
+          </div>
+          <div class="sa-toggle-row">
+            <span>Marketing module</span>
+            <p-toggleSwitch formControlName="flagMarketing" />
+          </div>
+          <div class="sa-toggle-row">
+            <span>Waitlist</span>
+            <p-toggleSwitch formControlName="flagWaitlist" />
+          </div>
+        </p-card>
+
+        <p-card header="Email (read-only)">
+          <p class="sa-email-note">{{ emailNote }}</p>
+        </p-card>
+      </div>
+
+      <div class="sa-save-row">
+        <p-button
+          label="Save changes"
+          icon="pi pi-check"
+          type="submit"
+          [loading]="saving()"
+          [disabled]="form.invalid || saving()"
+        />
+      </div>
+    </form>
+  }
+</div>

@@ -1,0 +1,86 @@
+.sa-page {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.sa-page-head {
+  margin-bottom: 1.25rem;
+}
+
+.sa-page-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-page-sub {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9375rem;
+}
+
+.sa-muted {
+  color: #64748b;
+}
+
+.sa-settings-grid {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .sa-settings-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.sa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+
+  label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+  }
+}
+
+.sa-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.875rem;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sa-hint {
+  margin: 0.75rem 0 0;
+  font-size: 0.8125rem;
+  color: #94a3b8;
+}
+
+.sa-email-note {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.sa-save-row {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.w-full {
+  width: 100%;
+}

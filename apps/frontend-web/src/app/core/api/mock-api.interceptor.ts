@@ -75,6 +75,10 @@ function isAuthLoginPost(req: HttpRequest<unknown>): boolean {
   return req.method === 'POST' && req.url.includes('/api/auth/login');
 }
 
+function isAuthLogoutPost(req: HttpRequest<unknown>): boolean {
+  return req.method === 'POST' && req.url.includes('/api/auth/logout');
+}
+
 function isBusinessSettingsPatch(req: HttpRequest<unknown>): boolean {
   return req.method === 'PATCH' && req.url.includes('/api/business/settings');
 }
@@ -90,6 +94,77 @@ function isAdminImpersonatePost(req: HttpRequest<unknown>): boolean {
 function isAdminStopImpersonatePost(req: HttpRequest<unknown>): boolean {
   return req.method === 'POST' && req.url.includes('/api/admin/stop-impersonate');
 }
+
+function adminUrlPath(req: HttpRequest<unknown>): string {
+  try {
+    const u = new URL(req.url, 'http://localhost');
+    return u.pathname;
+  } catch {
+    return req.url.split('?')[0];
+  }
+}
+
+function parseUrlQuery(req: HttpRequest<unknown>): URLSearchParams {
+  try {
+    return new URL(req.url, 'http://localhost').searchParams;
+  } catch {
+    const q = req.url.includes('?') ? req.url.split('?')[1] : '';
+    return new URLSearchParams(q);
+  }
+}
+
+const MOCK_ADMIN_USER_ROWS: Record<string, unknown>[] = [
+  {
+    id: 'mock-super-admin',
+    email: 'superadmin@example.com',
+    name: 'Super Admin',
+    role: 'super_admin',
+    status: 'active',
+    businessId: null,
+    businessName: null,
+    createdAt: '2024-06-01T10:00:00.000Z',
+    lastLoginAt: null,
+  },
+  {
+    id: 'mock-user-1',
+    email: 'owner@example.com',
+    name: 'Demo Owner',
+    role: 'owner',
+    status: 'active',
+    businessId: 'mock-business-1',
+    businessName: 'Demo Salon',
+    createdAt: '2024-06-02T10:00:00.000Z',
+    lastLoginAt: '2024-06-15T12:00:00.000Z',
+  },
+];
+
+let mockPlatformSettingsState: {
+  defaultTrialDurationDays: number;
+  maintenanceMode: boolean;
+  featureFlags: Record<string, boolean>;
+  platformDisplayName: string;
+  emailConfigurationNote: string;
+  updatedAt: string;
+} = {
+  defaultTrialDurationDays: 14,
+  maintenanceMode: false,
+  featureFlags: { booking: true, marketing: false, waitlist: false },
+  platformDisplayName: 'SaaS Booking (mock)',
+  emailConfigurationNote: 'Mock: real SMTP is configured on the API server.',
+  updatedAt: new Date().toISOString(),
+};
+
+const MOCK_AUDIT_ROWS: Record<string, unknown>[] = [
+  {
+    id: 'audit-1',
+    timestamp: new Date().toISOString(),
+    actor: 'superadmin@example.com',
+    action: 'impersonation.start',
+    entity: 'Business',
+    entityId: 'mock-business-1',
+    metadata: { businessId: 'mock-business-1' },
+  },
+];
 
 function isPublicBusinessGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/[^/]+\/business\/?(\?|$)/.test(req.url);
@@ -155,6 +230,9 @@ let mockCurrentUser: { role: 'owner'; businessId: string } | { role: 'super_admi
   role: 'owner',
   businessId: 'mock-business-1',
 };
+
+/** False until a successful mock POST /auth/login (fresh browser / reload = logged out). */
+let mockAuthenticated = false;
 
 const MOCK_BUSINESSES: Record<string, unknown>[] = [
   {
@@ -516,11 +594,17 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   // ——— Auth: login sets mockCurrentUser; auth/me uses Bearer or mockCurrentUser ———
+  if (isAuthLogoutPost(req)) {
+    mockAuthenticated = false;
+    return from([new HttpResponse({ status: 200, body: { success: true } })]);
+  }
+
   if (isAuthLoginPost(req)) {
     const body = req.body as Record<string, unknown>;
     const email = String(body['email'] ?? '').toLowerCase();
     if (email === 'superadmin@example.com') {
       mockCurrentUser = { role: 'super_admin' };
+      mockAuthenticated = true;
       return from([
         new HttpResponse({
           status: 200,
@@ -535,6 +619,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       ]);
     }
     mockCurrentUser = { role: 'owner', businessId: 'mock-business-1' };
+    mockAuthenticated = true;
     return from([
       new HttpResponse({
         status: 200,
@@ -551,6 +636,14 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   if (isAuthMeGet(req)) {
+    if (!mockAuthenticated) {
+      return from([
+        new HttpResponse({
+          status: 401,
+          body: { message: 'Not authenticated (mock)' },
+        }),
+      ]);
+    }
     return from([new HttpResponse({ status: 200, body: mockAuthMeResponse(req) })]);
   }
 
@@ -575,6 +668,142 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isAdminStopImpersonatePost(req)) {
     return from([new HttpResponse({ status: 200, body: { ok: true } })]);
+  }
+
+  // ——— Admin: users, settings, analytics, audit (mock) ———
+  const adminPath = adminUrlPath(req);
+  if (req.method === 'GET' && /\/api\/admin\/users\/?$/.test(adminPath)) {
+    const q = parseUrlQuery(req);
+    const page = Math.max(1, parseInt(q.get('page') || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(q.get('limit') || '20', 10) || 20));
+    const search = (q.get('search') || '').toLowerCase();
+    const role = q.get('role') || '';
+    const status = q.get('status') || '';
+    let list = MOCK_ADMIN_USER_ROWS.map((r) => ({ ...r }));
+    if (search) {
+      list = list.filter(
+        (r) =>
+          String(r['email']).toLowerCase().includes(search) ||
+          String(r['name'] || '').toLowerCase().includes(search)
+      );
+    }
+    if (role) list = list.filter((r) => r['role'] === role);
+    if (status) list = list.filter((r) => r['status'] === status);
+    const total = list.length;
+    const start = (page - 1) * limit;
+    const items = list.slice(start, start + limit);
+    return from([new HttpResponse({ status: 200, body: { items, total, page, limit } })]);
+  }
+  const adminUserOne = req.method === 'GET' && adminPath.match(/\/api\/admin\/users\/([^/]+)$/);
+  if (adminUserOne) {
+    const id = adminUserOne[1];
+    const row = MOCK_ADMIN_USER_ROWS.find((r) => r['id'] === id);
+    if (!row) {
+      return from([new HttpResponse({ status: 404, body: { message: 'Not found' } })]);
+    }
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          ...row,
+          updatedAt: row['createdAt'],
+        },
+      }),
+    ]);
+  }
+  const adminUserPatch = req.method === 'PATCH' && adminPath.match(/\/api\/admin\/users\/([^/]+)$/);
+  if (adminUserPatch) {
+    const id = adminUserPatch[1];
+    const row = MOCK_ADMIN_USER_ROWS.find((r) => r['id'] === id);
+    if (!row) {
+      return from([new HttpResponse({ status: 404, body: { message: 'Not found' } })]);
+    }
+    const body = req.body as Record<string, unknown>;
+    if (body['status'] === 'active' || body['status'] === 'disabled') {
+      row['status'] = body['status'];
+    }
+    if (typeof body['name'] === 'string') {
+      row['name'] = body['name'];
+    }
+    return from([new HttpResponse({ status: 200, body: { ...row } })]);
+  }
+  if (req.method === 'GET' && /\/api\/admin\/settings\/?$/.test(adminPath)) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: { ...mockPlatformSettingsState },
+      }),
+    ]);
+  }
+  if (req.method === 'PATCH' && /\/api\/admin\/settings\/?$/.test(adminPath)) {
+    const body = req.body as Record<string, unknown>;
+    mockPlatformSettingsState = {
+      ...mockPlatformSettingsState,
+      ...(typeof body['defaultTrialDurationDays'] === 'number'
+        ? { defaultTrialDurationDays: body['defaultTrialDurationDays'] as number }
+        : {}),
+      ...(typeof body['maintenanceMode'] === 'boolean'
+        ? { maintenanceMode: body['maintenanceMode'] as boolean }
+        : {}),
+      ...(body['featureFlags'] && typeof body['featureFlags'] === 'object'
+        ? { featureFlags: body['featureFlags'] as Record<string, boolean> }
+        : {}),
+      ...(typeof body['platformDisplayName'] === 'string'
+        ? { platformDisplayName: body['platformDisplayName'] as string }
+        : {}),
+      updatedAt: new Date().toISOString(),
+    };
+    return from([new HttpResponse({ status: 200, body: { ...mockPlatformSettingsState } })]);
+  }
+  if (req.method === 'GET' && /\/api\/admin\/analytics\/?$/.test(adminPath)) {
+    const range = parseUrlQuery(req).get('range') || '7d';
+    const days = range === '90d' ? 90 : range === '30d' ? 30 : 7;
+    const body = {
+      rangeDays: days,
+      totals: {
+        businesses: MOCK_BUSINESSES.length,
+        activeBusinesses: MOCK_BUSINESSES.length,
+        users: MOCK_ADMIN_USER_ROWS.length,
+        appointments: 42,
+        appointmentsInRange: 12,
+        revenueInRange: 4800,
+        newUserSignups: 2,
+        newBusinessesInRange: 1,
+        churnRiskBusinesses: 0,
+      },
+      charts: {
+        appointmentsByDay: [
+          { date: '2024-06-10', count: 2 },
+          { date: '2024-06-11', count: 4 },
+          { date: '2024-06-12', count: 3 },
+        ],
+        newBusinessesByWeek: [{ label: '2024-W23', count: 1 }],
+        planDistribution: [
+          { plan: 'free', count: 2 },
+          { plan: 'normal', count: 0 },
+        ],
+      },
+    };
+    return from([new HttpResponse({ status: 200, body })]);
+  }
+  if (req.method === 'GET' && /\/api\/admin\/audit\/?$/.test(adminPath)) {
+    const q = parseUrlQuery(req);
+    const page = Math.max(1, parseInt(q.get('page') || '1', 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(q.get('limit') || '25', 10) || 25));
+    const search = (q.get('search') || '').toLowerCase();
+    let list = [...MOCK_AUDIT_ROWS];
+    if (search) {
+      list = list.filter(
+        (r) =>
+          String(r['actor']).toLowerCase().includes(search) ||
+          String(r['action']).toLowerCase().includes(search) ||
+          String(r['entityId']).toLowerCase().includes(search)
+      );
+    }
+    const total = list.length;
+    const start = (page - 1) * limit;
+    const items = list.slice(start, start + limit);
+    return from([new HttpResponse({ status: 200, body: { items, total, page, limit } })]);
   }
 
   // ——— Public (customer booking: business by slug, request-otp, verify-otp) ———

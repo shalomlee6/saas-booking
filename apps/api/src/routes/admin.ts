@@ -8,8 +8,21 @@ import {
   adminStopImpersonate,
   adminUpdateBusinessUi,
 } from '../controllers/adminController';
+import {
+  getAdminUsers,
+  getAdminUserById,
+  patchAdminUser,
+  getAdminSettings,
+  patchAdminSettings,
+  getAdminAnalytics,
+  getAdminAudit,
+} from '../controllers/adminPlatformController';
 import { validateBody } from '../middleware/validateRequest';
-import { createAdminBusinessBodySchema } from '../validation/schemas/admin';
+import {
+  createAdminBusinessBodySchema,
+  patchAdminUserBodySchema,
+  patchPlatformSettingsBodySchema,
+} from '../validation/schemas/admin';
 
 export const adminRouter = Router();
 
@@ -22,6 +35,16 @@ adminRouter.post('/businesses', validateBody(createAdminBusinessBodySchema), cre
 adminRouter.post('/impersonate', adminImpersonate);
 adminRouter.post('/stop-impersonate', adminStopImpersonate);
 adminRouter.patch('/businesses/:id/ui', adminUpdateBusinessUi);
+
+adminRouter.get('/users', getAdminUsers);
+adminRouter.get('/users/:id', getAdminUserById);
+adminRouter.patch('/users/:id', validateBody(patchAdminUserBodySchema), patchAdminUser);
+
+adminRouter.get('/settings', getAdminSettings);
+adminRouter.patch('/settings', validateBody(patchPlatformSettingsBodySchema), patchAdminSettings);
+
+adminRouter.get('/analytics', getAdminAnalytics);
+adminRouter.get('/audit', getAdminAudit);
 
 
 

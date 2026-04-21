@@ -1,0 +1,94 @@
+<p-toast />
+
+<div class="sa-page">
+  <header class="sa-page-head sa-analytics-head">
+    <div>
+      <h1 class="sa-page-title">Analytics</h1>
+      <p class="sa-page-sub">Platform-wide metrics for the selected period.</p>
+    </div>
+    <div class="sa-analytics-toolbar">
+      <p-select
+        [options]="rangeOptions"
+        [(ngModel)]="range"
+        optionLabel="label"
+        optionValue="value"
+        (ngModelChange)="onRangeChange()"
+        styleClass="sa-range-select"
+      />
+      <p-button
+        icon="pi pi-refresh"
+        [rounded]="true"
+        [text]="true"
+        (onClick)="refresh()"
+        [disabled]="loading()"
+        aria-label="Refresh"
+      />
+    </div>
+  </header>
+
+  @if (loading()) {
+    <div class="sa-kpi-grid">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <p-skeleton width="100%" height="88px" styleClass="sa-kpi-skel" />
+      }
+    </div>
+    <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
+  } @else if (data(); as d) {
+    <div class="sa-kpi-grid">
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Businesses</span>
+        <span class="sa-kpi-value">{{ d.totals.businesses | number }}</span>
+        <span class="sa-kpi-meta">Active (30d): {{ d.totals.activeBusinesses | number }}</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Users</span>
+        <span class="sa-kpi-value">{{ d.totals.users | number }}</span>
+        <span class="sa-kpi-meta">New in range: {{ d.totals.newUserSignups | number }}</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Appointments</span>
+        <span class="sa-kpi-value">{{ d.totals.appointments | number }}</span>
+        <span class="sa-kpi-meta">In range: {{ d.totals.appointmentsInRange | number }}</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Revenue (range)</span>
+        <span class="sa-kpi-value">{{ d.totals.revenueInRange | currency: 'USD' : 'symbol' : '1.0-0' }}</span>
+        <span class="sa-kpi-meta">From booked services</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">New businesses</span>
+        <span class="sa-kpi-value">{{ d.totals.newBusinessesInRange | number }}</span>
+        <span class="sa-kpi-meta">In selected range</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Churn risk</span>
+        <span class="sa-kpi-value">{{ d.totals.churnRiskBusinesses | number }}</span>
+        <span class="sa-kpi-meta">No appts in 30d (approx.)</span>
+      </p-card>
+    </div>
+
+    <div class="sa-charts">
+      <p-card header="Appointments over time" styleClass="sa-chart-card">
+        @if (lineChart(); as lc) {
+          <div class="sa-chart-wrap">
+            <p-chart type="line" [data]="lc" [options]="chartOptions" [responsive]="true" />
+          </div>
+        }
+      </p-card>
+      <p-card header="New businesses by week" styleClass="sa-chart-card">
+        @if (barChart(); as bc) {
+          <div class="sa-chart-wrap">
+            <p-chart type="bar" [data]="bc" [options]="chartOptions" [responsive]="true" />
+          </div>
+        }
+      </p-card>
+      <p-card header="Plan distribution" styleClass="sa-chart-card sa-chart-card--pie">
+        @if (pieChart(); as pc) {
+          <div class="sa-chart-wrap sa-chart-wrap--pie">
+            <p-chart type="pie" [data]="pc" [options]="chartOptions" [responsive]="true" />
+          </div>
+        }
+      </p-card>
+    </div>
+  }
+</div>

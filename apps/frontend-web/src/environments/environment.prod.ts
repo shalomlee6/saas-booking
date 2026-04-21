@@ -1,10 +1,10 @@
 /**
- * Production build — replace `apiUrl` with your deployed API origin if the
- * Angular app is not served from the same host as the API (e.g. CDN frontend).
+ * Production: leave `apiUrl` empty when the app is served from the same origin as `/api`.
+ * Set to `https://your-api.example.com` when the API is on another host (no trailing slash).
  */
 export const environment = {
   production: true,
   useMocks: false,
   mockPublicApi: false,
-  apiUrl: 'https://api.your-domain.com',
+  apiUrl: '',
 };

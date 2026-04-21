@@ -1,0 +1,100 @@
+.sa-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.sa-page-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-page-sub {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9375rem;
+}
+
+.sa-analytics-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.sa-analytics-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sa-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+::ng-deep .sa-kpi-card .p-card-body {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sa-kpi-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.sa-kpi-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-kpi-meta {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.sa-charts {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .sa-charts {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sa-chart-card--pie {
+    grid-column: 1 / -1;
+    max-width: 420px;
+    justify-self: center;
+  }
+}
+
+.sa-chart-wrap {
+  height: 260px;
+  position: relative;
+}
+
+.sa-chart-wrap--pie {
+  height: 300px;
+}
+
+::ng-deep .sa-chart-card .p-card-body {
+  padding-top: 0;
+}
+
+.sa-kpi-skel,
+.sa-chart-skel {
+  border-radius: 12px;
+}

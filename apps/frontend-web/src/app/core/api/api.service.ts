@@ -1,46 +1,79 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
-const BASE_URL = '/api';
+function buildApiBaseUrl(): string {
+  const origin = (environment.apiUrl ?? '').replace(/\/$/, '');
+  return origin ? `${origin}/api` : '/api';
+}
+
+export type ApiQueryParams = Record<string, string | number | boolean | undefined | null>;
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private readonly baseUrl = BASE_URL;
+  private readonly baseUrl = buildApiBaseUrl();
 
   constructor(private readonly http: HttpClient) {}
 
-  get<T>(path: string): Observable<T> {
-    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
-    return this.http.get<T>(url, { withCredentials: true });
+  private buildUrl(path: string): string {
+    const segment = path.startsWith('/') ? path : `/${path}`;
+    return `${this.baseUrl}${segment}`;
   }
 
-  post<T>(path: string, body: unknown): Observable<T> {
-    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
-    return this.http.post<T>(url, body, { withCredentials: true });
+  private toHttpParams(query?: ApiQueryParams): HttpParams | undefined {
+    if (!query) return undefined;
+    let params = new HttpParams();
+    let has = false;
+    for (const [key, value] of Object.entries(query)) {
+      if (value === undefined || value === null || value === '') continue;
+      params = params.set(key, String(value));
+      has = true;
+    }
+    return has ? params : undefined;
   }
 
-  put<T>(path: string, body: unknown): Observable<T> {
-    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
-    return this.http.put<T>(url, body, { withCredentials: true });
+  get<T>(path: string, query?: ApiQueryParams): Observable<T> {
+    return this.http.get<T>(this.buildUrl(path), {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+    });
   }
 
-  patch<T>(path: string, body: unknown): Observable<T> {
-    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
-    return this.http.patch<T>(url, body, { withCredentials: true });
+  post<T>(path: string, body: unknown, query?: ApiQueryParams): Observable<T> {
+    return this.http.post<T>(this.buildUrl(path), body, {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+    });
   }
 
-  delete<T>(path: string): Observable<T> {
-    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
-    return this.http.delete<T>(url, { withCredentials: true });
+  put<T>(path: string, body: unknown, query?: ApiQueryParams): Observable<T> {
+    return this.http.put<T>(this.buildUrl(path), body, {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+    });
+  }
+
+  patch<T>(path: string, body: unknown, query?: ApiQueryParams): Observable<T> {
+    return this.http.patch<T>(this.buildUrl(path), body, {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+    });
+  }
+
+  delete<T>(path: string, query?: ApiQueryParams): Observable<T> {
+    return this.http.delete<T>(this.buildUrl(path), {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+    });
   }
 
   /** DELETE with a JSON request body (used when the endpoint needs extra context, e.g. reason). */
-  deleteWithBody<T>(path: string, body: unknown): Observable<T> {
-    const url = path.startsWith('/') ? `${this.baseUrl}${path}` : `${this.baseUrl}/${path}`;
-    return this.http.request<T>('DELETE', url, {
+  deleteWithBody<T>(path: string, body: unknown, query?: ApiQueryParams): Observable<T> {
+    return this.http.request<T>('DELETE', this.buildUrl(path), {
       body,
       withCredentials: true,
+      params: this.toHttpParams(query),
     });
   }
 }

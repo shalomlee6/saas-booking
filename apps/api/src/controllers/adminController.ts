@@ -6,6 +6,7 @@ import { User } from '../models/User';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { generateSlug } from '../utils/slug';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
+import { recordAudit } from '../utils/recordAudit';
 
 // GET /api/admin/businesses
 export async function getAdminBusinesses(req: AuthRequest, res: Response): Promise<void> {
@@ -111,6 +112,15 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       at: new Date().toISOString(),
     });
 
+    await recordAudit({
+      actorUserId: req.user.userId,
+      actorEmail: req.user.email,
+      action: 'impersonation.start',
+      entity: 'Business',
+      entityId: businessId,
+      metadata: { businessId },
+    });
+
     // Create impersonation token
     const token = jwt.sign(
       {
@@ -140,6 +150,13 @@ export async function adminStopImpersonate(req: AuthRequest, res: Response): Pro
     console.info('[AUDIT] impersonation_stop', {
       adminUserId: req.user?.userId,
       at: new Date().toISOString(),
+    });
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'impersonation.stop',
+      entity: 'Session',
+      metadata: {},
     });
     // Just return success - frontend will restore original token
     res.json({ ok: true });

@@ -1,0 +1,77 @@
+.sa-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.sa-page-head {
+  margin-bottom: 1.25rem;
+}
+
+.sa-page-title {
+  margin: 0 0 0.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-page-sub {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.9375rem;
+}
+
+.sa-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.sa-search {
+  min-width: 220px;
+}
+
+.sa-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.sa-empty {
+  text-align: center;
+  color: #94a3b8;
+  padding: 2rem !important;
+}
+
+.sa-detail {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 7rem 1fr;
+  gap: 0.5rem 1rem;
+  font-size: 0.875rem;
+
+  dt {
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  dd {
+    margin: 0;
+    color: #0f172a;
+  }
+}
+
+.sa-detail-actions {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+::ng-deep .sa-table.p-datatable .p-datatable-thead > tr > th {
+  background: #f8fafc;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}

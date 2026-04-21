@@ -1,0 +1,159 @@
+<p-toast />
+
+<div class="sa-page">
+  <header class="sa-page-head">
+    <h1 class="sa-page-title">Users</h1>
+    <p class="sa-page-sub">Search and manage platform accounts.</p>
+  </header>
+
+  <div class="sa-toolbar">
+    <span class="p-input-icon-left sa-search">
+      <i class="pi pi-search" aria-hidden="true"></i>
+      <input
+        pInputText
+        type="search"
+        [(ngModel)]="searchInput"
+        (keyup.enter)="onSearchSubmit()"
+        placeholder="Email or name…"
+        aria-label="Search users"
+      />
+    </span>
+    <p-button label="Search" (onClick)="onSearchSubmit()" styleClass="sa-btn" />
+    <p-select
+      [options]="roleOptions"
+      [(ngModel)]="roleFilter"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Role"
+      (ngModelChange)="onRoleChange()"
+      styleClass="sa-select"
+      [showClear]="true"
+    />
+    <p-select
+      [options]="statusOptions"
+      [(ngModel)]="statusFilter"
+      optionLabel="label"
+      optionValue="value"
+      placeholder="Status"
+      (ngModelChange)="onStatusChange()"
+      styleClass="sa-select"
+      [showClear]="true"
+    />
+  </div>
+
+  <p-table
+    [value]="rows()"
+    [lazy]="true"
+    (onLazyLoad)="onLazyLoad($event)"
+    [paginator]="true"
+    [rows]="pageSize"
+    [totalRecords]="totalRecords()"
+    [loading]="loading()"
+    [rowsPerPageOptions]="[10, 20, 50]"
+    [showCurrentPageReport]="true"
+    currentPageReportTemplate="{first}–{last} of {totalRecords}"
+    styleClass="sa-table"
+    [tableStyle]="{ 'min-width': '56rem' }"
+  >
+    <ng-template #header>
+      <tr>
+        <th>Name</th>
+        <th>Email</th>
+        <th>Role</th>
+        <th>Status</th>
+        <th>Business</th>
+        <th>Created</th>
+        <th>Last login</th>
+        <th style="width: 11rem">Actions</th>
+      </tr>
+    </ng-template>
+    <ng-template #body let-row>
+      <tr>
+        <td>{{ row.name || '—' }}</td>
+        <td>{{ row.email }}</td>
+        <td><p-tag [value]="row.role" severity="secondary" /></td>
+        <td>
+          <p-tag [value]="row.status" [severity]="row.status === 'active' ? 'success' : 'danger'" />
+        </td>
+        <td>{{ row.businessName || '—' }}</td>
+        <td>{{ row.createdAt | date: 'mediumDate' }}</td>
+        <td>{{ row.lastLoginAt ? (row.lastLoginAt | date: 'short') : '—' }}</td>
+        <td>
+          <div class="sa-actions">
+            <p-button
+              icon="pi pi-eye"
+              [rounded]="true"
+              [text]="true"
+              (onClick)="openDetail(row)"
+              pTooltip="Details"
+            />
+            @if (row.status === 'active') {
+              <p-button
+                icon="pi pi-ban"
+                [rounded]="true"
+                [text]="true"
+                severity="danger"
+                (onClick)="setStatus(row, 'disabled')"
+                pTooltip="Disable"
+                [disabled]="row.role === 'super_admin'"
+              />
+            } @else {
+              <p-button
+                icon="pi pi-check"
+                [rounded]="true"
+                [text]="true"
+                severity="success"
+                (onClick)="setStatus(row, 'active')"
+                pTooltip="Enable"
+              />
+            }
+            <p-button
+              icon="pi pi-user-plus"
+              [rounded]="true"
+              [text]="true"
+              (onClick)="impersonateUserFuture(row)"
+              pTooltip="Impersonate (soon)"
+            />
+          </div>
+        </td>
+      </tr>
+    </ng-template>
+    <ng-template #emptymessage>
+      <tr>
+        <td colspan="8" class="sa-empty">No users match your filters.</td>
+      </tr>
+    </ng-template>
+  </p-table>
+
+  <p-dialog
+    header="User details"
+    [(visible)]="detailVisible"
+    [modal]="true"
+    [style]="{ width: '32rem' }"
+    [dismissableMask]="true"
+  >
+    @if (detailLoading()) {
+      <p>Loading…</p>
+    } @else if (detailUser(); as u) {
+      <dl class="sa-detail">
+        <dt>Email</dt>
+        <dd>{{ u.email }}</dd>
+        <dt>Name</dt>
+        <dd>{{ u.name || '—' }}</dd>
+        <dt>Role</dt>
+        <dd>{{ u.role }}</dd>
+        <dt>Status</dt>
+        <dd>{{ u.status }}</dd>
+        <dt>Business</dt>
+        <dd>{{ u.businessName || '—' }}</dd>
+        <dt>Created</dt>
+        <dd>{{ u.createdAt | date: 'medium' }}</dd>
+        <dt>Last login</dt>
+        <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'medium') : '—' }}</dd>
+      </dl>
+      <div class="sa-detail-actions">
+        <p-button label="Reset password" [outlined]="true" (onClick)="resetPasswordFuture()" />
+      </div>
+    }
+  </p-dialog>
+</div>

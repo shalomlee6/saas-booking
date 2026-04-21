@@ -9,9 +9,21 @@ import { getMe } from '../controllers/authController';
 
 export const authRouter = Router();
 
+/** Public self-serve registration: allowed when ALLOW_PUBLIC_REGISTER=true, or when unset in non-production. */
+function isPublicRegistrationAllowed(): boolean {
+  const v = process.env.ALLOW_PUBLIC_REGISTER;
+  if (v === 'true') return true;
+  if (v === 'false') return false;
+  return process.env.NODE_ENV !== 'production';
+}
+
 // POST /api/auth/register
 authRouter.post('/register', async (req, res) => {
   try {
+    if (!isPublicRegistrationAllowed()) {
+      return res.status(403).json({ message: 'Public registration is disabled' });
+    }
+
     const { email, password } = req.body as { email?: string; password?: string };
 
     if (!email || !password) {
@@ -97,6 +109,13 @@ authRouter.post('/login', async (req, res) => {
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
+
+    if (user.status === 'disabled') {
+      return res.status(403).json({ message: 'Account is disabled' });
+    }
+
+    user.lastLoginAt = new Date();
+    await user.save();
 
     const payload: Record<string, unknown> = {
       userId: user._id,

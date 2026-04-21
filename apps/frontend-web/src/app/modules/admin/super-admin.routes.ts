@@ -26,45 +26,29 @@ export const SUPER_ADMIN_ROUTES: Routes = [
   {
     path: 'users',
     loadComponent: () =>
-      import('./pages/admin-section-placeholder/admin-section-placeholder.component').then(
-        (m) => m.AdminSectionPlaceholderComponent
+      import('./pages/super-admin-users/super-admin-users.component').then(
+        (m) => m.SuperAdminUsersComponent
       ),
-    data: {
-      adminTitle: 'Users',
-      adminSubtitle: 'Platform accounts and roles (coming soon).',
-    },
   },
   {
     path: 'analytics',
     loadComponent: () =>
-      import('./pages/admin-section-placeholder/admin-section-placeholder.component').then(
-        (m) => m.AdminSectionPlaceholderComponent
+      import('./pages/super-admin-analytics/super-admin-analytics.component').then(
+        (m) => m.SuperAdminAnalyticsComponent
       ),
-    data: {
-      adminTitle: 'Analytics',
-      adminSubtitle: 'Cross-tenant reports and KPIs (coming soon).',
-    },
   },
   {
     path: 'audit',
     loadComponent: () =>
-      import('./pages/admin-section-placeholder/admin-section-placeholder.component').then(
-        (m) => m.AdminSectionPlaceholderComponent
+      import('./pages/super-admin-audit/super-admin-audit.component').then(
+        (m) => m.SuperAdminAuditComponent
       ),
-    data: {
-      adminTitle: 'Audit log',
-      adminSubtitle: 'Security and impersonation events (coming soon).',
-    },
   },
   {
     path: 'settings',
     loadComponent: () =>
-      import('./pages/admin-section-placeholder/admin-section-placeholder.component').then(
-        (m) => m.AdminSectionPlaceholderComponent
+      import('./pages/super-admin-settings/super-admin-settings.component').then(
+        (m) => m.SuperAdminSettingsComponent
       ),
-    data: {
-      adminTitle: 'System settings',
-      adminSubtitle: 'Platform configuration (coming soon).',
-    },
   },
 ];
