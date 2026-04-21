@@ -14,6 +14,13 @@ export async function requireBusinessContext(
   next: NextFunction
 ): Promise<void> {
   try {
+    if (req.user?.role === 'super_admin' && req.user.impersonating !== true) {
+      res.status(403).json({
+        message: 'Tenant context is required. Super-admins must impersonate a business to use this endpoint.',
+      });
+      return;
+    }
+
     let businessId = resolveBusinessIdFromReq(req);
 
     if (!businessId && req.user?.role === 'owner' && req.user?.userId) {

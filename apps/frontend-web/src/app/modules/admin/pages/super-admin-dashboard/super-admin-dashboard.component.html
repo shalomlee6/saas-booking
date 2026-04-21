@@ -1,0 +1,51 @@
+<div class="sa-dash">
+  <header class="sa-dash-header">
+    <h1 class="sa-dash-title">Platform overview</h1>
+    <p class="sa-dash-sub">System-wide metrics and quick access to tenant management.</p>
+  </header>
+
+  @if (loading()) {
+    <p class="sa-dash-loading">Loading…</p>
+  } @else if (error()) {
+    <p class="sa-dash-error" role="alert">{{ error() }}</p>
+  } @else {
+    <div class="sa-dash-grid">
+      <a routerLink="/super-admin/businesses" class="sa-dash-card sa-dash-card--link">
+        <span class="sa-dash-card-label">Total businesses</span>
+        <span class="sa-dash-card-value">{{ totalBusinesses() }}</span>
+        <span class="sa-dash-card-cta">Manage tenants →</span>
+      </a>
+      <div class="sa-dash-card">
+        <span class="sa-dash-card-label">Active subscriptions</span>
+        <span class="sa-dash-card-value sa-dash-card-value--muted">—</span>
+        <span class="sa-dash-card-hint">Connect billing to populate</span>
+      </div>
+      <div class="sa-dash-card">
+        <span class="sa-dash-card-label">Platform appointments (30d)</span>
+        <span class="sa-dash-card-value sa-dash-card-value--muted">—</span>
+        <span class="sa-dash-card-hint">Analytics API pending</span>
+      </div>
+      <div class="sa-dash-card">
+        <span class="sa-dash-card-label">Alerts</span>
+        <span class="sa-dash-card-value sa-dash-card-value--ok">All clear</span>
+      </div>
+    </div>
+
+    <section class="sa-dash-section">
+      <h2 class="sa-dash-section-title">Recent sign-ups</h2>
+      @if (recentSignups().length === 0) {
+        <p class="sa-dash-empty">No businesses yet.</p>
+      } @else {
+        <ul class="sa-dash-list">
+          @for (b of recentSignups(); track b._id) {
+            <li class="sa-dash-list-item">
+              <span class="sa-dash-list-name">{{ b.name }}</span>
+              <span class="sa-dash-list-meta">{{ b.ownerEmail ?? '—' }}</span>
+              <span class="sa-dash-list-date">{{ b.createdAt | date: 'mediumDate' }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+  }
+</div>

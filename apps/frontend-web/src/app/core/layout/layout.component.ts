@@ -10,9 +10,12 @@ import {
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Store } from '@ngrx/store';
 import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
 import { AdminApiService } from '../../modules/admin/services/admin-api.service';
+import { GrowthBrainService } from '../../modules/dashboard/services/growth-brain.service';
+import * as AppointmentsActions from '../../modules/appointments/state/appointments.actions';
 import { DOCUMENT } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
@@ -37,6 +40,8 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly auth = inject(AuthService);
   private readonly adminApi = inject(AdminApiService);
   private readonly router = inject(Router);
+  private readonly store = inject(Store);
+  private readonly growthBrain = inject(GrowthBrainService);
 
   private readonly _titleSync = effect(() => {
     const name = this.auth.business()?.name?.trim();
@@ -110,26 +115,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return open ? 'pi pi-times' : 'pi pi-bars';
   });
 
-  /** Sidebar: Services nav link. */
-  readonly servicesNavLink = computed<string>(() =>
-    this.isSuperAdmin() && !this.isImpersonating() ? '/services' : '/services'
-  );
-
-  /** Sidebar: Customers label. */
-  readonly customersNavLabel = computed<string>(() =>
-    this.isSuperAdmin() && !this.isImpersonating() ? 'Businesses' : 'Customers'
-  );
-
-  /** Sidebar: Customers nav link. */
-  readonly customersNavLink = computed<string>(() =>
-    this.isSuperAdmin() && !this.isImpersonating() ? '/admin/business-customers' : '/customers'
-  );
-
-  /** Stable routerLinkActiveOptions for the customers nav item. */
-  readonly customersNavLinkActiveOptions = computed(() =>
-    this.customersNavLink() === '/admin/business-customers' ? LINK_OPTS_EXACT : LINK_OPTS_PREFIX
-  );
-
   /** URL for the public customer site (open in new tab). */
   readonly customerSiteUrl = computed<string>(() => {
     const slug = this.auth.business()?.slug;
@@ -138,47 +123,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   readonly linkOptsExact = LINK_OPTS_EXACT;
   readonly linkOptsPrefix = LINK_OPTS_PREFIX;
-
-  readonly themeToggleLabel = computed(() =>
-    this.themeService.currentMode() === 'light' ? 'Dark' : 'Light'
-  );
-
-  readonly themeToggleAriaLabel = computed(() =>
-    this.themeService.currentMode() === 'light'
-      ? 'Switch to dark mode'
-      : 'Switch to light mode'
-  );
-
-  /** Consolidated template VM to avoid repeated signal/computed calls in bindings. */
-  readonly layoutVm = computed(() => {
-    const isMobile = this.isMobile();
-    const isSidebarCollapsed = this.isSidebarCollapsed();
-    const isMobileMenuOpen = this.isMobileMenuOpen();
-    const isImpersonating = this.isImpersonating();
-    const isSuperAdmin = this.isSuperAdmin();
-    const business = this.business();
-    const user = this.user();
-
-    return {
-      isMobile,
-      isSidebarCollapsed,
-      isMobileMenuOpen,
-      isImpersonating,
-      isSuperAdmin,
-      business,
-      user,
-      activeBusinessName: this.activeBusinessName(),
-      menuToggleIcon: this.menuToggleIcon(),
-      menuAriaLabel: this.menuAriaLabel(),
-      servicesNavLink: this.servicesNavLink(),
-      customersNavLink: this.customersNavLink(),
-      customersNavLabel: this.customersNavLabel(),
-      customersNavLinkActiveOptions: this.customersNavLinkActiveOptions(),
-      customerSiteUrl: this.customerSiteUrl(),
-      themeToggleLabel: this.themeToggleLabel(),
-      themeToggleAriaLabel: this.themeToggleAriaLabel(),
-    };
-  });
 
   toggleTheme(): void {
     const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';
@@ -195,8 +139,10 @@ export class LayoutComponent implements OnInit, OnDestroy {
     const router = this.router;
     const finish = () => {
       auth.stopImpersonation();
+      this.store.dispatch(AppointmentsActions.resetTenantState());
+      this.growthBrain.invalidateTenantScope();
       auth.init().subscribe(() => {
-        router.navigate([auth.isSuperAdmin() ? '/admin/business-customers' : '/dashboard']);
+        router.navigate([auth.isSuperAdmin() ? '/super-admin/businesses' : '/dashboard']);
       });
     };
     this.adminApi.stopImpersonation().subscribe({ next: finish, error: finish });

@@ -17,8 +17,15 @@ export async function getMe(req: AuthRequest, res: Response) {
       return res.status(401).json({ message: 'User not found' });
     }
 
-    // When impersonating, use impersonatingBusinessId; else use user's businessId
-    const effectiveBusinessId = resolveBusinessIdFromReq(req) ?? user.businessId?.toString();
+    const isSuperAdmin = user.role === 'super_admin';
+    const isImpersonating = req.user?.impersonating === true;
+
+    // Super-admin: tenant context only while impersonating. Never fall back to user.businessId.
+    const effectiveBusinessId = isSuperAdmin
+      ? isImpersonating
+        ? req.user?.impersonatingBusinessId ?? resolveBusinessIdFromReq(req)
+        : undefined
+      : resolveBusinessIdFromReq(req) ?? user.businessId?.toString();
 
     let business: any = null;
     let businessSettings: any = null;
@@ -55,12 +62,17 @@ export async function getMe(req: AuthRequest, res: Response) {
       }
     }
 
+    const responseBusinessId =
+      isSuperAdmin && !isImpersonating
+        ? undefined
+        : effectiveBusinessId?.toString() || user.businessId?.toString();
+
     return res.json({
       user: {
         id: user._id,
         email: user.email,
         role: user.role,
-        businessId: effectiveBusinessId?.toString() || user.businessId?.toString(),
+        businessId: responseBusinessId,
         businessSlug: business?.slug?.toString(),
       },
       business: business || null,

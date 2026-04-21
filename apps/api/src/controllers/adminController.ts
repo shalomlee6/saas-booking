@@ -105,6 +105,12 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
+    console.info('[AUDIT] impersonation_start', {
+      adminUserId: req.user.userId,
+      businessId,
+      at: new Date().toISOString(),
+    });
+
     // Create impersonation token
     const token = jwt.sign(
       {
@@ -131,6 +137,10 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
 // POST /api/admin/stop-impersonate
 export async function adminStopImpersonate(req: AuthRequest, res: Response): Promise<void> {
   try {
+    console.info('[AUDIT] impersonation_stop', {
+      adminUserId: req.user?.userId,
+      at: new Date().toISOString(),
+    });
     // Just return success - frontend will restore original token
     res.json({ ok: true });
   } catch (err) {

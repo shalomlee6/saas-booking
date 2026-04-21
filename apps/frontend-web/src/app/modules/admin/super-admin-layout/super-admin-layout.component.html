@@ -1,0 +1,113 @@
+<p-toast />
+
+<div
+  class="sa-layout"
+  [class.sa-layout--sidebar-collapsed]="!isMobile() && isSidebarCollapsed()"
+  [class.sa-layout--mobile-drawer-open]="isMobile() && isMobileMenuOpen()"
+>
+  <div class="sa-layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
+
+  <div class="sa-layout-sidebar">
+    <div class="sa-layout-sidebar-header">
+      <div class="sa-layout-logo-mark" aria-hidden="true">A</div>
+      <div class="sa-layout-brand">
+        <span class="sa-layout-brand-title">Admin console</span>
+        <span class="sa-layout-brand-sub">SaaS Booking</span>
+      </div>
+    </div>
+
+    <aside class="sa-layout-sidebar-body" aria-label="Admin navigation">
+      <nav class="sa-layout-nav">
+        <a
+          routerLink="/super-admin/dashboard"
+          routerLinkActive="sa-layout-link-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+          class="sa-layout-link"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-chart-bar" aria-hidden="true"></i>
+          <span>Overview</span>
+        </a>
+        <a
+          routerLink="/super-admin/businesses"
+          routerLinkActive="sa-layout-link-active"
+          [routerLinkActiveOptions]="{ exact: false }"
+          class="sa-layout-link"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-building" aria-hidden="true"></i>
+          <span>Businesses</span>
+        </a>
+        <a
+          routerLink="/super-admin/users"
+          routerLinkActive="sa-layout-link-active"
+          class="sa-layout-link"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-users" aria-hidden="true"></i>
+          <span>Users</span>
+        </a>
+        <a
+          routerLink="/super-admin/analytics"
+          routerLinkActive="sa-layout-link-active"
+          class="sa-layout-link"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-chart-line" aria-hidden="true"></i>
+          <span>Analytics</span>
+        </a>
+        <a
+          routerLink="/super-admin/audit"
+          routerLinkActive="sa-layout-link-active"
+          class="sa-layout-link"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-list" aria-hidden="true"></i>
+          <span>Audit log</span>
+        </a>
+        <a
+          routerLink="/super-admin/settings"
+          routerLinkActive="sa-layout-link-active"
+          class="sa-layout-link"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-cog" aria-hidden="true"></i>
+          <span>System settings</span>
+        </a>
+      </nav>
+    </aside>
+
+    <div class="sa-layout-sidebar-footer">
+      <button type="button" class="sa-layout-logout" (click)="onLogout()">
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="sa-layout-shell">
+    <header class="sa-layout-topbar">
+      <p-button
+        [icon]="menuToggleIcon()"
+        [rounded]="false"
+        [text]="true"
+        severity="secondary"
+        [attr.aria-label]="menuAriaLabel()"
+        [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
+        (onClick)="toggleSidebar()"
+        styleClass="sa-layout-menu-btn"
+      />
+      <div class="sa-layout-topbar-center">
+        <h1 class="sa-layout-topbar-title">Platform administration</h1>
+        <p class="sa-layout-topbar-sub">Manage tenants, access, and system health</p>
+      </div>
+      <div class="sa-layout-topbar-actions">
+        <span class="sa-layout-user">{{ user()?.email ?? 'Admin' }}</span>
+      </div>
+    </header>
+
+    <main class="sa-layout-main" id="main-content" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+</div>

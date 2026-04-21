@@ -16,6 +16,10 @@ export const businessRouter = Router();
 
 businessRouter.get('/me', auth, async (req: AuthRequest, res) => {
   try {
+    if (req.user!.role === 'super_admin' && req.user!.impersonating !== true) {
+      return res.status(403).json({ message: 'Not available without impersonation' });
+    }
+
     const business = await Business.findOne({ ownerId: req.user!.userId });
 
     if (!business) {
@@ -32,7 +36,10 @@ businessRouter.get('/me', auth, async (req: AuthRequest, res) => {
 // PATCH /api/business/ui – owner updates own business UI (tenant from JWT / impersonation)
 businessRouter.patch('/ui', auth, requireBusinessContext, async (req: AuthRequest, res) => {
   try {
-    if (req.user!.role !== 'owner') {
+    const canEditUi =
+      req.user!.role === 'owner' ||
+      (req.user!.role === 'super_admin' && req.user!.impersonating === true);
+    if (!canEditUi) {
       return res.status(403).json({ message: 'Only business owners can update their business UI' });
     }
     const businessId = getEffectiveBusinessId(req)!;

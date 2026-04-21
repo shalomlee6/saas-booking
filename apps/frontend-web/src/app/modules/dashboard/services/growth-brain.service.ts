@@ -38,6 +38,8 @@ export class GrowthBrainService {
 
   private readonly period$ = new BehaviorSubject<InsightsPeriod>('month');
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  /** Bumps to drop shareReplay cache when switching tenant / impersonation. */
+  private readonly tenantContext$ = new BehaviorSubject(0);
 
   /** Current dashboard period for pill active state. */
   readonly selectedPeriod = toSignal(this.period$, { initialValue: 'month' });
@@ -46,7 +48,11 @@ export class GrowthBrainService {
    * Observable that re-fetches when refresh() is called or period changes.
    * Use async pipe in templates; do not manually subscribe.
    */
-  readonly insights$: Observable<Insights> = combineLatest([this.period$, this.refresh$]).pipe(
+  readonly insights$: Observable<Insights> = combineLatest([
+    this.period$,
+    this.refresh$,
+    this.tenantContext$,
+  ]).pipe(
     switchMap(([period]) =>
       this.api
         .get<InsightsApiResponse>(`business/insights?period=${encodeURIComponent(period)}`)
@@ -77,5 +83,10 @@ export class GrowthBrainService {
 
   refresh(): void {
     this.refresh$.next();
+  }
+
+  /** Call when leaving impersonation or switching tenant so cached insights are not reused. */
+  invalidateTenantScope(): void {
+    this.tenantContext$.next(this.tenantContext$.value + 1);
   }
 }

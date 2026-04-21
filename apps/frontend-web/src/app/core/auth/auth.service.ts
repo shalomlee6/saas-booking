@@ -111,8 +111,9 @@ export class AuthService {
         this.businessSettings.set(res.businessSettings ?? null);
         this.initialized.set(true);
 
-        // Super admin: use localStorage sb_theme for light/dark. Owners: use business theme only (ignore sb_theme for mode).
-        const isSuperAdmin = res.user?.role === 'super_admin';
+        // Super admin (not impersonating): sb_theme. Impersonating or owners: business UI drives mode.
+        const isSuperAdmin =
+          res.user?.role === 'super_admin' && !this._impersonationToken();
         const mode = isSuperAdmin
           ? ((typeof localStorage !== 'undefined' && (localStorage.getItem('sb_theme') as 'light' | 'dark' | null)) === 'dark' ? 'dark' : 'light')
           : (res.business?.ui?.themeMode === 'dark' ? 'dark' : 'light');

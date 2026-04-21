@@ -10,6 +10,9 @@ export const guestGuard: CanActivateFn = () => {
     return true;
   }
   if (auth.isLoggedIn()) {
+    if (auth.isSuperAdmin()) {
+      return router.createUrlTree(['/super-admin']);
+    }
     return router.createUrlTree(['/dashboard']);
   }
   return true;

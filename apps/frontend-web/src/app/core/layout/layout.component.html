@@ -56,9 +56,9 @@
         </a>
 
         <a
-          [routerLink]="servicesNavLink()"
+          routerLink="/services"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="{ exact: false }"
+          [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
           [attr.aria-label]="isSidebarCollapsed() ? 'Services' : null"
           (click)="closeMobileMenu()"
@@ -68,18 +68,18 @@
         </a>
 
         <a
-          [routerLink]="customersNavLink()"
+          routerLink="/customers"
           routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="customersNavLinkActiveOptions()"
+          [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? customersNavLabel() : null"
+          [attr.aria-label]="isSidebarCollapsed() ? 'Customers' : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-users" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">{{ customersNavLabel() }}</span>
+          <span class="layout-sidebar-link-text">Customers</span>
         </a>
 
-        @if (!isSuperAdmin() && user()?.businessId) {
+        @if (business()) {
           <span class="layout-sidebar-section-label" aria-hidden="true">הגדרות</span>
 
           <a
@@ -183,7 +183,7 @@
             Customer site
             <i class="pi pi-arrow-up-right" aria-hidden="true" style="font-size:0.7rem"></i>
           </a>
-        } @else if (business() && !isSuperAdmin()) {
+        } @else if (business() && !business()?.slug) {
           <span class="layout-topbar-customer-site-warning" role="note">
             No slug set
           </span>
@@ -197,7 +197,7 @@
           >Impersonating</span>
         }
 
-        @if (isSuperAdmin()) {
+        @if (business() && (!isSuperAdmin() || isImpersonating())) {
           <button
             type="button"
             class="layout-theme-toggle"

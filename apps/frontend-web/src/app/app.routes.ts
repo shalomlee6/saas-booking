@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/auth/guards/auth.guard';
 import { superAdminGuard } from './core/auth/guards/super-admin.guard';
+import { ownerPortalGuard } from './core/auth/guards/owner-portal.guard';
 
 export const routes: Routes = [
   {
@@ -14,8 +15,18 @@ export const routes: Routes = [
       import('./modules/public/public.routes').then((m) => m.PUBLIC_ROUTES),
   },
   {
+    path: 'super-admin',
+    canActivate: [authGuard, superAdminGuard],
+    loadComponent: () =>
+      import('./modules/admin/super-admin-layout/super-admin-layout.component').then(
+        (m) => m.SuperAdminLayoutComponent
+      ),
+    loadChildren: () =>
+      import('./modules/admin/super-admin.routes').then((m) => m.SUPER_ADMIN_ROUTES),
+  },
+  {
     path: '',
-    canActivate: [authGuard],
+    canActivate: [authGuard, ownerPortalGuard],
     loadComponent: () =>
       import('./core/layout/layout.component').then((m) => m.LayoutComponent),
     children: [
@@ -48,12 +59,6 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'admin',
-        canActivate: [superAdminGuard],
-        loadChildren: () =>
-          import('./modules/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
-      },
-      {
         path: 'settings',
         loadChildren: () =>
           import('./modules/settings/settings.routes').then((m) => m.SETTINGS_ROUTES),
@@ -67,6 +72,16 @@ export const routes: Routes = [
       },
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
     ],
+  },
+  { path: 'admin', redirectTo: '/super-admin', pathMatch: 'full' },
+  {
+    path: 'admin/business-customers',
+    redirectTo: '/super-admin/businesses',
+    pathMatch: 'full',
+  },
+  {
+    path: 'admin/businesses/:id/ui',
+    redirectTo: '/super-admin/businesses/:id/ui',
   },
   { path: '**', redirectTo: '' },
 ];

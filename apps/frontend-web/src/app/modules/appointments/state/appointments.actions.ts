@@ -35,3 +35,6 @@ export const createFailure = createAction(
 
 /** Clears create-time error so reopening the create overlay does not show a stale message. */
 export const clearCreateError = createAction('[Appointments] Clear Create Error');
+
+/** Clears tenant-scoped list state (e.g. after exiting impersonation). */
+export const resetTenantState = createAction('[Appointments] Reset Tenant State');

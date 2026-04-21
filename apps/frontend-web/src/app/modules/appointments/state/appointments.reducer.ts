@@ -60,5 +60,6 @@ export const appointmentsReducer = createReducer(
   on(AppointmentsActions.clearCreateError, (state) => ({
     ...state,
     error: null,
-  }))
+  })),
+  on(AppointmentsActions.resetTenantState, () => ({ ...initialState }))
 );

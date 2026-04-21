@@ -38,7 +38,7 @@ export class BusinessUiEditorComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
-      this.router.navigate(['/admin/business-customers']);
+      this.router.navigate(['/super-admin/businesses']);
       return;
     }
     this.businessId.set(id);
@@ -76,7 +76,7 @@ export class BusinessUiEditorComponent implements OnInit {
         if (currentBusinessId === id) {
           this.theme.applyBusinessUi(res.ui);
         }
-        this.router.navigate(['/admin/business-customers']);
+        this.router.navigate(['/super-admin/businesses']);
       },
       error: (err) => {
         this.error.set(err?.error?.message || 'Failed to save');

@@ -98,16 +98,17 @@ authRouter.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign(
-      { 
-        userId: user._id,
-        role: user.role,
-        email: user.email,
-        businessId: user.businessId
-      },
-      process.env.JWT_SECRET || 'dev-secret',
-      { expiresIn: '7d' }
-    );
+    const payload: Record<string, unknown> = {
+      userId: user._id,
+      role: user.role,
+      email: user.email,
+    };
+    // Super-admin session must not carry tenant scope; use impersonation JWT for that.
+    if (user.role !== 'super_admin' && user.businessId) {
+      payload.businessId = user.businessId;
+    }
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' });
 
     res.cookie('sb_token', token, {
       httpOnly: true,

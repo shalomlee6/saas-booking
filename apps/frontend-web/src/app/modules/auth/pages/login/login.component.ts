@@ -70,7 +70,8 @@ export class LoginComponent {
           this.auth.init().subscribe({
             next: () => {
               this.loading.set(false);
-              void this.router.navigate(['/dashboard']);
+              const target = this.auth.isSuperAdmin() ? '/super-admin' : '/dashboard';
+              void this.router.navigate([target]);
             },
             error: () => {
               this.loading.set(false);

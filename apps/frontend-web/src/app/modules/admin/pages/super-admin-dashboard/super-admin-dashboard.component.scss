@@ -1,0 +1,159 @@
+.sa-dash {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.sa-dash-header {
+  margin-bottom: 1.5rem;
+}
+
+.sa-dash-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-dash-sub {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: #64748b;
+}
+
+.sa-dash-loading,
+.sa-dash-error {
+  margin: 0;
+  padding: 1rem 0;
+  color: #64748b;
+}
+
+.sa-dash-error {
+  color: #b91c1c;
+}
+
+.sa-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.sa-dash-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1.25rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.sa-dash-card--link {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    border-color: #38bdf8;
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.15);
+  }
+}
+
+.sa-dash-card-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.sa-dash-card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-dash-card-value--muted {
+  color: #94a3b8;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.sa-dash-card-value--ok {
+  font-size: 1.125rem;
+  color: #15803d;
+}
+
+.sa-dash-card-cta {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #0284c7;
+  margin-top: 0.25rem;
+}
+
+.sa-dash-card-hint {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.sa-dash-section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.sa-dash-empty {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.875rem;
+}
+
+.sa-dash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sa-dash-list-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 0.875rem;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.sa-dash-list-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.sa-dash-list-meta {
+  color: #64748b;
+  font-size: 0.8125rem;
+}
+
+.sa-dash-list-date {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .sa-dash-list-item {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
