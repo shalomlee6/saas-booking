@@ -1,3 +1,5 @@
+@use './public-landing-palette' as *;
+
 .pl-svc {
   text-align: right;
   width: 100%;
@@ -7,7 +9,7 @@
   margin: 0 0 0.75rem;
   font-size: 18px;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .pl-svc__scroll {
@@ -27,10 +29,10 @@
 .pl-svc__card {
   flex: 0 0 148px;
   scroll-snap-align: start;
-  background: #ffffff;
+  background: $pl-bg-card;
   border-radius: 16px;
-  box-shadow: 0 2px 8px rgba(187, 135, 122, 0.1);
-  border: 1px solid #debcb2;
+  box-shadow: 0 2px 8px $pl-shadow-soft;
+  border: 1px solid $pl-border;
   padding: 1rem 0.85rem;
   display: flex;
   flex-direction: column;
@@ -41,40 +43,37 @@
 .pl-svc__emoji {
   font-size: 1.35rem;
   line-height: 1;
+  color: $pl-primary-light;
 }
 
 .pl-svc__name {
   margin: 0.15rem 0 0;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #3d2314;
+  color: $pl-text-heading;
   line-height: 1.3;
 }
 
 .pl-svc__meta {
   margin: 0;
   font-size: 13px;
-  color: #bb877a;
+  color: $pl-text-muted;
 }
 
 .pl-svc__price {
   margin: 0;
   font-size: 13px;
-  font-weight: 700;
-  color: #bb877a;
+  font-weight: 600;
+  color: $pl-gold;
 }
 
 ::ng-deep .pl-svc__btn.p-button {
   margin-top: 0.35rem;
   width: 100%;
   justify-content: center;
-  border-radius: 50px;
-  background: #d5a294;
-  border: none;
-  color: #fff;
-  font-weight: 600;
+  @include pl-btn-primary;
   font-size: 0.8125rem;
-  padding-block: 0.4rem;
+  padding-block: 0.5rem;
 }
 
 ::ng-deep .pl-svc__btn.p-button .p-button-icon {
@@ -82,7 +81,7 @@
 }
 
 ::ng-deep .pl-svc__btn.p-button:not(:disabled):hover {
-  background: #bb877a;
+  background: $pl-primary-hover;
   border: none;
   color: #fff;
 }

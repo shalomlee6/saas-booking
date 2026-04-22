@@ -1,7 +1,8 @@
-// ─── Public landing — palette (#f5ebe7 / #f3e2d6 / #debcb2 / #d5a294) ───────────
+@use './landing/public-landing-palette' as *;
+
 .pl-page {
   min-height: 100dvh;
-  background: #f5ebe7;
+  background: $pl-bg-page;
   text-align: right;
   box-sizing: border-box;
 }
@@ -24,20 +25,21 @@
 .pl-page__boot-text {
   margin: 0;
   font-size: 1rem;
-  color: #5c3d2e;
+  color: $pl-text-body;
 }
 
 .pl-section {
-  padding-block: 0px 16px 20px 16px;
+  padding-block: 20px;
+  padding-inline: 16px;
   box-sizing: border-box;
 }
 
 .pl-section--base {
-  background: #f5ebe7;
+  background: $pl-bg-page;
 }
 
 .pl-section--accent {
-  background: #f3e2d6;
+  background: $pl-bg-section-alt;
 }
 
 .pl-welcome {
@@ -72,13 +74,13 @@
   margin: 0 0 0.35rem;
   font-size: 20px;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .pl-greeting__sub {
   margin: 0;
   font-size: 14px;
-  color: #bb877a;
+  color: $pl-text-muted;
 }
 
 // ─── Mobile sticky bar ─────────────────────────────────────────────────────────
@@ -100,8 +102,8 @@
     bottom: 0;
     gap: 10px;
     padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
-    background: #ffffff;
-    border-top: 1px solid #debcb2;
+    background: $pl-bg-card;
+    border-top: 1px solid $pl-border;
     box-sizing: border-box;
   }
 
@@ -118,7 +120,7 @@
     min-height: 2.75rem;
     border-radius: 50px;
     font-size: 0.9375rem;
-    font-weight: 600;
+    font-weight: 500;
     font-family: inherit;
     text-decoration: none;
     cursor: pointer;
@@ -130,23 +132,25 @@
   }
 
   .pl-sticky-bar__btn--call {
-    background: #f3e2d6;
-    color: #bb877a;
-    border: 1px solid #debcb2;
+    @include pl-btn-secondary;
   }
 
   .pl-sticky-bar__btn--book {
-    background: #d5a294;
+    background: $pl-primary;
     color: #fff;
     border: none;
+  }
+
+  .pl-sticky-bar__btn--book:not(:disabled):hover {
+    background: $pl-primary-hover;
   }
 
   .pl-sticky-bar__btn--disabled {
     opacity: 0.45;
     cursor: not-allowed;
-    background: #f3e2d6;
-    color: #bb877a;
-    border: 1px solid #debcb2;
+    background: $pl-primary-pale;
+    color: $pl-text-muted;
+    border: 1px solid $pl-primary-light;
   }
 }
 
@@ -163,7 +167,7 @@
 
   .p-drawer-header {
     padding: 1.25rem 1.25rem 0.75rem;
-    border-bottom: 1px solid #debcb2;
+    border-bottom: 1px solid $pl-border;
   }
 
   .p-drawer-content {
@@ -180,13 +184,13 @@
 
 .cancel-drawer-icon {
   font-size: 1.25rem;
-  color: #d5a294;
+  color: $pl-primary;
 }
 
 .cancel-drawer-title {
   font-size: 1.0625rem;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .cancel-drawer-body {
@@ -197,7 +201,7 @@
 }
 
 .cancel-apt-summary {
-  background: #f3e2d6;
+  background: $pl-bg-section-alt;
   border-radius: 12px;
   padding: 0.875rem 1rem;
   display: flex;
@@ -210,10 +214,10 @@
   align-items: center;
   gap: 0.625rem;
   font-size: 0.9rem;
-  color: #5c3d2e;
+  color: $pl-text-body;
 
   .pi {
-    color: #d5a294;
+    color: $pl-primary;
     font-size: 0.875rem;
     width: 1rem;
     text-align: center;
@@ -229,7 +233,7 @@
 .cancel-confirm-text {
   margin: 0;
   font-size: 0.9375rem;
-  color: #3d2314;
+  color: $pl-text-heading;
   font-weight: 500;
   text-align: right;
 }
@@ -243,7 +247,7 @@
 .cancel-reason-label {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .cancel-reason-required {
@@ -255,12 +259,12 @@
   width: 100%;
   box-sizing: border-box;
   border-radius: 10px;
-  border: 1px solid #debcb2;
+  border: 1px solid $pl-border;
   padding: 0.75rem 0.875rem;
   font-size: 0.9375rem;
   font-family: inherit;
-  color: #5c3d2e;
-  background: #f3e2d6;
+  color: $pl-text-body;
+  background: $pl-primary-pale;
   resize: vertical;
   min-height: 80px;
   transition:
@@ -271,8 +275,8 @@
 
   &:focus {
     outline: none;
-    border-color: #d5a294;
-    box-shadow: 0 0 0 3px rgba(213, 162, 148, 0.25);
+    border-color: $pl-primary-light;
+    box-shadow: 0 0 0 3px rgba(183, 110, 121, 0.15);
   }
 
   &--invalid {
@@ -325,10 +329,10 @@
 .cancel-confirm-btn {
   ::ng-deep .p-button {
     width: 100%;
-    border-radius: 12px;
+    border-radius: 50px;
     justify-content: center;
     font-size: 1rem;
-    font-weight: 600;
+    font-weight: 500;
     padding: 0.875rem 1.5rem;
     min-height: 52px;
     gap: 0.5rem;

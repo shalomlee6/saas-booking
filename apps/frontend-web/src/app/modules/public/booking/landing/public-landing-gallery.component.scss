@@ -1,3 +1,5 @@
+@use './public-landing-palette' as *;
+
 .pl-gal {
   text-align: right;
 }
@@ -15,15 +17,15 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .pl-gal__empty-line {
   margin: 0;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   font-size: 14px;
-  color: #bb877a;
+  color: $pl-text-muted;
 }
 
 .pl-gal__masonry {
@@ -43,12 +45,12 @@
   margin-bottom: 0.5rem;
   padding: 0;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
   display: block;
-  box-shadow: 0 2px 8px rgba(187, 135, 122, 0.1);
-  background: #f3e2d6;
+  box-shadow: 0 2px 8px $pl-shadow-soft;
+  background: $pl-bg-section-alt;
 
   img {
     width: 100%;
@@ -84,7 +86,7 @@
   gap: 0.35rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: #5c3d2e;
+  color: $pl-text-body;
 }
 
 .pl-gal__input {
@@ -92,13 +94,23 @@
 }
 
 ::ng-deep .pl-gal__add.p-button.p-button-outlined {
-  color: #bb877a;
-  border-color: #debcb2;
-  background: #f3e2d6;
+  color: $pl-primary;
+  border-color: $pl-primary-light;
+  background: $pl-primary-pale;
 }
 
 ::ng-deep .pl-gal__add.p-button.p-button-outlined:not(:disabled):hover {
-  background: #f5ebe7;
-  border-color: #debcb2;
-  color: #5c3d2e;
+  background: $pl-primary-light;
+  border-color: $pl-primary;
+  color: $pl-text-heading;
+}
+
+::ng-deep .pl-gal__save.p-button {
+  @include pl-btn-primary;
+  width: 100%;
+  justify-content: center;
+}
+
+::ng-deep .pl-gal__save.p-button .p-button-icon {
+  color: #fff;
 }

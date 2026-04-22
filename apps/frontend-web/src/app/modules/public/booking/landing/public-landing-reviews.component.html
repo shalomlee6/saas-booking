@@ -6,9 +6,9 @@
         <p class="pl-rev__stars" aria-hidden="true">{{ r.starRow }}</p>
         <p class="pl-rev__text">"{{ r.text }}"</p>
         <p class="pl-rev__meta">
-          {{ r.customerName }}
+          <span class="pl-rev__name">{{ r.customerName }}</span>
           <span class="pl-rev__dot">·</span>
-          {{ r.date | date: 'mediumDate' : undefined : 'he-IL' }}
+          <span class="pl-rev__date">{{ r.date | date: 'mediumDate' : undefined : 'he-IL' }}</span>
         </p>
       </article>
     }

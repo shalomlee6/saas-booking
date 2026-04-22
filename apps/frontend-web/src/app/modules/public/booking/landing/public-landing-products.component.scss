@@ -1,3 +1,5 @@
+@use './public-landing-palette' as *;
+
 .pl-prod {
   text-align: right;
 }
@@ -6,7 +8,7 @@
   margin: 0 0 0.75rem;
   font-size: 18px;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .pl-prod__scroll {
@@ -19,10 +21,10 @@
 
 .pl-prod__card {
   flex: 0 0 220px;
-  background: #ffffff;
+  background: $pl-bg-card;
   border-radius: 16px;
-  border: 1px solid #debcb2;
-  box-shadow: 0 2px 8px rgba(187, 135, 122, 0.1);
+  border: 1px solid $pl-border;
+  box-shadow: 0 2px 8px $pl-shadow-soft;
   padding: 1rem;
 }
 
@@ -30,13 +32,13 @@
   margin: 0 0 0.35rem;
   font-size: 1.05rem;
   font-weight: 600;
-  color: #3d2314;
+  color: $pl-text-heading;
 }
 
 .pl-prod__desc {
   margin: 0 0 0.65rem;
   font-size: 0.875rem;
-  color: #bb877a;
+  color: $pl-text-muted;
   line-height: 1.45;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -48,5 +50,5 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #bb877a;
+  color: $pl-gold;
 }
