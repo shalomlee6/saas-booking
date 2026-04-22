@@ -5,6 +5,7 @@ import { BusinessSettings, defaultOpeningHours } from '../models/BusinessSetting
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
+import { BusinessReview } from '../models/BusinessReview';
 import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
@@ -43,6 +44,48 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
       ? settings.bookingWelcomeMessage.trim()
       : 'Book an appointment with us';
 
+  const businessIdObj = business._id as Types.ObjectId;
+
+  const [customerCount, completedAppointments, reviewDocs] = await Promise.all([
+    Customer.countDocuments({ businessId: businessIdObj }),
+    Appointment.countDocuments({ businessId: businessIdObj, status: 'completed' }),
+    BusinessReview.find({ businessId: businessIdObj }).sort({ createdAt: -1 }).limit(25).lean(),
+  ]);
+
+  let rating = settings.publicRating ?? 5;
+  if (reviewDocs.length > 0) {
+    const sum = reviewDocs.reduce((acc, r) => acc + r.rating, 0);
+    rating = Math.round((sum / reviewDocs.length) * 10) / 10;
+  }
+
+  const portfolioRaw = settings.portfolioImages ?? [];
+  const portfolioImages = portfolioRaw
+    .filter((u) => typeof u === 'string' && u.trim().length > 0)
+    .map((u) => u.trim())
+    .slice(0, 50);
+
+  const products = (settings.landingProducts ?? []).filter(
+    (p) => p && typeof p.name === 'string' && p.name.trim().length > 0 && typeof p.price === 'number'
+  );
+
+  const tagline =
+    typeof settings.landingTagline === 'string' && settings.landingTagline.trim()
+      ? settings.landingTagline.trim()
+      : 'יופי מקצועי, תוצאות מושלמות';
+
+  const coverImageUrl =
+    typeof settings.coverImageUrl === 'string' && settings.coverImageUrl.trim()
+      ? settings.coverImageUrl.trim()
+      : null;
+
+  const phoneFromBusiness =
+    typeof business.phone === 'string' ? business.phone.trim() : '';
+  const phoneFromSettings =
+    typeof settings.businessPhonePublic === 'string'
+      ? settings.businessPhonePublic.trim()
+      : '';
+  const phone = phoneFromBusiness || phoneFromSettings || null;
+
   res.json({
     id: business._id.toString(),
     name: business.name,
@@ -52,6 +95,28 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
     openingHours,
     welcomeMessage: welcome,
     cancellationNoticeHe: CANCELLATION_NOTICE_HE,
+    landing: {
+      tagline,
+      coverImageUrl,
+      phone,
+      stats: {
+        rating,
+        customersCount: customerCount,
+        completedAppointmentsCount: completedAppointments,
+      },
+      portfolioImages,
+      products: products.map((p) => ({
+        name: p.name.trim(),
+        description: typeof p.description === 'string' ? p.description.trim() : '',
+        price: p.price,
+      })),
+      reviews: reviewDocs.map((r) => ({
+        customerName: r.customerName,
+        text: r.text,
+        rating: r.rating,
+        date: r.createdAt.toISOString().slice(0, 10),
+      })),
+    },
   });
 }
 

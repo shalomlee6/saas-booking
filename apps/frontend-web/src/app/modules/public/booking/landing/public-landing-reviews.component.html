@@ -1,0 +1,16 @@
+<section class="pl-rev" aria-labelledby="pl-rev-title">
+  <h2 id="pl-rev-title" class="pl-rev__title">מה הלקוחות אומרות</h2>
+  <div class="pl-rev__scroll" role="list">
+    @for (r of rows(); track r.date + r.customerName + r.text) {
+      <article class="pl-rev__card" role="listitem">
+        <p class="pl-rev__stars" aria-hidden="true">{{ r.starRow }}</p>
+        <p class="pl-rev__text">"{{ r.text }}"</p>
+        <p class="pl-rev__meta">
+          {{ r.customerName }}
+          <span class="pl-rev__dot">·</span>
+          {{ r.date | date: 'mediumDate' : undefined : 'he-IL' }}
+        </p>
+      </article>
+    }
+  </div>
+</section>

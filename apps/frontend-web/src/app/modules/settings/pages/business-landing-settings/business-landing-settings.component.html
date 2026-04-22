@@ -1,0 +1,144 @@
+<div class="bls" dir="rtl">
+  <header class="bls__head">
+    <h1 class="bls__title">דף נחיתה ציבורי</h1>
+    <p class="bls__intro">
+      עריכת הטקסטים, הטלפון, מוצרים מומלצים והמלצות לקוחות שמופיעים בכתובת הציבורית של העסק.
+    </p>
+  </header>
+
+  @if (loading()) {
+    <p class="bls__loading">טוען…</p>
+  } @else {
+    <form class="bls__form" [formGroup]="form" (ngSubmit)="save()">
+      <section class="bls__section" aria-labelledby="bls-landing-labels">
+        <h2 id="bls-landing-labels" class="bls__section-title">טקסטים ותמונה</h2>
+
+        <label class="bls__field">
+          <span class="bls__label">סלוגן (מתחת לשם העסק)</span>
+          <textarea
+            pTextarea
+            formControlName="landingTagline"
+            rows="2"
+            class="bls__textarea"
+            placeholder="יופי מקצועי, תוצאות מושלמות"
+          ></textarea>
+        </label>
+
+        <label class="bls__field">
+          <span class="bls__label">כתובת תמונת כיסוי (URL)</span>
+          <input pInputText type="url" formControlName="coverImageUrl" class="bls__input" />
+        </label>
+
+        <label class="bls__field">
+          <span class="bls__label">טלפון לחשיפה באתר (אופציונלי)</span>
+          <input pInputText type="tel" formControlName="businessPhonePublic" class="bls__input" />
+        </label>
+
+        <label class="bls__field">
+          <span class="bls__label">דירוג תצוגה (כשאין עדיין המלצות, 1–5)</span>
+          <input
+            pInputText
+            type="number"
+            min="1"
+            max="5"
+            formControlName="publicRating"
+            class="bls__input bls__input--narrow"
+          />
+        </label>
+      </section>
+
+      <section class="bls__section" aria-labelledby="bls-products-title">
+        <div class="bls__section-head">
+          <h2 id="bls-products-title" class="bls__section-title">מוצרים / טיפולים מומלצים</h2>
+          <button type="button" class="bls__linkish" (click)="addProductRow()">+ שורה</button>
+        </div>
+
+        <div formArrayName="products" class="bls__products">
+          @for (g of products.controls; track $index; let i = $index) {
+            <div class="bls__product-card" [formGroupName]="i">
+              <label class="bls__field">
+                <span class="bls__label">שם</span>
+                <input pInputText formControlName="name" class="bls__input" />
+              </label>
+              <label class="bls__field">
+                <span class="bls__label">תיאור קצר</span>
+                <input pInputText formControlName="description" class="bls__input" />
+              </label>
+              <label class="bls__field">
+                <span class="bls__label">מחיר (₪)</span>
+                <input pInputText type="number" min="0" formControlName="price" class="bls__input bls__input--narrow" />
+              </label>
+              <button type="button" class="bls__remove" (click)="removeProductRow(i)">הסרה</button>
+            </div>
+          }
+        </div>
+      </section>
+
+      <div class="bls__actions">
+        <button
+          pButton
+          type="submit"
+          label="שמירת דף הנחיתה"
+          icon="pi pi-check"
+          iconPos="right"
+          [disabled]="form.invalid || saving()"
+          [loading]="saving()"
+        ></button>
+      </div>
+    </form>
+  }
+
+  <section class="bls__section bls__section--reviews" aria-labelledby="bls-reviews-title">
+    <h2 id="bls-reviews-title" class="bls__section-title">המלצות לקוחות</h2>
+    <p class="bls__hint">ההמלצות מוצגות בדף הציבורי רק כשקיימת לפחות אחת.</p>
+
+    @if (reviewsLoading()) {
+      <p class="bls__loading">טוען המלצות…</p>
+    } @else {
+      <ul class="bls__review-list">
+        @for (r of reviews(); track r.id) {
+          <li class="bls__review-item">
+            <div class="bls__review-top">
+              <strong>{{ r.customerName }}</strong>
+              <span class="bls__review-stars" aria-hidden="true">{{ r.starDisplay }}</span>
+            </div>
+            <p class="bls__review-text">{{ r.text }}</p>
+            <button type="button" class="bls__remove" (click)="deleteReview(r.id)">מחיקה</button>
+          </li>
+        }
+      </ul>
+    }
+
+    <form class="bls__new-review" [formGroup]="newReviewForm" (ngSubmit)="addReview()">
+      <h3 class="bls__subsection-title">הוספת המלצה</h3>
+      <label class="bls__field">
+        <span class="bls__label">שם הלקוחה</span>
+        <input pInputText formControlName="customerName" class="bls__input" />
+      </label>
+      <label class="bls__field">
+        <span class="bls__label">טקסט</span>
+        <textarea pTextarea formControlName="text" rows="3" class="bls__textarea"></textarea>
+      </label>
+      <label class="bls__field">
+        <span class="bls__label">דירוג (1–5)</span>
+        <input
+          pInputText
+          type="number"
+          min="1"
+          max="5"
+          formControlName="rating"
+          class="bls__input bls__input--narrow"
+        />
+      </label>
+      <button
+        pButton
+        type="submit"
+        label="הוספת המלצה"
+        icon="pi pi-plus"
+        iconPos="right"
+        [disabled]="newReviewForm.invalid || reviewSaving()"
+        [loading]="reviewSaving()"
+      ></button>
+    </form>
+  </section>
+</div>

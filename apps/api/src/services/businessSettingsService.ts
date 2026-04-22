@@ -63,6 +63,32 @@ export function buildBusinessSettingsUpdateSet(
     }
   }
 
+  if (body.bookingWelcomeMessage !== undefined) {
+    updateData.bookingWelcomeMessage = body.bookingWelcomeMessage;
+  }
+  if (body.landingTagline !== undefined) {
+    updateData.landingTagline = body.landingTagline;
+  }
+  if (body.coverImageUrl !== undefined) {
+    updateData.coverImageUrl = body.coverImageUrl;
+  }
+  if (body.portfolioImages !== undefined) {
+    updateData.portfolioImages = body.portfolioImages;
+  }
+  if (body.landingProducts !== undefined) {
+    updateData.landingProducts = body.landingProducts.map((p) => ({
+      name: p.name,
+      description: p.description?.trim() ? p.description.trim() : undefined,
+      price: p.price,
+    }));
+  }
+  if (body.publicRating !== undefined) {
+    updateData.publicRating = body.publicRating;
+  }
+  if (body.businessPhonePublic !== undefined) {
+    updateData.businessPhonePublic = body.businessPhonePublic;
+  }
+
   return updateData;
 }
 

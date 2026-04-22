@@ -1,0 +1,68 @@
+<section class="pl-gal" aria-labelledby="pl-gal-title">
+  <div class="pl-gal__head">
+    <h2 id="pl-gal-title" class="pl-gal__title">העבודות שלנו</h2>
+    @if (isOwner()) {
+      <p-button
+        label="הוסיפי תמונה"
+        icon="pi pi-plus"
+        iconPos="right"
+        [outlined]="true"
+        styleClass="pl-gal__add"
+        (onClick)="openAddDialog()"
+      />
+    }
+  </div>
+
+  @if (images().length === 0) {
+    <p class="pl-gal__empty-line">תמונות בקרוב ✨</p>
+  } @else {
+    <div class="pl-gal__masonry">
+      @for (src of images(); track src; let idx = $index) {
+        <button
+          type="button"
+          class="pl-gal__thumb"
+          (click)="openLightbox(idx)"
+        >
+          <img [src]="src" [alt]="'תמונת גלריה ' + (idx + 1)" loading="lazy" decoding="async" />
+        </button>
+      }
+    </div>
+  }
+</section>
+
+<p-dialog
+  [visible]="lightboxOpen()"
+  (visibleChange)="lightboxOpen.set($event)"
+  [modal]="true"
+  [dismissableMask]="true"
+  [style]="{ width: '100vw', maxWidth: '100vw', height: '100vh' }"
+  styleClass="pl-gal__lightbox"
+  [contentStyle]="{ padding: 0 }"
+>
+  @if (lightboxSrc(); as s) {
+    <img [src]="s" alt="" class="pl-gal__lightbox-img" loading="lazy" />
+  }
+</p-dialog>
+
+<p-dialog
+  header="הוספת תמונה לגלריה"
+  [visible]="addDialogOpen()"
+  (visibleChange)="addDialogOpen.set($event)"
+  [modal]="true"
+  [style]="{ width: '22rem' }"
+  [dismissableMask]="true"
+>
+  <div class="pl-gal__form" dir="rtl">
+    <label class="pl-gal__label">
+      קישור לתמונה (URL)
+      <input
+        pInputText
+        class="pl-gal__input"
+        [ngModel]="urlDraft()"
+        (ngModelChange)="urlDraft.set($event)"
+        placeholder="https://..."
+      />
+    </label>
+    <p-button label="שמירה" icon="pi pi-check" iconPos="right" (onClick)="submitNewImage()" />
+  </div>
+</p-dialog>

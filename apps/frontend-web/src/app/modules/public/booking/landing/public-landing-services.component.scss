@@ -1,0 +1,94 @@
+.pl-svc {
+  text-align: right;
+  width: 100%;
+}
+
+.pl-svc__title {
+  margin: 0 0 0.75rem;
+  font-size: 18px;
+  font-weight: 600;
+  color: #3d2314;
+}
+
+.pl-svc__scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  margin-inline: -0.25rem;
+  padding-inline: 0.25rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  justify-content: flex-start;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pl-svc__card {
+  flex: 0 0 148px;
+  scroll-snap-align: start;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(187, 135, 122, 0.1);
+  border: 1px solid #debcb2;
+  padding: 1rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  box-sizing: border-box;
+}
+
+.pl-svc__emoji {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.pl-svc__name {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #3d2314;
+  line-height: 1.3;
+}
+
+.pl-svc__meta {
+  margin: 0;
+  font-size: 13px;
+  color: #bb877a;
+}
+
+.pl-svc__price {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #bb877a;
+}
+
+::ng-deep .pl-svc__btn.p-button {
+  margin-top: 0.35rem;
+  width: 100%;
+  justify-content: center;
+  border-radius: 50px;
+  background: #d5a294;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding-block: 0.4rem;
+}
+
+::ng-deep .pl-svc__btn.p-button .p-button-icon {
+  color: #fff;
+}
+
+::ng-deep .pl-svc__btn.p-button:not(:disabled):hover {
+  background: #bb877a;
+  border: none;
+  color: #fff;
+}
+
+@media (min-width: 480px) {
+  .pl-svc__card {
+    flex: 0 0 160px;
+  }
+}

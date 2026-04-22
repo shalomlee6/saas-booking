@@ -95,6 +95,18 @@
           </a>
 
           <a
+            routerLink="/settings/landing"
+            routerLinkActive="layout-sidebar-link-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="layout-sidebar-link"
+            [attr.aria-label]="isSidebarCollapsed() ? 'Landing page' : null"
+            (click)="closeMobileMenu()"
+          >
+            <i class="layout-sidebar-link-icon pi pi-megaphone" aria-hidden="true"></i>
+            <span class="layout-sidebar-link-text">דף נחיתה</span>
+          </a>
+
+          <a
             routerLink="/settings/working-hours"
             routerLinkActive="layout-sidebar-link-active"
             class="layout-sidebar-link"

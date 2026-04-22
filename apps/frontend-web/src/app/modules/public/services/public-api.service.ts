@@ -15,6 +15,37 @@ export interface PublicBusiness {
   };
 }
 
+/** Stats strip on public landing (from GET /api/public/businesses/:slug → landing.stats). */
+export interface PublicLandingStats {
+  rating: number;
+  customersCount: number;
+  completedAppointmentsCount: number;
+}
+
+export interface PublicLandingReviewItem {
+  customerName: string;
+  text: string;
+  rating: number;
+  date: string;
+}
+
+export interface PublicLandingProductItem {
+  name: string;
+  description: string;
+  price: number;
+}
+
+/** Extended payload on public business for booking (landing marketing sections). */
+export interface PublicLandingPayload {
+  tagline: string;
+  coverImageUrl: string | null;
+  phone: string | null;
+  stats: PublicLandingStats;
+  portfolioImages: string[];
+  products: PublicLandingProductItem[];
+  reviews: PublicLandingReviewItem[];
+}
+
 /** Booking page: business details with opening hours and cancellation notice */
 export interface PublicBusinessForBooking {
   id: string;
@@ -28,6 +59,7 @@ export interface PublicBusinessForBooking {
     language?: string;
     currency?: string;
   };
+  landing?: PublicLandingPayload;
 }
 
 export interface PublicService {
@@ -172,6 +204,28 @@ export class PublicApiService {
         cancellationNoticeHe:
           'יש להודיע מראש על ביטול התור. ביטול פחות מ-24 שעות מראש עשוי לחייב בתשלום.',
         localization: { timezone: 'Asia/Jerusalem', language: 'he', currency: 'ILS' },
+        landing: {
+          tagline: 'יופי מקצועי, תוצאות מושלמות',
+          coverImageUrl: null,
+          phone: '050-1234567',
+          stats: { rating: 4.9, customersCount: 128, completedAppointmentsCount: 900 },
+          portfolioImages: [],
+          products: [
+            {
+              name: 'לק ג׳ל פרימיום',
+              description: 'עמידות ארוכה וברק מושלם',
+              price: 180,
+            },
+          ],
+          reviews: [
+            {
+              customerName: 'מיכל',
+              text: 'שירות מקסים ומקצועי, חזרתי שוב!',
+              rating: 5,
+              date: '2026-03-01',
+            },
+          ],
+        },
       };
       return of(mock).pipe(delay(400));
     }
