@@ -71,6 +71,8 @@ export interface CreateAdminBusinessBody {
   ownerPhone?: string;
   plan: AdminPlanTier;
   timezone: string;
+  businessSlug?: string;
+  ownerPassword?: string;
 }
 
 export interface CreateAdminBusinessResponse {
@@ -196,6 +198,10 @@ export class AdminApiService {
     return this.api.get<AdminUsersPage>('admin/users', query);
   }
 
+  checkSlug(slug: string): Observable<{ available: boolean }> {
+    return this.api.get<{ available: boolean }>('admin/check-slug', { slug });
+  }
+
   getOverview(): Observable<AdminOverviewDto> {
     return this.api.get<AdminOverviewDto>('admin/overview');
   }
@@ -210,6 +216,10 @@ export class AdminApiService {
 
   patchUser(id: string, body: { status?: 'active' | 'disabled'; name?: string }): Observable<AdminUserRow> {
     return this.api.patch<AdminUserRow>(`admin/users/${id}`, body);
+  }
+
+  patchUserPlan(id: string, body: { plan: AdminPlanTier }): Observable<AdminUserRow> {
+    return this.api.patch<AdminUserRow>(`admin/users/${id}/plan`, body);
   }
 
   deleteUser(id: string): Observable<void> {

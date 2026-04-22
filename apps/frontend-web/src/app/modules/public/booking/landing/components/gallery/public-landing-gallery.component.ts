@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
-import { ApiService } from '../../../../core/api/api.service';
+import { ApiService } from '../../../../../../core/api/api.service';
 import { MessageService } from 'primeng/api';
 
 @Component({

@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import type { PublicService } from '../../services/public-api.service';
+import type { PublicService } from '../../../../services/public-api.service';
 
 function serviceEmoji(name: string): string {
   const n = name.toLowerCase();

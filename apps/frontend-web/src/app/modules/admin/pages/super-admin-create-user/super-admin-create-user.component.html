@@ -1,0 +1,204 @@
+<p-toast />
+<div class="sa-create" dir="rtl">
+  <a routerLink="/super-admin/users" class="sa-create__back">← חזרה למשתמשים</a>
+  <h1 class="sa-create__title">יצירת בעל עסק חדש</h1>
+  <p class="sa-create__sub">המערכת תיצור אוטומטית את כל הנתונים הדרושים</p>
+
+  <div class="sa-create__grid">
+    <section class="sa-create__panel">
+      <h2 class="sa-create__section-title">פרטי העסק</h2>
+      <label class="sa-create__field">
+        <span>שם העסק *</span>
+        <input
+          pInputText
+          class="sa-create__input"
+          [value]="businessName()"
+          (input)="onBusinessNameInput($any($event.target).value)"
+          [class.sa-create__input--err]="submitAttempted() && fieldError().businessName"
+          autocomplete="organization"
+        />
+        @if (submitAttempted() && fieldError().businessName) {
+          <span class="sa-create__err">{{ fieldError().businessName }}</span>
+        }
+      </label>
+      <label class="sa-create__field">
+        <span>מזהה URL (slug) *</span>
+        <input
+          pInputText
+          class="sa-create__input"
+          dir="ltr"
+          [value]="slugInput()"
+          (input)="onSlugInput($any($event.target).value)"
+          [class.sa-create__input--err]="submitAttempted() && fieldError().slug"
+        />
+        <p class="sa-create__hint" dir="ltr">
+          הלינק שלך: {{ bookingPreviewBase() }}/b/{{ previewSlug() || '…' }}
+        </p>
+        <div class="sa-create__slug-status">
+          @switch (slugCheck()) {
+            @case ('checking') {
+              <span class="sa-create__slug-muted">בודק…</span>
+            }
+            @case ('ok') {
+              <span class="sa-create__slug-ok">✓ זמין</span>
+            }
+            @case ('bad') {
+              <span class="sa-create__slug-bad">✗ תפוס</span>
+            }
+            @case ('invalid') {
+              <span class="sa-create__slug-bad">✗ קצר מדי</span>
+            }
+            @default {
+              <span class="sa-create__slug-muted"></span>
+            }
+          }
+        </div>
+        @if (submitAttempted() && fieldError().slug) {
+          <span class="sa-create__err">{{ fieldError().slug }}</span>
+        }
+        <button type="button" class="sa-create__linkish" (click)="regenerateSlugFromName()">
+          יצירה מחדש מהשם
+        </button>
+      </label>
+      <label class="sa-create__field">
+        <span>אזור זמן</span>
+        <p-select
+          [options]="timezoneOptions"
+          [ngModel]="timezone()"
+          (ngModelChange)="timezone.set($event)"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="sa-create__select"
+        />
+      </label>
+    </section>
+
+    <section class="sa-create__panel">
+      <h2 class="sa-create__section-title">פרטי בעל העסק</h2>
+      <label class="sa-create__field">
+        <span>שם מלא *</span>
+        <input
+          pInputText
+          class="sa-create__input"
+          [value]="ownerName()"
+          (input)="ownerName.set($any($event.target).value)"
+          [class.sa-create__input--err]="submitAttempted() && fieldError().ownerName"
+          autocomplete="name"
+        />
+        @if (submitAttempted() && fieldError().ownerName) {
+          <span class="sa-create__err">{{ fieldError().ownerName }}</span>
+        }
+      </label>
+      <label class="sa-create__field">
+        <span>אימייל *</span>
+        <input
+          pInputText
+          class="sa-create__input"
+          dir="ltr"
+          [value]="ownerEmail()"
+          (input)="ownerEmail.set($any($event.target).value)"
+          [class.sa-create__input--err]="submitAttempted() && fieldError().ownerEmail"
+          autocomplete="email"
+          type="email"
+        />
+        @if (submitAttempted() && fieldError().ownerEmail) {
+          <span class="sa-create__err">{{ fieldError().ownerEmail }}</span>
+        }
+      </label>
+      <label class="sa-create__field">
+        <span>טלפון</span>
+        <input
+          pInputText
+          class="sa-create__input"
+          dir="ltr"
+          [value]="ownerPhone()"
+          (input)="ownerPhone.set($any($event.target).value)"
+          autocomplete="tel"
+        />
+      </label>
+      <label class="sa-create__field">
+        <span>סיסמה זמנית *</span>
+        <div class="sa-create__pw-row">
+          <input
+            pInputText
+            class="sa-create__input sa-create__input--grow"
+            dir="ltr"
+            [type]="passwordVisible() ? 'text' : 'password'"
+            [value]="ownerPassword()"
+            (input)="ownerPassword.set($any($event.target).value)"
+            [class.sa-create__input--err]="submitAttempted() && fieldError().password"
+            autocomplete="new-password"
+          />
+          <button type="button" class="sa-create__ghost" (click)="togglePasswordVisible()">
+            {{ passwordVisible() ? 'הסתר' : 'הצג' }}
+          </button>
+        </div>
+        <button type="button" class="sa-create__linkish" (click)="regeneratePassword()">
+          צור סיסמה אוטומטית 🔄
+        </button>
+        @if (submitAttempted() && fieldError().password) {
+          <span class="sa-create__err">{{ fieldError().password }}</span>
+        }
+      </label>
+    </section>
+  </div>
+
+  <section class="sa-create__plans" aria-label="בחירת תוכנית">
+    <h2 class="sa-create__section-title sa-create__section-title--full">תוכנית</h2>
+    <div class="sa-create__plan-grid">
+      <button
+        type="button"
+        class="sa-create__plan"
+        [class.sa-create__plan--active]="selectedPlan() === 'free'"
+        (click)="selectPlan('free')"
+      >
+        <span class="sa-create__plan-name">Free</span>
+        <span class="sa-create__plan-price">₪0/חודש</span>
+        <ul class="sa-create__plan-list">
+          <li>✓ 1 אנשי צוות</li>
+          <li>✓ 2 שירותים</li>
+          <li>✗ אנליטיקה</li>
+          <li>✗ דומיין מותאם</li>
+        </ul>
+      </button>
+      <button
+        type="button"
+        class="sa-create__plan sa-create__plan--popular"
+        [class.sa-create__plan--active]="selectedPlan() === 'pro'"
+        (click)="selectPlan('pro')"
+      >
+        <span class="sa-create__plan-badge">הכי פופולרי</span>
+        <span class="sa-create__plan-name">Pro ⭐</span>
+        <span class="sa-create__plan-price">₪99/חודש</span>
+        <ul class="sa-create__plan-list">
+          <li>✓ 5 אנשי צוות</li>
+          <li>✓ 10 שירותים</li>
+          <li>✓ אנליטיקה</li>
+          <li>✗ דומיין מותאם</li>
+        </ul>
+      </button>
+      <button
+        type="button"
+        class="sa-create__plan"
+        [class.sa-create__plan--active]="selectedPlan() === 'premium'"
+        (click)="selectPlan('premium')"
+      >
+        <span class="sa-create__plan-name">Premium 👑</span>
+        <span class="sa-create__plan-price">₪199/חודש</span>
+        <ul class="sa-create__plan-list">
+          <li>✓ ללא הגבלת צוות</li>
+          <li>✓ ללא הגבלת שירותים</li>
+          <li>✓ כל הפיצ׳רים</li>
+          <li>✓ דומיין מותאם</li>
+        </ul>
+      </button>
+    </div>
+  </section>
+
+  <p-button
+    label="צור עסק ומנהל"
+    styleClass="sa-create__submit"
+    [loading]="submitting()"
+    (onClick)="onSubmit()"
+  />
+</div>

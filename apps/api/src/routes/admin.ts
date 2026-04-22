@@ -12,6 +12,8 @@ import {
 import {
   getAdminUsers,
   getAdminUserById,
+  getAdminCheckSlug,
+  patchAdminUserPlan,
   patchAdminUser,
   deleteAdminUser,
   getAdminSettings,
@@ -30,6 +32,7 @@ import { validateBody } from '../middleware/validateRequest';
 import {
   createAdminBusinessBodySchema,
   patchAdminUserBodySchema,
+  patchAdminUserPlanBodySchema,
   patchPlatformSettingsBodySchema,
 } from '../validation/schemas/admin';
 
@@ -47,7 +50,9 @@ adminRouter.post('/impersonate', adminImpersonate);
 adminRouter.post('/stop-impersonate', adminStopImpersonate);
 adminRouter.patch('/businesses/:id/ui', adminUpdateBusinessUi);
 
+adminRouter.get('/check-slug', getAdminCheckSlug);
 adminRouter.get('/users', getAdminUsers);
+adminRouter.patch('/users/:id/plan', validateBody(patchAdminUserPlanBodySchema), patchAdminUserPlan);
 adminRouter.get('/users/:id', getAdminUserById);
 adminRouter.patch('/users/:id', validateBody(patchAdminUserBodySchema), patchAdminUser);
 adminRouter.delete('/users/:id', deleteAdminUser);

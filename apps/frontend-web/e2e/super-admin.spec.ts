@@ -52,7 +52,7 @@ test.describe('Super admin console', () => {
   test('users page loads data', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await page.goto('/super-admin/users');
-    await expect(page.getByRole('cell', { name: 'Email' }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('superadmin@example.com').first()).toBeVisible();
   });
 

@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
-import type { PublicLandingProductItem } from '../../services/public-api.service';
+import type { PublicLandingProductItem } from '../../../../services/public-api.service';
 
 @Component({
   selector: 'app-public-landing-products',

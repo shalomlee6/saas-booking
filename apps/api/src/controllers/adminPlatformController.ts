@@ -10,6 +10,8 @@ import { AuditLog } from '../models/AuditLog';
 import { Service } from '../models/Service';
 import { recordAudit } from '../utils/recordAudit';
 import { normalizePlan, type PlanTier } from '../utils/planPolicy';
+import { syncBusinessPlanDocuments } from '../utils/provisionTenant';
+import { normalizeBusinessSlugInput } from '../utils/slug';
 
 const USER_ROLES = ['super_admin', 'owner', 'staff', 'client'] as const;
 
@@ -77,8 +79,11 @@ export async function getAdminUsers(req: AuthRequest, res: Response): Promise<vo
     const role = String(req.query.role || '').trim();
     const status = String(req.query.status || '').trim();
     const businessId = String(req.query.businessId || '').trim();
+    const planFilter = String(req.query.plan || '').trim();
     const rawSortField = String(req.query.sortField || 'createdAt');
-    const sortField = ['name', 'email', 'createdAt'].includes(rawSortField) ? rawSortField : 'createdAt';
+    const sortField = ['name', 'email', 'createdAt', 'lastLoginAt'].includes(rawSortField)
+      ? rawSortField
+      : 'createdAt';
     const sortDir = String(req.query.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
     const sort: Record<string, 1 | -1> = { [sortField]: sortDir };
 
@@ -91,6 +96,11 @@ export async function getAdminUsers(req: AuthRequest, res: Response): Promise<vo
     }
     if (businessId && Types.ObjectId.isValid(businessId)) {
       filter.businessId = new Types.ObjectId(businessId);
+    }
+    if (planFilter === 'free' || planFilter === 'pro' || planFilter === 'premium') {
+      const businessesWithPlan = await Business.find({ plan: planFilter }).select('_id').lean();
+      const ids = businessesWithPlan.map((b) => b._id);
+      filter.businessId = { $in: ids };
     }
     if (search) {
       const rx = new RegExp(escapeRegex(search), 'i');
@@ -185,6 +195,83 @@ export async function getAdminUserById(req: AuthRequest, res: Response): Promise
     });
   } catch (err) {
     console.error('Error GET /admin/users/:id:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+// GET /api/admin/check-slug?slug=
+export async function getAdminCheckSlug(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const slug = normalizeBusinessSlugInput(String(req.query.slug ?? ''));
+    if (slug.length < 2) {
+      res.json({ available: false });
+      return;
+    }
+    const taken = await Business.findOne({ slug }).select('_id').lean();
+    res.json({ available: !taken });
+  } catch (err) {
+    console.error('Error GET /admin/check-slug:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+// PATCH /api/admin/users/:id/plan
+export async function patchAdminUserPlan(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    if (!Types.ObjectId.isValid(id)) {
+      res.status(400).json({ message: 'Invalid user id' });
+      return;
+    }
+    const body = req.body as { plan?: string };
+    const tier = body.plan;
+    if (tier !== 'free' && tier !== 'pro' && tier !== 'premium') {
+      res.status(400).json({ message: 'Invalid plan' });
+      return;
+    }
+    const plan = tier as PlanTier;
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    if (!user.businessId) {
+      res.status(400).json({ message: 'User has no linked business' });
+      return;
+    }
+
+    await syncBusinessPlanDocuments(user.businessId, plan);
+
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'business.plan_update',
+      entity: 'Business',
+      entityId: user.businessId.toString(),
+      metadata: { targetUserId: id, plan },
+    });
+
+    let planOut: PlanTier | null = null;
+    let businessName: string | null = null;
+    const b = await Business.findById(user.businessId).select('name plan').lean();
+    businessName = b?.name ?? null;
+    planOut = normalizePlan(typeof (b as { plan?: string } | null)?.plan === 'string' ? (b as { plan: string }).plan : null);
+
+    res.json({
+      id: user._id.toString(),
+      email: user.email,
+      name: user.name ?? '',
+      phone: user.phone?.trim() || null,
+      role: user.role,
+      status: user.status,
+      businessId: user.businessId?.toString() ?? null,
+      businessName,
+      plan: planOut,
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt ?? null,
+    });
+  } catch (err) {
+    console.error('Error PATCH /admin/users/:id/plan:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 }

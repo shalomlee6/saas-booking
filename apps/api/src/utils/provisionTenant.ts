@@ -5,7 +5,8 @@ import { Business } from '../models/Business';
 import { User } from '../models/User';
 import { BusinessSettings, type IOpeningHours } from '../models/BusinessSettings';
 import { Service } from '../models/Service';
-import { generateSlug } from './slug';
+import { ensureBusinessSettings } from './ensureBusinessSettings';
+import { generateSlug, normalizeBusinessSlugInput } from './slug';
 import type { PlanTier } from './planPolicy';
 import { limitsFor } from './planPolicy';
 import type { SettingsPlan } from '../dto/enums';
@@ -17,9 +18,13 @@ export interface ProvisionTenantInput {
   ownerPhone?: string;
   plan: PlanTier;
   timezone: string;
+  /** Optional explicit slug; must be unique. */
+  businessSlug?: string;
+  /** Optional password (min 8); otherwise auto-generated. */
+  ownerPassword?: string;
 }
 
-function settingsPlanFromTier(plan: PlanTier): SettingsPlan {
+export function settingsPlanFromTier(plan: PlanTier): SettingsPlan {
   if (plan === 'premium') return 'premium';
   if (plan === 'pro') return 'pro';
   return 'free';
@@ -36,6 +41,23 @@ function buildFeaturesForPlan(plan: PlanTier) {
     analyticsEnabled: L.analyticsEnabled,
     customDomainEnabled: L.customDomainEnabled,
   };
+}
+
+/**
+ * Updates canonical plan on Business and mirrors plan + feature flags on BusinessSettings.
+ */
+export async function syncBusinessPlanDocuments(
+  businessId: Types.ObjectId,
+  plan: PlanTier
+): Promise<void> {
+  await ensureBusinessSettings(businessId);
+  const features = buildFeaturesForPlan(plan);
+  const settingsPlan = settingsPlanFromTier(plan);
+  await Business.updateOne({ _id: businessId }, { $set: { plan } });
+  await BusinessSettings.updateOne(
+    { businessId },
+    { $set: { plan: settingsPlan, features } }
+  );
 }
 
 function provisionOpeningHours(): IOpeningHours {
@@ -66,7 +88,9 @@ export interface ProvisionTenantResult {
  * Rolls back created documents (best-effort) if any step fails.
  */
 export async function provisionTenant(input: ProvisionTenantInput): Promise<ProvisionTenantResult> {
-  const tempPassword = crypto.randomBytes(9).toString('base64url');
+  const rawPw = input.ownerPassword?.trim();
+  const tempPassword =
+    rawPw && rawPw.length >= 8 ? rawPw : crypto.randomBytes(9).toString('base64url');
   const passwordHash = await bcrypt.hash(tempPassword, 10);
 
   let userId: Types.ObjectId | null = null;
@@ -81,12 +105,29 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
     throw err;
   }
 
-  const baseSlug = generateSlug(input.businessName);
-  let slug = baseSlug;
-  let counter = 1;
-  while (await Business.findOne({ slug })) {
-    slug = `${baseSlug}-${counter}`;
-    counter += 1;
+  let slug: string;
+  const custom = input.businessSlug?.trim() ? normalizeBusinessSlugInput(input.businessSlug) : '';
+  if (custom) {
+    if (custom.length < 2) {
+      const err = new Error('Slug must be at least 2 characters');
+      (err as Error & { status: number }).status = 400;
+      throw err;
+    }
+    const taken = await Business.findOne({ slug: custom });
+    if (taken) {
+      const err = new Error('Slug is already taken');
+      (err as Error & { status: number }).status = 409;
+      throw err;
+    }
+    slug = custom;
+  } else {
+    const baseSlug = generateSlug(input.businessName);
+    slug = baseSlug || 'business';
+    let counter = 1;
+    while (await Business.findOne({ slug })) {
+      slug = `${baseSlug || 'business'}-${counter}`;
+      counter += 1;
+    }
   }
 
   try {

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, output } from '@an
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
-import type { UpcomingAppointment } from '../../services/public-api.service';
+import type { UpcomingAppointment } from '../../../../services/public-api.service';
 
 @Component({
   selector: 'app-public-landing-next-appointment',

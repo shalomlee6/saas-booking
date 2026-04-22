@@ -10,12 +10,26 @@ export const createAdminBusinessBodySchema = z.object({
   ownerPhone: z.string().max(40).trim().optional().or(z.literal('')),
   plan: z.enum(['free', 'pro', 'premium']),
   timezone: z.string().min(1).max(80).trim().default('Asia/Jerusalem'),
+  businessSlug: z
+    .union([z.string().max(60).trim(), z.literal('')])
+    .optional()
+    .transform((s) => (s === '' ? undefined : s)),
+  ownerPassword: z
+    .union([z.string().min(8).max(128), z.literal('')])
+    .optional()
+    .transform((s) => (s === '' ? undefined : s)),
 });
 
 export const patchAdminUserBodySchema = z
   .object({
     status: z.enum(['active', 'disabled']).optional(),
     name: z.string().max(200).trim().optional(),
+  })
+  .strict();
+
+export const patchAdminUserPlanBodySchema = z
+  .object({
+    plan: z.enum(['free', 'pro', 'premium']),
   })
   .strict();
 

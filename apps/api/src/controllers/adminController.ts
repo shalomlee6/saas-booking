@@ -61,6 +61,8 @@ export async function createAdminBusiness(req: AuthRequest, res: Response): Prom
       ownerPhone?: string;
       plan: PlanTier;
       timezone: string;
+      businessSlug?: string;
+      ownerPassword?: string;
     };
 
     const result = await provisionTenant({
@@ -70,6 +72,8 @@ export async function createAdminBusiness(req: AuthRequest, res: Response): Prom
       ownerPhone: body.ownerPhone?.trim() || undefined,
       plan: body.plan,
       timezone: body.timezone,
+      businessSlug: body.businessSlug,
+      ownerPassword: body.ownerPassword,
     });
 
     await recordAudit({

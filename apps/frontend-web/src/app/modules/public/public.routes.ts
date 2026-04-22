@@ -11,7 +11,7 @@ export const PUBLIC_ROUTES: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('./booking/public-landing.component').then(
+          import('./booking/landing/containers/public-landing.component').then(
             (m) => m.PublicLandingComponent
           ),
       },

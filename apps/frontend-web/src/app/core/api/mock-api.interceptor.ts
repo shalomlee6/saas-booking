@@ -318,6 +318,7 @@ const MOCK_BUSINESSES: Record<string, unknown>[] = [
     _id: 'mock-business-1',
     name: 'Demo Salon',
     slug: 'demo-salon',
+    plan: 'pro',
     ownerEmail: 'owner@example.com',
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
@@ -327,6 +328,7 @@ const MOCK_BUSINESSES: Record<string, unknown>[] = [
     _id: 'mock-business-2',
     name: 'Second Salon',
     slug: 'second-salon',
+    plan: 'free',
     ownerEmail: 'owner2@example.com',
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
@@ -741,16 +743,24 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const bizId = `mock-business-${Date.now()}`;
     const ownerId = `mock-owner-${Date.now()}`;
     const businessName = String(body['businessName'] ?? 'New business').trim();
+    const slugRaw = String(body['businessSlug'] ?? '').trim();
     const slug =
-      businessName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '') || 'business';
+      slugRaw.length > 0
+        ? slugRaw
+            .toLowerCase()
+            .replace(/[^a-z0-9-]+/g, '-')
+            .replace(/^-|-$/g, '')
+            .slice(0, 60) || `biz-${bizId.slice(-4)}`
+        : (businessName
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '') || 'business') + `-${bizId.slice(-4)}`;
     const plan = (body['plan'] as string) || 'free';
     MOCK_BUSINESSES.push({
       _id: bizId,
       name: businessName,
-      slug: `${slug}-${bizId.slice(-4)}`,
+      slug,
+      plan,
       ownerEmail: body['ownerEmail'],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -776,7 +786,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
           business: {
             _id: bizId,
             name: businessName,
-            slug: `${slug}-${bizId.slice(-4)}`,
+            slug,
             plan,
             phone: body['ownerPhone'] ? String(body['ownerPhone']) : null,
             ownerId,
@@ -878,6 +888,31 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     }
     MOCK_ADMIN_USER_ROWS.splice(idx, 1);
     return from([new HttpResponse({ status: 204, body: null })]);
+  }
+  const adminUserPlanPatch =
+    req.method === 'PATCH' && adminPath.match(/\/api\/admin\/users\/([^/]+)\/plan$/);
+  if (adminUserPlanPatch) {
+    const id = adminUserPlanPatch[1];
+    const row = MOCK_ADMIN_USER_ROWS.find((r) => r['id'] === id);
+    if (!row) {
+      return from([new HttpResponse({ status: 404, body: { message: 'Not found' } })]);
+    }
+    const body = req.body as Record<string, unknown>;
+    const nextPlan = body['plan'];
+    if (nextPlan !== 'free' && nextPlan !== 'pro' && nextPlan !== 'premium') {
+      return from([new HttpResponse({ status: 400, body: { message: 'Invalid plan' } })]);
+    }
+    if (!row['businessId']) {
+      return from([
+        new HttpResponse({ status: 400, body: { message: 'User has no linked business' } }),
+      ]);
+    }
+    row['plan'] = nextPlan;
+    const biz = MOCK_BUSINESSES.find((b) => String(b['_id']) === String(row['businessId']));
+    if (biz) {
+      biz['plan'] = nextPlan;
+    }
+    return from([new HttpResponse({ status: 200, body: { ...row } })]);
   }
   const adminUserPatch = req.method === 'PATCH' && adminPath.match(/\/api\/admin\/users\/([^/]+)$/);
   if (adminUserPatch) {

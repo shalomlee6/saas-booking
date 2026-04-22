@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
-import type { PublicLandingReviewItem } from '../../services/public-api.service';
+import type { PublicLandingReviewItem } from '../../../../services/public-api.service';
 
 function starRow(rating: number): string {
   const n = Math.max(0, Math.min(5, Math.round(rating)));

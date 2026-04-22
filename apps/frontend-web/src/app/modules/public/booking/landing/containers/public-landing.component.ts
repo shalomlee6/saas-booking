@@ -25,19 +25,19 @@ import {
   type PublicLandingReviewItem,
   type PublicService,
   type UpcomingAppointment,
-} from '../services/public-api.service';
-import { PublicSessionService } from '../services/public-session.service';
-import { AuthService } from '../../../core/auth/auth.service';
+} from '../../../services/public-api.service';
+import { PublicSessionService } from '../../../services/public-session.service';
+import { AuthService } from '../../../../../core/auth/auth.service';
 import {
   PublicLandingHeroComponent,
   PUBLIC_LANDING_DEFAULT_HERO_PHOTOS,
-} from './landing/public-landing-hero.component';
-import { PublicLandingNextAppointmentComponent } from './landing/public-landing-next-appointment.component';
-import { PublicLandingServicesComponent } from './landing/public-landing-services.component';
-import { PublicLandingGalleryComponent } from './landing/public-landing-gallery.component';
-import { PublicLandingProductsComponent } from './landing/public-landing-products.component';
-import { PublicLandingReviewsComponent } from './landing/public-landing-reviews.component';
-import { PublicLandingBookingCtaComponent } from './landing/public-landing-booking-cta.component';
+} from '../components/hero/public-landing-hero.component';
+import { PublicLandingNextAppointmentComponent } from '../components/next-appointment/public-landing-next-appointment.component';
+import { PublicLandingServicesComponent } from '../components/services/public-landing-services.component';
+import { PublicLandingGalleryComponent } from '../components/gallery/public-landing-gallery.component';
+import { PublicLandingProductsComponent } from '../components/products/public-landing-products.component';
+import { PublicLandingReviewsComponent } from '../components/reviews/public-landing-reviews.component';
+import { PublicLandingBookingCtaComponent } from '../components/booking-cta/public-landing-booking-cta.component';
 
 /** Map status values to Hebrew labels. */
 const STATUS_LABEL: Record<string, string> = {

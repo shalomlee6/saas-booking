@@ -24,6 +24,13 @@ export const SUPER_ADMIN_ROUTES: Routes = [
       ),
   },
   {
+    path: 'users/new',
+    loadComponent: () =>
+      import('./pages/super-admin-create-user/super-admin-create-user.component').then(
+        (m) => m.SuperAdminCreateUserComponent
+      ),
+  },
+  {
     path: 'users',
     loadComponent: () =>
       import('./pages/super-admin-users/super-admin-users.component').then(
