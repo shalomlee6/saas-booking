@@ -9,6 +9,13 @@ export const SETTINGS_ROUTES: Routes = [
       ),
   },
   {
+    path: 'landing',
+    loadComponent: () =>
+      import('./pages/business-landing-settings/business-landing-settings.component').then(
+        (m) => m.BusinessLandingSettingsComponent
+      ),
+  },
+  {
     path: 'working-hours',
     loadComponent: () =>
       import('./pages/working-hours-list/working-hours-list.component').then(

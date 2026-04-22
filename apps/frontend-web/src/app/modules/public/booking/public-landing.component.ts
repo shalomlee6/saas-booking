@@ -1,26 +1,43 @@
 import {
- Component,
- OnInit,
- inject,
- computed,
- signal,
- effect,
- untracked,
+  Component,
+  OnInit,
+  inject,
+  computed,
+  signal,
+  effect,
+  untracked,
+  DestroyRef,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { CarouselModule } from 'primeng/carousel';
 import { DrawerModule } from 'primeng/drawer';
 import { TextareaModule } from 'primeng/textarea';
 import { SkeletonModule } from 'primeng/skeleton';
 import { TagModule } from 'primeng/tag';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, distinctUntilChanged, map } from 'rxjs';
 import {
   PublicApiService,
+  type PublicBusinessForBooking,
+  type PublicLandingProductItem,
+  type PublicLandingReviewItem,
+  type PublicService,
   type UpcomingAppointment,
 } from '../services/public-api.service';
 import { PublicSessionService } from '../services/public-session.service';
+import { AuthService } from '../../../core/auth/auth.service';
+import {
+  PublicLandingHeroComponent,
+  PUBLIC_LANDING_DEFAULT_HERO_PHOTOS,
+} from './landing/public-landing-hero.component';
+import { PublicLandingNextAppointmentComponent } from './landing/public-landing-next-appointment.component';
+import { PublicLandingServicesComponent } from './landing/public-landing-services.component';
+import { PublicLandingGalleryComponent } from './landing/public-landing-gallery.component';
+import { PublicLandingProductsComponent } from './landing/public-landing-products.component';
+import { PublicLandingReviewsComponent } from './landing/public-landing-reviews.component';
+import { PublicLandingBookingCtaComponent } from './landing/public-landing-booking-cta.component';
 
 /** Map status values to Hebrew labels. */
 const STATUS_LABEL: Record<string, string> = {
@@ -56,10 +73,26 @@ function formatDateHe(dateStr: string): string {
 /** Statuses that allow a customer to cancel their appointment. */
 const CANCELLABLE_STATUSES = new Set(['confirmed', 'pending']);
 
+const DEFAULT_TAGLINE = 'יופי מקצועי, תוצאות מושלמות';
+
 @Component({
   selector: 'app-public-landing',
   standalone: true,
-  imports: [ButtonModule, CarouselModule, DrawerModule, FormsModule, TextareaModule, SkeletonModule, TagModule],
+  imports: [
+    ButtonModule,
+    DrawerModule,
+    FormsModule,
+    TextareaModule,
+    SkeletonModule,
+    TagModule,
+    PublicLandingHeroComponent,
+    PublicLandingNextAppointmentComponent,
+    PublicLandingServicesComponent,
+    PublicLandingGalleryComponent,
+    PublicLandingProductsComponent,
+    PublicLandingReviewsComponent,
+    PublicLandingBookingCtaComponent,
+  ],
   templateUrl: './public-landing.component.html',
   styleUrl: './public-landing.component.scss',
 })
@@ -69,11 +102,10 @@ export class PublicLandingComponent implements OnInit {
   private readonly publicApi = inject(PublicApiService);
   private readonly session = inject(PublicSessionService);
   private readonly messageService = inject(MessageService);
+  private readonly auth = inject(AuthService);
+  private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
-    // Safety net: if the authenticated customer identity changes while this component
-    // is alive (tab reuse, future in-page auth flow, etc.), clear every piece of
-    // appointment state immediately so stale data can never bleed to the new identity.
     let prevCustomerId: string | null | undefined;
     effect(() => {
       const currentId = this.session.customerId();
@@ -89,9 +121,8 @@ export class PublicLandingComponent implements OnInit {
     });
   }
 
-  readonly businessSlug = computed(
-    () => this.route.parent?.snapshot.paramMap.get('slug') ?? ''
-  );
+  /** Reactive slug from parent route (`/b/:slug`). */
+  readonly businessSlug = signal('');
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
@@ -100,24 +131,108 @@ export class PublicLandingComponent implements OnInit {
 
   readonly greetingSub = 'בואי נקבע תור בקלות ובמהירות';
 
-  readonly carouselImages = [
-    'https://picsum.photos/800/400?random=1',
-    'https://picsum.photos/800/400?random=2',
-    'https://picsum.photos/800/400?random=3',
-  ];
+  readonly loadingPageData = signal(true);
+  readonly pageLoadError = signal<string | null>(null);
+  readonly bookingBusiness = signal<PublicBusinessForBooking | null>(null);
+  readonly servicesList = signal<PublicService[]>([]);
+
+  readonly landingTagline = computed(
+    () => this.bookingBusiness()?.landing?.tagline?.trim() || DEFAULT_TAGLINE
+  );
+
+  /**
+   * Two hero photos side by side: cover URL, then `media.photos`, then defaults
+   * (same sources as the original carousel — business imagery with picsum fallback).
+   */
+  private readonly heroPhotoPair = computed((): readonly [string, string] => {
+    const b = this.bookingBusiness();
+    const ordered: string[] = [];
+    const add = (u: string | null | undefined): void => {
+      const t = typeof u === 'string' ? u.trim() : '';
+      if (t && !ordered.includes(t)) ordered.push(t);
+    };
+    add(b?.landing?.coverImageUrl);
+    for (const p of b?.media?.photos ?? []) {
+      add(p);
+    }
+    const [d0, d1] = PUBLIC_LANDING_DEFAULT_HERO_PHOTOS;
+    if (ordered.length >= 2) {
+      return [ordered[0], ordered[1]];
+    }
+    if (ordered.length === 1) {
+      return [ordered[0], d1];
+    }
+    return [d0, d1];
+  });
+
+  readonly heroImageLeft = computed(() => this.heroPhotoPair()[0]);
+
+  readonly heroImageRight = computed(() => this.heroPhotoPair()[1]);
+
+  readonly businessDisplayName = computed(() => this.bookingBusiness()?.name ?? '');
+
+  readonly landingPhone = computed(() => this.bookingBusiness()?.landing?.phone ?? null);
+
+  readonly portfolioImages = computed(
+    () => this.bookingBusiness()?.landing?.portfolioImages ?? []
+  );
+
+  readonly landingProducts = computed((): PublicLandingProductItem[] => {
+    const raw = this.bookingBusiness()?.landing?.products ?? [];
+    return raw.filter((p) => p.name?.trim());
+  });
+
+  readonly showProductsSection = computed(() => this.landingProducts().length > 0);
+
+  readonly landingReviews = computed((): PublicLandingReviewItem[] => {
+    const raw = this.bookingBusiness()?.landing?.reviews ?? [];
+    return raw.filter((r) => r.text?.trim());
+  });
+
+  readonly showReviewsSection = computed(() => this.landingReviews().length > 0);
+
+  readonly statsRating = computed(
+    () => this.bookingBusiness()?.landing?.stats?.rating ?? 5
+  );
+
+  readonly statsCustomers = computed(
+    () => this.bookingBusiness()?.landing?.stats?.customersCount ?? 0
+  );
+
+  readonly statsCompleted = computed(
+    () => this.bookingBusiness()?.landing?.stats?.completedAppointmentsCount ?? 0
+  );
+
+  /**
+   * True when the back-office owner (or impersonating super-admin) views their own public slug.
+   * Requires `auth.init()` to have populated `user` / `business`.
+   */
+  readonly isOwnerViewingOwnLanding = computed(() => {
+    const slug = this.businessSlug();
+    if (!slug || !this.auth.initialized()) return false;
+    const u = this.auth.user();
+    const b = this.auth.business();
+    if (!u || !b || b.slug !== slug) return false;
+    if (u.role === 'owner') return true;
+    return u.role === 'super_admin' && this.auth.isImpersonating();
+  });
+
+  readonly stickyPhoneHref = computed((): string | null => {
+    const p = this.landingPhone();
+    if (!p?.trim()) return null;
+    const digits = p.replace(/\D/g, '');
+    return digits.length > 0 ? `tel:${digits}` : null;
+  });
 
   readonly loadingUpcoming = signal(false);
   readonly upcomingApt = signal<UpcomingAppointment | null>(null);
   readonly upcomingError = signal(false);
-  /** When a booking just completed, show the just-booked apt until the real fetch resolves. */
   readonly justBookedApt = signal<UpcomingAppointment | null>(null);
 
-  /** The appointment to display: prefer the live-fetched one, fall back to just-booked. */
   readonly displayApt = computed(
     () => this.upcomingApt() ?? this.justBookedApt()
   );
 
-  // ── Cancellation drawer state ─────────────────────────────────────────────
   readonly cancelDrawerOpen = signal(false);
   readonly cancelReason = signal('');
   readonly cancelReasonTouched = signal(false);
@@ -155,43 +270,83 @@ export class PublicLandingComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    const slug = this.businessSlug();
-    // The customer ID that belongs to the current authenticated session.
-    const currentCustomerId = this.session.customerId();
+    this.auth.init().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 
-    // Read router state written by CustomerBookPageComponent on successful booking.
-    // history.state persists for the current navigation only and is absent on refresh.
-    const state = (typeof window !== 'undefined' ? window.history.state : {}) as Record<string, unknown>;
-    if (state?.['booked'] === true) {
-      const aptData = state['apt'] as UpcomingAppointment | undefined;
-      // IDENTITY GUARD: only accept the just-booked appointment card if its
-      // embedded customerId matches the current session.  This prevents a
-      // lingering history entry from a previous customer being shown to a
-      // different customer who navigates to the same URL later.
-      const stateCustomerId = (state['customerId'] as string | null | undefined) ?? null;
-      const identityMatch = stateCustomerId === currentCustomerId;
+    this.route.parent!.paramMap
+      .pipe(
+        map((p) => p.get('slug') ?? ''),
+        distinctUntilChanged(),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((slug) => {
+        this.businessSlug.set(slug);
+        if (!slug) {
+          this.loadingPageData.set(false);
+          this.pageLoadError.set('חסר מזהה עסק');
+          return;
+        }
 
-      if (aptData && identityMatch) {
-        this.justBookedApt.set(aptData);
-      }
+        this.consumeBookedHistoryState();
+        this.reloadLandingData(slug);
 
-      // Always show the success toast — the booking itself succeeded regardless.
-      this.messageService.add({
-        severity: 'success',
-        summary: 'התור נקבע!',
-        detail: 'התור שלך אושר בהצלחה',
-        life: 5000,
+        if (this.session.hasSessionFor(slug)) {
+          this.loadUpcoming();
+        } else {
+          this.upcomingApt.set(null);
+          this.justBookedApt.set(null);
+          this.upcomingError.set(false);
+          this.loadingUpcoming.set(false);
+        }
       });
+  }
 
-      // Neutralise the state so back/forward navigation does not re-trigger it.
-      if (typeof window !== 'undefined') {
-        window.history.replaceState({ ...state, booked: false }, '');
-      }
+  private reloadLandingData(slug: string): void {
+    this.bookingBusiness.set(null);
+    this.servicesList.set([]);
+    this.loadingPageData.set(true);
+    this.pageLoadError.set(null);
+    forkJoin({
+      biz: this.publicApi.getBusinessForBooking(slug),
+      svc: this.publicApi.getServices(slug),
+    }).subscribe({
+      next: ({ biz, svc }) => {
+        this.bookingBusiness.set(biz);
+        this.servicesList.set(svc);
+        this.loadingPageData.set(false);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
+        this.loadingPageData.set(false);
+      },
+    });
+  }
+
+  private consumeBookedHistoryState(): void {
+    const slug = this.businessSlug();
+    const currentCustomerId = this.session.customerId();
+    const state = (typeof window !== 'undefined' ? window.history.state : {}) as Record<
+      string,
+      unknown
+    >;
+    if (state?.['booked'] !== true) return;
+
+    const aptData = state['apt'] as UpcomingAppointment | undefined;
+    const stateCustomerId = (state['customerId'] as string | null | undefined) ?? null;
+    const identityMatch = stateCustomerId === currentCustomerId;
+
+    if (aptData && identityMatch) {
+      this.justBookedApt.set(aptData);
     }
 
-    // Fetch the real upcoming appointment only for the currently authenticated customer.
-    if (slug && this.session.hasSessionFor(slug)) {
-      this.loadUpcoming();
+    this.messageService.add({
+      severity: 'success',
+      summary: 'התור נקבע!',
+      detail: 'התור שלך אושר בהצלחה',
+      life: 5000,
+    });
+
+    if (typeof window !== 'undefined') {
+      window.history.replaceState({ ...state, booked: false }, '');
     }
   }
 
@@ -237,7 +392,6 @@ export class PublicLandingComponent implements OnInit {
       next: () => {
         this.cancelling.set(false);
         this.cancelDrawerOpen.set(false);
-        // Clear local appointment state immediately, then fetch fresh state.
         this.upcomingApt.set(null);
         this.justBookedApt.set(null);
         this.messageService.add({
@@ -246,7 +400,6 @@ export class PublicLandingComponent implements OnInit {
           detail: 'התור שלך בוטל בהצלחה',
           life: 5000,
         });
-        // Refresh from server to get accurate state.
         if (this.session.hasSessionFor(this.businessSlug())) {
           this.loadUpcoming();
         }
@@ -265,8 +418,15 @@ export class PublicLandingComponent implements OnInit {
     });
   }
 
-  goToBook(): void {
+  goToBook(serviceId?: string): void {
     const slug = this.businessSlug();
-    if (slug) this.router.navigate(['/b', slug, 'book']);
+    if (!slug) return;
+    if (serviceId) {
+      this.router.navigate(['/b', slug, 'book'], {
+        queryParams: { service: serviceId },
+      });
+    } else {
+      this.router.navigate(['/b', slug, 'book']);
+    }
   }
 }

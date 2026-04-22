@@ -1,0 +1,39 @@
+<div class="pl-hero-wrap">
+  <div class="pl-hero-slider" aria-hidden="true">
+    <p-carousel
+      [value]="carouselSlides()"
+      [numVisible]="1"
+      [numScroll]="1"
+      [circular]="true"
+      [showIndicators]="true"
+      [showNavigators]="false"
+      styleClass="pl-hero-carousel"
+    >
+      <ng-template let-src pTemplate="item">
+        <div class="pl-hero-carousel__slide">
+          <img
+            class="pl-hero-carousel__img"
+            [src]="src"
+            alt=""
+            width="800"
+            height="400"
+            loading="lazy"
+            decoding="async"
+          />
+        </div>
+      </ng-template>
+    </p-carousel>
+  </div>
+
+  <!-- <div class="pl-hero-intro" dir="rtl">
+    <h1 class="pl-hero-intro__name">{{ businessName() }}</h1>
+    <p class="pl-hero-intro__tagline">{{ tagline() }}</p>
+    <p-button
+      label="קביעת תור"
+      icon="pi pi-calendar-plus"
+      iconPos="right"
+      styleClass="pl-hero-intro__cta"
+      (onClick)="book.emit()"
+    />
+  </div> -->
+</div>

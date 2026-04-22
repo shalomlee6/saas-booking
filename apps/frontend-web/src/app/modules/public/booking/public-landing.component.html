@@ -1,126 +1,108 @@
-<div class="public-page" dir="rtl">
+<div class="pl-page" dir="rtl">
+  @if (pageLoadError(); as err) {
+    <div class="pl-page__error" role="alert">{{ err }}</div>
+  } @else if (loadingPageData() && !bookingBusiness()) {
+    <div class="pl-page__boot" aria-busy="true">
+      <p class="pl-page__boot-text">טוענת את דף הנחיתה…</p>
+    </div>
+  } @else {
+    <app-public-landing-hero
+      [businessName]="businessDisplayName()"
+      [tagline]="landingTagline()"
+      [imageLeft]="heroImageLeft()"
+      [imageRight]="heroImageRight()"
+      (book)="goToBook()"
+    />
 
-  <!-- ── Hero media carousel ─────────────────────────────────────────────── -->
-  <section class="public-hero" aria-hidden="true">
-    <p-carousel
-      [value]="carouselImages"
-      [showIndicators]="true"
-      [showNavigators]="false"
-      [numVisible]="1"
-      [numScroll]="1"
-      [autoplayInterval]="5000"
-      [circular]="true"
-      styleClass="landing-carousel"
-    >
-      <ng-template let-src pTemplate="item">
-        <div class="landing-carousel-item">
-          <img [src]="src" alt="" class="landing-carousel-img" />
+    <div class="pl-section pl-section--base pl-welcome">
+      <div class="pl-welcome-inner">
+        <div class="pl-greeting">
+          <h2 class="pl-greeting__title">{{ greetingTitle() }}</h2>
+          <p class="pl-greeting__sub">{{ greetingSub }}</p>
         </div>
-      </ng-template>
-    </p-carousel>
-  </section>
 
-  <!-- ── Main content card ────────────────────────────────────────────────── -->
-  <section class="public-content">
-
-    <!-- Greeting -->
-    <div class="public-greeting">
-      <h1 class="public-greeting-title">{{ greetingTitle() }}</h1>
-      <p class="public-greeting-sub">{{ greetingSub }}</p>
+        <app-public-landing-next-appointment
+          [loading]="loadingUpcoming()"
+          [apt]="displayApt()"
+          [error]="upcomingError()"
+          [statusLabel]="statusLabel()"
+          [statusSeverity]="statusSeverity()"
+          [formattedDate]="formattedDate()"
+          [staffLine]="''"
+          [canCancel]="canCancelApt()"
+          (book)="goToBook()"
+          (cancel)="openCancelDrawer()"
+        />
+      </div>
     </div>
 
-    <!-- ── Upcoming appointment ─────────────────────────────────────────── -->
-    <div class="public-upcoming">
-      <h2 class="public-upcoming-heading">
-        <i class="pi pi-calendar" aria-hidden="true"></i>
-        התור הקרוב שלך
-      </h2>
-
-      <!-- Loading skeleton -->
-      @if (loadingUpcoming()) {
-        <div class="public-apt-card public-apt-card--skeleton">
-          <p-skeleton width="60%" height="1.125rem" styleClass="mb-2" />
-          <p-skeleton width="40%" height="0.875rem" styleClass="mb-1" />
-          <p-skeleton width="50%" height="0.875rem" />
-        </div>
-      }
-
-      <!-- Has upcoming appointment -->
-      @else if (displayApt(); as apt) {
-        <div class="public-apt-card">
-          <div class="public-apt-card-header">
-            <p-tag
-              [value]="statusLabel()"
-              [severity]="statusSeverity()"
-              styleClass="public-apt-status"
-            />
-            @if (canCancelApt()) {
-              <button
-                type="button"
-                class="apt-cancel-btn"
-                aria-label="ביטול תור"
-                (click)="openCancelDrawer()"
-              >
-                <i class="pi pi-times-circle" aria-hidden="true"></i>
-                ביטול תור
-              </button>
-            }
-          </div>
-          <div class="public-apt-row">
-            <i class="pi pi-wrench public-apt-icon" aria-hidden="true"></i>
-            <span class="public-apt-service">{{ apt.serviceName }}</span>
-          </div>
-          <div class="public-apt-row">
-            <i class="pi pi-calendar public-apt-icon" aria-hidden="true"></i>
-            <span class="public-apt-date">{{ formattedDate() }}</span>
-          </div>
-          <div class="public-apt-row">
-            <i class="pi pi-clock public-apt-icon" aria-hidden="true"></i>
-            <span class="public-apt-time">{{ apt.time }}</span>
-          </div>
-        </div>
-      }
-
-      <!-- Error state (soft — don't crash the page) -->
-      @else if (upcomingError()) {
-        <div class="public-apt-card public-apt-card--error">
-          <i class="pi pi-exclamation-circle public-apt-error-icon" aria-hidden="true"></i>
-          <p class="public-apt-error-msg">לא ניתן לטעון את פרטי התור כרגע</p>
-        </div>
-      }
-
-      <!-- Empty state: no upcoming appointment -->
-      @else {
-        <div class="public-apt-empty">
-          <i class="pi pi-calendar-plus public-apt-empty-icon" aria-hidden="true"></i>
-          <p class="public-apt-empty-msg">אין לך תור קרוב</p>
-          <p-button
-            label="לקביעת תור חדש"
-            icon="pi pi-plus"
-            iconPos="right"
-            styleClass="public-apt-cta"
-            (onClick)="goToBook()"
-          />
-        </div>
-      }
+    <div class="pl-section pl-section--accent">
+      <div class="pl-inner pl-inner--wide">
+        <app-public-landing-services
+          [services]="servicesList()"
+          (bookService)="goToBook($event)"
+        />
+      </div>
     </div>
 
-    <!-- ── Primary CTA (always visible) ────────────────────────────────── -->
-    <div class="public-cta-wrap">
-      <p-button
-        label="לקביעת תור"
-        icon="pi pi-calendar-plus"
-        iconPos="right"
-        styleClass="public-cta-btn"
-        (onClick)="goToBook()"
-      />
-      <p class="public-cta-notice">יש להודיע מראש על ביטול התור</p>
+    <div class="pl-section pl-section--base">
+      <div class="pl-inner pl-inner--wide">
+        <app-public-landing-gallery
+          [images]="portfolioImages()"
+          [isOwner]="isOwnerViewingOwnLanding()"
+        />
+      </div>
     </div>
 
-  </section>
+    @if (showProductsSection()) {
+      <div class="pl-section pl-section--accent">
+        <div class="pl-inner pl-inner--wide">
+          <app-public-landing-products [products]="landingProducts()" />
+        </div>
+      </div>
+    }
+
+    @if (showReviewsSection()) {
+      <div class="pl-section pl-section--base">
+        <div class="pl-inner pl-inner--wide">
+          <app-public-landing-reviews [reviews]="landingReviews()" />
+        </div>
+      </div>
+    }
+
+    <div class="pl-section pl-section--base">
+      <div class="pl-inner">
+        <app-public-landing-booking-cta
+          [phone]="landingPhone()"
+          (book)="goToBook()"
+        />
+      </div>
+    </div>
+  }
+
+  <nav
+    class="pl-sticky-bar"
+    aria-label="פעולות מהירות"
+    [class.pl-sticky-bar--hidden]="!!pageLoadError()"
+  >
+    @if (stickyPhoneHref(); as tel) {
+      <a class="pl-sticky-bar__btn pl-sticky-bar__btn--call" [href]="tel">
+        <span aria-hidden="true">📞</span>
+        התקשרי
+      </a>
+    } @else {
+      <span class="pl-sticky-bar__btn pl-sticky-bar__btn--disabled" aria-disabled="true">
+        <span aria-hidden="true">📞</span>
+        התקשרי
+      </span>
+    }
+    <button type="button" class="pl-sticky-bar__btn pl-sticky-bar__btn--book" (click)="goToBook()">
+      <span aria-hidden="true">📅</span>
+      קביעת תור
+    </button>
+  </nav>
 </div>
 
-<!-- ── Cancellation drawer ───────────────────────────────────────────────── -->
 <p-drawer
   [visible]="cancelDrawerOpen()"
   (visibleChange)="cancelDrawerOpen.set($event)"
@@ -138,8 +120,6 @@
   </ng-template>
 
   <div class="cancel-drawer-body" dir="rtl">
-
-    <!-- Appointment summary recap -->
     @if (displayApt(); as apt) {
       <div class="cancel-apt-summary">
         <div class="cancel-apt-summary-row">
@@ -157,12 +137,8 @@
       </div>
     }
 
-    <!-- Confirmation text -->
-    <p class="cancel-confirm-text">
-      האם את בטוחה שברצונך לבטל את התור?
-    </p>
+    <p class="cancel-confirm-text">האם את בטוחה שברצונך לבטל את התור?</p>
 
-    <!-- Cancellation reason -->
     <div class="cancel-reason-field">
       <label class="cancel-reason-label" for="cancelReasonInput">
         סיבת ביטול התור
@@ -190,7 +166,6 @@
       }
     </div>
 
-    <!-- Server error -->
     @if (cancelError()) {
       <div class="cancel-server-error" role="alert">
         <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
@@ -198,7 +173,6 @@
       </div>
     }
 
-    <!-- Actions -->
     <div class="cancel-drawer-actions">
       <p-button
         [label]="cancelling() ? 'מבטלת תור...' : 'לחצי כאן לביטול התור'"
@@ -210,16 +184,6 @@
         [loading]="cancelling()"
         (onClick)="confirmCancel()"
       />
-      <!-- <p-button
-        label="חזרה"
-        icon="pi pi-arrow-left"
-        iconPos="right"
-        styleClass="cancel-back-btn"
-        severity="secondary"
-        [disabled]="cancelling()"
-        (onClick)="closeCancelDrawer()"
-      /> -->
     </div>
-
   </div>
 </p-drawer>

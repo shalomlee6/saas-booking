@@ -18,6 +18,12 @@ export interface IOpeningHours {
   days: IOpeningHoursDay[];
 }
 
+export interface ILandingProduct {
+  name: string;
+  description?: string;
+  price: number;
+}
+
 export interface IBusinessSettings extends Document {
   businessId: Types.ObjectId;
   plan: SettingsPlan;
@@ -43,6 +49,18 @@ export interface IBusinessSettings extends Document {
   };
   /** Shown on the public booking page when supported by the client. */
   bookingWelcomeMessage?: string;
+  /** Hero / SEO tagline on public landing (Hebrew). */
+  landingTagline?: string;
+  /** Full-bleed hero background image URL (optional). */
+  coverImageUrl?: string;
+  /** Gallery images for public landing portfolio section. */
+  portfolioImages?: string[];
+  /** Featured products / treatments on public landing. */
+  landingProducts?: ILandingProduct[];
+  /** Display rating when there are no computed reviews yet (1–5). */
+  publicRating?: number;
+  /** Public contact phone shown on landing / booking CTA (optional). */
+  businessPhonePublic?: string;
   localization: {
     language: 'he' | 'en';
     timezone: string;
@@ -102,6 +120,21 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       customDomainEnabled: { type: Boolean, default: false },
     },
     bookingWelcomeMessage: { type: String, default: '' },
+    landingTagline: { type: String, default: '' },
+    coverImageUrl: { type: String, default: '' },
+    portfolioImages: { type: [String], default: [] },
+    landingProducts: {
+      type: [
+        {
+          name: { type: String, required: true },
+          description: { type: String },
+          price: { type: Number, required: true, min: 0 },
+        },
+      ],
+      default: [],
+    },
+    publicRating: { type: Number, min: 1, max: 5, default: 5 },
+    businessPhonePublic: { type: String, default: '' },
     localization: {
       language: { type: String, enum: ['he', 'en'], default: 'he' },
       timezone: { type: String, default: 'Asia/Jerusalem' },

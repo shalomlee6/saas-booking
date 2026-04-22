@@ -1,0 +1,22 @@
+<section class="pl-svc" aria-labelledby="pl-svc-title">
+  <h2 id="pl-svc-title" class="pl-svc__title">השירותים שלנו</h2>
+  <div class="pl-svc__scroll" role="list">
+    @for (s of cards(); track s.id) {
+      <article class="pl-svc__card" role="listitem">
+        <span class="pl-svc__emoji" aria-hidden="true">{{ s.emoji }}</span>
+        <h3 class="pl-svc__name">{{ s.nameHe }}</h3>
+        <p class="pl-svc__meta">{{ s.durationMinutes }} דקות</p>
+        @if (s.price != null) {
+          <p class="pl-svc__price">{{ s.price | currency: 'ILS' : 'symbol' : '1.0-0' }}</p>
+        }
+        <p-button
+          label="הזמיני"
+          icon="pi pi-arrow-left"
+          iconPos="right"
+          styleClass="pl-svc__btn"
+          (onClick)="bookService.emit(s.id)"
+        />
+      </article>
+    }
+  </div>
+</section>

@@ -383,6 +383,16 @@ export class CustomerBookPageComponent implements OnInit {
 
   // ── Private helpers ────────────────────────────────────────────────────────
 
+  /** Pre-select service when opening e.g. `/b/:slug/book?service=:id` from the landing page. */
+  private applyPresetServiceFromQuery(services: PublicService[]): void {
+    const id = this.route.snapshot.queryParamMap.get('service');
+    if (!id) return;
+    const match = services.find((s) => s.id === id);
+    if (match) {
+      this.selectService(match);
+    }
+  }
+
   private loadBusiness(slug: string): void {
     this.loadingBusiness.set(true);
     this.publicApi.getBusinessForBooking(slug).subscribe({
@@ -403,6 +413,7 @@ export class CustomerBookPageComponent implements OnInit {
       next: (data) => {
         this.services.set(data);
         this.loadingServices.set(false);
+        this.applyPresetServiceFromQuery(data);
       },
       error: (err) => {
         this.loadingServices.set(false);

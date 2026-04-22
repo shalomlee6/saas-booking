@@ -1,0 +1,54 @@
+@use './public-landing-palette' as *;
+
+.pl-prod {
+  text-align: right;
+}
+
+.pl-prod__title {
+  margin: 0 0 0.75rem;
+  font-size: 18px;
+  font-weight: 600;
+  color: $pl-text-heading;
+}
+
+.pl-prod__scroll {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  padding-bottom: 0.35rem;
+  justify-content: flex-start;
+}
+
+.pl-prod__card {
+  flex: 0 0 220px;
+  background: $pl-bg-card;
+  border-radius: 16px;
+  border: 1px solid $pl-border;
+  box-shadow: 0 2px 8px $pl-shadow-soft;
+  padding: 1rem;
+}
+
+.pl-prod__name {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: $pl-text-heading;
+}
+
+.pl-prod__desc {
+  margin: 0 0 0.65rem;
+  font-size: 0.875rem;
+  color: $pl-text-muted;
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pl-prod__price {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: $pl-gold;
+}

@@ -1,0 +1,68 @@
+<section class="pl-next" aria-labelledby="pl-next-heading">
+  <h2 id="pl-next-heading" class="pl-next__heading">
+    <i class="pi pi-calendar pl-next__heading-ico" aria-hidden="true"></i>
+    התור הקרוב שלך
+  </h2>
+
+  @if (loading()) {
+    <div class="pl-next__card pl-next__card--skeleton">
+      <p-skeleton width="55%" height="1.125rem" styleClass="mb-2" />
+      <p-skeleton width="70%" height="0.875rem" styleClass="mb-1" />
+      <p-skeleton width="45%" height="0.875rem" />
+    </div>
+  } @else if (apt(); as a) {
+    <div class="pl-next__card">
+      <div class="pl-next__row pl-next__row--head">
+        <p-tag [value]="statusLabel()" [severity]="statusSeverity()" styleClass="pl-next__tag" />
+        @if (canCancel()) {
+          <p-button
+            label="ביטול תור"
+            icon="pi pi-times"
+            iconPos="right"
+            styleClass="pl-next__cancel"
+            (onClick)="cancel.emit()"
+          />
+        }
+      </div>
+      @if (countdownLabel()) {
+        <p class="pl-next__countdown">{{ countdownLabel() }}</p>
+      }
+      <div class="pl-next__row">
+        <i class="pi pi-sparkles pl-next__ico pl-next__ico--sparkle" aria-hidden="true"></i>
+        <span class="pl-next__strong">{{ a.serviceName }}</span>
+      </div>
+      @if (staffLine()) {
+        <div class="pl-next__row">
+          <i class="pi pi-user pl-next__ico" aria-hidden="true"></i>
+          <span class="pl-next__muted">{{ staffLine() }}</span>
+        </div>
+      }
+      <div class="pl-next__row">
+        <i class="pi pi-calendar pl-next__ico" aria-hidden="true"></i>
+        <span>{{ formattedDate() }}</span>
+      </div>
+      <div class="pl-next__row">
+        <i class="pi pi-clock pl-next__ico" aria-hidden="true"></i>
+        <span class="pl-next__time">{{ a.time }}</span>
+      </div>
+    </div>
+  } @else if (error()) {
+    <div class="pl-next__card pl-next__card--error">
+      <i class="pi pi-exclamation-circle pl-next__err-ico" aria-hidden="true"></i>
+      <p class="pl-next__err-msg">לא ניתן לטעון את פרטי התור כרגע</p>
+    </div>
+  } @else {
+    <div class="pl-next__empty">
+      <span class="pl-next__empty-illu" aria-hidden="true">✨</span>
+      <p class="pl-next__empty-title">אין לך תור קרוב</p>
+      <p class="pl-next__empty-sub">קבעי עכשיו טיפול מפנק!</p>
+      <p-button
+        label="קביעת תור"
+        icon="pi pi-calendar-plus"
+        iconPos="right"
+        styleClass="pl-next__empty-btn"
+        (onClick)="book.emit()"
+      />
+    </div>
+  }
+</section>

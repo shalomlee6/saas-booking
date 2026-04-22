@@ -43,6 +43,14 @@ const localizationSchema = z
   .strict()
   .optional();
 
+const landingProductSchema = z
+  .object({
+    name: z.string().min(1).max(200).trim(),
+    description: z.string().max(500).trim().optional().or(z.literal('')),
+    price: z.number().min(0).max(1_000_000),
+  })
+  .strict();
+
 /** PUT /api/settings/me/settings — partial document; unknown keys rejected */
 export const updateBusinessSettingsBodySchema = z
   .object({
@@ -50,6 +58,13 @@ export const updateBusinessSettingsBodySchema = z
     theme: themeSchema,
     features: featuresSchema,
     localization: localizationSchema,
+    bookingWelcomeMessage: z.string().max(2000).trim().optional().or(z.literal('')),
+    landingTagline: z.string().max(300).trim().optional().or(z.literal('')),
+    coverImageUrl: z.string().max(2000).trim().optional().or(z.literal('')),
+    portfolioImages: z.array(z.string().max(2000)).max(50).optional(),
+    landingProducts: z.array(landingProductSchema).max(30).optional(),
+    publicRating: z.number().min(1).max(5).optional(),
+    businessPhonePublic: z.string().max(40).trim().optional().or(z.literal('')),
   })
   .strict();
 

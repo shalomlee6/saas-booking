@@ -11,6 +11,12 @@ import {
   deleteOverride,
 } from '../controllers/availabilityOverridesController';
 import { getBusinessInsights } from '../controllers/insightsController';
+import {
+  listBusinessReviews,
+  createBusinessReview,
+  deleteBusinessReview,
+} from '../controllers/businessReviewController';
+import { asyncHandler } from '../utils/asyncHandler';
 
 export const businessRouter = Router();
 
@@ -75,3 +81,13 @@ businessRouter.get('/insights', auth, requireBusinessContext, getBusinessInsight
 businessRouter.get('/overrides', auth, requireBusinessContext, getOverrides);
 businessRouter.post('/overrides', auth, requireBusinessContext, postOverride);
 businessRouter.delete('/overrides/:id', auth, requireBusinessContext, deleteOverride);
+
+// Testimonials for public landing (owner-managed)
+businessRouter.get('/reviews', auth, requireBusinessContext, asyncHandler(listBusinessReviews));
+businessRouter.post('/reviews', auth, requireBusinessContext, asyncHandler(createBusinessReview));
+businessRouter.delete(
+  '/reviews/:id',
+  auth,
+  requireBusinessContext,
+  asyncHandler(deleteBusinessReview)
+);

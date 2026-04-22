@@ -1,0 +1,55 @@
+@use './public-landing-palette' as *;
+
+.pl-cta {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, $pl-bg-section-alt, $pl-primary-pale);
+  border: 1px solid $pl-border;
+}
+
+.pl-cta__title {
+  margin: 0 0 0.35rem;
+  font-size: 20px;
+  font-weight: 600;
+  color: $pl-text-heading;
+}
+
+.pl-cta__sub {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: $pl-text-muted;
+}
+
+::ng-deep .pl-cta__btn.p-button {
+  background: $pl-primary;
+  border: none;
+  color: #fff;
+  font-weight: 500;
+  padding: 16px 40px;
+  border-radius: 50px;
+  font-size: 1.05rem;
+}
+
+::ng-deep .pl-cta__btn.p-button .p-button-icon {
+  color: #fff;
+}
+
+::ng-deep .pl-cta__btn.p-button:not(:disabled):hover {
+  background: $pl-primary-hover;
+  border: none;
+  color: #fff;
+}
+
+.pl-cta__phone {
+  display: block;
+  margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: $pl-primary;
+  text-decoration: none;
+}
+
+.pl-cta__phone:hover {
+  text-decoration: underline;
+}

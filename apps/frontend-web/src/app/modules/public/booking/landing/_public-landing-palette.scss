@@ -1,0 +1,38 @@
+// Rose gold palette — shared by public landing components
+$pl-bg-page: #fdf6f0;
+$pl-bg-section-alt: #fdf0f0;
+$pl-bg-card: #ffffff;
+$pl-primary: #b76e79;
+$pl-primary-hover: #a05c67;
+$pl-primary-light: #e8b4b8;
+$pl-primary-pale: #fadadd;
+$pl-gold: #c9a84c;
+$pl-text-heading: #2c1810;
+$pl-text-body: #5c3a3a;
+$pl-text-muted: #a07070;
+$pl-border: #f0d5d5;
+$pl-shadow: rgba(183, 110, 121, 0.1);
+$pl-shadow-soft: rgba(183, 110, 121, 0.08);
+
+@mixin pl-btn-primary {
+  background: $pl-primary;
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 28px;
+  font-weight: 500;
+
+  &:not(:disabled):hover {
+    background: $pl-primary-hover;
+    color: #fff;
+  }
+}
+
+@mixin pl-btn-secondary {
+  background: $pl-primary-pale;
+  color: $pl-primary;
+  border: 1px solid $pl-primary-light;
+  border-radius: 50px;
+  padding: 12px 28px;
+  font-weight: 500;
+}

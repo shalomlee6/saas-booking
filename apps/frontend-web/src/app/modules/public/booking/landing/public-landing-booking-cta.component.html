@@ -1,0 +1,14 @@
+<section class="pl-cta" aria-label="קביעת תור">
+  <h2 class="pl-cta__title">מוכנה לטיפול הבא שלך?</h2>
+  <p class="pl-cta__sub">קביעת תור פשוטה, מהירה ובלחיצה אחת</p>
+  <p-button
+    label="קביעי תור עכשיו"
+    icon="pi pi-calendar-plus"
+    iconPos="right"
+    styleClass="pl-cta__btn"
+    (onClick)="book.emit()"
+  />
+  @if (phoneHref(); as href) {
+    <a class="pl-cta__phone" [href]="href">התקשרי: {{ phone() }}</a>
+  }
+</section>
