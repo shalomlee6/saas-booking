@@ -33,6 +33,7 @@ export class SuperAdminAnalyticsComponent {
 
   readonly loading = signal(true);
   readonly data = signal<AdminAnalyticsDto | null>(null);
+  readonly error = signal<string | null>(null);
 
   range: '7d' | '30d' | '90d' = '7d';
   readonly rangeOptions = [
@@ -58,6 +59,26 @@ export class SuperAdminAnalyticsComponent {
           data: pts.map((p) => p.count),
           borderColor: '#38bdf8',
           backgroundColor: 'rgba(56, 189, 248, 0.15)',
+          fill: true,
+          tension: 0.3,
+        },
+      ],
+    };
+  });
+
+  readonly revenueLineChart = computed(() => {
+    const d = this.data();
+    if (!d) return null;
+    const pts = d.charts.revenueByDay ?? [];
+    if (pts.length === 0) return null;
+    return {
+      labels: pts.map((p) => p.date),
+      datasets: [
+        {
+          label: 'Revenue',
+          data: pts.map((p) => p.amount),
+          borderColor: '#a78bfa',
+          backgroundColor: 'rgba(167, 139, 250, 0.12)',
           fill: true,
           tension: 0.3,
         },
@@ -107,6 +128,7 @@ export class SuperAdminAnalyticsComponent {
 
   refresh(): void {
     this.loading.set(true);
+    this.error.set(null);
     this.adminApi.getAnalytics(this.range).subscribe({
       next: (res) => {
         this.data.set(res);
@@ -114,6 +136,7 @@ export class SuperAdminAnalyticsComponent {
       },
       error: (err) => {
         this.loading.set(false);
+        this.error.set(err?.error?.message ?? 'Failed to load analytics');
         this.messages.add({
           severity: 'error',
           summary: 'Analytics',

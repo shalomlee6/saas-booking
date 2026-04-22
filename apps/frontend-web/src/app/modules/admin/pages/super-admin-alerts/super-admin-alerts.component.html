@@ -1,0 +1,70 @@
+<p-toast />
+
+<div class="sa-page">
+  <header class="sa-page-head">
+    <div>
+      <h1 class="sa-page-title">System alerts</h1>
+      <p class="sa-page-sub">Operational signals across tenants and billing.</p>
+    </div>
+    <p-button
+      icon="pi pi-refresh"
+      label="Refresh"
+      [outlined]="true"
+      (onClick)="load()"
+      [disabled]="loading()"
+      styleClass="sa-btn"
+    />
+  </header>
+
+  @if (loading()) {
+    <div class="sa-alerts-skel">
+      @for (i of [1, 2, 3]; track i) {
+        <p-skeleton width="100%" height="96px" styleClass="sa-alert-skel" />
+      }
+    </div>
+  } @else if (error(); as errMsg) {
+    <div class="sa-empty sa-empty--error">
+      <p class="sa-empty-title">Could not load alerts</p>
+      <p class="sa-empty-text">{{ errMsg }}</p>
+      <p-button label="Try again" (onClick)="load()" styleClass="sa-btn" />
+    </div>
+  } @else if (items().length === 0) {
+    <div class="sa-empty">
+      <p class="sa-empty-title">All clear</p>
+      <p class="sa-empty-text">There are no active alerts right now.</p>
+    </div>
+  } @else {
+    <ul class="sa-alert-list">
+      @for (a of items(); track a.id) {
+        <li>
+          <p-card styleClass="sa-alert-card">
+            <div class="sa-alert-card-head">
+              <p-tag [value]="severityLabel(a.severity)" [severity]="severityTag(a.severity)" />
+              <span class="sa-alert-meta">{{ a.category }} · {{ a.createdAt | date: 'short' }}</span>
+            </div>
+            <h2 class="sa-alert-title">{{ a.title }}</h2>
+            <p class="sa-alert-msg">{{ a.message }}</p>
+            <div class="sa-alert-actions">
+              <p-button
+                label="Dismiss"
+                [outlined]="true"
+                severity="secondary"
+                size="small"
+                (onClick)="dismiss(a)"
+                [disabled]="actingId() === a.id"
+                styleClass="sa-btn"
+              />
+              <p-button
+                label="Mark resolved"
+                size="small"
+                (onClick)="resolve(a)"
+                [disabled]="actingId() === a.id"
+                styleClass="sa-btn"
+              />
+            </div>
+          </p-card>
+        </li>
+      }
+    </ul>
+  }
+</div>

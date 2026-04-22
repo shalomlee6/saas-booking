@@ -6,7 +6,7 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router, withDisabledInitialNavigation } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { provideStore, provideState } from '@ngrx/store';
@@ -62,10 +62,13 @@ export const appConfig: ApplicationConfig = {
           : [publicCustomerAuthInterceptor, authInterceptor, unauthorizedInterceptor]
       )
     ),
-    provideRouter(routes),
+    provideRouter(routes, withDisabledInitialNavigation()),
     provideAppInitializer(() => {
       const auth = inject(AuthService);
-      return lastValueFrom(auth.init());
+      const router = inject(Router);
+      return lastValueFrom(auth.init()).then(() => {
+        router.initialNavigation();
+      });
     }),
     // Required by PrimeNG until it supports Angular's animate.enter/leave (v23). See: https://github.com/primefaces/primeng/issues/18863
     provideAnimationsAsync(),

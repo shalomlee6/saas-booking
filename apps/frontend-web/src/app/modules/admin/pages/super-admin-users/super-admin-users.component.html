@@ -6,6 +6,13 @@
     <p class="sa-page-sub">Search and manage platform accounts.</p>
   </header>
 
+  @if (loadError(); as err) {
+    <div class="sa-inline-error">
+      <span>{{ err }}</span>
+      <button type="button" class="sa-retry-btn" (click)="retryLoad()">Retry</button>
+    </div>
+  }
+
   <div class="sa-toolbar">
     <span class="p-input-icon-left sa-search">
       <i class="pi pi-search" aria-hidden="true"></i>

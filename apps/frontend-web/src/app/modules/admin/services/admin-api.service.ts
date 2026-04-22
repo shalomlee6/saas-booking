@@ -60,6 +60,12 @@ export interface AdminAnalyticsDto {
     appointments: number;
     appointmentsInRange: number;
     revenueInRange: number;
+    /** Present on API ≥ revenue metrics release; mock always sends them. */
+    totalRevenue?: number;
+    revenueLast30Days?: number;
+    mrr?: number;
+    arpu?: number;
+    payingBusinesses?: number;
     newUserSignups: number;
     newBusinessesInRange: number;
     churnRiskBusinesses: number;
@@ -68,7 +74,25 @@ export interface AdminAnalyticsDto {
     appointmentsByDay: { date: string; count: number }[];
     newBusinessesByWeek: { label: string; count: number }[];
     planDistribution: { plan: string; count: number }[];
+    revenueByDay?: { date: string; amount: number }[];
   };
+}
+
+export type AdminAlertSeverity = 'info' | 'warning' | 'error';
+
+export interface AdminAlertItem {
+  id: string;
+  severity: AdminAlertSeverity;
+  category: string;
+  title: string;
+  message: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface AdminAlertsResponse {
+  items: AdminAlertItem[];
+  activeCount: number;
 }
 
 export interface AdminAuditRow {
@@ -133,6 +157,22 @@ export class AdminApiService {
 
   getAnalytics(range: '7d' | '30d' | '90d'): Observable<AdminAnalyticsDto> {
     return this.api.get<AdminAnalyticsDto>('admin/analytics', { range });
+  }
+
+  getAlerts(): Observable<AdminAlertsResponse> {
+    return this.api.get<AdminAlertsResponse>('admin/alerts');
+  }
+
+  getAlertsCount(): Observable<{ count: number }> {
+    return this.api.get<{ count: number }>('admin/alerts/count');
+  }
+
+  dismissAlert(id: string): Observable<{ ok: boolean; activeCount: number }> {
+    return this.api.patch<{ ok: boolean; activeCount: number }>(`admin/alerts/${id}/dismiss`, {});
+  }
+
+  resolveAlert(id: string): Observable<{ ok: boolean; activeCount: number }> {
+    return this.api.patch<{ ok: boolean; activeCount: number }>(`admin/alerts/${id}/resolve`, {});
   }
 
   listAudit(query: ApiQueryParams): Observable<AdminAuditPage> {

@@ -9,6 +9,10 @@ export interface IPlatformSettings extends Document {
   platformDisplayName: string;
   /** Read-only hint for admins; real SMTP lives in server env. */
   emailConfigurationNote: string;
+  /** Super-admin alert UI: hidden alert ids (dismiss). */
+  adminAlertDismissedIds: string[];
+  /** Super-admin alert UI: resolved alert ids. */
+  adminAlertResolvedIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,6 +28,8 @@ const PlatformSettingsSchema = new Schema<IPlatformSettings>(
       default: 'Outbound email is configured via server environment variables (not editable here).',
       trim: true,
     },
+    adminAlertDismissedIds: { type: [String], default: [] },
+    adminAlertResolvedIds: { type: [String], default: [] },
   },
   { timestamps: true }
 );

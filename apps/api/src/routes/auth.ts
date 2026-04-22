@@ -9,6 +9,20 @@ import { getMe } from '../controllers/authController';
 
 export const authRouter = Router();
 
+const authCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000,
+});
+
+const clearAuthCookieOptions = () => ({
+  path: '/',
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+});
+
 /** Public self-serve registration: allowed when ALLOW_PUBLIC_REGISTER=true, or when unset in non-production. */
 function isPublicRegistrationAllowed(): boolean {
   const v = process.env.ALLOW_PUBLIC_REGISTER;
@@ -67,13 +81,7 @@ authRouter.post('/register', async (req, res) => {
       { expiresIn: '7d' }
     );
 
-    res.cookie('sb_token', token, {
-      httpOnly: true,
-      secure: false,        // ב-https production לשים true
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // שבוע
-    });
-
+    res.cookie('sb_token', token, authCookieOptions());
 
     return res.status(201).json({
       token,
@@ -129,12 +137,7 @@ authRouter.post('/login', async (req, res) => {
 
     const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' });
 
-    res.cookie('sb_token', token, {
-      httpOnly: true,
-      secure: false,        // ב-https production לשים true
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // שבוע
-    });
+    res.cookie('sb_token', token, authCookieOptions());
 
     return res.json({
       token,
@@ -156,7 +159,7 @@ authRouter.get('/me', auth, getMe);
 
 // logout
 authRouter.post('/logout', (req, res) => {
-  res.clearCookie('sb_token');
+  res.clearCookie('sb_token', clearAuthCookieOptions());
   return res.json({ success: true });
 });
 

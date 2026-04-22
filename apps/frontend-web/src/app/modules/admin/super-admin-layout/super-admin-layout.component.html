@@ -57,6 +57,18 @@
           <span>Analytics</span>
         </a>
         <a
+          routerLink="/super-admin/alerts"
+          routerLinkActive="sa-layout-link-active"
+          class="sa-layout-link sa-layout-link--alerts"
+          (click)="closeMobileMenu()"
+        >
+          <i class="pi pi-bell" aria-hidden="true"></i>
+          <span>Alerts</span>
+          @if (alertCount() > 0) {
+            <span class="sa-layout-nav-badge" aria-label="Active alerts">{{ alertCount() }}</span>
+          }
+        </a>
+        <a
           routerLink="/super-admin/audit"
           routerLinkActive="sa-layout-link-active"
           class="sa-layout-link"

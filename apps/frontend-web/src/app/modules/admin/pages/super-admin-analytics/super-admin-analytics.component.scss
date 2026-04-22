@@ -98,3 +98,38 @@
 .sa-chart-skel {
   border-radius: 12px;
 }
+
+.sa-empty {
+  border: 1px dashed #e2e8f0;
+  border-radius: 12px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  background: #f8fafc;
+  margin-bottom: 1rem;
+}
+
+.sa-empty--error {
+  border-style: solid;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.sa-empty-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #0f172a;
+}
+
+.sa-empty-text {
+  margin: 0 0 1rem;
+  color: #64748b;
+}
+
+.sa-chart-empty {
+  margin: 0;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.9375rem;
+}

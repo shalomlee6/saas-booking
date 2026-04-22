@@ -38,6 +38,13 @@ export const SUPER_ADMIN_ROUTES: Routes = [
       ),
   },
   {
+    path: 'alerts',
+    loadComponent: () =>
+      import('./pages/super-admin-alerts/super-admin-alerts.component').then(
+        (m) => m.SuperAdminAlertsComponent
+      ),
+  },
+  {
     path: 'audit',
     loadComponent: () =>
       import('./pages/super-admin-audit/super-admin-audit.component').then(

@@ -234,6 +234,77 @@ let mockCurrentUser: { role: 'owner'; businessId: string } | { role: 'super_admi
 /** False until a successful mock POST /auth/login (fresh browser / reload = logged out). */
 let mockAuthenticated = false;
 
+const SB_MOCK_AUTH_KEY = 'sb_mock_authenticated';
+const SB_MOCK_ROLE_KEY = 'sb_mock_role';
+const SB_MOCK_BIZ_KEY = 'sb_mock_business_id';
+
+function syncMockSessionFromStorage(): void {
+  if (typeof sessionStorage === 'undefined') return;
+  if (sessionStorage.getItem(SB_MOCK_AUTH_KEY) !== '1') return;
+  mockAuthenticated = true;
+  const role = sessionStorage.getItem(SB_MOCK_ROLE_KEY);
+  if (role === 'super_admin') {
+    mockCurrentUser = { role: 'super_admin' };
+    return;
+  }
+  if (role === 'owner') {
+    const bid = sessionStorage.getItem(SB_MOCK_BIZ_KEY) || 'mock-business-1';
+    mockCurrentUser = { role: 'owner', businessId: bid };
+  }
+}
+
+function persistMockSessionToStorage(): void {
+  if (typeof sessionStorage === 'undefined') return;
+  sessionStorage.setItem(SB_MOCK_AUTH_KEY, '1');
+  if (mockCurrentUser.role === 'super_admin') {
+    sessionStorage.setItem(SB_MOCK_ROLE_KEY, 'super_admin');
+    sessionStorage.removeItem(SB_MOCK_BIZ_KEY);
+  } else {
+    sessionStorage.setItem(SB_MOCK_ROLE_KEY, 'owner');
+    sessionStorage.setItem(SB_MOCK_BIZ_KEY, mockCurrentUser.businessId);
+  }
+}
+
+function clearMockSessionStorage(): void {
+  if (typeof sessionStorage === 'undefined') return;
+  sessionStorage.removeItem(SB_MOCK_AUTH_KEY);
+  sessionStorage.removeItem(SB_MOCK_ROLE_KEY);
+  sessionStorage.removeItem(SB_MOCK_BIZ_KEY);
+}
+
+const mockAlertDismissed = new Set<string>();
+const mockAlertResolved = new Set<string>();
+
+function mockAlertsList(): {
+  id: string;
+  severity: string;
+  category: string;
+  title: string;
+  message: string;
+  createdAt: string;
+}[] {
+  const now = new Date().toISOString();
+  const all = [
+    {
+      id: 'mock-alert-inactive',
+      severity: 'warning',
+      category: 'engagement',
+      title: 'Inactive business (30+ days)',
+      message: 'Second Salon has had no recent appointments in the mock dataset.',
+      createdAt: now,
+    },
+    {
+      id: 'mock-alert-payments',
+      severity: 'info',
+      category: 'payments',
+      title: 'Payment activity',
+      message: '1 business has online payments enabled in mock data — monitor failed charges.',
+      createdAt: now,
+    },
+  ];
+  return all.filter((a) => !mockAlertDismissed.has(a.id) && !mockAlertResolved.has(a.id));
+}
+
 const MOCK_BUSINESSES: Record<string, unknown>[] = [
   {
     _id: 'mock-business-1',
@@ -424,6 +495,65 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
+  syncMockSessionFromStorage();
+
+  // ——— Auth (evaluate before other handlers) ———
+  if (isAuthLogoutPost(req)) {
+    mockAuthenticated = false;
+    clearMockSessionStorage();
+    return from([new HttpResponse({ status: 200, body: { success: true } })]);
+  }
+
+  if (isAuthLoginPost(req)) {
+    const body = req.body as Record<string, unknown>;
+    const email = String(body['email'] ?? '').toLowerCase();
+    if (email === 'superadmin@example.com') {
+      mockCurrentUser = { role: 'super_admin' };
+      mockAuthenticated = true;
+      persistMockSessionToStorage();
+      return from([
+        new HttpResponse({
+          status: 200,
+          body: {
+            user: {
+              id: 'mock-super-admin',
+              email: 'superadmin@example.com',
+              role: 'super_admin',
+            },
+          },
+        }),
+      ]);
+    }
+    mockCurrentUser = { role: 'owner', businessId: 'mock-business-1' };
+    mockAuthenticated = true;
+    persistMockSessionToStorage();
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          user: {
+            id: 'mock-user-1',
+            email: 'owner@example.com',
+            role: 'owner',
+            businessId: 'mock-business-1',
+          },
+        },
+      }),
+    ]);
+  }
+
+  if (isAuthMeGet(req)) {
+    if (!mockAuthenticated) {
+      return from([
+        new HttpResponse({
+          status: 401,
+          body: { message: 'Not authenticated (mock)' },
+        }),
+      ]);
+    }
+    return from([new HttpResponse({ status: 200, body: mockAuthMeResponse(req) })]);
+  }
+
   // ——— Appointments ———
   if (isAppointmentsGetOne(req)) {
     const match = req.url.split('?')[0].match(/\/api\/appointments\/([^/]+)$/);
@@ -593,60 +723,6 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
 
-  // ——— Auth: login sets mockCurrentUser; auth/me uses Bearer or mockCurrentUser ———
-  if (isAuthLogoutPost(req)) {
-    mockAuthenticated = false;
-    return from([new HttpResponse({ status: 200, body: { success: true } })]);
-  }
-
-  if (isAuthLoginPost(req)) {
-    const body = req.body as Record<string, unknown>;
-    const email = String(body['email'] ?? '').toLowerCase();
-    if (email === 'superadmin@example.com') {
-      mockCurrentUser = { role: 'super_admin' };
-      mockAuthenticated = true;
-      return from([
-        new HttpResponse({
-          status: 200,
-          body: {
-            user: {
-              id: 'mock-super-admin',
-              email: 'superadmin@example.com',
-              role: 'super_admin',
-            },
-          },
-        }),
-      ]);
-    }
-    mockCurrentUser = { role: 'owner', businessId: 'mock-business-1' };
-    mockAuthenticated = true;
-    return from([
-      new HttpResponse({
-        status: 200,
-        body: {
-          user: {
-            id: 'mock-user-1',
-            email: 'owner@example.com',
-            role: 'owner',
-            businessId: 'mock-business-1',
-          },
-        },
-      }),
-    ]);
-  }
-
-  if (isAuthMeGet(req)) {
-    if (!mockAuthenticated) {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Not authenticated (mock)' },
-        }),
-      ]);
-    }
-    return from([new HttpResponse({ status: 200, body: mockAuthMeResponse(req) })]);
-  }
-
   // ——— Admin: businesses list, impersonate, stop-impersonate ———
   if (isAdminBusinessesGet(req)) {
     return from([new HttpResponse({ status: 200, body: [...MOCK_BUSINESSES] })]);
@@ -767,6 +843,11 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         appointments: 42,
         appointmentsInRange: 12,
         revenueInRange: 4800,
+        totalRevenue: 128_500,
+        revenueLast30Days: 18_200,
+        mrr: 49,
+        arpu: 64250,
+        payingBusinesses: 1,
         newUserSignups: 2,
         newBusinessesInRange: 1,
         churnRiskBusinesses: 0,
@@ -779,12 +860,41 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         ],
         newBusinessesByWeek: [{ label: '2024-W23', count: 1 }],
         planDistribution: [
-          { plan: 'free', count: 2 },
-          { plan: 'normal', count: 0 },
+          { plan: 'free', count: 1 },
+          { plan: 'normal', count: 1 },
+        ],
+        revenueByDay: [
+          { date: '2024-06-10', amount: 1200 },
+          { date: '2024-06-11', amount: 2100 },
+          { date: '2024-06-12', amount: 1500 },
         ],
       },
     };
     return from([new HttpResponse({ status: 200, body })]);
+  }
+  if (req.method === 'GET' && /\/api\/admin\/alerts\/count\/?$/.test(adminPath)) {
+    const items = mockAlertsList();
+    return from([new HttpResponse({ status: 200, body: { count: items.length } })]);
+  }
+  if (req.method === 'GET' && /\/api\/admin\/alerts\/?$/.test(adminPath)) {
+    const items = mockAlertsList();
+    return from([
+      new HttpResponse({ status: 200, body: { items, activeCount: items.length } }),
+    ]);
+  }
+  const dismissAlert =
+    req.method === 'PATCH' && adminPath.match(/\/api\/admin\/alerts\/([^/]+)\/dismiss$/);
+  if (dismissAlert) {
+    mockAlertDismissed.add(dismissAlert[1]);
+    const items = mockAlertsList();
+    return from([new HttpResponse({ status: 200, body: { ok: true, activeCount: items.length } })]);
+  }
+  const resolveAlert =
+    req.method === 'PATCH' && adminPath.match(/\/api\/admin\/alerts\/([^/]+)\/resolve$/);
+  if (resolveAlert) {
+    mockAlertResolved.add(resolveAlert[1]);
+    const items = mockAlertsList();
+    return from([new HttpResponse({ status: 200, body: { ok: true, activeCount: items.length } })]);
   }
   if (req.method === 'GET' && /\/api\/admin\/audit\/?$/.test(adminPath)) {
     const q = parseUrlQuery(req);

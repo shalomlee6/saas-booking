@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { auth } from '../middleware/auth';
 import { requireSuperAdmin } from '../middleware/requireSuperAdmin';
+import { postAdminTestSeed } from '../controllers/adminTestSeedController';
 import {
   getAdminBusinesses,
   createAdminBusiness,
@@ -17,6 +18,12 @@ import {
   getAdminAnalytics,
   getAdminAudit,
 } from '../controllers/adminPlatformController';
+import {
+  getAdminAlerts,
+  getAdminAlertsCount,
+  dismissAdminAlert,
+  resolveAdminAlert,
+} from '../controllers/adminAlertsController';
 import { validateBody } from '../middleware/validateRequest';
 import {
   createAdminBusinessBodySchema,
@@ -26,7 +33,9 @@ import {
 
 export const adminRouter = Router();
 
-// All admin routes require super admin
+adminRouter.post('/test-seed', postAdminTestSeed);
+
+// All other admin routes require super admin
 adminRouter.use(auth);
 adminRouter.use(requireSuperAdmin);
 
@@ -44,6 +53,10 @@ adminRouter.get('/settings', getAdminSettings);
 adminRouter.patch('/settings', validateBody(patchPlatformSettingsBodySchema), patchAdminSettings);
 
 adminRouter.get('/analytics', getAdminAnalytics);
+adminRouter.get('/alerts/count', getAdminAlertsCount);
+adminRouter.get('/alerts', getAdminAlerts);
+adminRouter.patch('/alerts/:id/dismiss', dismissAdminAlert);
+adminRouter.patch('/alerts/:id/resolve', resolveAdminAlert);
 adminRouter.get('/audit', getAdminAudit);
 
 

@@ -7,13 +7,17 @@ import {
   HostListener,
   signal,
   computed,
+  DestroyRef,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet, NavigationEnd } from '@angular/router';
 import { DOCUMENT } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '../../../core/auth/auth.service';
+import { AdminApiService } from '../services/admin-api.service';
+import { filter } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 const BREAKPOINT_PX = 768;
 
@@ -27,6 +31,9 @@ const BREAKPOINT_PX = 768;
 export class SuperAdminLayoutComponent implements OnInit, OnDestroy {
   private readonly doc = inject(DOCUMENT);
   private readonly title = inject(Title);
+  private readonly router = inject(Router);
+  private readonly adminApi = inject(AdminApiService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly auth = inject(AuthService);
 
   private readonly _titleSync = effect(() => {
@@ -38,6 +45,7 @@ export class SuperAdminLayoutComponent implements OnInit, OnDestroy {
   readonly isMobileMenuOpen = signal(false);
   readonly isSidebarCollapsed = signal(false);
   readonly isMobile = signal(false);
+  readonly alertCount = signal(0);
 
   readonly menuToggleIcon = computed<string>(() => {
     const open = this.isMobile() ? this.isMobileMenuOpen() : !this.isSidebarCollapsed();
@@ -60,6 +68,20 @@ export class SuperAdminLayoutComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.resizeListener();
     this.doc.defaultView?.addEventListener('resize', this.resizeListener);
+    this.refreshAlertCount();
+    this.router.events
+      .pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.refreshAlertCount());
+  }
+
+  private refreshAlertCount(): void {
+    this.adminApi.getAlertsCount().subscribe({
+      next: (r: { count: number }) => this.alertCount.set(r.count),
+      error: () => this.alertCount.set(0),
+    });
   }
 
   ngOnDestroy(): void {

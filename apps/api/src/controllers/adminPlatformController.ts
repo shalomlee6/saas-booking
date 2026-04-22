@@ -29,6 +29,13 @@ function parseRangeDays(range: string | undefined): number {
   return 7;
 }
 
+/** Estimated MRR per plan when billing integration is not present (USD). */
+const PLAN_MRR_USD: Record<string, number> = {
+  free: 0,
+  normal: 49,
+  premium: 99,
+};
+
 // GET /api/admin/users
 export async function getAdminUsers(req: AuthRequest, res: Response): Promise<void> {
   try {
@@ -264,6 +271,10 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
     rangeStart.setUTCDate(rangeStart.getUTCDate() - days);
     rangeStart.setUTCHours(0, 0, 0, 0);
 
+    const thirtyDaysStart = new Date(now);
+    thirtyDaysStart.setUTCDate(thirtyDaysStart.getUTCDate() - 30);
+    thirtyDaysStart.setUTCHours(0, 0, 0, 0);
+
     const [
       totalBusinesses,
       totalUsers,
@@ -274,6 +285,10 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
       revenueAgg,
       activeBusinessIds,
       planAgg,
+      totalRevenueAllAgg,
+      revenueLast30Agg,
+      revenueByDayInRange,
+      planRowsForMrr,
     ] = await Promise.all([
       Business.countDocuments(),
       User.countDocuments(),
@@ -297,9 +312,61 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
       BusinessSettings.aggregate<{ _id: string; count: number }>([
         { $group: { _id: '$plan', count: { $sum: 1 } } },
       ]),
+      Appointment.aggregate<{ total: number }>([
+        {
+          $match: {
+            status: { $nin: ['cancelled'] },
+            price: { $exists: true, $gt: 0 },
+          },
+        },
+        { $group: { _id: null as unknown as string, total: { $sum: '$price' } } },
+      ]),
+      Appointment.aggregate<{ total: number }>([
+        {
+          $match: {
+            start: { $gte: thirtyDaysStart, $lte: now },
+            status: { $nin: ['cancelled'] },
+            price: { $exists: true, $gt: 0 },
+          },
+        },
+        { $group: { _id: null as unknown as string, total: { $sum: '$price' } } },
+      ]),
+      Appointment.aggregate<{ _id: string; total: number }>([
+        {
+          $match: {
+            start: { $gte: rangeStart, $lte: now },
+            status: { $nin: ['cancelled'] },
+            price: { $exists: true, $gt: 0 },
+          },
+        },
+        {
+          $group: {
+            _id: {
+              $dateToString: { format: '%Y-%m-%d', date: '$start', timezone: 'UTC' },
+            },
+            total: { $sum: '$price' },
+          },
+        },
+        { $sort: { _id: 1 } },
+      ]),
+      BusinessSettings.find().select('plan').lean(),
     ]);
 
     const revenueTotal = revenueAgg[0]?.total ?? 0;
+    const totalRevenue = totalRevenueAllAgg[0]?.total ?? 0;
+    const revenueLast30Days = revenueLast30Agg[0]?.total ?? 0;
+
+    let mrr = 0;
+    let payingBusinesses = 0;
+    for (const row of planRowsForMrr) {
+      const key = row.plan || 'free';
+      const add = PLAN_MRR_USD[key] ?? 0;
+      if (add > 0) payingBusinesses += 1;
+      mrr += add;
+    }
+
+    const arpu =
+      totalUsers > 0 ? Math.round((totalRevenue / totalUsers) * 100) / 100 : 0;
     const activeBusinesses = activeBusinessIds.length;
 
     const appointmentsByDay = await Appointment.aggregate<{ _id: string; count: number }>([
@@ -361,6 +428,11 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
         appointments: totalAppointments,
         appointmentsInRange,
         revenueInRange: revenueTotal,
+        totalRevenue,
+        revenueLast30Days,
+        mrr,
+        arpu,
+        payingBusinesses,
         newUserSignups,
         newBusinessesInRange,
         churnRiskBusinesses,
@@ -372,6 +444,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
           count: w.count,
         })),
         planDistribution: planAgg.map((p) => ({ plan: p._id || 'unknown', count: p.count })),
+        revenueByDay: revenueByDayInRange.map((d) => ({ date: d._id, amount: d.total })),
       },
     });
   } catch (err) {

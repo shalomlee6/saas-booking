@@ -23,7 +23,7 @@ app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN || 'http://localhost:4200',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-e2e-test-seed-secret'],
     credentials: true,
   })
 );
@@ -58,6 +58,17 @@ async function bootstrap() {
 
   app.listen(PORT, () => {
     console.log(`🚀 API server running on http://localhost:${PORT}`);
+    if (process.env.NODE_ENV === 'production') {
+      if (process.env.ALLOW_PUBLIC_REGISTER === 'true') {
+        console.warn(
+          '⚠️ ALLOW_PUBLIC_REGISTER=true — public self-serve registration is enabled in production.'
+        );
+      } else {
+        console.log('✓ Public registration disabled or gated (ALLOW_PUBLIC_REGISTER is not true).');
+      }
+      const origin = process.env.CLIENT_ORIGIN || 'http://localhost:4200';
+      console.log(`✓ CORS CLIENT_ORIGIN=${origin} (set to your deployed UI origin).`);
+    }
   });
 }
 

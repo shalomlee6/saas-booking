@@ -39,6 +39,7 @@ export class SuperAdminUsersComponent {
   private readonly messages = inject(MessageService);
 
   readonly loading = signal(false);
+  readonly loadError = signal<string | null>(null);
   readonly totalRecords = signal(0);
   readonly rows = signal<AdminUserRow[]>([]);
   readonly searchDebounce = signal('');
@@ -91,6 +92,7 @@ export class SuperAdminUsersComponent {
     this.page = Math.floor(first / rows) + 1;
     this.pageSize = rows;
     this.loading.set(true);
+    this.loadError.set(null);
     this.adminApi
       .listUsers({
         page: this.page,
@@ -107,6 +109,7 @@ export class SuperAdminUsersComponent {
         },
         error: (err) => {
           this.loading.set(false);
+          this.loadError.set(err?.error?.message ?? 'Request failed');
           this.messages.add({
             severity: 'error',
             summary: 'Failed to load users',
@@ -114,6 +117,13 @@ export class SuperAdminUsersComponent {
           });
         },
       });
+  }
+
+  retryLoad(): void {
+    this.loadPage({
+      first: (this.page - 1) * this.pageSize,
+      rows: this.pageSize,
+    } as TableLazyLoadEvent);
   }
 
   openDetail(row: AdminUserRow): void {

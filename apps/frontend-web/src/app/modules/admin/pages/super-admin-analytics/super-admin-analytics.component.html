@@ -28,13 +28,53 @@
 
   @if (loading()) {
     <div class="sa-kpi-grid">
-      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+      @for (i of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]; track i) {
         <p-skeleton width="100%" height="88px" styleClass="sa-kpi-skel" />
       }
     </div>
     <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
+    <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
+  } @else if (error(); as errDetail) {
+    <div class="sa-empty sa-empty--error">
+      <p class="sa-empty-title">Analytics unavailable</p>
+      <p class="sa-empty-text">{{ errDetail }}</p>
+      <p-button label="Retry" icon="pi pi-refresh" (onClick)="refresh()" styleClass="sa-btn" />
+    </div>
   } @else if (data(); as d) {
     <div class="sa-kpi-grid">
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Total revenue</span>
+        <span class="sa-kpi-value">{{
+          (d.totals.totalRevenue ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+        }}</span>
+        <span class="sa-kpi-meta">All-time from appointments</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">MRR</span>
+        <span class="sa-kpi-value">{{
+          (d.totals.mrr ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+        }}</span>
+        <span class="sa-kpi-meta">Estimated from plan tiers</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">ARPU</span>
+        <span class="sa-kpi-value">{{
+          (d.totals.arpu ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+        }}</span>
+        <span class="sa-kpi-meta">Revenue ÷ users (all-time)</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Paying businesses</span>
+        <span class="sa-kpi-value">{{ d.totals.payingBusinesses ?? 0 | number }}</span>
+        <span class="sa-kpi-meta">Normal or premium plan</span>
+      </p-card>
+      <p-card styleClass="sa-kpi-card">
+        <span class="sa-kpi-label">Revenue (30d)</span>
+        <span class="sa-kpi-value">{{
+          (d.totals.revenueLast30Days ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+        }}</span>
+        <span class="sa-kpi-meta">Last 30 days</span>
+      </p-card>
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">Businesses</span>
         <span class="sa-kpi-value">{{ d.totals.businesses | number }}</span>
@@ -53,7 +93,7 @@
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">Revenue (range)</span>
         <span class="sa-kpi-value">{{ d.totals.revenueInRange | currency: 'USD' : 'symbol' : '1.0-0' }}</span>
-        <span class="sa-kpi-meta">From booked services</span>
+        <span class="sa-kpi-meta">Booked services in period</span>
       </p-card>
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">New businesses</span>
@@ -68,6 +108,15 @@
     </div>
 
     <div class="sa-charts">
+      <p-card header="Revenue over time" styleClass="sa-chart-card">
+        @if (revenueLineChart(); as rc) {
+          <div class="sa-chart-wrap">
+            <p-chart type="line" [data]="rc" [options]="chartOptions" [responsive]="true" />
+          </div>
+        } @else {
+          <p class="sa-chart-empty">No revenue in this range yet.</p>
+        }
+      </p-card>
       <p-card header="Appointments over time" styleClass="sa-chart-card">
         @if (lineChart(); as lc) {
           <div class="sa-chart-wrap">

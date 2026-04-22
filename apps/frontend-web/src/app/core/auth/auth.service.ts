@@ -106,14 +106,23 @@ export class AuthService {
   init(): Observable<void> {
     return this.api.get<AuthMeResponse>('auth/me').pipe(
       tap((res) => {
-        this.user.set(res.user);
+        const u = res?.user;
+        if (!u) {
+          this.user.set(null);
+          this.business.set(null);
+          this.businessSettings.set(null);
+          this.initialized.set(true);
+          this.clearSessionExpiryHint();
+          return;
+        }
+        this.user.set(u);
         this.business.set(res.business ?? null);
         this.businessSettings.set(res.businessSettings ?? null);
         this.initialized.set(true);
 
         // Super admin (not impersonating): sb_theme. Impersonating or owners: business UI drives mode.
         const isSuperAdmin =
-          res.user?.role === 'super_admin' && !this._impersonationToken();
+          u.role === 'super_admin' && !this._impersonationToken();
         const mode = isSuperAdmin
           ? ((typeof localStorage !== 'undefined' && (localStorage.getItem('sb_theme') as 'light' | 'dark' | null)) === 'dark' ? 'dark' : 'light')
           : (res.business?.ui?.themeMode === 'dark' ? 'dark' : 'light');
@@ -136,7 +145,7 @@ export class AuthService {
   }
 
   isLoggedIn(): boolean {
-    return this.user() !== null;
+    return this.user() != null;
   }
 
   /**
