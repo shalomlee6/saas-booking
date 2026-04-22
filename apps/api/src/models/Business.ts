@@ -9,12 +9,16 @@ export interface IBusinessUi {
   dashboardLayout?: 'classic' | 'compact';
 }
 
+export type BusinessPlan = 'free' | 'pro' | 'premium';
+
 export interface IBusiness extends Document {
   ownerId: Types.ObjectId;
   name: string;
   phone?: string;
   address?: string;
   slug: string;
+  /** Canonical subscription tier (also mirrored in BusinessSettings.plan for legacy paths). */
+  plan: BusinessPlan;
   ui?: IBusinessUi;
   createdAt: Date;
   updatedAt: Date;
@@ -39,6 +43,12 @@ const BusinessSchema = new Schema<IBusiness>(
     phone: String,
     address: String,
     slug: { type: String, required: true, unique: true },
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'premium'],
+      default: 'free',
+      index: true,
+    },
     ui: { type: BusinessUiSchema, default: () => ({}) },
   },
   { timestamps: true }

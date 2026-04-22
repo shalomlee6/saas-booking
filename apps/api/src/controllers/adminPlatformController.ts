@@ -7,7 +7,9 @@ import { Appointment } from '../models/Appointment';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { PlatformSettings } from '../models/PlatformSettings';
 import { AuditLog } from '../models/AuditLog';
+import { Service } from '../models/Service';
 import { recordAudit } from '../utils/recordAudit';
+import { normalizePlan, type PlanTier } from '../utils/planPolicy';
 
 const USER_ROLES = ['super_admin', 'owner', 'staff', 'client'] as const;
 
@@ -23,16 +25,45 @@ async function getOrCreatePlatformSettings() {
   return doc;
 }
 
-function parseRangeDays(range: string | undefined): number {
-  if (range === '90d') return 90;
-  if (range === '30d') return 30;
-  return 7;
+type AdminAnalyticsWindow = { rangeStart: Date; rangeEnd: Date; rangeDays: number };
+
+function startOfUtcDay(d: Date): Date {
+  const x = new Date(d);
+  x.setUTCHours(0, 0, 0, 0);
+  return x;
+}
+
+function parseAdminAnalyticsWindow(req: AuthRequest): AdminAnalyticsWindow | null {
+  const range = String(req.query.range || '7d');
+  const now = new Date();
+  if (range === 'custom') {
+    const fromStr = typeof req.query.from === 'string' ? req.query.from : '';
+    const toStr = typeof req.query.to === 'string' ? req.query.to : '';
+    const from = new Date(fromStr);
+    const to = new Date(toStr);
+    if (!fromStr || !toStr || Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+      return null;
+    }
+    const rangeStart = startOfUtcDay(from);
+    const rangeEnd = new Date(to);
+    rangeEnd.setUTCHours(23, 59, 59, 999);
+    const end = now < rangeEnd ? now : rangeEnd;
+    const ms = end.getTime() - rangeStart.getTime();
+    const rangeDays = Math.max(1, Math.ceil(ms / 86400000));
+    return { rangeStart, rangeEnd: end, rangeDays };
+  }
+  const days = range === '90d' ? 90 : range === '30d' ? 30 : 7;
+  const rangeStart = new Date(now);
+  rangeStart.setUTCDate(rangeStart.getUTCDate() - days);
+  rangeStart.setUTCHours(0, 0, 0, 0);
+  return { rangeStart, rangeEnd: now, rangeDays: days };
 }
 
 /** Estimated MRR per plan when billing integration is not present (USD). */
 const PLAN_MRR_USD: Record<string, number> = {
   free: 0,
   normal: 49,
+  pro: 49,
   premium: 99,
 };
 
@@ -46,6 +77,10 @@ export async function getAdminUsers(req: AuthRequest, res: Response): Promise<vo
     const role = String(req.query.role || '').trim();
     const status = String(req.query.status || '').trim();
     const businessId = String(req.query.businessId || '').trim();
+    const rawSortField = String(req.query.sortField || 'createdAt');
+    const sortField = ['name', 'email', 'createdAt'].includes(rawSortField) ? rawSortField : 'createdAt';
+    const sortDir = String(req.query.sortOrder || 'desc').toLowerCase() === 'asc' ? 1 : -1;
+    const sort: Record<string, 1 | -1> = { [sortField]: sortDir };
 
     const filter: Record<string, unknown> = {};
     if (role && USER_ROLES.includes(role as (typeof USER_ROLES)[number])) {
@@ -64,11 +99,7 @@ export async function getAdminUsers(req: AuthRequest, res: Response): Promise<vo
 
     const [total, users] = await Promise.all([
       User.countDocuments(filter),
-      User.find(filter)
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      User.find(filter).sort(sort).skip(skip).limit(limit).lean(),
     ]);
 
     const businessIds = [
@@ -81,24 +112,35 @@ export async function getAdminUsers(req: AuthRequest, res: Response): Promise<vo
     const businesses =
       businessIds.length > 0
         ? await Business.find({ _id: { $in: businessIds } })
-            .select('name')
+            .select('name plan')
             .lean()
         : [];
     const businessNameById = new Map(
       businesses.map((b) => [b._id.toString(), b.name as string])
     );
+    const businessPlanById = new Map<string, PlanTier>(
+      businesses.map((b) => [
+        b._id.toString(),
+        normalizePlan(typeof (b as { plan?: string }).plan === 'string' ? (b as { plan: string }).plan : null),
+      ])
+    );
 
-    const items = users.map((u) => ({
-      id: u._id.toString(),
-      email: u.email,
-      name: (u as { name?: string }).name?.trim() || '',
-      role: u.role,
-      status: (u as { status?: string }).status || 'active',
-      businessId: u.businessId?.toString() ?? null,
-      businessName: u.businessId ? businessNameById.get(u.businessId.toString()) ?? null : null,
-      createdAt: u.createdAt,
-      lastLoginAt: (u as { lastLoginAt?: Date }).lastLoginAt ?? null,
-    }));
+    const items = users.map((u) => {
+      const bid = u.businessId?.toString() ?? null;
+      return {
+        id: u._id.toString(),
+        email: u.email,
+        name: (u as { name?: string }).name?.trim() || '',
+        phone: (u as { phone?: string }).phone?.trim() || null,
+        role: u.role,
+        status: (u as { status?: string }).status || 'active',
+        businessId: bid,
+        businessName: bid ? businessNameById.get(bid) ?? null : null,
+        plan: bid ? businessPlanById.get(bid) ?? 'free' : null,
+        createdAt: u.createdAt,
+        lastLoginAt: (u as { lastLoginAt?: Date }).lastLoginAt ?? null,
+      };
+    });
 
     res.json({ items, total, page, limit });
   } catch (err) {
@@ -121,18 +163,22 @@ export async function getAdminUserById(req: AuthRequest, res: Response): Promise
       return;
     }
     let businessName: string | null = null;
+    let plan: PlanTier | null = null;
     if (u.businessId) {
-      const b = await Business.findById(u.businessId).select('name').lean();
+      const b = await Business.findById(u.businessId).select('name plan').lean();
       businessName = b?.name ?? null;
+      plan = normalizePlan(typeof (b as { plan?: string } | null)?.plan === 'string' ? (b as { plan: string }).plan : null);
     }
     res.json({
       id: u._id.toString(),
       email: u.email,
       name: (u as { name?: string }).name?.trim() || '',
+      phone: (u as { phone?: string }).phone?.trim() || null,
       role: u.role,
       status: (u as { status?: string }).status || 'active',
       businessId: u.businessId?.toString() ?? null,
       businessName,
+      plan,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
       lastLoginAt: (u as { lastLoginAt?: Date }).lastLoginAt ?? null,
@@ -178,18 +224,69 @@ export async function patchAdminUser(req: AuthRequest, res: Response): Promise<v
       metadata: { status: user.status, name: user.name },
     });
 
+    let plan: PlanTier | null = null;
+    let businessName: string | null = null;
+    if (user.businessId) {
+      const b = await Business.findById(user.businessId).select('name plan').lean();
+      businessName = b?.name ?? null;
+      plan = normalizePlan(typeof (b as { plan?: string } | null)?.plan === 'string' ? (b as { plan: string }).plan : null);
+    }
+
     res.json({
       id: user._id.toString(),
       email: user.email,
       name: user.name ?? '',
+      phone: user.phone?.trim() || null,
       role: user.role,
       status: user.status,
       businessId: user.businessId?.toString() ?? null,
+      businessName,
+      plan,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt ?? null,
     });
   } catch (err) {
     console.error('Error PATCH /admin/users/:id:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+// DELETE /api/admin/users/:id
+export async function deleteAdminUser(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    if (!Types.ObjectId.isValid(id)) {
+      res.status(400).json({ message: 'Invalid user id' });
+      return;
+    }
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    if (user.role === 'super_admin') {
+      res.status(403).json({ message: 'Cannot delete a super admin' });
+      return;
+    }
+    if (user.role === 'owner') {
+      res.status(400).json({
+        message:
+          'Cannot delete a business owner from the users list. Disable the account or remove the tenant from the database.',
+      });
+      return;
+    }
+    await User.deleteOne({ _id: id });
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'user.delete',
+      entity: 'User',
+      entityId: id,
+      metadata: { email: user.email, role: user.role },
+    });
+    res.status(204).send();
+  } catch (err) {
+    console.error('Error DELETE /admin/users/:id:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -262,14 +359,15 @@ export async function patchAdminSettings(req: AuthRequest, res: Response): Promi
   }
 }
 
-// GET /api/admin/analytics?range=7d|30d|90d
+// GET /api/admin/analytics?range=7d|30d|90d|custom&from=&to=
 export async function getAdminAnalytics(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const days = parseRangeDays(String(req.query.range || '7d'));
-    const now = new Date();
-    const rangeStart = new Date(now);
-    rangeStart.setUTCDate(rangeStart.getUTCDate() - days);
-    rangeStart.setUTCHours(0, 0, 0, 0);
+    const win = parseAdminAnalyticsWindow(req);
+    if (!win) {
+      res.status(400).json({ message: 'Invalid custom range; provide from and to (ISO dates).' });
+      return;
+    }
+    const { rangeStart, rangeEnd: now, rangeDays: days } = win;
 
     const thirtyDaysStart = new Date(now);
     thirtyDaysStart.setUTCDate(thirtyDaysStart.getUTCDate() - 30);
@@ -449,6 +547,178 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
     });
   } catch (err) {
     console.error('Error GET /admin/analytics:', err);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+// GET /api/admin/overview — dashboard KPIs and insight strings (real DB aggregates)
+export async function getAdminOverview(_req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const now = new Date();
+    const thisMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+    const nextMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0));
+    const lastMonthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1, 0, 0, 0, 0));
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const monthPromises: Promise<{ year: number; month: number; count: number }>[] = [];
+    for (let i = 5; i >= 0; i -= 1) {
+      const ms = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1, 0, 0, 0, 0));
+      const me = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 1, 0, 0, 0, 0));
+      monthPromises.push(
+        Appointment.countDocuments({
+          start: { $gte: ms, $lt: me },
+          status: { $ne: 'cancelled' },
+        }).then((count) => ({
+          year: ms.getUTCFullYear(),
+          month: ms.getUTCMonth() + 1,
+          count,
+        }))
+      );
+    }
+
+    const [
+      totalBusinesses,
+      totalAppointments,
+      appointmentsThisMonth,
+      appointmentsLastMonth,
+      activeBusinessIds,
+      totalRevenueAgg,
+      newBusinessesThisMonth,
+      newBusinessesLastMonth,
+      topPerforming,
+      chartAppointmentsByMonth,
+      businessesWithRecentBooking,
+      heavyServiceBusinesses,
+    ] = await Promise.all([
+      Business.countDocuments(),
+      Appointment.countDocuments({ status: { $ne: 'cancelled' } }),
+      Appointment.countDocuments({
+        start: { $gte: thisMonthStart, $lt: nextMonthStart },
+        status: { $ne: 'cancelled' },
+      }),
+      Appointment.countDocuments({
+        start: { $gte: lastMonthStart, $lt: thisMonthStart },
+        status: { $ne: 'cancelled' },
+      }),
+      Appointment.distinct('businessId', {
+        start: { $gte: thirtyDaysAgo, $lte: now },
+        status: { $ne: 'cancelled' },
+      }),
+      Appointment.aggregate<{ total: number }>([
+        {
+          $match: {
+            status: { $nin: ['cancelled'] },
+            price: { $exists: true, $gte: 0 },
+          },
+        },
+        { $group: { _id: null as unknown as string, total: { $sum: { $ifNull: ['$price', 0] } } } },
+      ]),
+      Business.countDocuments({ createdAt: { $gte: thisMonthStart, $lt: nextMonthStart } }),
+      Business.countDocuments({ createdAt: { $gte: lastMonthStart, $lt: thisMonthStart } }),
+      Appointment.aggregate<{ _id: Types.ObjectId; c: number }>([
+        {
+          $match: {
+            start: { $gte: thisMonthStart, $lt: nextMonthStart },
+            status: { $ne: 'cancelled' },
+          },
+        },
+        { $group: { _id: '$businessId', c: { $sum: 1 } } },
+        { $sort: { c: -1 } },
+        { $limit: 1 },
+      ]),
+      Promise.all(monthPromises),
+      Appointment.distinct('businessId', {
+        start: { $gte: thirtyDaysAgo, $lte: now },
+        status: { $ne: 'cancelled' },
+      }),
+      Service.aggregate<{ _id: Types.ObjectId; n: number }>([
+        { $group: { _id: '$businessId', n: { $sum: 1 } } },
+        { $match: { n: { $gte: 2 } } },
+      ]),
+    ]);
+
+    const totalRevenue = totalRevenueAgg[0]?.total ?? 0;
+    const activeBusinesses = activeBusinessIds.length;
+    const monthOverMonthGrowthPercent =
+      appointmentsLastMonth === 0
+        ? appointmentsThisMonth > 0
+          ? 100
+          : 0
+        : Math.round(((appointmentsThisMonth - appointmentsLastMonth) / appointmentsLastMonth) * 1000) / 10;
+
+    const businessesMonthOverMonthGrowthPercent =
+      newBusinessesLastMonth === 0
+        ? newBusinessesThisMonth > 0
+          ? 100
+          : 0
+        : Math.round(((newBusinessesThisMonth - newBusinessesLastMonth) / newBusinessesLastMonth) * 1000) / 10;
+
+    const avgBookingsPerBusiness =
+      totalBusinesses > 0 ? Math.round((totalAppointments / totalBusinesses) * 100) / 100 : 0;
+
+    const busySet = new Set(businessesWithRecentBooking.map((id) => String(id)));
+    const businessesIdleOver30Days = Math.max(0, totalBusinesses - busySet.size);
+
+    let topName: string | null = null;
+    let topCount = 0;
+    const topRow = topPerforming[0];
+    if (topRow) {
+      topCount = topRow.c;
+      const bdoc = await Business.findById(topRow._id).select('name').lean();
+      topName = bdoc?.name ?? null;
+    }
+
+    const capIds = heavyServiceBusinesses.map((x) => x._id);
+    const freePlanHeavy =
+      capIds.length === 0
+        ? 0
+        : await Business.countDocuments({
+            _id: { $in: capIds },
+            $or: [{ plan: 'free' }, { plan: { $exists: false } }],
+          });
+
+    const insights: string[] = [];
+    if (businessesIdleOver30Days > 0) {
+      insights.push(
+        `${businessesIdleOver30Days} business${businessesIdleOver30Days === 1 ? ' has' : 'es have'} had no bookings in the last 30 days — consider reaching out.`
+      );
+    }
+    if (!(appointmentsThisMonth === 0 && appointmentsLastMonth === 0)) {
+      const dir = monthOverMonthGrowthPercent >= 0 ? 'up' : 'down';
+      insights.push(
+        `Appointments ${dir} ${Math.abs(monthOverMonthGrowthPercent)}% this month vs last month.`
+      );
+    }
+    if (freePlanHeavy > 0) {
+      insights.push(
+        `${freePlanHeavy} business${freePlanHeavy === 1 ? ' is' : 'es are'} on the Free plan with ${freePlanHeavy === 1 ? 'its' : 'their'} service catalog near the plan limit — upsell opportunity.`
+      );
+    }
+
+    res.json({
+      totalBusinesses,
+      activeBusinesses,
+      totalAppointments,
+      appointmentsThisMonth,
+      appointmentsLastMonth,
+      monthOverMonthGrowthPercent,
+      totalRevenue,
+      newBusinessesThisMonth,
+      newBusinessesLastMonth,
+      businessesMonthOverMonthGrowthPercent,
+      topPerformingBusiness:
+        topName !== null
+          ? { name: topName, bookingCount: topCount }
+          : { name: null, bookingCount: 0 },
+      avgBookingsPerBusiness,
+      insights,
+      chartAppointmentsByMonth: chartAppointmentsByMonth.map((m) => ({
+        period: `${m.year}-${String(m.month).padStart(2, '0')}`,
+        count: m.count,
+      })),
+    });
+  } catch (err) {
+    console.error('Error GET /admin/overview:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 }

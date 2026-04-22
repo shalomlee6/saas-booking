@@ -30,6 +30,8 @@ export async function ensureBusinessSettings(
         marketingModule: false,
         chatModule: false,
         waitlistEnabled: false,
+        analyticsEnabled: false,
+        customDomainEnabled: false,
       },
       localization: {
         language: 'he',

@@ -13,9 +13,11 @@ import {
   getAdminUsers,
   getAdminUserById,
   patchAdminUser,
+  deleteAdminUser,
   getAdminSettings,
   patchAdminSettings,
   getAdminAnalytics,
+  getAdminOverview,
   getAdminAudit,
 } from '../controllers/adminPlatformController';
 import {
@@ -48,11 +50,13 @@ adminRouter.patch('/businesses/:id/ui', adminUpdateBusinessUi);
 adminRouter.get('/users', getAdminUsers);
 adminRouter.get('/users/:id', getAdminUserById);
 adminRouter.patch('/users/:id', validateBody(patchAdminUserBodySchema), patchAdminUser);
+adminRouter.delete('/users/:id', deleteAdminUser);
 
 adminRouter.get('/settings', getAdminSettings);
 adminRouter.patch('/settings', validateBody(patchPlatformSettingsBodySchema), patchAdminSettings);
 
 adminRouter.get('/analytics', getAdminAnalytics);
+adminRouter.get('/overview', getAdminOverview);
 adminRouter.get('/alerts/count', getAdminAlertsCount);
 adminRouter.get('/alerts', getAdminAlerts);
 adminRouter.patch('/alerts/:id/dismiss', dismissAdminAlert);

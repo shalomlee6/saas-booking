@@ -27,8 +27,21 @@
 
 .sa-analytics-toolbar {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  align-items: flex-end;
   gap: 0.5rem;
+}
+
+.sa-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.sa-date-label {
+  font-weight: 600;
 }
 
 .sa-kpi-grid {
@@ -72,12 +85,24 @@
 @media (min-width: 900px) {
   .sa-charts {
     grid-template-columns: 1fr 1fr;
+    align-items: stretch;
   }
 
   .sa-chart-card--pie {
     grid-column: 1 / -1;
-    max-width: 420px;
+    max-width: 440px;
     justify-self: center;
+  }
+}
+
+.sa-charts--skeleton {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .sa-charts--skeleton {
+    grid-template-columns: 1fr 1fr;
   }
 }
 

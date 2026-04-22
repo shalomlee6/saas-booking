@@ -6,6 +6,7 @@ import { SelectModule } from 'primeng/select';
 import { CardModule } from 'primeng/card';
 import { ChartModule } from 'primeng/chart';
 import { SkeletonModule } from 'primeng/skeleton';
+import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { AdminApiService, type AdminAnalyticsDto } from '../../services/admin-api.service';
@@ -21,6 +22,7 @@ import { AdminApiService, type AdminAnalyticsDto } from '../../services/admin-ap
     ChartModule,
     SkeletonModule,
     ToastModule,
+    InputTextModule,
     CurrencyPipe,
     DecimalPipe,
   ],
@@ -35,30 +37,46 @@ export class SuperAdminAnalyticsComponent {
   readonly data = signal<AdminAnalyticsDto | null>(null);
   readonly error = signal<string | null>(null);
 
-  range: '7d' | '30d' | '90d' = '7d';
+  rangeMode: '7d' | '30d' | '90d' | 'custom' = '7d';
+  customFrom = '';
+  customTo = '';
+
   readonly rangeOptions = [
     { label: 'Last 7 days', value: '7d' as const },
     { label: 'Last 30 days', value: '30d' as const },
     { label: 'Last 90 days', value: '90d' as const },
+    { label: 'Custom', value: 'custom' as const },
   ];
 
   readonly chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom' as const,
+      },
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+      },
+    },
   };
 
   readonly lineChart = computed(() => {
     const d = this.data();
     if (!d) return null;
     const pts = d.charts.appointmentsByDay;
+    if (pts.length === 0) return null;
     return {
       labels: pts.map((p) => p.date),
       datasets: [
         {
           label: 'Appointments',
           data: pts.map((p) => p.count),
-          borderColor: '#38bdf8',
-          backgroundColor: 'rgba(56, 189, 248, 0.15)',
+          borderColor: '#3787F6',
+          backgroundColor: 'rgba(55, 135, 246, 0.14)',
           fill: true,
           tension: 0.3,
         },
@@ -75,10 +93,10 @@ export class SuperAdminAnalyticsComponent {
       labels: pts.map((p) => p.date),
       datasets: [
         {
-          label: 'Revenue',
+          label: 'Revenue (ILS)',
           data: pts.map((p) => p.amount),
-          borderColor: '#a78bfa',
-          backgroundColor: 'rgba(167, 139, 250, 0.12)',
+          borderColor: '#0F172A',
+          backgroundColor: 'rgba(15, 23, 42, 0.08)',
           fill: true,
           tension: 0.3,
         },
@@ -90,13 +108,14 @@ export class SuperAdminAnalyticsComponent {
     const d = this.data();
     if (!d) return null;
     const pts = d.charts.newBusinessesByWeek;
+    if (pts.length === 0) return null;
     return {
       labels: pts.map((p) => p.label),
       datasets: [
         {
           label: 'New businesses',
           data: pts.map((p) => p.count),
-          backgroundColor: '#6366f1',
+          backgroundColor: '#3787F6',
         },
       ],
     };
@@ -106,13 +125,20 @@ export class SuperAdminAnalyticsComponent {
     const d = this.data();
     if (!d) return null;
     const pts = d.charts.planDistribution;
-    const colors = ['#94a3b8', '#38bdf8', '#a78bfa', '#f472b6'];
+    if (pts.length === 0) return null;
+    const colorFor = (plan: string): string => {
+      const p = (plan || 'unknown').toLowerCase();
+      if (p === 'free') return '#94a3b8';
+      if (p === 'pro' || p === 'normal') return '#3787F6';
+      if (p === 'premium') return '#d97706';
+      return '#cbd5e1';
+    };
     return {
       labels: pts.map((p) => p.plan),
       datasets: [
         {
           data: pts.map((p) => p.count),
-          backgroundColor: pts.map((_, i) => colors[i % colors.length]),
+          backgroundColor: pts.map((p) => colorFor(p.plan)),
         },
       ],
     };
@@ -127,9 +153,23 @@ export class SuperAdminAnalyticsComponent {
   }
 
   refresh(): void {
+    if (this.rangeMode === 'custom') {
+      if (!this.customFrom || !this.customTo) {
+        this.messages.add({
+          severity: 'warn',
+          summary: 'Custom range',
+          detail: 'Choose a start and end date.',
+        });
+        return;
+      }
+    }
     this.loading.set(true);
     this.error.set(null);
-    this.adminApi.getAnalytics(this.range).subscribe({
+    const req =
+      this.rangeMode === 'custom'
+        ? this.adminApi.getAnalytics('custom', { from: this.customFrom, to: this.customTo })
+        : this.adminApi.getAnalytics(this.rangeMode);
+    req.subscribe({
       next: (res) => {
         this.data.set(res);
         this.loading.set(false);

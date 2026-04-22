@@ -157,3 +157,99 @@
     gap: 0.25rem;
   }
 }
+
+.sa-dash-kpi-skeletons {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.sa-dash-skel {
+  border-radius: 12px;
+}
+
+.sa-dash-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+}
+
+::ng-deep .sa-dash-kpi .p-card-body {
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sa-dash-kpi-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.sa-dash-kpi-value {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-dash-kpi-value--sm {
+  font-size: 1.15rem;
+  line-height: 1.3;
+}
+
+.sa-dash-kpi-meta {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.sa-trend {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.sa-trend--up {
+  color: #15803d;
+}
+
+.sa-trend--down {
+  color: #b91c1c;
+}
+
+.sa-dash-chart-section {
+  margin-bottom: 2rem;
+}
+
+.sa-dash-chart-card {
+  border-radius: 12px;
+}
+
+.sa-dash-chart-wrap {
+  height: 300px;
+  position: relative;
+}
+
+.sa-dash-insights {
+  margin-bottom: 2rem;
+}
+
+.sa-dash-insight-list {
+  margin: 0;
+  padding: 1rem 1.25rem 1rem 2rem;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  color: #334155;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.sa-dash-quick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+}

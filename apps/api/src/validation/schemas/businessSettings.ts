@@ -28,6 +28,8 @@ const featuresSchema = z
     marketingModule: z.boolean().optional(),
     chatModule: z.boolean().optional(),
     waitlistEnabled: z.boolean().optional(),
+    analyticsEnabled: z.boolean().optional(),
+    customDomainEnabled: z.boolean().optional(),
   })
   .strict()
   .optional();

@@ -8,6 +8,7 @@ import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import type { SettingsPlan } from '../dto/enums';
 
 /**
  * POST /api/admin/test-seed
@@ -55,6 +56,7 @@ export async function postAdminTestSeed(req: Request, res: Response): Promise<vo
       slug: string,
       plan: 'free' | 'normal' | 'premium'
     ): Promise<{ businessId: Types.ObjectId; ownerId: Types.ObjectId }> {
+      const settingsPlan: SettingsPlan = plan === 'normal' ? 'pro' : plan;
       let owner = await User.findOne({ email: ownerEmail });
       if (!owner) {
         owner = await User.create({
@@ -66,22 +68,26 @@ export async function postAdminTestSeed(req: Request, res: Response): Promise<vo
         });
       }
       let business = await Business.findOne({ slug });
+      const businessPlan: 'free' | 'pro' | 'premium' =
+        plan === 'premium' ? 'premium' : plan === 'normal' ? 'pro' : 'free';
       if (!business) {
         business = await Business.create({
           ownerId: owner._id,
           name: businessName,
           slug,
+          plan: businessPlan,
         });
         owner.businessId = business._id;
         await owner.save();
       } else {
         business.ownerId = owner._id;
+        business.plan = businessPlan;
         await business.save();
         owner.businessId = business._id;
         await owner.save();
       }
       const settings = await ensureBusinessSettings(business._id);
-      settings.plan = plan;
+      settings.plan = settingsPlan;
       await settings.save();
       return { businessId: business._id as Types.ObjectId, ownerId: owner._id as Types.ObjectId };
     }

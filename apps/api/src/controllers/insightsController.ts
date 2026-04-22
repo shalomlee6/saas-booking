@@ -1,9 +1,10 @@
 import { Response } from 'express';
+import mongoose from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
-import mongoose from 'mongoose';
+import { assertTenantAnalyticsAllowed } from '../utils/planPolicy';
 
 type InsightsPeriod = 'week' | 'month' | 'year';
 
@@ -40,6 +41,20 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       return res.status(400).json({ message: 'businessId is required' });
     }
     const businessIdObj = new mongoose.Types.ObjectId(businessId);
+    try {
+      await assertTenantAnalyticsAllowed(businessIdObj);
+    } catch (planErr: unknown) {
+      const status =
+        typeof planErr === 'object' && planErr !== null && 'status' in planErr
+          ? (planErr as { status: number }).status
+          : undefined;
+      if (status === 403) {
+        return res.status(403).json({
+          message: planErr instanceof Error ? planErr.message : 'Analytics not available on your plan',
+        });
+      }
+      throw planErr;
+    }
     const period = parseInsightsPeriod(req.query?.period);
     const rangeStart = periodStart(period);
     const matchPeriod = {

@@ -1,51 +1,107 @@
-<div class="sa-dash">
+<div class="sa-dash" dir="rtl">
   <header class="sa-dash-header">
     <h1 class="sa-dash-title">Platform overview</h1>
-    <p class="sa-dash-sub">System-wide metrics and quick access to tenant management.</p>
+    <p class="sa-dash-sub">Live KPIs and growth signals from your database.</p>
   </header>
 
   @if (loading()) {
-    <p class="sa-dash-loading">Loading…</p>
-  } @else if (error()) {
-    <p class="sa-dash-error" role="alert">{{ error() }}</p>
-  } @else {
-    <div class="sa-dash-grid">
-      <a routerLink="/super-admin/businesses" class="sa-dash-card sa-dash-card--link">
-        <span class="sa-dash-card-label">Total businesses</span>
-        <span class="sa-dash-card-value">{{ totalBusinesses() }}</span>
-        <span class="sa-dash-card-cta">Manage tenants →</span>
-      </a>
-      <div class="sa-dash-card">
-        <span class="sa-dash-card-label">Active subscriptions</span>
-        <span class="sa-dash-card-value sa-dash-card-value--muted">—</span>
-        <span class="sa-dash-card-hint">Connect billing to populate</span>
-      </div>
-      <div class="sa-dash-card">
-        <span class="sa-dash-card-label">Platform appointments (30d)</span>
-        <span class="sa-dash-card-value sa-dash-card-value--muted">—</span>
-        <span class="sa-dash-card-hint">Analytics API pending</span>
-      </div>
-      <div class="sa-dash-card">
-        <span class="sa-dash-card-label">Alerts</span>
-        <span class="sa-dash-card-value sa-dash-card-value--ok">All clear</span>
-      </div>
+    <div class="sa-dash-kpi-skeletons">
+      @for (i of [1, 2, 3, 4, 5, 6]; track i) {
+        <p-skeleton width="100%" height="96px" styleClass="sa-dash-skel" />
+      }
+    </div>
+    <p-skeleton width="100%" height="280px" styleClass="sa-dash-skel" />
+  } @else if (error(); as errMsg) {
+    <p class="sa-dash-error" role="alert">{{ errMsg }}</p>
+  } @else if (overview(); as o) {
+    <div class="sa-dash-kpi-grid">
+      <p-card styleClass="sa-dash-kpi">
+        <span class="sa-dash-kpi-label">Total businesses</span>
+        <span class="sa-dash-kpi-value">{{ o.totalBusinesses | number }}</span>
+        <span class="sa-dash-kpi-meta">
+          @if (businessGrowthPositive()) {
+            <span class="sa-trend sa-trend--up">▲ {{ o.businessesMonthOverMonthGrowthPercent | number: '1.0-1' }}% vs last month</span>
+          } @else if (o.businessesMonthOverMonthGrowthPercent < 0) {
+            <span class="sa-trend sa-trend--down"
+              >▼ {{ o.businessesMonthOverMonthGrowthPercent | number: '1.0-1' }}% vs last month</span
+            >
+          } @else {
+            <span class="sa-trend">Flat vs last month</span>
+          }
+        </span>
+      </p-card>
+      <p-card styleClass="sa-dash-kpi">
+        <span class="sa-dash-kpi-label">Active businesses (30d)</span>
+        <span class="sa-dash-kpi-value">{{ o.activeBusinesses | number }}</span>
+        <span class="sa-dash-kpi-meta">With at least one booking</span>
+      </p-card>
+      <p-card styleClass="sa-dash-kpi">
+        <span class="sa-dash-kpi-label">Appointments this month</span>
+        <span class="sa-dash-kpi-value">{{ o.appointmentsThisMonth | number }}</span>
+        <span class="sa-dash-kpi-meta">
+          @if (o.monthOverMonthGrowthPercent === 0) {
+            <span class="sa-trend">Flat vs last month</span>
+          } @else if (appointmentGrowthPositive()) {
+            <span class="sa-trend sa-trend--up">▲ {{ o.monthOverMonthGrowthPercent | number: '1.0-1' }}% vs last month</span>
+          } @else {
+            <span class="sa-trend sa-trend--down">▼ {{ o.monthOverMonthGrowthPercent | number: '1.0-1' }}% vs last month</span>
+          }
+        </span>
+      </p-card>
+      <p-card styleClass="sa-dash-kpi">
+        <span class="sa-dash-kpi-label">New businesses this month</span>
+        <span class="sa-dash-kpi-value">{{ o.newBusinessesThisMonth | number }}</span>
+        <span class="sa-dash-kpi-meta">Created in current calendar month</span>
+      </p-card>
+      <p-card styleClass="sa-dash-kpi">
+        <span class="sa-dash-kpi-label">Top business (this month)</span>
+        <span class="sa-dash-kpi-value sa-dash-kpi-value--sm">{{ o.topPerformingBusiness.name ?? '—' }}</span>
+        <span class="sa-dash-kpi-meta">{{ o.topPerformingBusiness.bookingCount | number }} bookings</span>
+      </p-card>
+      <p-card styleClass="sa-dash-kpi">
+        <span class="sa-dash-kpi-label">Total revenue (appointments)</span>
+        <span class="sa-dash-kpi-value">{{ o.totalRevenue | currency: 'ILS' : 'symbol' : '1.0-0' }}</span>
+        <span class="sa-dash-kpi-meta">Sum of recorded prices · Avg {{ o.avgBookingsPerBusiness | number: '1.0-2' }} bookings / business</span>
+      </p-card>
     </div>
 
-    <section class="sa-dash-section">
-      <h2 class="sa-dash-section-title">Recent sign-ups</h2>
-      @if (recentSignups().length === 0) {
-        <p class="sa-dash-empty">No businesses yet.</p>
+    <section class="sa-dash-chart-section">
+      <h2 class="sa-dash-section-title">Platform growth · last 6 months</h2>
+      @if (trendChart(); as tc) {
+        <p-card styleClass="sa-dash-chart-card">
+          <div class="sa-dash-chart-wrap">
+            <p-chart type="line" [data]="tc" [options]="chartOptions" />
+          </div>
+        </p-card>
       } @else {
-        <ul class="sa-dash-list">
-          @for (b of recentSignups(); track b._id) {
-            <li class="sa-dash-list-item">
-              <span class="sa-dash-list-name">{{ b.name }}</span>
-              <span class="sa-dash-list-meta">{{ b.ownerEmail ?? '—' }}</span>
-              <span class="sa-dash-list-date">{{ b.createdAt | date: 'mediumDate' }}</span>
-            </li>
+        <p class="sa-dash-empty">Not enough history to chart yet.</p>
+      }
+    </section>
+
+    @if (o.insights.length > 0) {
+      <section class="sa-dash-insights">
+        <h2 class="sa-dash-section-title">Insights</h2>
+        <ul class="sa-dash-insight-list">
+          @for (line of o.insights; track line) {
+            <li>{{ line }}</li>
           }
         </ul>
-      }
+      </section>
+    }
+
+    <section class="sa-dash-section">
+      <h2 class="sa-dash-section-title">Quick links</h2>
+      <div class="sa-dash-quick">
+        <a routerLink="/super-admin/businesses" class="sa-dash-card sa-dash-card--link">
+          <span class="sa-dash-card-label">Tenants</span>
+          <span class="sa-dash-card-value">{{ o.totalBusinesses | number }}</span>
+          <span class="sa-dash-card-cta">Manage businesses →</span>
+        </a>
+        <a routerLink="/super-admin/users" class="sa-dash-card sa-dash-card--link">
+          <span class="sa-dash-card-label">Users</span>
+          <span class="sa-dash-card-cta">Open directory →</span>
+        </a>
+      </div>
     </section>
   }
 </div>

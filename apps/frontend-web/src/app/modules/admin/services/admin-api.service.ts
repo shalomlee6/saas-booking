@@ -19,14 +19,19 @@ export interface ImpersonateResponse {
   impersonatingBusinessId: string;
 }
 
+export type AdminPlanTier = 'free' | 'pro' | 'premium';
+
 export interface AdminUserRow {
   id: string;
   email: string;
   name: string;
+  phone: string | null;
   role: string;
   status: string;
   businessId: string | null;
   businessName: string | null;
+  /** Present when the user belongs to a business (normalized tier). */
+  plan: AdminPlanTier | null;
   createdAt: string;
   lastLoginAt: string | null;
 }
@@ -40,6 +45,58 @@ export interface AdminUsersPage {
 
 export interface AdminUserDetail extends AdminUserRow {
   updatedAt?: string;
+}
+
+export interface AdminOverviewDto {
+  totalBusinesses: number;
+  activeBusinesses: number;
+  totalAppointments: number;
+  appointmentsThisMonth: number;
+  appointmentsLastMonth: number;
+  monthOverMonthGrowthPercent: number;
+  totalRevenue: number;
+  newBusinessesThisMonth: number;
+  newBusinessesLastMonth: number;
+  businessesMonthOverMonthGrowthPercent: number;
+  topPerformingBusiness: { name: string | null; bookingCount: number };
+  avgBookingsPerBusiness: number;
+  insights: string[];
+  chartAppointmentsByMonth: { period: string; count: number }[];
+}
+
+export interface CreateAdminBusinessBody {
+  businessName: string;
+  ownerFullName: string;
+  ownerEmail: string;
+  ownerPhone?: string;
+  plan: AdminPlanTier;
+  timezone: string;
+}
+
+export interface CreateAdminBusinessResponse {
+  business: {
+    _id: string;
+    name: string;
+    slug: string;
+    plan: AdminPlanTier;
+    phone: string | null;
+    ownerId: string;
+    createdAt: string;
+    updatedAt: string;
+  } | null;
+  owner: {
+    id: string;
+    email: string;
+    name: string;
+    phone: string | null;
+    role: string;
+    status: string;
+    businessId: string | null;
+    createdAt: string;
+  } | null;
+  settings: Record<string, unknown> | null;
+  defaultService: Record<string, unknown> | null;
+  credentialsSentVia: string;
 }
 
 export interface PlatformSettingsDto {
@@ -139,12 +196,24 @@ export class AdminApiService {
     return this.api.get<AdminUsersPage>('admin/users', query);
   }
 
+  getOverview(): Observable<AdminOverviewDto> {
+    return this.api.get<AdminOverviewDto>('admin/overview');
+  }
+
+  createBusiness(body: CreateAdminBusinessBody): Observable<CreateAdminBusinessResponse> {
+    return this.api.post<CreateAdminBusinessResponse>('admin/businesses', body);
+  }
+
   getUser(id: string): Observable<AdminUserDetail> {
     return this.api.get<AdminUserDetail>(`admin/users/${id}`);
   }
 
   patchUser(id: string, body: { status?: 'active' | 'disabled'; name?: string }): Observable<AdminUserRow> {
     return this.api.patch<AdminUserRow>(`admin/users/${id}`, body);
+  }
+
+  deleteUser(id: string): Observable<void> {
+    return this.api.delete<void>(`admin/users/${id}`);
   }
 
   getSettings(): Observable<PlatformSettingsDto> {
@@ -155,8 +224,15 @@ export class AdminApiService {
     return this.api.patch<PlatformSettingsDto>('admin/settings', body);
   }
 
-  getAnalytics(range: '7d' | '30d' | '90d'): Observable<AdminAnalyticsDto> {
-    return this.api.get<AdminAnalyticsDto>('admin/analytics', { range });
+  getAnalytics(
+    range: '7d' | '30d' | '90d' | 'custom',
+    custom?: { from: string; to: string }
+  ): Observable<AdminAnalyticsDto> {
+    const params: ApiQueryParams =
+      range === 'custom' && custom
+        ? { range: 'custom', from: custom.from, to: custom.to }
+        : { range };
+    return this.api.get<AdminAnalyticsDto>('admin/analytics', params);
   }
 
   getAlerts(): Observable<AdminAlertsResponse> {

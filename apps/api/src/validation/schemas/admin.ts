@@ -1,14 +1,15 @@
 import { z } from 'zod';
 
 /**
- * POST /api/admin/businesses — accepted JSON shape.
- * Unknown keys are **stripped** (not an error). Only `name` is read by the handler.
- *
- * Intended contract:
- * - `name`: non-empty trimmed string (max 200 chars).
+ * POST /api/admin/businesses — full tenant provisioning (owner + business + settings + default service).
  */
 export const createAdminBusinessBodySchema = z.object({
-  name: z.string().min(1).max(200).trim(),
+  businessName: z.string().min(1).max(200).trim(),
+  ownerFullName: z.string().min(1).max(200).trim(),
+  ownerEmail: z.string().email().max(320).trim().toLowerCase(),
+  ownerPhone: z.string().max(40).trim().optional().or(z.literal('')),
+  plan: z.enum(['free', 'pro', 'premium']),
+  timezone: z.string().min(1).max(80).trim().default('Asia/Jerusalem'),
 });
 
 export const patchAdminUserBodySchema = z

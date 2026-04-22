@@ -15,8 +15,8 @@ export const APPOINTMENT_SOURCES = ['owner', 'client-online'] as const;
 export type AppointmentSource = (typeof APPOINTMENT_SOURCES)[number];
 export const appointmentSourceZod = z.enum(APPOINTMENT_SOURCES);
 
-/** Subscription / plan tier in business settings. */
-export const SETTINGS_PLANS = ['free', 'normal', 'premium'] as const;
+/** Subscription / plan tier in business settings. `normal` is legacy; prefer `pro`. */
+export const SETTINGS_PLANS = ['free', 'normal', 'pro', 'premium'] as const;
 export type SettingsPlan = (typeof SETTINGS_PLANS)[number];
 export const settingsPlanZod = z.enum(SETTINGS_PLANS);
 

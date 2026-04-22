@@ -45,6 +45,8 @@ export function buildBusinessSettingsUpdateSet(
     if (f.marketingModule !== undefined) features.marketingModule = f.marketingModule;
     if (f.chatModule !== undefined) features.chatModule = f.chatModule;
     if (f.waitlistEnabled !== undefined) features.waitlistEnabled = f.waitlistEnabled;
+    if (f.analyticsEnabled !== undefined) features.analyticsEnabled = f.analyticsEnabled;
+    if (f.customDomainEnabled !== undefined) features.customDomainEnabled = f.customDomainEnabled;
     if (Object.keys(features).length) {
       updateData.features = features;
     }

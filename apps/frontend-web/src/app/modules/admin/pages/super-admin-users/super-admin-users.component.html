@@ -1,9 +1,18 @@
 <p-toast />
+<p-confirmDialog />
 
-<div class="sa-page">
-  <header class="sa-page-head">
-    <h1 class="sa-page-title">Users</h1>
-    <p class="sa-page-sub">Search and manage platform accounts.</p>
+<div class="sa-page" dir="rtl">
+  <header class="sa-page-head sa-users-head">
+    <div>
+      <h1 class="sa-page-title">Users</h1>
+      <p class="sa-page-sub">Search and manage platform accounts.</p>
+    </div>
+    <p-button
+      label="Create Business Owner"
+      icon="pi pi-plus"
+      (onClick)="openCreateSidebar()"
+      styleClass="sa-primary-btn"
+    />
   </header>
 
   @if (loadError(); as err) {
@@ -21,7 +30,7 @@
         type="search"
         [(ngModel)]="searchInput"
         (keyup.enter)="onSearchSubmit()"
-        placeholder="Email or name…"
+        placeholder="שם או אימייל…"
         aria-label="Search users"
       />
     </span>
@@ -48,89 +57,250 @@
     />
   </div>
 
-  <p-table
-    [value]="rows()"
-    [lazy]="true"
-    (onLazyLoad)="onLazyLoad($event)"
-    [paginator]="true"
-    [rows]="pageSize"
-    [totalRecords]="totalRecords()"
-    [loading]="loading()"
-    [rowsPerPageOptions]="[10, 20, 50]"
-    [showCurrentPageReport]="true"
-    currentPageReportTemplate="{first}–{last} of {totalRecords}"
-    styleClass="sa-table"
-    [tableStyle]="{ 'min-width': '56rem' }"
+  @if (isEmpty()) {
+    <div class="sa-empty-state">
+      <i class="pi pi-users sa-empty-icon" aria-hidden="true"></i>
+      <p class="sa-empty-title">No users found</p>
+      <p class="sa-empty-text">Try adjusting search or filters, or create a new business owner.</p>
+    </div>
+  } @else {
+    <div class="sa-table-card">
+      <p-table
+        [value]="rows()"
+        [lazy]="true"
+        [rows]="pageSize"
+        [first]="first()"
+        [totalRecords]="totalRecords()"
+        (onLazyLoad)="onLazyLoad($event)"
+        [sortField]="sortField"
+        [sortOrder]="sortOrder"
+        [loading]="loading()"
+        styleClass="sa-table sa-table-desktop"
+        [tableStyle]="{ 'min-width': '100%' }"
+        [paginator]="false"
+      >
+        <ng-template #header>
+          <tr>
+            <th pSortableColumn="name" class="col-name">
+              Name
+              <p-sortIcon field="name" />
+            </th>
+            <th pSortableColumn="email" class="col-email">
+              Email
+              <p-sortIcon field="email" />
+            </th>
+            <th class="col-plan">Plan</th>
+            <th class="col-role">Role</th>
+            <th class="col-status">Status</th>
+            <th class="col-business">Business</th>
+            <th pSortableColumn="createdAt" class="col-created">
+              Created
+              <p-sortIcon field="createdAt" />
+            </th>
+            <th class="col-login">Last login</th>
+            <th class="col-actions">Actions</th>
+          </tr>
+        </ng-template>
+        <ng-template #body let-row>
+          <tr class="sa-data-row">
+            <td class="col-name">{{ row.name || '—' }}</td>
+            <td class="col-email"><span class="sa-ellipsis">{{ row.email }}</span></td>
+            <td class="col-plan">
+              @if (row.plan) {
+                @switch (row.plan) {
+                  @case ('free') {
+                    <p-tag value="Free" severity="secondary" />
+                  }
+                  @case ('pro') {
+                    <p-tag value="Pro" severity="info" />
+                  }
+                  @case ('premium') {
+                    <p-tag value="Premium" severity="warn" />
+                  }
+                }
+              } @else {
+                <span class="sa-muted">—</span>
+              }
+            </td>
+            <td class="col-role"><p-tag [value]="row.role" severity="secondary" /></td>
+            <td class="col-status">
+              <p-tag
+                [value]="row.status === 'active' ? 'Active' : 'Suspended'"
+                [severity]="row.status === 'active' ? 'success' : 'danger'"
+              />
+            </td>
+            <td class="col-business"><span class="sa-ellipsis">{{ row.businessName || '—' }}</span></td>
+            <td class="col-created">{{ row.createdAt | date: 'mediumDate' }}</td>
+            <td class="col-login">{{ row.lastLoginAt ? (row.lastLoginAt | date: 'short') : '—' }}</td>
+            <td class="col-actions">
+              <div class="sa-actions">
+                <p-button
+                  icon="pi pi-eye"
+                  [rounded]="true"
+                  [text]="true"
+                  (onClick)="openDetail(row)"
+                  pTooltip="View"
+                />
+                @if (row.status === 'active') {
+                  <p-button
+                    icon="pi pi-ban"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="danger"
+                    (onClick)="setStatus(row, 'disabled')"
+                    pTooltip="Suspend"
+                    [disabled]="row.role === 'super_admin'"
+                  />
+                } @else {
+                  <p-button
+                    icon="pi pi-check"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="success"
+                    (onClick)="setStatus(row, 'active')"
+                    pTooltip="Activate"
+                  />
+                }
+                @if (row.role !== 'super_admin' && row.role !== 'owner') {
+                  <p-button
+                    icon="pi pi-trash"
+                    [rounded]="true"
+                    [text]="true"
+                    severity="danger"
+                    (onClick)="confirmDelete(row)"
+                    pTooltip="Delete"
+                  />
+                }
+              </div>
+            </td>
+          </tr>
+        </ng-template>
+        <ng-template #emptymessage>
+          <tr>
+            <td colspan="9" class="sa-empty">No users on this page.</td>
+          </tr>
+        </ng-template>
+      </p-table>
+
+      <div class="sa-user-cards">
+        @for (row of rows(); track row.id) {
+          <article class="sa-user-card">
+            <div class="sa-user-card-top">
+              <span class="sa-user-card-name">{{ row.name || '—' }}</span>
+              @if (row.plan) {
+                @switch (row.plan) {
+                  @case ('free') {
+                    <p-tag value="Free" severity="secondary" styleClass="sa-plan-tag" />
+                  }
+                  @case ('pro') {
+                    <p-tag value="Pro" severity="info" styleClass="sa-plan-tag" />
+                  }
+                  @case ('premium') {
+                    <p-tag value="Premium" severity="warn" styleClass="sa-plan-tag" />
+                  }
+                }
+              }
+            </div>
+            <p class="sa-user-card-email">{{ row.email }}</p>
+            <div class="sa-user-card-meta">
+              <p-tag [value]="row.role" severity="secondary" />
+              <p-tag
+                [value]="row.status === 'active' ? 'Active' : 'Suspended'"
+                [severity]="row.status === 'active' ? 'success' : 'danger'"
+              />
+            </div>
+            <p class="sa-user-card-biz">{{ row.businessName || '—' }}</p>
+            <div class="sa-user-card-actions">
+              <p-button label="View" [text]="true" (onClick)="openDetail(row)" />
+              @if (row.status === 'active') {
+                <p-button
+                  label="Suspend"
+                  [text]="true"
+                  severity="danger"
+                  (onClick)="setStatus(row, 'disabled')"
+                  [disabled]="row.role === 'super_admin'"
+                />
+              } @else {
+                <p-button label="Activate" [text]="true" severity="success" (onClick)="setStatus(row, 'active')" />
+              }
+              @if (row.role !== 'super_admin' && row.role !== 'owner') {
+                <p-button label="Delete" [text]="true" severity="danger" (onClick)="confirmDelete(row)" />
+              }
+            </div>
+          </article>
+        }
+      </div>
+
+      <p-paginator
+        [rows]="pageSize"
+        [totalRecords]="totalRecords()"
+        [first]="first()"
+        [rowsPerPageOptions]="[10, 20, 50]"
+        (onPageChange)="onPaginatorChange($event)"
+        styleClass="sa-paginator"
+        [showCurrentPageReport]="true"
+        currentPageReportTemplate="{first} – {last} מתוך {totalRecords}"
+      />
+    </div>
+  }
+
+  <p-drawer
+    [(visible)]="createSidebarVisible"
+    position="left"
+    header="Create Business Owner"
+    styleClass="sa-create-sidebar"
+    [modal]="true"
+    [dismissible]="true"
   >
-    <ng-template #header>
-      <tr>
-        <th>Name</th>
-        <th>Email</th>
-        <th>Role</th>
-        <th>Status</th>
-        <th>Business</th>
-        <th>Created</th>
-        <th>Last login</th>
-        <th style="width: 11rem">Actions</th>
-      </tr>
-    </ng-template>
-    <ng-template #body let-row>
-      <tr>
-        <td>{{ row.name || '—' }}</td>
-        <td>{{ row.email }}</td>
-        <td><p-tag [value]="row.role" severity="secondary" /></td>
-        <td>
-          <p-tag [value]="row.status" [severity]="row.status === 'active' ? 'success' : 'danger'" />
-        </td>
-        <td>{{ row.businessName || '—' }}</td>
-        <td>{{ row.createdAt | date: 'mediumDate' }}</td>
-        <td>{{ row.lastLoginAt ? (row.lastLoginAt | date: 'short') : '—' }}</td>
-        <td>
-          <div class="sa-actions">
-            <p-button
-              icon="pi pi-eye"
-              [rounded]="true"
-              [text]="true"
-              (onClick)="openDetail(row)"
-              pTooltip="Details"
-            />
-            @if (row.status === 'active') {
-              <p-button
-                icon="pi pi-ban"
-                [rounded]="true"
-                [text]="true"
-                severity="danger"
-                (onClick)="setStatus(row, 'disabled')"
-                pTooltip="Disable"
-                [disabled]="row.role === 'super_admin'"
-              />
-            } @else {
-              <p-button
-                icon="pi pi-check"
-                [rounded]="true"
-                [text]="true"
-                severity="success"
-                (onClick)="setStatus(row, 'active')"
-                pTooltip="Enable"
-              />
-            }
-            <p-button
-              icon="pi pi-user-plus"
-              [rounded]="true"
-              [text]="true"
-              (onClick)="impersonateUserFuture(row)"
-              pTooltip="Impersonate (soon)"
-            />
-          </div>
-        </td>
-      </tr>
-    </ng-template>
-    <ng-template #emptymessage>
-      <tr>
-        <td colspan="8" class="sa-empty">No users match your filters.</td>
-      </tr>
-    </ng-template>
-  </p-table>
+    <div class="sa-create-form">
+      <label class="sa-field">
+        <span>Business name</span>
+        <input pInputText [(ngModel)]="createBusinessName" autocomplete="organization" class="sa-input-full" />
+      </label>
+      <label class="sa-field">
+        <span>Full name</span>
+        <input pInputText [(ngModel)]="createOwnerName" autocomplete="name" class="sa-input-full" />
+      </label>
+      <label class="sa-field">
+        <span>Email</span>
+        <input pInputText [(ngModel)]="createEmail" type="email" autocomplete="email" class="sa-input-full" />
+      </label>
+      <label class="sa-field">
+        <span>Phone</span>
+        <input pInputText [(ngModel)]="createPhone" type="tel" autocomplete="tel" class="sa-input-full" />
+      </label>
+      <label class="sa-field">
+        <span>Plan</span>
+        <p-select
+          [options]="planOptions"
+          [(ngModel)]="createPlan"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="sa-input-full"
+        />
+      </label>
+      <label class="sa-field">
+        <span>Timezone</span>
+        <p-select
+          [options]="timezoneOptions"
+          [(ngModel)]="createTimezone"
+          optionLabel="label"
+          optionValue="value"
+          styleClass="sa-input-full"
+        />
+      </label>
+      <div class="sa-sidebar-actions">
+        <p-button label="Cancel" [text]="true" (onClick)="createSidebarVisible = false" />
+        <p-button
+          label="Create"
+          icon="pi pi-check"
+          [loading]="createSubmitting()"
+          (onClick)="submitCreate()"
+          styleClass="sa-primary-btn"
+        />
+      </div>
+    </div>
+  </p-drawer>
 
   <p-dialog
     header="User details"
@@ -147,10 +317,20 @@
         <dd>{{ u.email }}</dd>
         <dt>Name</dt>
         <dd>{{ u.name || '—' }}</dd>
+        <dt>Phone</dt>
+        <dd>{{ u.phone || '—' }}</dd>
         <dt>Role</dt>
         <dd>{{ u.role }}</dd>
         <dt>Status</dt>
         <dd>{{ u.status }}</dd>
+        <dt>Plan</dt>
+        <dd>
+          @if (u.plan) {
+            {{ u.plan }}
+          } @else {
+            —
+          }
+        </dd>
         <dt>Business</dt>
         <dd>{{ u.businessName || '—' }}</dd>
         <dt>Created</dt>

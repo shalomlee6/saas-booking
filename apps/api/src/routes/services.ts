@@ -1,7 +1,9 @@
 import { Router } from 'express';
+import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { Service } from '../models/Service';
+import { assertCanCreateService } from '../utils/planPolicy';
 
 export const servicesRouter = Router();
 
@@ -28,18 +30,38 @@ servicesRouter.post('/', async (req: AuthRequest, res) => {
     const businessId = req.effectiveBusinessId!;
     const { name, price, description, durationMinutes, colorHex, textColorHex } = req.body;
 
-    if (!name || !durationMinutes || !price) {
+    if (!name || durationMinutes == null || price == null) {
       return res
         .status(400)
         .json({ message: 'name, durationMinutes and price are required' });
+    }
+    const priceNum = Number(price);
+    const durationNum = Number(durationMinutes);
+    if (Number.isNaN(priceNum) || priceNum < 0 || Number.isNaN(durationNum) || durationNum < 1) {
+      return res.status(400).json({ message: 'Invalid duration or price' });
+    }
+
+    try {
+      await assertCanCreateService(new Types.ObjectId(businessId));
+    } catch (planErr: unknown) {
+      const status =
+        typeof planErr === 'object' && planErr !== null && 'status' in planErr
+          ? (planErr as { status: number }).status
+          : undefined;
+      if (status === 403) {
+        return res.status(403).json({
+          message: planErr instanceof Error ? planErr.message : 'Plan limit exceeded',
+        });
+      }
+      throw planErr;
     }
 
     const service = await Service.create({
       businessId,
       name,
       description,
-      durationMinutes,
-      price,
+      durationMinutes: durationNum,
+      price: priceNum,
       colorHex,
       textColorHex,
     });

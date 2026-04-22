@@ -38,6 +38,11 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
   const language = settings.localization?.language ?? 'he';
   const currency = settings.localization?.currency ?? 'ILS';
 
+  const welcome =
+    typeof settings.bookingWelcomeMessage === 'string' && settings.bookingWelcomeMessage.trim()
+      ? settings.bookingWelcomeMessage.trim()
+      : 'Book an appointment with us';
+
   res.json({
     id: business._id.toString(),
     name: business.name,
@@ -45,6 +50,7 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
     localization: { language, timezone, currency },
     theme: settings.theme,
     openingHours,
+    welcomeMessage: welcome,
     cancellationNoticeHe: CANCELLATION_NOTICE_HE,
   });
 }

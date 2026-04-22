@@ -1,6 +1,5 @@
 import { Schema, model, Types, Document } from 'mongoose';
-
-export type Plan = 'free' | 'normal' | 'premium';
+import type { SettingsPlan } from '../dto/enums';
 
 /** Day of week 0 = Sunday, 6 = Saturday */
 export interface IOpeningHoursRange {
@@ -21,7 +20,7 @@ export interface IOpeningHours {
 
 export interface IBusinessSettings extends Document {
   businessId: Types.ObjectId;
-  plan: Plan;
+  plan: SettingsPlan;
   theme: {
     colors: {
       primary: string;
@@ -39,7 +38,11 @@ export interface IBusinessSettings extends Document {
     marketingModule: boolean;
     chatModule: boolean;
     waitlistEnabled: boolean;
+    analyticsEnabled: boolean;
+    customDomainEnabled: boolean;
   };
+  /** Shown on the public booking page when supported by the client. */
+  bookingWelcomeMessage?: string;
   localization: {
     language: 'he' | 'en';
     timezone: string;
@@ -75,7 +78,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
     },
     plan: {
       type: String,
-      enum: ['free', 'normal', 'premium'],
+      enum: ['free', 'normal', 'pro', 'premium'],
       default: 'free',
     },
     theme: {
@@ -95,7 +98,10 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       marketingModule: { type: Boolean, default: false },
       chatModule: { type: Boolean, default: false },
       waitlistEnabled: { type: Boolean, default: false },
+      analyticsEnabled: { type: Boolean, default: false },
+      customDomainEnabled: { type: Boolean, default: false },
     },
+    bookingWelcomeMessage: { type: String, default: '' },
     localization: {
       language: { type: String, enum: ['he', 'en'], default: 'he' },
       timezone: { type: String, default: 'Asia/Jerusalem' },
@@ -119,9 +125,14 @@ BusinessSettingsSchema.pre('save', function (next) {
   if (!this.openingHours || !this.openingHours.days || this.openingHours.days.length === 0) {
     this.openingHours = defaultOpeningHours;
   }
-  if (!this.localization?.timezone) {
-    if (!this.localization) (this as any).localization = {};
-    (this as any).localization.timezone = 'Asia/Jerusalem';
+  if (!this.localization) {
+    this.localization = {
+      language: 'he',
+      timezone: 'Asia/Jerusalem',
+      currency: 'ILS',
+    };
+  } else if (!this.localization.timezone) {
+    this.localization.timezone = 'Asia/Jerusalem';
   }
   next();
 });

@@ -1,6 +1,6 @@
 <p-toast />
 
-<div class="sa-page">
+<div class="sa-page" dir="rtl">
   <header class="sa-page-head sa-analytics-head">
     <div>
       <h1 class="sa-page-title">Analytics</h1>
@@ -9,12 +9,22 @@
     <div class="sa-analytics-toolbar">
       <p-select
         [options]="rangeOptions"
-        [(ngModel)]="range"
+        [(ngModel)]="rangeMode"
         optionLabel="label"
         optionValue="value"
         (ngModelChange)="onRangeChange()"
         styleClass="sa-range-select"
       />
+      @if (rangeMode === 'custom') {
+        <label class="sa-date-field">
+          <span class="sa-date-label">From</span>
+          <input pInputText type="date" [(ngModel)]="customFrom" (change)="refresh()" />
+        </label>
+        <label class="sa-date-field">
+          <span class="sa-date-label">To</span>
+          <input pInputText type="date" [(ngModel)]="customTo" (change)="refresh()" />
+        </label>
+      }
       <p-button
         icon="pi pi-refresh"
         [rounded]="true"
@@ -32,8 +42,10 @@
         <p-skeleton width="100%" height="88px" styleClass="sa-kpi-skel" />
       }
     </div>
-    <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
-    <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
+    <div class="sa-charts sa-charts--skeleton">
+      <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
+      <p-skeleton width="100%" height="280px" styleClass="sa-chart-skel" />
+    </div>
   } @else if (error(); as errDetail) {
     <div class="sa-empty sa-empty--error">
       <p class="sa-empty-title">Analytics unavailable</p>
@@ -45,7 +57,7 @@
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">Total revenue</span>
         <span class="sa-kpi-value">{{
-          (d.totals.totalRevenue ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+          (d.totals.totalRevenue ?? 0) | currency: 'ILS' : 'symbol' : '1.0-0'
         }}</span>
         <span class="sa-kpi-meta">All-time from appointments</span>
       </p-card>
@@ -59,19 +71,19 @@
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">ARPU</span>
         <span class="sa-kpi-value">{{
-          (d.totals.arpu ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+          (d.totals.arpu ?? 0) | currency: 'ILS' : 'symbol' : '1.0-0'
         }}</span>
         <span class="sa-kpi-meta">Revenue ÷ users (all-time)</span>
       </p-card>
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">Paying businesses</span>
         <span class="sa-kpi-value">{{ d.totals.payingBusinesses ?? 0 | number }}</span>
-        <span class="sa-kpi-meta">Normal or premium plan</span>
+        <span class="sa-kpi-meta">Pro or premium plan</span>
       </p-card>
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">Revenue (30d)</span>
         <span class="sa-kpi-value">{{
-          (d.totals.revenueLast30Days ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
+          (d.totals.revenueLast30Days ?? 0) | currency: 'ILS' : 'symbol' : '1.0-0'
         }}</span>
         <span class="sa-kpi-meta">Last 30 days</span>
       </p-card>
@@ -92,7 +104,7 @@
       </p-card>
       <p-card styleClass="sa-kpi-card">
         <span class="sa-kpi-label">Revenue (range)</span>
-        <span class="sa-kpi-value">{{ d.totals.revenueInRange | currency: 'USD' : 'symbol' : '1.0-0' }}</span>
+        <span class="sa-kpi-value">{{ d.totals.revenueInRange | currency: 'ILS' : 'symbol' : '1.0-0' }}</span>
         <span class="sa-kpi-meta">Booked services in period</span>
       </p-card>
       <p-card styleClass="sa-kpi-card">
@@ -108,34 +120,40 @@
     </div>
 
     <div class="sa-charts">
-      <p-card header="Revenue over time" styleClass="sa-chart-card">
-        @if (revenueLineChart(); as rc) {
-          <div class="sa-chart-wrap">
-            <p-chart type="line" [data]="rc" [options]="chartOptions" [responsive]="true" />
-          </div>
-        } @else {
-          <p class="sa-chart-empty">No revenue in this range yet.</p>
-        }
-      </p-card>
       <p-card header="Appointments over time" styleClass="sa-chart-card">
         @if (lineChart(); as lc) {
           <div class="sa-chart-wrap">
-            <p-chart type="line" [data]="lc" [options]="chartOptions" [responsive]="true" />
+            <p-chart type="line" [data]="lc" [options]="chartOptions" />
           </div>
+        } @else {
+          <p class="sa-chart-empty">No appointments in this range.</p>
+        }
+      </p-card>
+      <p-card header="Revenue over time" styleClass="sa-chart-card">
+        @if (revenueLineChart(); as rc) {
+          <div class="sa-chart-wrap">
+            <p-chart type="line" [data]="rc" [options]="chartOptions" />
+          </div>
+        } @else {
+          <p class="sa-chart-empty">No paid revenue recorded in this range.</p>
         }
       </p-card>
       <p-card header="New businesses by week" styleClass="sa-chart-card">
         @if (barChart(); as bc) {
           <div class="sa-chart-wrap">
-            <p-chart type="bar" [data]="bc" [options]="chartOptions" [responsive]="true" />
+            <p-chart type="bar" [data]="bc" [options]="chartOptions" />
           </div>
+        } @else {
+          <p class="sa-chart-empty">No new businesses in this range.</p>
         }
       </p-card>
       <p-card header="Plan distribution" styleClass="sa-chart-card sa-chart-card--pie">
         @if (pieChart(); as pc) {
           <div class="sa-chart-wrap sa-chart-wrap--pie">
-            <p-chart type="pie" [data]="pc" [options]="chartOptions" [responsive]="true" />
+            <p-chart type="pie" [data]="pc" [options]="chartOptions" />
           </div>
+        } @else {
+          <p class="sa-chart-empty">No plan data yet.</p>
         }
       </p-card>
     </div>

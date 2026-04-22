@@ -87,6 +87,10 @@ function isAdminBusinessesGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && req.url.includes('/api/admin/businesses');
 }
 
+function isAdminBusinessesPost(req: HttpRequest<unknown>): boolean {
+  return req.method === 'POST' && req.url.includes('/api/admin/businesses');
+}
+
 function isAdminImpersonatePost(req: HttpRequest<unknown>): boolean {
   return req.method === 'POST' && req.url.includes('/api/admin/impersonate');
 }
@@ -118,10 +122,12 @@ const MOCK_ADMIN_USER_ROWS: Record<string, unknown>[] = [
     id: 'mock-super-admin',
     email: 'superadmin@example.com',
     name: 'Super Admin',
+    phone: null,
     role: 'super_admin',
     status: 'active',
     businessId: null,
     businessName: null,
+    plan: null,
     createdAt: '2024-06-01T10:00:00.000Z',
     lastLoginAt: null,
   },
@@ -129,10 +135,12 @@ const MOCK_ADMIN_USER_ROWS: Record<string, unknown>[] = [
     id: 'mock-user-1',
     email: 'owner@example.com',
     name: 'Demo Owner',
+    phone: '+972501234567',
     role: 'owner',
     status: 'active',
     businessId: 'mock-business-1',
     businessName: 'Demo Salon',
+    plan: 'pro',
     createdAt: '2024-06-02T10:00:00.000Z',
     lastLoginAt: '2024-06-15T12:00:00.000Z',
   },
@@ -728,6 +736,71 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     return from([new HttpResponse({ status: 200, body: [...MOCK_BUSINESSES] })]);
   }
 
+  if (isAdminBusinessesPost(req)) {
+    const body = req.body as Record<string, unknown>;
+    const bizId = `mock-business-${Date.now()}`;
+    const ownerId = `mock-owner-${Date.now()}`;
+    const businessName = String(body['businessName'] ?? 'New business').trim();
+    const slug =
+      businessName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '') || 'business';
+    const plan = (body['plan'] as string) || 'free';
+    MOCK_BUSINESSES.push({
+      _id: bizId,
+      name: businessName,
+      slug: `${slug}-${bizId.slice(-4)}`,
+      ownerEmail: body['ownerEmail'],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ui: { themeMode: 'light' },
+    });
+    MOCK_ADMIN_USER_ROWS.push({
+      id: ownerId,
+      email: String(body['ownerEmail'] ?? '').toLowerCase(),
+      name: String(body['ownerFullName'] ?? ''),
+      phone: body['ownerPhone'] ? String(body['ownerPhone']) : null,
+      role: 'owner',
+      status: 'active',
+      businessId: bizId,
+      businessName,
+      plan,
+      createdAt: new Date().toISOString(),
+      lastLoginAt: null,
+    });
+    return from([
+      new HttpResponse({
+        status: 201,
+        body: {
+          business: {
+            _id: bizId,
+            name: businessName,
+            slug: `${slug}-${bizId.slice(-4)}`,
+            plan,
+            phone: body['ownerPhone'] ? String(body['ownerPhone']) : null,
+            ownerId,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          owner: {
+            id: ownerId,
+            email: String(body['ownerEmail'] ?? ''),
+            name: String(body['ownerFullName'] ?? ''),
+            phone: body['ownerPhone'] ? String(body['ownerPhone']) : null,
+            role: 'owner',
+            status: 'active',
+            businessId: bizId,
+            createdAt: new Date().toISOString(),
+          },
+          settings: { plan, features: {}, localization: { timezone: body['timezone'] ?? 'Asia/Jerusalem' } },
+          defaultService: { _id: 'mock-svc', name: 'Consultation', durationMinutes: 60, price: 0, isActive: true },
+          credentialsSentVia: 'server_log',
+        },
+      }),
+    ]);
+  }
+
   if (isAdminImpersonatePost(req)) {
     const body = req.body as Record<string, unknown>;
     const businessId = String(body['businessId'] ?? '');
@@ -787,6 +860,25 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       }),
     ]);
   }
+  const adminUserDelete = req.method === 'DELETE' && adminPath.match(/\/api\/admin\/users\/([^/]+)$/);
+  if (adminUserDelete) {
+    const id = adminUserDelete[1];
+    const idx = MOCK_ADMIN_USER_ROWS.findIndex((r) => r['id'] === id);
+    if (idx < 0) {
+      return from([new HttpResponse({ status: 404, body: { message: 'Not found' } })]);
+    }
+    const row = MOCK_ADMIN_USER_ROWS[idx];
+    if (row['role'] === 'super_admin' || row['role'] === 'owner') {
+      return from([
+        new HttpResponse({
+          status: 400,
+          body: { message: 'Cannot delete this user in mock mode.' },
+        }),
+      ]);
+    }
+    MOCK_ADMIN_USER_ROWS.splice(idx, 1);
+    return from([new HttpResponse({ status: 204, body: null })]);
+  }
   const adminUserPatch = req.method === 'PATCH' && adminPath.match(/\/api\/admin\/users\/([^/]+)$/);
   if (adminUserPatch) {
     const id = adminUserPatch[1];
@@ -831,9 +923,51 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     };
     return from([new HttpResponse({ status: 200, body: { ...mockPlatformSettingsState } })]);
   }
+  if (req.method === 'GET' && /\/api\/admin\/overview\/?$/.test(adminPath)) {
+    const body = {
+      totalBusinesses: MOCK_BUSINESSES.length,
+      activeBusinesses: MOCK_BUSINESSES.length,
+      totalAppointments: 42,
+      appointmentsThisMonth: 12,
+      appointmentsLastMonth: 8,
+      monthOverMonthGrowthPercent: 50,
+      totalRevenue: 18_200,
+      newBusinessesThisMonth: 1,
+      newBusinessesLastMonth: 0,
+      businessesMonthOverMonthGrowthPercent: 100,
+      topPerformingBusiness: { name: 'Demo Salon', bookingCount: 9 },
+      avgBookingsPerBusiness: 21,
+      insights: [
+        'Mock mode: connect the app to the real API for idle-business and capacity insights.',
+        'Appointments up 50% this month vs last month.',
+        '1 business is on the Free plan with their service catalog near the plan limit — upsell opportunity.',
+      ],
+      chartAppointmentsByMonth: [
+        { period: '2024-01', count: 4 },
+        { period: '2024-02', count: 6 },
+        { period: '2024-03', count: 5 },
+        { period: '2024-04', count: 8 },
+        { period: '2024-05', count: 7 },
+        { period: '2024-06', count: 12 },
+      ],
+    };
+    return from([new HttpResponse({ status: 200, body })]);
+  }
   if (req.method === 'GET' && /\/api\/admin\/analytics\/?$/.test(adminPath)) {
-    const range = parseUrlQuery(req).get('range') || '7d';
-    const days = range === '90d' ? 90 : range === '30d' ? 30 : 7;
+    const q = parseUrlQuery(req);
+    const range = q.get('range') || '7d';
+    let days = range === '90d' ? 90 : range === '30d' ? 30 : 7;
+    if (range === 'custom') {
+      const fromD = q.get('from');
+      const toD = q.get('to');
+      if (fromD && toD) {
+        const a = new Date(fromD).getTime();
+        const b = new Date(toD).getTime();
+        if (!Number.isNaN(a) && !Number.isNaN(b) && b >= a) {
+          days = Math.max(1, Math.ceil((b - a) / 86400000));
+        }
+      }
+    }
     const body = {
       rangeDays: days,
       totals: {

@@ -3,10 +3,13 @@ import jwt from 'jsonwebtoken';
 import { AuthRequest } from '../middleware/auth';
 import { Business } from '../models/Business';
 import { User } from '../models/User';
+import { BusinessSettings } from '../models/BusinessSettings';
+import { Service } from '../models/Service';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
-import { generateSlug } from '../utils/slug';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
 import { recordAudit } from '../utils/recordAudit';
+import { provisionTenant } from '../utils/provisionTenant';
+import type { PlanTier } from '../utils/planPolicy';
 
 // GET /api/admin/businesses
 export async function getAdminBusinesses(req: AuthRequest, res: Response): Promise<void> {
@@ -14,7 +17,7 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
     const businesses = await Business.find({}).sort({ createdAt: -1 }).lean();
 
     const businessesWithOwner = await Promise.all(
-      businesses.map(async (business: any) => {
+      businesses.map(async (business) => {
         const owner = await User.findById(business.ownerId).lean();
         const settings = await ensureBusinessSettings(business._id);
         return {
@@ -22,7 +25,7 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
           name: business.name,
           slug: business.slug,
           ownerEmail: owner?.email ?? null,
-          ownerPhone: (owner as any)?.phone ?? null,
+          ownerPhone: owner?.phone ?? null,
           createdAt: business.createdAt,
           updatedAt: business.updatedAt,
           ui: normalizeBusinessUi(business.ui),
@@ -48,40 +51,99 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
   }
 }
 
-// POST /api/admin/businesses — body validated by createAdminBusinessBodySchema (unknown keys stripped)
-export async function createAdminBusiness(req: AuthRequest, res: Response): Promise<any> {
+// POST /api/admin/businesses — body validated by createAdminBusinessBodySchema
+export async function createAdminBusiness(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const { name } = req.body as { name: string };
+    const body = req.body as {
+      businessName: string;
+      ownerFullName: string;
+      ownerEmail: string;
+      ownerPhone?: string;
+      plan: PlanTier;
+      timezone: string;
+    };
 
-    // Generate unique slug
-    const baseSlug = generateSlug(name);
-    let slug = baseSlug;
-    let counter = 1;
-
-    // Ensure slug is unique
-    while (await Business.findOne({ slug })) {
-      slug = `${baseSlug}-${counter}`;
-      counter++;
-    }
-
-    // Create business (no ownerId for admin-created businesses, or use a system user)
-    const business = await Business.create({
-      name,
-      slug,
-      ownerId: req.user?.userId, // Use super admin as owner, or create a system owner
+    const result = await provisionTenant({
+      businessName: body.businessName,
+      ownerFullName: body.ownerFullName,
+      ownerEmail: body.ownerEmail,
+      ownerPhone: body.ownerPhone?.trim() || undefined,
+      plan: body.plan,
+      timezone: body.timezone,
     });
 
-    // Create default settings
-    await ensureBusinessSettings(business._id);
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'business.provision',
+      entity: 'Business',
+      entityId: result.businessId.toString(),
+      metadata: { ownerEmail: body.ownerEmail, plan: body.plan },
+    });
+
+    const [business, owner, settings, defaultService] = await Promise.all([
+      Business.findById(result.businessId).lean(),
+      User.findById(result.ownerId).lean(),
+      BusinessSettings.findById(result.settingsId).lean(),
+      Service.findById(result.serviceId).lean(),
+    ]);
 
     res.status(201).json({
-      _id: business._id.toString(),
-      name: business.name,
-      slug: business.slug,
-      createdAt: business.createdAt,
-      updatedAt: business.updatedAt,
+      business:
+        business &&
+        ({
+          _id: business._id.toString(),
+          name: business.name,
+          slug: business.slug,
+          plan: business.plan,
+          phone: business.phone ?? null,
+          ownerId: business.ownerId.toString(),
+          createdAt: business.createdAt,
+          updatedAt: business.updatedAt,
+        } as const),
+      owner:
+        owner &&
+        ({
+          id: owner._id.toString(),
+          email: owner.email,
+          name: owner.name ?? '',
+          phone: owner.phone ?? null,
+          role: owner.role,
+          status: owner.status,
+          businessId: owner.businessId?.toString() ?? null,
+          createdAt: owner.createdAt,
+        } as const),
+      settings:
+        settings &&
+        ({
+          plan: settings.plan,
+          features: settings.features,
+          localization: settings.localization,
+          openingHours: settings.openingHours,
+          bookingWelcomeMessage: settings.bookingWelcomeMessage ?? '',
+        } as const),
+      defaultService:
+        defaultService &&
+        ({
+          _id: defaultService._id.toString(),
+          name: defaultService.name,
+          durationMinutes: defaultService.durationMinutes,
+          price: defaultService.price,
+          isActive: defaultService.isActive,
+        } as const),
+      credentialsSentVia: 'server_log',
     });
-  } catch (err) {
+  } catch (err: unknown) {
+    const status =
+      typeof err === 'object' && err !== null && 'status' in err
+        ? (err as { status: number }).status
+        : undefined;
+    if (status === 409) {
+      res.status(409).json({
+        message: err instanceof Error ? err.message : 'Conflict',
+      });
+      return;
+    }
     console.error('Error POST /admin/businesses:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
