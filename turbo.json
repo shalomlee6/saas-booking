@@ -10,6 +10,15 @@
     },
     "lint": {
       "outputs": []
+    },
+    "typeCheck": {
+      "dependsOn": ["^build"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "cache": false
     }
   }
 }
