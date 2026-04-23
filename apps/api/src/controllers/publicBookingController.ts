@@ -18,6 +18,7 @@ import {
   UnauthorizedError,
   ValidationError,
 } from '../errors/httpErrors';
+import { mergeSectionVisibility, normalizeGalleryItems, orderServicesById } from '../utils/publicLanding';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -86,6 +87,27 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
       : '';
   const phone = phoneFromBusiness || phoneFromSettings || null;
 
+  const galleryItems = normalizeGalleryItems(portfolioImages, settings.landingGalleryItems);
+  const sectionVisibility = mergeSectionVisibility(
+    settings.landingSectionVisibility as Record<string, boolean> | undefined
+  );
+  const contactExtra = {
+    whatsapp:
+      typeof settings.landingContact?.whatsapp === 'string' ? settings.landingContact.whatsapp.trim() : '',
+    email: typeof settings.landingContact?.email === 'string' ? settings.landingContact.email.trim() : '',
+    location:
+      typeof settings.landingContact?.location === 'string' ? settings.landingContact.location.trim() : '',
+  };
+  const heroDescription =
+    typeof settings.landingHeroDescription === 'string' ? settings.landingHeroDescription.trim() : '';
+  const secondaryHeroImageUrl =
+    typeof settings.landingSecondaryHeroImageUrl === 'string' && settings.landingSecondaryHeroImageUrl.trim()
+      ? settings.landingSecondaryHeroImageUrl.trim()
+      : null;
+
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+
   res.json({
     id: business._id.toString(),
     name: business.name,
@@ -99,6 +121,11 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
       tagline,
       coverImageUrl,
       phone,
+      heroDescription,
+      secondaryHeroImageUrl,
+      galleryItems,
+      contact: contactExtra,
+      sectionVisibility,
       stats: {
         rating,
         customersCount: customerCount,
@@ -120,6 +147,125 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
   });
 }
 
+// --- GET /api/public/businesses/:slug/landing — structured bundle for landing builder + public page
+export async function getPublicBusinessLanding(req: Request, res: Response): Promise<void> {
+  const { slug } = req.params;
+  const business = await Business.findOne({ slug });
+  if (!business) {
+    throw new NotFoundError(
+      'Business not found for this slug. Use the public booking slug (e.g. from /b/:slug), not the internal business id.'
+    );
+  }
+  const settings = await ensureBusinessSettings(business._id);
+  if (!settings.features?.bookingEnabled) {
+    throw new ForbiddenError('Booking is disabled for this business');
+  }
+
+  const businessIdObj = business._id as Types.ObjectId;
+  const [customerCount, completedAppointments, reviewDocs, servicesRaw] = await Promise.all([
+    Customer.countDocuments({ businessId: businessIdObj }),
+    Appointment.countDocuments({ businessId: businessIdObj, status: 'completed' }),
+    BusinessReview.find({ businessId: businessIdObj }).sort({ createdAt: -1 }).limit(25).lean(),
+    Service.find({ businessId: business._id, isActive: true })
+      .select('_id name description durationMinutes price')
+      .lean(),
+  ]);
+
+  let rating = settings.publicRating ?? 5;
+  if (reviewDocs.length > 0) {
+    const sum = reviewDocs.reduce((acc, r) => acc + r.rating, 0);
+    rating = Math.round((sum / reviewDocs.length) * 10) / 10;
+  }
+
+  const portfolioRaw = settings.portfolioImages ?? [];
+  const portfolioImages = portfolioRaw
+    .filter((u) => typeof u === 'string' && u.trim().length > 0)
+    .map((u) => u.trim())
+    .slice(0, 50);
+
+  const products = (settings.landingProducts ?? []).filter(
+    (p) => p && typeof p.name === 'string' && p.name.trim().length > 0 && typeof p.price === 'number'
+  );
+
+  const tagline =
+    typeof settings.landingTagline === 'string' && settings.landingTagline.trim()
+      ? settings.landingTagline.trim()
+      : 'יופי מקצועי, תוצאות מושלמות';
+
+  const coverImageUrl =
+    typeof settings.coverImageUrl === 'string' && settings.coverImageUrl.trim()
+      ? settings.coverImageUrl.trim()
+      : null;
+
+  const phoneFromBusiness = typeof business.phone === 'string' ? business.phone.trim() : '';
+  const phoneFromSettings =
+    typeof settings.businessPhonePublic === 'string' ? settings.businessPhonePublic.trim() : '';
+  const phone = phoneFromBusiness || phoneFromSettings || null;
+
+  const galleryItems = normalizeGalleryItems(portfolioImages, settings.landingGalleryItems);
+  const sectionVisibility = mergeSectionVisibility(
+    settings.landingSectionVisibility as Record<string, boolean> | undefined
+  );
+
+  const serviceRows = servicesRaw.map((s) => ({
+    id: s._id.toString(),
+    name: s.name,
+    description: typeof s.description === 'string' ? s.description.trim() : '',
+    durationMinutes: s.durationMinutes ?? 30,
+    price: s.price,
+  }));
+  const servicesOrdered = orderServicesById(serviceRows, settings.landingServiceOrder);
+
+  const secondaryHero =
+    typeof settings.landingSecondaryHeroImageUrl === 'string' && settings.landingSecondaryHeroImageUrl.trim()
+      ? settings.landingSecondaryHeroImageUrl.trim()
+      : galleryItems[1]?.imageUrl ?? null;
+
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+
+  res.json({
+    businessName: business.name,
+    slug: business.slug,
+    heroSection: {
+      businessName: business.name,
+      tagline,
+      description:
+        typeof settings.landingHeroDescription === 'string' ? settings.landingHeroDescription.trim() : '',
+      heroImage: coverImageUrl,
+      heroImageSecondary: secondaryHero,
+    },
+    services: servicesOrdered,
+    gallery: galleryItems,
+    contact: {
+      phone: phone ?? '',
+      whatsapp:
+        typeof settings.landingContact?.whatsapp === 'string' ? settings.landingContact.whatsapp.trim() : '',
+      email: typeof settings.landingContact?.email === 'string' ? settings.landingContact.email.trim() : '',
+      location:
+        typeof settings.landingContact?.location === 'string' ? settings.landingContact.location.trim() : '',
+    },
+    products: products.map((p) => ({
+      name: p.name.trim(),
+      description: typeof p.description === 'string' ? p.description.trim() : '',
+      price: p.price,
+    })),
+    reviews: reviewDocs.map((r) => ({
+      customerName: r.customerName,
+      text: r.text,
+      rating: r.rating,
+      date: r.createdAt.toISOString().slice(0, 10),
+    })),
+    stats: {
+      rating,
+      customersCount: customerCount,
+      completedAppointmentsCount: completedAppointments,
+    },
+    sections: sectionVisibility,
+    portfolioImageUrls: portfolioImages,
+  });
+}
+
 // --- GET /api/public/businesses/:slug/services
 export async function getPublicServices(req: Request, res: Response): Promise<void> {
   const { slug } = req.params;
@@ -127,19 +273,25 @@ export async function getPublicServices(req: Request, res: Response): Promise<vo
   if (!business) {
     throw new NotFoundError('Business not found');
   }
+  const settings = await ensureBusinessSettings(business._id);
   const services = await Service.find({
     businessId: business._id,
     isActive: true,
-  }).select('_id name durationMinutes price');
+  })
+    .select('_id name description durationMinutes price')
+    .lean();
 
-  res.json(
-    services.map((s) => ({
-      id: s._id.toString(),
-      nameHe: s.name,
-      durationMinutes: s.durationMinutes ?? 30,
-      price: s.price != null ? s.price : undefined,
-    }))
-  );
+  const rows = services.map((s) => ({
+    id: s._id.toString(),
+    nameHe: s.name,
+    description: typeof s.description === 'string' ? s.description : undefined,
+    durationMinutes: s.durationMinutes ?? 30,
+    price: s.price != null ? s.price : undefined,
+  }));
+
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.json(orderServicesById(rows, settings.landingServiceOrder));
 }
 
 // Re-export for tests or callers that imported from the controller.

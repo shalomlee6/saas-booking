@@ -35,15 +35,80 @@ export interface PublicLandingProductItem {
   price: number;
 }
 
+export interface PublicLandingGalleryItem {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  type: 'product' | 'service';
+}
+
+export interface PublicLandingContact {
+  whatsapp?: string;
+  email?: string;
+  location?: string;
+}
+
+export interface PublicLandingSectionVisibility {
+  hero?: boolean;
+  services?: boolean;
+  gallery?: boolean;
+  products?: boolean;
+  reviews?: boolean;
+  cta?: boolean;
+}
+
 /** Extended payload on public business for booking (landing marketing sections). */
 export interface PublicLandingPayload {
   tagline: string;
   coverImageUrl: string | null;
   phone: string | null;
+  /** Longer hero copy under the tagline. */
+  heroDescription?: string;
+  /** Second hero / feature image (URL). */
+  secondaryHeroImageUrl?: string | null;
+  galleryItems?: PublicLandingGalleryItem[];
+  contact?: PublicLandingContact;
+  sectionVisibility?: PublicLandingSectionVisibility;
   stats: PublicLandingStats;
   portfolioImages: string[];
   products: PublicLandingProductItem[];
   reviews: PublicLandingReviewItem[];
+}
+
+/** GET /api/public/businesses/:slug/landing — structured bundle for builder + public sync. */
+export interface PublicLandingHeroSection {
+  businessName: string;
+  tagline: string;
+  description: string;
+  heroImage: string | null;
+  heroImageSecondary: string | null;
+}
+
+export interface PublicLandingServiceRow {
+  id: string;
+  name: string;
+  description: string;
+  durationMinutes: number;
+  price?: number;
+}
+
+export interface PublicBusinessLandingBundle {
+  businessName: string;
+  slug: string;
+  heroSection: PublicLandingHeroSection;
+  services: PublicLandingServiceRow[];
+  gallery: PublicLandingGalleryItem[];
+  contact: {
+    phone: string;
+    whatsapp: string;
+    email: string;
+    location: string;
+  };
+  products: PublicLandingProductItem[];
+  reviews: PublicLandingReviewItem[];
+  stats: PublicLandingStats;
+  sections: PublicLandingSectionVisibility;
+  portfolioImageUrls: string[];
 }
 
 /** Booking page: business details with opening hours and cancellation notice */
@@ -65,6 +130,7 @@ export interface PublicBusinessForBooking {
 export interface PublicService {
   id: string;
   nameHe: string;
+  description?: string;
   durationMinutes: number;
   price?: number;
 }
@@ -208,6 +274,18 @@ export class PublicApiService {
           tagline: 'יופי מקצועי, תוצאות מושלמות',
           coverImageUrl: null,
           phone: '050-1234567',
+          heroDescription: '',
+          secondaryHeroImageUrl: null,
+          galleryItems: [],
+          contact: {},
+          sectionVisibility: {
+            hero: true,
+            services: true,
+            gallery: true,
+            products: true,
+            reviews: true,
+            cta: true,
+          },
           stats: { rating: 4.9, customersCount: 128, completedAppointmentsCount: 900 },
           portfolioImages: [],
           products: [
@@ -231,6 +309,45 @@ export class PublicApiService {
     }
     return this.api.get<PublicBusinessForBooking>(
       `public/businesses/${encodeURIComponent(slug)}`
+    );
+  }
+
+  /** GET /api/public/businesses/:slug/landing — full structured landing (no-store on server). */
+  getBusinessLanding(slug: string): Observable<PublicBusinessLandingBundle> {
+    if (environment.mockPublicApi) {
+      return this.getBusinessForBooking(slug).pipe(
+        map((b) => ({
+          businessName: b.name,
+          slug,
+          heroSection: {
+            businessName: b.name,
+            tagline: b.landing?.tagline ?? '',
+            description: b.landing?.heroDescription ?? '',
+            heroImage: b.landing?.coverImageUrl ?? null,
+            heroImageSecondary: b.landing?.secondaryHeroImageUrl ?? null,
+          },
+          services: [],
+          gallery: b.landing?.galleryItems ?? [],
+          contact: {
+            phone: b.landing?.phone ?? '',
+            whatsapp: b.landing?.contact?.whatsapp ?? '',
+            email: b.landing?.contact?.email ?? '',
+            location: b.landing?.contact?.location ?? '',
+          },
+          products: b.landing?.products ?? [],
+          reviews: b.landing?.reviews ?? [],
+          stats: b.landing?.stats ?? {
+            rating: 5,
+            customersCount: 0,
+            completedAppointmentsCount: 0,
+          },
+          sections: b.landing?.sectionVisibility ?? {},
+          portfolioImageUrls: b.landing?.portfolioImages ?? [],
+        }))
+      );
+    }
+    return this.api.get<PublicBusinessLandingBundle>(
+      `public/businesses/${encodeURIComponent(slug)}/landing`
     );
   }
 

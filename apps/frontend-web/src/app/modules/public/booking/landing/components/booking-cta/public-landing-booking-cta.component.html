@@ -8,7 +8,20 @@
     styleClass="pl-cta__btn"
     (onClick)="book.emit()"
   />
-  @if (phoneHref(); as href) {
-    <a class="pl-cta__phone" [href]="href">התקשרי: {{ phone() }}</a>
-  }
+  <div class="pl-cta__links">
+    @if (phoneHref(); as href) {
+      <a class="pl-cta__link" [href]="href">התקשרי: {{ phone() }}</a>
+    }
+    @if (whatsappHref(); as wa) {
+      <a class="pl-cta__link" [href]="wa" target="_blank" rel="noopener noreferrer">וואטסאפ</a>
+    }
+    @if (emailHref(); as em) {
+      <a class="pl-cta__link" [href]="em">אימייל</a>
+    }
+    @if (location(); as loc) {
+      @if (loc.trim()) {
+        <p class="pl-cta__loc">{{ loc }}</p>
+      }
+    }
+  </div>
 </section>

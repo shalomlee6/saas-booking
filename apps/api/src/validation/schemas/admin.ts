@@ -24,6 +24,17 @@ export const patchAdminUserBodySchema = z
   .object({
     status: z.enum(['active', 'disabled']).optional(),
     name: z.string().max(200).trim().optional(),
+    email: z.string().email().max(320).trim().toLowerCase().optional(),
+    role: z.enum(['super_admin', 'owner', 'staff', 'client']).optional(),
+    suspensionReason: z.string().max(500).trim().optional(),
+    businessFeatures: z
+      .object({
+        bookingEnabled: z.boolean().optional(),
+        marketingModule: z.boolean().optional(),
+        waitlistEnabled: z.boolean().optional(),
+        analyticsEnabled: z.boolean().optional(),
+      })
+      .optional(),
   })
   .strict();
 

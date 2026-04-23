@@ -5,6 +5,7 @@ import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
 import { validateBody } from '../middleware/validateRequest';
 import { loadBusinessSettings } from '../middleware/businessSettings';
 import { getMyBusinessSettings, updateMyBusinessSettings } from '../controllers/businessSettingsController';
+import { runLandingImageUpload, postLandingImageUpload } from '../controllers/landingUploadController';
 import { updateBusinessSettingsBodySchema } from '../validation/schemas/businessSettings';
 import { asyncHandler } from '../utils/asyncHandler';
 
@@ -26,5 +27,14 @@ settingsRouter.put(
   validateBody(updateBusinessSettingsBodySchema),
   loadBusinessSettings,
   asyncHandler(updateMyBusinessSettings)
+);
+
+settingsRouter.post(
+  '/me/landing/upload',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  runLandingImageUpload,
+  asyncHandler(postLandingImageUpload)
 );
 

@@ -1,7 +1,11 @@
+import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
+import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { connectDB } from './config/db';
+import { validateEnv } from './config/env';
 import { businessRouter } from './routes/business';
 import { authRouter } from './routes/auth';
 import { customersRouter } from './routes/customers';
@@ -10,14 +14,25 @@ import { appointmentsRouter } from './routes/appointments';
 import { publicRouter } from './routes/public';
 import { settingsRouter } from './routes/settings';
 import { adminRouter } from './routes/admin';
-import cookieParser from 'cookie-parser';
 import { errorHandler } from './middleware/errorHandler';
+import { authRouteLimiter, publicRouteLimiter } from './middleware/rateLimits';
 
-dotenv.config();
+const env = validateEnv();
 
 const app = express();
-const PORT = Number(process.env.PORT || 3000);
-const MONGO_URI = process.env.MONGO_URI || '';
+
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+if (env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  })
+);
 
 app.use(
   cors({
@@ -29,12 +44,12 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
-app.use('/api/auth', authRouter);
+app.use('/api/auth', authRouteLimiter, authRouter);
 app.use('/api/business', businessRouter);
 app.use('/api/customers', customersRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/appointments', appointmentsRouter);
-app.use('/api/public', publicRouter);
+app.use('/api/public', publicRouteLimiter, publicRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/admin', adminRouter);
 
@@ -49,16 +64,11 @@ app.use((_req, res) => {
 app.use(errorHandler);
 
 async function bootstrap() {
-  if (!MONGO_URI) {
-    console.error('❌ MONGO_URI is not defined in .env');
-    process.exit(1);
-  }
+  await connectDB(env.MONGO_URI, env.NODE_ENV);
 
-  await connectDB(MONGO_URI);
-
-  app.listen(PORT, () => {
-    console.log(`🚀 API server running on http://localhost:${PORT}`);
-    if (process.env.NODE_ENV === 'production') {
+  app.listen(env.PORT, () => {
+    console.log(`🚀 API server running on http://localhost:${env.PORT}`);
+    if (env.NODE_ENV === 'production') {
       if (process.env.ALLOW_PUBLIC_REGISTER === 'true') {
         console.warn(
           '⚠️ ALLOW_PUBLIC_REGISTER=true — public self-serve registration is enabled in production.'
@@ -78,4 +88,3 @@ bootstrap().catch((err) => {
 });
 
 export { app };
-

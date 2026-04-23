@@ -72,6 +72,35 @@ export function buildBusinessSettingsUpdateSet(
   if (body.coverImageUrl !== undefined) {
     updateData.coverImageUrl = body.coverImageUrl;
   }
+  if (body.landingSecondaryHeroImageUrl !== undefined) {
+    updateData.landingSecondaryHeroImageUrl = body.landingSecondaryHeroImageUrl;
+  }
+  if (body.landingHeroDescription !== undefined) {
+    updateData.landingHeroDescription = body.landingHeroDescription;
+  }
+  if (body.landingGalleryItems !== undefined) {
+    const items = body.landingGalleryItems.map((g) => ({
+      id: g.id,
+      imageUrl: g.imageUrl.trim(),
+      title: g.title?.trim() ? g.title.trim() : '',
+      type: g.type === 'product' ? 'product' : 'service',
+    }));
+    updateData.landingGalleryItems = items;
+    updateData.portfolioImages = items.map((i) => i.imageUrl).filter(Boolean);
+  }
+  if (body.landingContact !== undefined) {
+    updateData.landingContact = {
+      whatsapp: body.landingContact.whatsapp?.trim() ?? '',
+      email: body.landingContact.email?.trim().toLowerCase() ?? '',
+      location: body.landingContact.location?.trim() ?? '',
+    };
+  }
+  if (body.landingServiceOrder !== undefined) {
+    updateData.landingServiceOrder = body.landingServiceOrder;
+  }
+  if (body.landingSectionVisibility !== undefined) {
+    updateData.landingSectionVisibility = body.landingSectionVisibility;
+  }
   if (body.portfolioImages !== undefined) {
     updateData.portfolioImages = body.portfolioImages;
   }

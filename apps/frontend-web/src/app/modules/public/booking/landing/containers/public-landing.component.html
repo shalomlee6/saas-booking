@@ -6,13 +6,16 @@
       <p class="pl-page__boot-text">טוענת את דף הנחיתה…</p>
     </div>
   } @else {
-    <app-public-landing-hero
-      [businessName]="businessDisplayName()"
-      [tagline]="landingTagline()"
-      [imageLeft]="heroImageLeft()"
-      [imageRight]="heroImageRight()"
-      (book)="goToBook()"
-    />
+    @if (sectionVisibility().hero) {
+      <app-public-landing-hero
+        [businessName]="businessDisplayName()"
+        [tagline]="landingTagline()"
+        [description]="landingHeroDescription()"
+        [imageLeft]="heroImageLeft()"
+        [imageRight]="heroImageRight()"
+        (book)="goToBook()"
+      />
+    }
 
     <div class="pl-section pl-section--base pl-welcome">
       <div class="pl-welcome-inner">
@@ -36,25 +39,29 @@
       </div>
     </div>
 
-    <div class="pl-section pl-section--accent">
-      <div class="pl-inner pl-inner--wide">
-        <app-public-landing-services
-          [services]="servicesList()"
-          (bookService)="goToBook($event)"
-        />
+    @if (sectionVisibility().services) {
+      <div class="pl-section pl-section--accent">
+        <div class="pl-inner pl-inner--wide">
+          <app-public-landing-services
+            [services]="servicesList()"
+            (bookService)="goToBook($event)"
+          />
+        </div>
       </div>
-    </div>
+    }
 
-    <div class="pl-section pl-section--base">
-      <div class="pl-inner pl-inner--wide">
-        <app-public-landing-gallery
-          [images]="portfolioImages()"
-          [isOwner]="isOwnerViewingOwnLanding()"
-        />
+    @if (sectionVisibility().gallery) {
+      <div class="pl-section pl-section--base">
+        <div class="pl-inner pl-inner--wide">
+          <app-public-landing-gallery
+            [items]="landingGalleryItems()"
+            [isOwner]="isOwnerViewingOwnLanding()"
+          />
+        </div>
       </div>
-    </div>
+    }
 
-    @if (showProductsSection()) {
+    @if (sectionVisibility().products && showProductsSection()) {
       <div class="pl-section pl-section--accent">
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-products [products]="landingProducts()" />
@@ -62,7 +69,7 @@
       </div>
     }
 
-    @if (showReviewsSection()) {
+    @if (sectionVisibility().reviews && showReviewsSection()) {
       <div class="pl-section pl-section--base">
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-reviews [reviews]="landingReviews()" />
@@ -70,14 +77,19 @@
       </div>
     }
 
-    <div class="pl-section pl-section--base">
-      <div class="pl-inner">
-        <app-public-landing-booking-cta
-          [phone]="landingPhone()"
-          (book)="goToBook()"
-        />
+    @if (sectionVisibility().cta) {
+      <div class="pl-section pl-section--base">
+        <div class="pl-inner">
+          <app-public-landing-booking-cta
+            [phone]="landingPhone()"
+            [whatsapp]="contactWhatsapp()"
+            [email]="contactEmail()"
+            [location]="contactLocation()"
+            (book)="goToBook()"
+          />
+        </div>
       </div>
-    </div>
+    }
   }
 
   <nav
@@ -95,6 +107,17 @@
         <span aria-hidden="true">📞</span>
         התקשרי
       </span>
+    }
+    @if (stickyWhatsappHref(); as wa) {
+      <a
+        class="pl-sticky-bar__btn pl-sticky-bar__btn--wa"
+        [href]="wa"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <span aria-hidden="true">💬</span>
+        וואטסאפ
+      </a>
     }
     <button type="button" class="pl-sticky-bar__btn pl-sticky-bar__btn--book" (click)="goToBook()">
       <span aria-hidden="true">📅</span>

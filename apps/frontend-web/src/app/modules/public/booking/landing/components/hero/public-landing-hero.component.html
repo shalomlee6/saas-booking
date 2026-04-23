@@ -25,9 +25,12 @@
     </p-carousel>
   </div>
 
-  <!-- <div class="pl-hero-intro" dir="rtl">
+  <div class="pl-hero-intro" dir="rtl">
     <h1 class="pl-hero-intro__name">{{ businessName() }}</h1>
     <p class="pl-hero-intro__tagline">{{ tagline() }}</p>
+    @if (description().trim()) {
+      <p class="pl-hero-intro__desc">{{ description() }}</p>
+    }
     <p-button
       label="קביעת תור"
       icon="pi pi-calendar-plus"
@@ -35,5 +38,5 @@
       styleClass="pl-hero-intro__cta"
       (onClick)="book.emit()"
     />
-  </div> -->
+  </div>
 </div>

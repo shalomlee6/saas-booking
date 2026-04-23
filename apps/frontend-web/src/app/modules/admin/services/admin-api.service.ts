@@ -43,9 +43,26 @@ export interface AdminUsersPage {
   limit: number;
 }
 
+export interface AdminBusinessFeatures {
+  bookingEnabled: boolean;
+  marketingModule: boolean;
+  waitlistEnabled: boolean;
+  analyticsEnabled: boolean;
+}
+
 export interface AdminUserDetail extends AdminUserRow {
   updatedAt?: string;
+  businessFeatures?: AdminBusinessFeatures | null;
 }
+
+export type PatchAdminUserBody = {
+  status?: 'active' | 'disabled';
+  name?: string;
+  email?: string;
+  role?: 'super_admin' | 'owner' | 'staff' | 'client';
+  suspensionReason?: string;
+  businessFeatures?: Partial<AdminBusinessFeatures>;
+};
 
 export interface AdminOverviewDto {
   totalBusinesses: number;
@@ -214,7 +231,7 @@ export class AdminApiService {
     return this.api.get<AdminUserDetail>(`admin/users/${id}`);
   }
 
-  patchUser(id: string, body: { status?: 'active' | 'disabled'; name?: string }): Observable<AdminUserRow> {
+  patchUser(id: string, body: PatchAdminUserBody): Observable<AdminUserRow> {
     return this.api.patch<AdminUserRow>(`admin/users/${id}`, body);
   }
 

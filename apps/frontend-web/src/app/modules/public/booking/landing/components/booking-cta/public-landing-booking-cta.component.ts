@@ -11,6 +11,9 @@ import { ButtonModule } from 'primeng/button';
 })
 export class PublicLandingBookingCtaComponent {
   readonly phone = input<string | null>(null);
+  readonly whatsapp = input<string | null>(null);
+  readonly email = input<string | null>(null);
+  readonly location = input<string | null>(null);
 
   /** `tel:` href with digits only when possible */
   readonly phoneHref = computed((): string | null => {
@@ -18,6 +21,19 @@ export class PublicLandingBookingCtaComponent {
     if (!p?.trim()) return null;
     const digits = p.replace(/\D/g, '');
     return digits.length > 0 ? `tel:${digits}` : null;
+  });
+
+  readonly whatsappHref = computed((): string | null => {
+    const w = this.whatsapp()?.trim();
+    if (!w) return null;
+    const digits = w.replace(/\D/g, '');
+    return digits.length > 0 ? `https://wa.me/${digits}` : null;
+  });
+
+  readonly emailHref = computed((): string | null => {
+    const e = this.email()?.trim();
+    if (!e) return null;
+    return `mailto:${e}`;
   });
 
   readonly book = output<void>();

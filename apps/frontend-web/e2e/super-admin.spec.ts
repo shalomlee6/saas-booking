@@ -56,6 +56,15 @@ test.describe('Super admin console', () => {
     await expect(page.getByText('superadmin@example.com').first()).toBeVisible();
   });
 
+  test('users row navigates to detail', async ({ page }) => {
+    await loginAsSuperAdmin(page);
+    await page.goto('/super-admin/users');
+    await expect(page.getByTestId('user-row-mock-user-1')).toBeVisible({ timeout: 15_000 });
+    await page.getByTestId('user-row-mock-user-1').click();
+    await expect(page).toHaveURL(/\/super-admin\/users\/mock-user-1/, { timeout: 15_000 });
+    await expect(page.getByRole('heading', { name: 'Demo Owner' })).toBeVisible();
+  });
+
   test('analytics page renders charts', async ({ page }) => {
     await loginAsSuperAdmin(page);
     await page.goto('/super-admin/analytics');

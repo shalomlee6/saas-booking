@@ -1,0 +1,213 @@
+.sa-user-detail {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 0 2.5rem;
+}
+
+.sa-user-detail__back {
+  display: inline-block;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+  text-decoration: none;
+}
+
+.sa-user-detail__back:hover {
+  color: #111827;
+}
+
+.sa-user-detail__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sa-user-detail__sk-block {
+  border-radius: 8px;
+}
+
+.sa-user-detail__err {
+  padding: 2rem;
+  border: 1px solid #fecaca;
+  border-radius: 12px;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.sa-user-detail__link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  color: #111827;
+  font-weight: 600;
+}
+
+.sa-user-detail__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #e8eaed;
+}
+
+.sa-user-detail__title {
+  margin: 0 0 0.35rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.sa-user-detail__email {
+  margin: 0 0 0.75rem;
+  font-size: 0.9375rem;
+  color: #6b7280;
+}
+
+.sa-user-detail__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sa-user-detail__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+}
+
+.sa-user-detail__badge--neutral {
+  font-weight: 500;
+}
+
+.sa-user-detail__badge--off {
+  color: #71717a;
+  background: #fafafa;
+  border-color: #e4e4e7;
+}
+
+::ng-deep .sa-user-detail__save.p-button {
+  border-radius: 10px;
+  background: #111827;
+  border: none;
+  font-weight: 600;
+}
+
+::ng-deep .sa-user-detail__save.p-button:not(:disabled):hover {
+  background: #1f2937;
+}
+
+.sa-user-detail__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+::ng-deep .sa-user-detail__card.p-card {
+  border: 1px solid #e8eaed;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+::ng-deep .sa-user-detail__card.p-card .p-card-header {
+  padding-bottom: 0.5rem;
+}
+
+::ng-deep .sa-user-detail__card.p-card .p-card-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+::ng-deep .sa-user-detail__card.p-card .p-card-body {
+  padding-top: 0.75rem;
+}
+
+.sa-user-detail__card--danger-zone ::ng-deep .p-card-title {
+  color: #991b1b;
+}
+
+.sa-user-detail__field {
+  margin-bottom: 1rem;
+}
+
+.sa-user-detail__field:last-child {
+  margin-bottom: 0;
+}
+
+.sa-user-detail__field label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.sa-user-detail__input {
+  width: 100%;
+}
+
+.sa-user-detail__textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.sa-user-detail__hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+.sa-user-detail__flags {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #f0f1f3;
+}
+
+.sa-user-detail__flags-title {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.sa-user-detail__toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.sa-user-detail__toggle-row--strong {
+  font-weight: 600;
+}
+
+.sa-user-detail__muted {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+.sa-user-detail__biz-name {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+::ng-deep .sa-user-detail__btn-secondary.p-button {
+  border-radius: 8px;
+}

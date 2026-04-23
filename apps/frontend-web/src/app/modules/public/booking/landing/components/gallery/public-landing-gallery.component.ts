@@ -5,6 +5,7 @@ import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { ApiService } from '../../../../../../core/api/api.service';
 import { MessageService } from 'primeng/api';
+import type { PublicLandingGalleryItem } from '../../../../services/public-api.service';
 
 @Component({
   selector: 'app-public-landing-gallery',
@@ -18,7 +19,7 @@ export class PublicLandingGalleryComponent {
   private readonly api = inject(ApiService);
   private readonly messages = inject(MessageService);
 
-  readonly images = input<string[]>([]);
+  readonly items = input<PublicLandingGalleryItem[]>([]);
   readonly isOwner = input(false);
 
   readonly lightboxOpen = signal(false);
@@ -28,9 +29,15 @@ export class PublicLandingGalleryComponent {
   readonly urlDraft = signal('');
 
   readonly lightboxSrc = computed(() => {
-    const imgs = this.images();
+    const imgs = this.items();
     const i = this.lightboxIndex();
-    return imgs[i] ?? null;
+    return imgs[i]?.imageUrl ?? null;
+  });
+
+  readonly lightboxTitle = computed(() => {
+    const imgs = this.items();
+    const i = this.lightboxIndex();
+    return imgs[i]?.title?.trim() ?? '';
   });
 
   openLightbox(index: number): void {
@@ -49,20 +56,61 @@ export class PublicLandingGalleryComponent {
       this.messages.add({ severity: 'warn', summary: 'חסר קישור', detail: 'הזיני כתובת תמונה תקינה' });
       return;
     }
-    const next = [...this.images(), url];
-    this.api.put<unknown>('settings/me/settings', { portfolioImages: next }).subscribe({
-      next: () => {
-        this.addDialogOpen.set(false);
-        this.messages.add({ severity: 'success', summary: 'נשמר', detail: 'התמונה נוספה לגלריה' });
-        window.location.reload();
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.messages.add({
-          severity: 'error',
-          summary: 'שגיאה',
-          detail: err?.error?.message ?? 'לא ניתן לשמור',
-        });
-      },
-    });
+    this.api
+      .get<{
+        landingGalleryItems?: PublicLandingGalleryItem[];
+        portfolioImages?: string[];
+      }>('settings/me/settings')
+      .subscribe({
+        next: (s) => {
+          let base: PublicLandingGalleryItem[] = [];
+          if (s.landingGalleryItems && s.landingGalleryItems.length > 0) {
+            base = s.landingGalleryItems.map((g) => ({
+              id: g.id,
+              imageUrl: g.imageUrl,
+              title: g.title ?? '',
+              type: g.type === 'product' ? 'product' : 'service',
+            }));
+          } else {
+            base = (s.portfolioImages ?? []).map((u, i) => ({
+              id: `legacy-${i}`,
+              imageUrl: u,
+              title: '',
+              type: 'service' as const,
+            }));
+          }
+          const newItem: PublicLandingGalleryItem = {
+            id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `g-${Date.now()}`,
+            imageUrl: url,
+            title: '',
+            type: 'service',
+          };
+          this.api.put<unknown>('settings/me/settings', { landingGalleryItems: [...base, newItem] }).subscribe({
+            next: () => {
+              this.addDialogOpen.set(false);
+              this.messages.add({
+                severity: 'success',
+                summary: 'נשמר',
+                detail: 'התמונה נוספה לגלריה',
+              });
+              window.location.reload();
+            },
+            error: (err: { error?: { message?: string } }) => {
+              this.messages.add({
+                severity: 'error',
+                summary: 'שגיאה',
+                detail: err?.error?.message ?? 'לא ניתן לשמור',
+              });
+            },
+          });
+        },
+        error: (err: { error?: { message?: string } }) => {
+          this.messages.add({
+            severity: 'error',
+            summary: 'שגיאה',
+            detail: err?.error?.message ?? 'לא ניתן לטעון הגדרות',
+          });
+        },
+      });
   }
 }

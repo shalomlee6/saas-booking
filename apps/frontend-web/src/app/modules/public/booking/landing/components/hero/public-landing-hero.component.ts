@@ -19,6 +19,8 @@ export const PUBLIC_LANDING_DEFAULT_HERO_PHOTOS: readonly [string, string] = [
 export class PublicLandingHeroComponent {
   readonly businessName = input.required<string>();
   readonly tagline = input.required<string>();
+  /** Optional longer intro under the tagline. */
+  readonly description = input('');
   readonly imageLeft = input.required<string>();
   readonly imageRight = input.required<string>();
 

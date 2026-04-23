@@ -13,17 +13,25 @@
     }
   </div>
 
-  @if (images().length === 0) {
+  @if (items().length === 0) {
     <p class="pl-gal__empty-line">תמונות בקרוב ✨</p>
   } @else {
     <div class="pl-gal__masonry">
-      @for (src of images(); track src; let idx = $index) {
+      @for (item of items(); track item.id; let idx = $index) {
         <button
           type="button"
           class="pl-gal__thumb"
           (click)="openLightbox(idx)"
         >
-          <img [src]="src" [alt]="'תמונת גלריה ' + (idx + 1)" loading="lazy" decoding="async" />
+          <img
+            [src]="item.imageUrl"
+            [alt]="item.title?.trim() ? item.title! : 'תמונת גלריה ' + (idx + 1)"
+            loading="lazy"
+            decoding="async"
+          />
+          @if (item.title?.trim()) {
+            <span class="pl-gal__thumb-cap">{{ item.title }}</span>
+          }
         </button>
       }
     </div>
@@ -40,7 +48,12 @@
   [contentStyle]="{ padding: 0 }"
 >
   @if (lightboxSrc(); as s) {
-    <img [src]="s" alt="" class="pl-gal__lightbox-img" loading="lazy" />
+    <figure class="pl-gal__lightbox-fig">
+      <img [src]="s" alt="" class="pl-gal__lightbox-img" loading="lazy" />
+      @if (lightboxTitle()) {
+        <figcaption class="pl-gal__lightbox-cap">{{ lightboxTitle() }}</figcaption>
+      }
+    </figure>
   }
 </p-dialog>
 

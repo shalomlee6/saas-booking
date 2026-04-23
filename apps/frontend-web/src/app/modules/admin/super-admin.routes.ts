@@ -31,6 +31,13 @@ export const SUPER_ADMIN_ROUTES: Routes = [
       ),
   },
   {
+    path: 'users/:id',
+    loadComponent: () =>
+      import('./pages/super-admin-user-detail/super-admin-user-detail.component').then(
+        (m) => m.SuperAdminUserDetailComponent
+      ),
+  },
+  {
     path: 'users',
     loadComponent: () =>
       import('./pages/super-admin-users/super-admin-users.component').then(

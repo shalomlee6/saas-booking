@@ -1,0 +1,200 @@
+<p-toast />
+<p-confirmDialog />
+
+<div class="sa-user-detail" dir="rtl">
+  <a routerLink="/super-admin/users" class="sa-user-detail__back">← Back to users</a>
+
+  @if (loading()) {
+    <div class="sa-user-detail__skeleton">
+      <p-skeleton width="40%" height="2rem" class="sa-user-detail__sk-block" />
+      <p-skeleton width="70%" height="1rem" class="sa-user-detail__sk-block" />
+      <p-skeleton height="8rem" class="sa-user-detail__sk-block" />
+      <p-skeleton height="10rem" class="sa-user-detail__sk-block" />
+      <p-skeleton height="8rem" class="sa-user-detail__sk-block" />
+    </div>
+  } @else if (loadError(); as err) {
+    <div class="sa-user-detail__err">
+      <p>{{ err }}</p>
+      <a routerLink="/super-admin/users" class="sa-user-detail__link">Return to list</a>
+    </div>
+  } @else if (serverUser(); as u) {
+    <header class="sa-user-detail__header">
+      <div class="sa-user-detail__header-main">
+        <h1 class="sa-user-detail__title">{{ displayName() }}</h1>
+        <p class="sa-user-detail__email">{{ draftEmail() }}</p>
+        <div class="sa-user-detail__badges">
+          <span class="sa-user-detail__badge" [class.sa-user-detail__badge--off]="!draftStatusActive()">
+            {{ statusBadgeLabel() }}
+          </span>
+          @if (u.businessId) {
+            <span class="sa-user-detail__badge sa-user-detail__badge--neutral">{{ planBadgeLabel() }}</span>
+          }
+        </div>
+      </div>
+      <p-button
+        label="Save changes"
+        icon="pi pi-check"
+        styleClass="sa-user-detail__save"
+        [loading]="saving()"
+        [disabled]="saving()"
+        (onClick)="save()"
+      />
+    </header>
+
+    <div class="sa-user-detail__grid">
+      <p-card header="Account" styleClass="sa-user-detail__card">
+        <div class="sa-user-detail__field">
+          <label for="su-name">Name</label>
+          <input id="su-name" pInputText class="sa-user-detail__input" [ngModel]="draftName()" (ngModelChange)="draftName.set($event)" />
+        </div>
+        <div class="sa-user-detail__field">
+          <label for="su-email">Email</label>
+          <input
+            id="su-email"
+            pInputText
+            type="email"
+            class="sa-user-detail__input"
+            [ngModel]="draftEmail()"
+            (ngModelChange)="draftEmail.set($event)"
+          />
+        </div>
+        <div class="sa-user-detail__field">
+          <label for="su-role">Role</label>
+          <p-select
+            inputId="su-role"
+            [options]="roleOptions"
+            [ngModel]="draftRole()"
+            (ngModelChange)="draftRole.set($event)"
+            optionLabel="label"
+            optionValue="value"
+            [disabled]="!roleEditable()"
+            styleClass="sa-user-detail__select"
+            [style]="{ width: '100%' }"
+          />
+          @if (!roleEditable()) {
+            <p class="sa-user-detail__hint">Role cannot be changed for this account type.</p>
+          }
+        </div>
+      </p-card>
+
+      <p-card header="Subscription" styleClass="sa-user-detail__card">
+        <div class="sa-user-detail__field">
+          <label for="su-plan">Plan</label>
+          <p-select
+            inputId="su-plan"
+            [options]="planOptions"
+            [ngModel]="draftPlan()"
+            (ngModelChange)="draftPlan.set($event)"
+            optionLabel="label"
+            optionValue="value"
+            [disabled]="!planEditable()"
+            placeholder="No plan"
+            styleClass="sa-user-detail__select"
+            [style]="{ width: '100%' }"
+          />
+          @if (!planEditable()) {
+            <p class="sa-user-detail__hint">Plan applies to business accounts only.</p>
+          }
+        </div>
+        <div class="sa-user-detail__flags">
+          <span class="sa-user-detail__flags-title">Feature flags</span>
+          <div class="sa-user-detail__toggle-row">
+            <label for="f-book">Public booking</label>
+            <p-toggleSwitch
+              inputId="f-book"
+              [ngModel]="draftFeatures().bookingEnabled"
+              (ngModelChange)="setFeatureBooking($event)"
+              [disabled]="!featuresEditable()"
+            />
+          </div>
+          <div class="sa-user-detail__toggle-row">
+            <label for="f-mkt">Marketing</label>
+            <p-toggleSwitch
+              inputId="f-mkt"
+              [ngModel]="draftFeatures().marketingModule"
+              (ngModelChange)="setFeatureMarketing($event)"
+              [disabled]="!featuresEditable()"
+            />
+          </div>
+          <div class="sa-user-detail__toggle-row">
+            <label for="f-wait">Waitlist</label>
+            <p-toggleSwitch
+              inputId="f-wait"
+              [ngModel]="draftFeatures().waitlistEnabled"
+              (ngModelChange)="setFeatureWaitlist($event)"
+              [disabled]="!featuresEditable()"
+            />
+          </div>
+          <div class="sa-user-detail__toggle-row">
+            <label for="f-an">Analytics</label>
+            <p-toggleSwitch
+              inputId="f-an"
+              [ngModel]="draftFeatures().analyticsEnabled"
+              (ngModelChange)="setFeatureAnalytics($event)"
+              [disabled]="!featuresEditable()"
+            />
+          </div>
+        </div>
+      </p-card>
+
+      <p-card header="Account status" styleClass="sa-user-detail__card">
+        <div class="sa-user-detail__toggle-row sa-user-detail__toggle-row--strong">
+          <span>Active</span>
+          <p-toggleSwitch
+            [ngModel]="draftStatusActive()"
+            (ngModelChange)="draftStatusActive.set($event)"
+            [disabled]="statusLocked()"
+          />
+        </div>
+        @if (statusLocked()) {
+          <p class="sa-user-detail__hint">Super admin accounts cannot be suspended.</p>
+        }
+        @if (!draftStatusActive()) {
+          <div class="sa-user-detail__field">
+            <label for="su-susp">Suspension note (optional)</label>
+            <textarea
+              id="su-susp"
+              pTextarea
+              rows="3"
+              class="sa-user-detail__textarea"
+              [ngModel]="draftSuspensionReason()"
+              (ngModelChange)="draftSuspensionReason.set($event)"
+              placeholder="Reason for suspension (audit log)"
+            ></textarea>
+          </div>
+        }
+      </p-card>
+
+      <p-card header="Security" styleClass="sa-user-detail__card">
+        <p class="sa-user-detail__muted">Last login: {{ u.lastLoginAt ? (u.lastLoginAt | date: 'medium') : 'Never' }}</p>
+        <p-button
+          label="Reset password"
+          [outlined]="true"
+          styleClass="sa-user-detail__btn-secondary"
+          (onClick)="confirmResetPassword()"
+        />
+      </p-card>
+
+      <p-card header="Business" styleClass="sa-user-detail__card">
+        @if (u.businessName) {
+          <p class="sa-user-detail__biz-name">{{ u.businessName }}</p>
+          <p class="sa-user-detail__muted">Linked business for plan and feature flags.</p>
+        } @else {
+          <p class="sa-user-detail__muted">No business linked to this user.</p>
+        }
+      </p-card>
+
+      @if (canDelete()) {
+        <p-card header="Danger zone" styleClass="sa-user-detail__card sa-user-detail__card--danger-zone">
+          <p class="sa-user-detail__muted">Permanently remove this user.</p>
+          <p-button
+            label="Delete user"
+            severity="danger"
+            [outlined]="true"
+            (onClick)="confirmDelete()"
+          />
+        </p-card>
+      }
+    </div>
+  }
+</div>

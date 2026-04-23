@@ -135,6 +135,17 @@
     @include pl-btn-secondary;
   }
 
+  .pl-sticky-bar__btn--wa {
+    flex: 1;
+    background: #25d366;
+    color: #fff;
+    border: none;
+  }
+
+  .pl-sticky-bar__btn--wa:hover {
+    filter: brightness(1.05);
+  }
+
   .pl-sticky-bar__btn--book {
     background: $pl-primary;
     color: #fff;

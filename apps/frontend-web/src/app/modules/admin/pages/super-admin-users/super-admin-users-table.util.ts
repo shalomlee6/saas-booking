@@ -60,19 +60,6 @@ export function paginationPages(current: number, total: number): (number | 'dots
   return out;
 }
 
-export function roleBadgeClass(role: string): string {
-  switch (role) {
-    case 'owner':
-      return 'sa-users__role--owner';
-    case 'super_admin':
-      return 'sa-users__role--super';
-    case 'staff':
-      return 'sa-users__role--staff';
-    default:
-      return 'sa-users__role--default';
-  }
-}
-
 export function roleLabel(role: string): string {
   switch (role) {
     case 'super_admin':
@@ -88,19 +75,6 @@ export function roleLabel(role: string): string {
   }
 }
 
-export function planBadgeClass(plan: AdminUserRow['plan']): string {
-  switch (plan) {
-    case 'free':
-      return 'sa-users__plan--free';
-    case 'pro':
-      return 'sa-users__plan--pro';
-    case 'premium':
-      return 'sa-users__plan--premium';
-    default:
-      return 'sa-users__plan--none';
-  }
-}
-
 export function planLabel(plan: AdminUserRow['plan']): string {
   switch (plan) {
     case 'free':
@@ -112,4 +86,8 @@ export function planLabel(plan: AdminUserRow['plan']): string {
     default:
       return '—';
   }
+}
+
+export function statusLabel(status: string): string {
+  return status === 'active' ? 'Active' : 'Suspended';
 }

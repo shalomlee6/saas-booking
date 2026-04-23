@@ -5,6 +5,9 @@
       <article class="pl-svc__card" role="listitem">
         <span class="pl-svc__emoji" aria-hidden="true">{{ s.emoji }}</span>
         <h3 class="pl-svc__name">{{ s.nameHe }}</h3>
+        @if (s.description?.trim()) {
+          <p class="pl-svc__desc">{{ s.description }}</p>
+        }
         <p class="pl-svc__meta">{{ s.durationMinutes }} דקות</p>
         @if (s.price != null) {
           <p class="pl-svc__price">{{ s.price | currency: 'ILS' : 'symbol' : '1.0-0' }}</p>

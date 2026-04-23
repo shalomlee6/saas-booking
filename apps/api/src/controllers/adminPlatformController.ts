@@ -174,10 +174,33 @@ export async function getAdminUserById(req: AuthRequest, res: Response): Promise
     }
     let businessName: string | null = null;
     let plan: PlanTier | null = null;
+    let businessFeatures: {
+      bookingEnabled: boolean;
+      marketingModule: boolean;
+      waitlistEnabled: boolean;
+      analyticsEnabled: boolean;
+    } | null = null;
     if (u.businessId) {
       const b = await Business.findById(u.businessId).select('name plan').lean();
       businessName = b?.name ?? null;
       plan = normalizePlan(typeof (b as { plan?: string } | null)?.plan === 'string' ? (b as { plan: string }).plan : null);
+      const settings = await BusinessSettings.findOne({ businessId: u.businessId }).select('features').lean();
+      const f = settings?.features as
+        | {
+            bookingEnabled?: boolean;
+            marketingModule?: boolean;
+            waitlistEnabled?: boolean;
+            analyticsEnabled?: boolean;
+          }
+        | undefined;
+      if (f) {
+        businessFeatures = {
+          bookingEnabled: f.bookingEnabled !== false,
+          marketingModule: !!f.marketingModule,
+          waitlistEnabled: !!f.waitlistEnabled,
+          analyticsEnabled: !!f.analyticsEnabled,
+        };
+      }
     }
     res.json({
       id: u._id.toString(),
@@ -189,6 +212,7 @@ export async function getAdminUserById(req: AuthRequest, res: Response): Promise
       businessId: u.businessId?.toString() ?? null,
       businessName,
       plan,
+      businessFeatures,
       createdAt: u.createdAt,
       updatedAt: u.updatedAt,
       lastLoginAt: (u as { lastLoginAt?: Date }).lastLoginAt ?? null,
@@ -284,7 +308,19 @@ export async function patchAdminUser(req: AuthRequest, res: Response): Promise<v
       res.status(400).json({ message: 'Invalid user id' });
       return;
     }
-    const body = req.body as { status?: string; name?: string };
+    const body = req.body as {
+      status?: string;
+      name?: string;
+      email?: string;
+      role?: string;
+      suspensionReason?: string;
+      businessFeatures?: {
+        bookingEnabled?: boolean;
+        marketingModule?: boolean;
+        waitlistEnabled?: boolean;
+        analyticsEnabled?: boolean;
+      };
+    };
     const user = await User.findById(id);
     if (!user) {
       res.status(404).json({ message: 'User not found' });
@@ -300,23 +336,86 @@ export async function patchAdminUser(req: AuthRequest, res: Response): Promise<v
     if (typeof body.name === 'string') {
       user.name = body.name.trim().slice(0, 200);
     }
+    if (typeof body.email === 'string' && body.email !== user.email) {
+      const dup = await User.findOne({ email: body.email, _id: { $ne: user._id } }).select('_id').lean();
+      if (dup) {
+        res.status(400).json({ message: 'Email already in use' });
+        return;
+      }
+      user.email = body.email;
+    }
+    if (body.role !== undefined && body.role !== user.role) {
+      if (user.role === 'super_admin' || user.role === 'owner') {
+        res.status(400).json({ message: 'Cannot change role for this account type' });
+        return;
+      }
+      if (body.role === 'super_admin' || body.role === 'owner') {
+        res.status(400).json({ message: 'Cannot assign this role via admin panel' });
+        return;
+      }
+      if (!USER_ROLES.includes(body.role as (typeof USER_ROLES)[number])) {
+        res.status(400).json({ message: 'Invalid role' });
+        return;
+      }
+      user.role = body.role as (typeof USER_ROLES)[number];
+    }
+
+    if (body.businessFeatures && user.businessId) {
+      const bf = body.businessFeatures;
+      const setDoc: Record<string, boolean> = {};
+      if (typeof bf.bookingEnabled === 'boolean') setDoc['features.bookingEnabled'] = bf.bookingEnabled;
+      if (typeof bf.marketingModule === 'boolean') setDoc['features.marketingModule'] = bf.marketingModule;
+      if (typeof bf.waitlistEnabled === 'boolean') setDoc['features.waitlistEnabled'] = bf.waitlistEnabled;
+      if (typeof bf.analyticsEnabled === 'boolean') setDoc['features.analyticsEnabled'] = bf.analyticsEnabled;
+      if (Object.keys(setDoc).length > 0) {
+        await BusinessSettings.updateOne({ businessId: user.businessId }, { $set: setDoc });
+      }
+    }
+
     await user.save();
 
+    const auditMeta: Record<string, unknown> = { status: user.status, name: user.name, email: user.email, role: user.role };
+    if (body.suspensionReason && user.status === 'disabled') {
+      auditMeta['suspensionReason'] = body.suspensionReason.trim().slice(0, 500);
+    }
     await recordAudit({
       actorUserId: req.user?.userId,
       actorEmail: req.user?.email,
       action: 'user.update',
       entity: 'User',
       entityId: id,
-      metadata: { status: user.status, name: user.name },
+      metadata: auditMeta,
     });
 
     let plan: PlanTier | null = null;
     let businessName: string | null = null;
+    let businessFeatures: {
+      bookingEnabled: boolean;
+      marketingModule: boolean;
+      waitlistEnabled: boolean;
+      analyticsEnabled: boolean;
+    } | null = null;
     if (user.businessId) {
       const b = await Business.findById(user.businessId).select('name plan').lean();
       businessName = b?.name ?? null;
       plan = normalizePlan(typeof (b as { plan?: string } | null)?.plan === 'string' ? (b as { plan: string }).plan : null);
+      const settings = await BusinessSettings.findOne({ businessId: user.businessId }).select('features').lean();
+      const f = settings?.features as
+        | {
+            bookingEnabled?: boolean;
+            marketingModule?: boolean;
+            waitlistEnabled?: boolean;
+            analyticsEnabled?: boolean;
+          }
+        | undefined;
+      if (f) {
+        businessFeatures = {
+          bookingEnabled: f.bookingEnabled !== false,
+          marketingModule: !!f.marketingModule,
+          waitlistEnabled: !!f.waitlistEnabled,
+          analyticsEnabled: !!f.analyticsEnabled,
+        };
+      }
     }
 
     res.json({
@@ -329,6 +428,7 @@ export async function patchAdminUser(req: AuthRequest, res: Response): Promise<v
       businessId: user.businessId?.toString() ?? null,
       businessName,
       plan,
+      businessFeatures,
       createdAt: user.createdAt,
       lastLoginAt: user.lastLoginAt ?? null,
     });

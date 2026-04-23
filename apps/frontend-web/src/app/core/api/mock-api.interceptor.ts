@@ -141,6 +141,12 @@ const MOCK_ADMIN_USER_ROWS: Record<string, unknown>[] = [
     businessId: 'mock-business-1',
     businessName: 'Demo Salon',
     plan: 'pro',
+    businessFeatures: {
+      bookingEnabled: true,
+      marketingModule: false,
+      waitlistEnabled: false,
+      analyticsEnabled: true,
+    },
     createdAt: '2024-06-02T10:00:00.000Z',
     lastLoginAt: '2024-06-15T12:00:00.000Z',
   },
@@ -195,8 +201,18 @@ function getPublicSlugFromUrl(url: string): string | null {
   return m ? m[1] : null;
 }
 
+/** GET /api/public/businesses/:slug only (no /services, /availability, /landing). Uses path without query. */
 function isPublicBusinessesGet(req: HttpRequest<unknown>): boolean {
-  return req.method === 'GET' && /\/api\/public\/businesses\/[^/]+\/?(\?|$)/.test(req.url);
+  if (req.method !== 'GET') return false;
+  const u = req.url.split('?')[0];
+  return /\/api\/public\/businesses\/[^/]+\/?$/.test(u);
+}
+
+/** GET /api/public/businesses/:slug/landing */
+function isPublicBusinessesLandingGet(req: HttpRequest<unknown>): boolean {
+  if (req.method !== 'GET') return false;
+  const u = req.url.split('?')[0];
+  return /\/api\/public\/businesses\/[^/]+\/landing\/?$/.test(u);
 }
 
 function isPublicBusinessesServicesGet(req: HttpRequest<unknown>): boolean {
@@ -928,6 +944,32 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     if (typeof body['name'] === 'string') {
       row['name'] = body['name'];
     }
+    if (typeof body['email'] === 'string') {
+      row['email'] = String(body['email']).toLowerCase().trim();
+    }
+    const nextRole = body['role'];
+    if (
+      (nextRole === 'staff' || nextRole === 'client') &&
+      row['role'] !== 'super_admin' &&
+      row['role'] !== 'owner'
+    ) {
+      row['role'] = nextRole;
+    }
+    const bf = body['businessFeatures'];
+    if (bf && typeof bf === 'object' && !Array.isArray(bf)) {
+      const cur = (row['businessFeatures'] as Record<string, boolean> | undefined) ?? {};
+      const inc = bf as Record<string, unknown>;
+      row['businessFeatures'] = {
+        bookingEnabled:
+          typeof inc['bookingEnabled'] === 'boolean' ? inc['bookingEnabled'] : cur['bookingEnabled'] ?? true,
+        marketingModule:
+          typeof inc['marketingModule'] === 'boolean' ? inc['marketingModule'] : cur['marketingModule'] ?? false,
+        waitlistEnabled:
+          typeof inc['waitlistEnabled'] === 'boolean' ? inc['waitlistEnabled'] : cur['waitlistEnabled'] ?? false,
+        analyticsEnabled:
+          typeof inc['analyticsEnabled'] === 'boolean' ? inc['analyticsEnabled'] : cur['analyticsEnabled'] ?? false,
+      };
+    }
     return from([new HttpResponse({ status: 200, body: { ...row } })]);
   }
   if (req.method === 'GET' && /\/api\/admin\/settings\/?$/.test(adminPath)) {
@@ -1182,8 +1224,48 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     }
   }
 
-  // ——— Public booking: GET business (full), GET services, GET availability, POST appointments ———
-  if (isPublicBusinessesGet(req) && !req.url.includes('/services') && !req.url.includes('/availability')) {
+  // ——— Public booking: GET business (full), GET landing bundle, GET services, GET availability, POST appointments ———
+  if (isPublicBusinessesLandingGet(req)) {
+    const slug = getPublicBusinessesSlugFromUrl(req.url);
+    if (!slug) return next(req);
+    const known = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug) as
+      | Record<string, unknown>
+      | undefined;
+    const name = known ? String(known['name']) : slug;
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          businessName: name,
+          slug,
+          heroSection: {
+            businessName: name,
+            tagline: 'יופי מקצועי, תוצאות מושלמות',
+            description: '',
+            heroImage: null,
+            heroImageSecondary: null,
+          },
+          services: [],
+          gallery: [],
+          contact: { phone: '', whatsapp: '', email: '', location: '' },
+          products: [],
+          reviews: [],
+          stats: { rating: 5, customersCount: 0, completedAppointmentsCount: 0 },
+          sections: {
+            hero: true,
+            services: true,
+            gallery: true,
+            products: true,
+            reviews: true,
+            cta: true,
+          },
+          portfolioImageUrls: [],
+        },
+      }),
+    ]);
+  }
+
+  if (isPublicBusinessesGet(req)) {
     const slug = getPublicBusinessesSlugFromUrl(req.url);
     if (!slug) return next(req);
     const known = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug) as Record<string, unknown> | undefined;

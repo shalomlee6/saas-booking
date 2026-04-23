@@ -8,6 +8,7 @@ import {
 } from '../controllers/publicController';
 import {
   getPublicBusinessBySlug,
+  getPublicBusinessLanding,
   getPublicServices as getPublicServicesBooking,
   getAvailability,
   getPublicAvailability,
@@ -45,6 +46,11 @@ publicRouter.get(
   '/businesses/:slug',
   validateParams(slugParamsSchema),
   asyncHandler(getPublicBusinessBySlug)
+);
+publicRouter.get(
+  '/businesses/:slug/landing',
+  validateParams(slugParamsSchema),
+  asyncHandler(getPublicBusinessLanding)
 );
 publicRouter.get(
   '/businesses/:slug/services',

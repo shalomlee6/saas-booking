@@ -51,6 +51,40 @@ const landingProductSchema = z
   })
   .strict();
 
+const landingGalleryItemSchema = z
+  .object({
+    id: z.string().min(1).max(120),
+    imageUrl: z.string().min(1).max(2000),
+    title: z.string().max(200).trim().optional().or(z.literal('')),
+    type: z.enum(['product', 'service']).optional(),
+  })
+  .strict();
+
+const landingContactSchema = z
+  .object({
+    whatsapp: z.string().max(40).trim().optional().or(z.literal('')),
+    email: z.string().max(320).trim().optional().or(z.literal('')),
+    location: z.string().max(500).trim().optional().or(z.literal('')),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    const e = data.email?.trim() ?? '';
+    if (e && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      ctx.addIssue({ code: 'custom', path: ['email'], message: 'Invalid email' });
+    }
+  });
+
+const landingSectionVisibilitySchema = z
+  .object({
+    hero: z.boolean().optional(),
+    services: z.boolean().optional(),
+    gallery: z.boolean().optional(),
+    products: z.boolean().optional(),
+    reviews: z.boolean().optional(),
+    cta: z.boolean().optional(),
+  })
+  .strict();
+
 /** PUT /api/settings/me/settings — partial document; unknown keys rejected */
 export const updateBusinessSettingsBodySchema = z
   .object({
@@ -61,6 +95,12 @@ export const updateBusinessSettingsBodySchema = z
     bookingWelcomeMessage: z.string().max(2000).trim().optional().or(z.literal('')),
     landingTagline: z.string().max(300).trim().optional().or(z.literal('')),
     coverImageUrl: z.string().max(2000).trim().optional().or(z.literal('')),
+    landingSecondaryHeroImageUrl: z.string().max(2000).trim().optional().or(z.literal('')),
+    landingHeroDescription: z.string().max(2000).trim().optional().or(z.literal('')),
+    landingGalleryItems: z.array(landingGalleryItemSchema).max(50).optional(),
+    landingContact: landingContactSchema.optional(),
+    landingServiceOrder: z.array(z.string().max(80)).max(100).optional(),
+    landingSectionVisibility: landingSectionVisibilitySchema.optional(),
     portfolioImages: z.array(z.string().max(2000)).max(50).optional(),
     landingProducts: z.array(landingProductSchema).max(30).optional(),
     publicRating: z.number().min(1).max(5).optional(),

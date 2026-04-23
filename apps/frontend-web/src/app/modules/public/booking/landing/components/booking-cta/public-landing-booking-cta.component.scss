@@ -41,15 +41,29 @@
   color: #fff;
 }
 
-.pl-cta__phone {
-  display: block;
+.pl-cta__links {
   margin-top: 1rem;
-  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pl-cta__link {
+  font-size: 0.9375rem;
   font-weight: 500;
   color: $pl-primary;
   text-decoration: none;
 }
 
-.pl-cta__phone:hover {
+.pl-cta__link:hover {
   text-decoration: underline;
+}
+
+.pl-cta__loc {
+  margin: 0.25rem 0 0;
+  font-size: 0.875rem;
+  color: $pl-text-muted;
+  line-height: 1.4;
+  max-width: 28rem;
 }

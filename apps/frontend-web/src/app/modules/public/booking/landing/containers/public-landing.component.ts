@@ -21,6 +21,7 @@ import { forkJoin, distinctUntilChanged, map } from 'rxjs';
 import {
   PublicApiService,
   type PublicBusinessForBooking,
+  type PublicLandingGalleryItem,
   type PublicLandingProductItem,
   type PublicLandingReviewItem,
   type PublicService,
@@ -140,6 +141,22 @@ export class PublicLandingComponent implements OnInit {
     () => this.bookingBusiness()?.landing?.tagline?.trim() || DEFAULT_TAGLINE
   );
 
+  readonly landingHeroDescription = computed(
+    () => this.bookingBusiness()?.landing?.heroDescription?.trim() ?? ''
+  );
+
+  readonly sectionVisibility = computed(() => {
+    const v = this.bookingBusiness()?.landing?.sectionVisibility;
+    return {
+      hero: v?.hero !== false,
+      services: v?.services !== false,
+      gallery: v?.gallery !== false,
+      products: v?.products !== false,
+      reviews: v?.reviews !== false,
+      cta: v?.cta !== false,
+    };
+  });
+
   /**
    * Two hero photos side by side: cover URL, then `media.photos`, then defaults
    * (same sources as the original carousel — business imagery with picsum fallback).
@@ -152,6 +169,8 @@ export class PublicLandingComponent implements OnInit {
       if (t && !ordered.includes(t)) ordered.push(t);
     };
     add(b?.landing?.coverImageUrl);
+    const sec = b?.landing?.secondaryHeroImageUrl;
+    if (typeof sec === 'string') add(sec);
     for (const p of b?.media?.photos ?? []) {
       add(p);
     }
@@ -173,8 +192,31 @@ export class PublicLandingComponent implements OnInit {
 
   readonly landingPhone = computed(() => this.bookingBusiness()?.landing?.phone ?? null);
 
-  readonly portfolioImages = computed(
-    () => this.bookingBusiness()?.landing?.portfolioImages ?? []
+  readonly landingGalleryItems = computed((): PublicLandingGalleryItem[] => {
+    const landing = this.bookingBusiness()?.landing;
+    const structured = landing?.galleryItems;
+    if (structured && structured.length > 0) {
+      return structured;
+    }
+    const urls = landing?.portfolioImages ?? [];
+    return urls.map((url, i) => ({
+      id: `legacy-${i}`,
+      imageUrl: url,
+      title: '',
+      type: 'service' as const,
+    }));
+  });
+
+  readonly contactWhatsapp = computed(
+    () => this.bookingBusiness()?.landing?.contact?.whatsapp?.trim() || null
+  );
+
+  readonly contactEmail = computed(
+    () => this.bookingBusiness()?.landing?.contact?.email?.trim() || null
+  );
+
+  readonly contactLocation = computed(
+    () => this.bookingBusiness()?.landing?.contact?.location?.trim() || null
   );
 
   readonly landingProducts = computed((): PublicLandingProductItem[] => {
@@ -222,6 +264,13 @@ export class PublicLandingComponent implements OnInit {
     if (!p?.trim()) return null;
     const digits = p.replace(/\D/g, '');
     return digits.length > 0 ? `tel:${digits}` : null;
+  });
+
+  readonly stickyWhatsappHref = computed((): string | null => {
+    const w = this.contactWhatsapp();
+    if (!w) return null;
+    const digits = w.replace(/\D/g, '');
+    return digits.length > 0 ? `https://wa.me/${digits}` : null;
   });
 
   readonly loadingUpcoming = signal(false);

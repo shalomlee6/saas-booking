@@ -3,9 +3,17 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 
+/**
+ * Builds the JSON API prefix used by HttpClient.
+ * - Empty: same-origin `/api` (Angular dev proxy or app served with API under `/api`).
+ * - Non-empty: `environment.apiUrl` may be either the API host (`https://api.example.com`)
+ *   or the full API root already ending in `/api` — avoid doubling to `/api/api/...` (404s).
+ */
 function buildApiBaseUrl(): string {
-  const origin = (environment.apiUrl ?? '').replace(/\/$/, '');
-  return origin ? `${origin}/api` : '/api';
+  const raw = (environment.apiUrl ?? '').trim().replace(/\/$/, '');
+  if (!raw) return '/api';
+  if (raw.endsWith('/api')) return raw;
+  return `${raw}/api`;
 }
 
 export type ApiQueryParams = Record<string, string | number | boolean | undefined | null>;
@@ -49,6 +57,14 @@ export class ApiService {
 
   put<T>(path: string, body: unknown, query?: ApiQueryParams): Observable<T> {
     return this.http.put<T>(this.buildUrl(path), body, {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+    });
+  }
+
+  /** POST multipart (e.g. file upload). Do not set Content-Type — browser sets boundary. */
+  postFormData<T>(path: string, body: FormData, query?: ApiQueryParams): Observable<T> {
+    return this.http.post<T>(this.buildUrl(path), body, {
       withCredentials: true,
       params: this.toHttpParams(query),
     });

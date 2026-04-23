@@ -24,6 +24,28 @@ export interface ILandingProduct {
   price: number;
 }
 
+export interface ILandingGalleryItem {
+  id: string;
+  imageUrl: string;
+  title?: string;
+  type: 'product' | 'service';
+}
+
+export interface ILandingContact {
+  whatsapp?: string;
+  email?: string;
+  location?: string;
+}
+
+export interface ILandingSectionVisibility {
+  hero?: boolean;
+  services?: boolean;
+  gallery?: boolean;
+  products?: boolean;
+  reviews?: boolean;
+  cta?: boolean;
+}
+
 export interface IBusinessSettings extends Document {
   businessId: Types.ObjectId;
   plan: SettingsPlan;
@@ -61,6 +83,18 @@ export interface IBusinessSettings extends Document {
   publicRating?: number;
   /** Public contact phone shown on landing / booking CTA (optional). */
   businessPhonePublic?: string;
+  /** Secondary hero / feature image URL for public landing. */
+  landingSecondaryHeroImageUrl?: string;
+  /** Longer hero body copy on public landing. */
+  landingHeroDescription?: string;
+  /** Structured gallery items (image, title, type) for public landing. */
+  landingGalleryItems?: ILandingGalleryItem[];
+  /** Extended contact block (whatsapp, email, location) for public landing. */
+  landingContact?: ILandingContact;
+  /** Service IDs in display order on public landing. */
+  landingServiceOrder?: string[];
+  /** Toggle visibility of landing sections. */
+  landingSectionVisibility?: ILandingSectionVisibility;
   localization: {
     language: 'he' | 'en';
     timezone: string;
@@ -122,6 +156,33 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
     bookingWelcomeMessage: { type: String, default: '' },
     landingTagline: { type: String, default: '' },
     coverImageUrl: { type: String, default: '' },
+    landingSecondaryHeroImageUrl: { type: String, default: '' },
+    landingHeroDescription: { type: String, default: '' },
+    landingGalleryItems: {
+      type: [
+        {
+          id: { type: String, required: true },
+          imageUrl: { type: String, required: true },
+          title: { type: String, default: '' },
+          type: { type: String, enum: ['product', 'service'], default: 'service' },
+        },
+      ],
+      default: [],
+    },
+    landingContact: {
+      whatsapp: { type: String, default: '' },
+      email: { type: String, default: '' },
+      location: { type: String, default: '' },
+    },
+    landingServiceOrder: { type: [String], default: [] },
+    landingSectionVisibility: {
+      hero: { type: Boolean },
+      services: { type: Boolean },
+      gallery: { type: Boolean },
+      products: { type: Boolean },
+      reviews: { type: Boolean },
+      cta: { type: Boolean },
+    },
     portfolioImages: { type: [String], default: [] },
     landingProducts: {
       type: [

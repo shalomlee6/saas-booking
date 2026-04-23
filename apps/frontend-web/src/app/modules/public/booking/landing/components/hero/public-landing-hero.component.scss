@@ -90,9 +90,19 @@
 }
 
 .pl-hero-intro__tagline {
-  margin: 0 0 1rem;
+  margin: 0 0 0.5rem;
   font-size: 14px;
   color: $pl-text-muted;
+}
+
+.pl-hero-intro__desc {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: $pl-text-heading;
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 ::ng-deep .pl-hero-intro__cta.p-button {

@@ -1,58 +1,4 @@
 <p-toast />
-<p-confirmDialog />
-<p-menu #rowMenu [model]="actionsMenuModel()" [popup]="true" appendTo="body" />
-
-<p-popover #planPanel styleClass="sa-users__plan-panel" [dismissable]="true" appendTo="body">
-  @if (planTargetRow(); as pr) {
-    <div class="sa-users__plan-pop">
-      <p class="sa-users__plan-pop-title">Change plan for {{ pr.email }}</p>
-      <div class="sa-users__plan-options">
-        <div class="sa-users__plan-opt">
-          <div class="sa-users__plan-opt-head">FREE</div>
-          <ul class="sa-users__plan-feats">
-            <li>✓ 1 staff member</li>
-            <li>✓ 2 services</li>
-            <li>✗ Analytics</li>
-          </ul>
-          <p-button
-            label="Select"
-            styleClass="sa-users__plan-select"
-            [disabled]="planSavingUserId() === pr.id"
-            (onClick)="applyPlanTier('free')"
-          />
-        </div>
-        <div class="sa-users__plan-opt">
-          <div class="sa-users__plan-opt-head">PRO</div>
-          <ul class="sa-users__plan-feats">
-            <li>✓ 5 staff members</li>
-            <li>✓ 10 services</li>
-            <li>✓ Analytics</li>
-          </ul>
-          <p-button
-            label="Select"
-            styleClass="sa-users__plan-select"
-            [disabled]="planSavingUserId() === pr.id"
-            (onClick)="applyPlanTier('pro')"
-          />
-        </div>
-        <div class="sa-users__plan-opt">
-          <div class="sa-users__plan-opt-head">PREMIUM</div>
-          <ul class="sa-users__plan-feats">
-            <li>✓ Unlimited staff</li>
-            <li>✓ Unlimited services</li>
-            <li>✓ All features</li>
-          </ul>
-          <p-button
-            label="Select"
-            styleClass="sa-users__plan-select"
-            [disabled]="planSavingUserId() === pr.id"
-            (onClick)="applyPlanTier('premium')"
-          />
-        </div>
-      </div>
-    </div>
-  }
-</p-popover>
 
 <div class="sa-users" dir="rtl">
   <header class="sa-users__head">
@@ -156,26 +102,24 @@
                 Name
                 <p-sortIcon field="name" />
               </th>
-              <th class="sa-users__th">Business</th>
-              <th class="sa-users__th">Role</th>
+              <th class="sa-users__th">Email</th>
               <th class="sa-users__th">Plan</th>
               <th class="sa-users__th">Status</th>
-              <th pSortableColumn="createdAt" class="sa-users__th">
-                Created
-                <p-sortIcon field="createdAt" />
-              </th>
               <th pSortableColumn="lastLoginAt" class="sa-users__th">
                 Last login
                 <p-sortIcon field="lastLoginAt" />
               </th>
-              <th class="sa-users__th sa-users__th--actions">Actions</th>
             </tr>
           </ng-template>
           <ng-template #body let-vm>
             <tr
               class="sa-users__tr"
-              [class.sa-users__tr--selected]="selectedRowId() === vm.row.id"
-              (click)="selectRow(vm.row.id)"
+              role="button"
+              tabindex="0"
+              [attr.data-testid]="'user-row-' + vm.row.id"
+              (click)="openUser(vm.row)"
+              (keydown.enter)="openUser(vm.row)"
+              (keydown.space)="$event.preventDefault(); openUser(vm.row)"
             >
               <td class="sa-users__td">
                 <div class="sa-users__who">
@@ -189,62 +133,25 @@
                   >
                   <div class="sa-users__who-text">
                     <span class="sa-users__name">{{ vm.row.name || '—' }}</span>
-                    <span class="sa-users__email">{{ vm.row.email }}</span>
                   </div>
                 </div>
               </td>
-              <td class="sa-users__td sa-users__td--ellipsis">{{ vm.row.businessName || '—' }}</td>
+              <td class="sa-users__td sa-users__td-email">{{ vm.row.email }}</td>
               <td class="sa-users__td">
-                <span class="sa-users__badge-role" [class]="vm.roleClass">{{ vm.roleLbl }}</span>
-              </td>
-              <td class="sa-users__td">
-                @if (vm.row.businessId) {
-                  <button
-                    type="button"
-                    class="sa-users__badge-plan"
-                    [class]="vm.planClass"
-                    [disabled]="planSavingUserId() === vm.row.id"
-                    (click)="openPlanPanel($event, vm.row); $event.stopPropagation()"
-                  >
-                    @if (planSavingUserId() === vm.row.id) {
-                      <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-                    }
-                    {{ vm.planLbl }}
-                  </button>
-                } @else {
-                  <span class="sa-users__muted">—</span>
-                }
+                <span class="sa-users__cell-muted">{{ vm.planLbl }}</span>
               </td>
               <td class="sa-users__td">
-                @if (vm.row.status === 'active') {
-                  <span class="sa-users__badge-status sa-users__badge-status--active">
-                    <span class="sa-users__dot"></span>
-                    Active
-                  </span>
-                } @else {
-                  <span class="sa-users__badge-status sa-users__badge-status--suspended">
-                    <span class="sa-users__dot"></span>
-                    Suspended
-                  </span>
-                }
+                <span class="sa-users__status" [class.sa-users__status--inactive]="!vm.statusActive">
+                  <span class="sa-users__status-dot" aria-hidden="true"></span>
+                  {{ vm.statusLbl }}
+                </span>
               </td>
-              <td class="sa-users__td">{{ vm.row.createdAt | date: 'd MMM y' : '' : 'en-US' }}</td>
-              <td class="sa-users__td">{{ vm.lastRelative }}</td>
-              <td class="sa-users__td sa-users__td--actions">
-                <button
-                  type="button"
-                  class="sa-users__kebab"
-                  (click)="openActionsMenu($event, vm.row); $event.stopPropagation()"
-                  aria-label="Actions"
-                >
-                  ···
-                </button>
-              </td>
+              <td class="sa-users__td sa-users__cell-muted">{{ vm.lastRelative }}</td>
             </tr>
           </ng-template>
           <ng-template #emptymessage>
             <tr>
-              <td colspan="8" class="sa-users__td-empty">No users on this page.</td>
+              <td colspan="5" class="sa-users__td-empty">No users on this page.</td>
             </tr>
           </ng-template>
         </p-table>
@@ -303,69 +210,4 @@
       </footer>
     </div>
   }
-
-  <p-dialog
-    header="User details"
-    [visible]="detailVisible()"
-    (visibleChange)="detailVisible.set($event)"
-    [modal]="true"
-    [style]="{ width: '32rem' }"
-    [dismissableMask]="true"
-  >
-    @if (detailLoading()) {
-      <p-skeleton height="8rem" />
-    } @else if (detailUser(); as u) {
-      <dl class="sa-users__detail">
-        <dt>Email</dt>
-        <dd>{{ u.email }}</dd>
-        <dt>Name</dt>
-        <dd>{{ u.name || '—' }}</dd>
-        <dt>Phone</dt>
-        <dd>{{ u.phone || '—' }}</dd>
-        <dt>Role</dt>
-        <dd>{{ u.role }}</dd>
-        <dt>Status</dt>
-        <dd>{{ u.status }}</dd>
-        <dt>Plan</dt>
-        <dd>
-          @if (u.plan) {
-            {{ u.plan }}
-          } @else {
-            —
-          }
-        </dd>
-        <dt>Business</dt>
-        <dd>{{ u.businessName || '—' }}</dd>
-        <dt>Created</dt>
-        <dd>{{ u.createdAt | date: 'medium' }}</dd>
-        <dt>Last login</dt>
-        <dd>{{ u.lastLoginAt ? (u.lastLoginAt | date: 'medium') : '—' }}</dd>
-      </dl>
-      <div class="sa-users__detail-actions">
-        <p-button label="Reset password" [outlined]="true" (onClick)="resetPasswordFuture()" />
-      </div>
-    }
-  </p-dialog>
-
-  <p-dialog
-    header="Edit user"
-    [visible]="editVisible()"
-    (visibleChange)="editVisible.set($event)"
-    [modal]="true"
-    [style]="{ width: '26rem' }"
-  >
-    <label class="sa-users__edit-field">
-      <span>Name</span>
-      <input pInputText [ngModel]="editName()" (ngModelChange)="editName.set($event)" class="sa-users__edit-input" />
-    </label>
-    <div class="sa-users__edit-actions">
-      <p-button label="Cancel" [text]="true" (onClick)="editVisible.set(false)" />
-      <p-button
-        label="Save"
-        [loading]="editLoading()"
-        styleClass="sa-users__create"
-        (onClick)="saveEdit()"
-      />
-    </div>
-  </p-dialog>
 </div>
