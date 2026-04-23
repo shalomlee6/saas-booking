@@ -21,3 +21,21 @@ export const publicRouteLimiter = rateLimit({
   legacyHeaders: false,
   message: jsonMessage,
 });
+
+/** Authenticated backoffice routes (business, appointments, customers, etc.) */
+export const apiRouteLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonMessage,
+});
+
+/** Admin/super-admin routes. */
+export const adminRouteLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: jsonMessage,
+});

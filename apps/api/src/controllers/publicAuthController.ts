@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { Business } from '../models/Business';
 import { Customer } from '../models/Customer';
 import jwt from 'jsonwebtoken';
+import { validateEnv } from '../config/env';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
 import { setPublicCustomerSessionCookie } from '../utils/publicCustomerSession';
 
@@ -154,6 +155,7 @@ export async function verifyOtp(req: Request, res: Response) {
     }
 
     // Generate JWT token for client (role: 'customer' for public booking)
+    const env = validateEnv();
     const token = jwt.sign(
       {
         sub: customer._id.toString(),
@@ -162,7 +164,7 @@ export async function verifyOtp(req: Request, res: Response) {
         slug: businessSlug,
         role: 'customer',
       },
-      process.env.JWT_SECRET || 'dev-secret',
+      env.JWT_SECRET,
       { expiresIn: '30d' }
     );
 

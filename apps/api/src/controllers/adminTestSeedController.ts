@@ -16,6 +16,10 @@ import type { SettingsPlan } from '../dto/enums';
  * Guarded by E2E_TEST_SEED_SECRET (header x-e2e-test-seed-secret).
  */
 export async function postAdminTestSeed(req: Request, res: Response): Promise<void> {
+  if (process.env.NODE_ENV === 'production') {
+    res.status(404).json({ message: 'Not found' });
+    return;
+  }
   try {
     const secret = process.env.E2E_TEST_SEED_SECRET;
     if (!secret || secret.length < 8) {

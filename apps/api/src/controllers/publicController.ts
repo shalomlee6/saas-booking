@@ -8,6 +8,7 @@ import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { AppointmentError } from '../services/appointmentErrors';
 import { defaultOpeningHours } from '../models/BusinessSettings';
 import jwt from 'jsonwebtoken';
+import { validateEnv } from '../config/env';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { toIsoUtcString } from '../dto/datetime';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
@@ -249,7 +250,8 @@ export async function createPublicAppointment(req: Request, res: Response) {
 
     let decoded: any;
     try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret');
+      const env = validateEnv();
+      decoded = jwt.verify(token, env.JWT_SECRET);
     } catch (err) {
       return res.status(401).json({ message: 'Invalid token' });
     }

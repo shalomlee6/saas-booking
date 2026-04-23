@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { validateEnv } from '../config/env';
 import { AuthRequest } from '../middleware/auth';
 import { Business } from '../models/Business';
 import { User } from '../models/User';
@@ -188,6 +189,7 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
     });
 
     // Create impersonation token
+    const env = validateEnv();
     const token = jwt.sign(
       {
         userId: req.user.userId,
@@ -196,7 +198,7 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
         impersonatingBusinessId: businessId,
         impersonating: true,
       },
-      process.env.JWT_SECRET || 'dev-secret',
+      env.JWT_SECRET,
       { expiresIn: '30m' } // 30 minutes
     );
 

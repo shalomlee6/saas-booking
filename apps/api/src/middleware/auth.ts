@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { validateEnv } from '../config/env';
 import { IBusinessSettings } from '../models/BusinessSettings';
 
 export interface AuthRequest extends Request {
@@ -45,7 +46,8 @@ export function auth(req: AuthRequest, res: Response, next: NextFunction) {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as Record<string, unknown>;
+    const env = validateEnv();
+    const decoded = jwt.verify(token, env.JWT_SECRET) as Record<string, unknown>;
     req.user = {
       userId: String(decoded.userId ?? decoded.sub ?? ''),
       role: String(decoded.role ?? ''),

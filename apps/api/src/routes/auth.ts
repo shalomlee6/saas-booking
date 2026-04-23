@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { validateEnv } from '../config/env';
 import { User } from '../models/User';
 import { Business } from '../models/Business';
 import { generateSlug } from '../utils/slug';
@@ -69,7 +70,7 @@ authRouter.post('/register', async (req, res) => {
     user.businessId = business._id;
     await user.save();
 
-
+    const env = validateEnv();
     const token = jwt.sign(
       {
         userId: user._id,
@@ -77,7 +78,7 @@ authRouter.post('/register', async (req, res) => {
         email: user.email,
         businessId: user.businessId, 
       },
-        process.env.JWT_SECRET || 'dev-secret',
+      env.JWT_SECRET,
       { expiresIn: '7d' }
     );
 
@@ -135,7 +136,8 @@ authRouter.post('/login', async (req, res) => {
       payload.businessId = user.businessId;
     }
 
-    const token = jwt.sign(payload, process.env.JWT_SECRET || 'dev-secret', { expiresIn: '7d' });
+    const env = validateEnv();
+    const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: '7d' });
 
     res.cookie('sb_token', token, authCookieOptions());
 

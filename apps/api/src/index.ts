@@ -15,13 +15,25 @@ import { publicRouter } from './routes/public';
 import { settingsRouter } from './routes/settings';
 import { adminRouter } from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
-import { authRouteLimiter, publicRouteLimiter } from './middleware/rateLimits';
+import {
+  authRouteLimiter,
+  publicRouteLimiter,
+  apiRouteLimiter,
+  adminRouteLimiter,
+} from './middleware/rateLimits';
 
 const env = validateEnv();
 
 const app = express();
 
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+app.use(
+  '/uploads',
+  (_req, res, next) => {
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    next();
+  },
+  express.static(path.join(process.cwd(), 'uploads'))
+);
 
 if (env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
@@ -29,8 +41,12 @@ if (env.NODE_ENV === 'production') {
 
 app.use(
   helmet({
-    contentSecurityPolicy: false,
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
   })
 );
 
@@ -45,13 +61,13 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use('/api/auth', authRouteLimiter, authRouter);
-app.use('/api/business', businessRouter);
-app.use('/api/customers', customersRouter);
-app.use('/api/services', servicesRouter);
-app.use('/api/appointments', appointmentsRouter);
+app.use('/api/business', apiRouteLimiter, businessRouter);
+app.use('/api/customers', apiRouteLimiter, customersRouter);
+app.use('/api/services', apiRouteLimiter, servicesRouter);
+app.use('/api/appointments', apiRouteLimiter, appointmentsRouter);
 app.use('/api/public', publicRouteLimiter, publicRouter);
-app.use('/api/settings', settingsRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api/settings', apiRouteLimiter, settingsRouter);
+app.use('/api/admin', adminRouteLimiter, adminRouter);
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'saas-booking-api' });

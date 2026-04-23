@@ -175,9 +175,10 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
       isActive: true,
     });
 
-    console.info('[provisionTenant] Welcome email (mock):', {
+    // TODO: Replace with real transactional email service.
+    // Send `tempPassword` via email to the owner — do NOT log it.
+    console.info('[provisionTenant] Tenant provisioned:', {
       to: email,
-      temporaryPassword: tempPassword,
       businessName: input.businessName.trim(),
       slug,
     });

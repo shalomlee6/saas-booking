@@ -38,11 +38,11 @@ import {
 
 export const adminRouter = Router();
 
-adminRouter.post('/test-seed', postAdminTestSeed);
-
-// All other admin routes require super admin
+// Admin routes require authentication and super admin
 adminRouter.use(auth);
 adminRouter.use(requireSuperAdmin);
+
+adminRouter.post('/test-seed', postAdminTestSeed);
 
 adminRouter.get('/businesses', getAdminBusinesses);
 adminRouter.post('/businesses', validateBody(createAdminBusinessBodySchema), createAdminBusiness);

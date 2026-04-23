@@ -1,5 +1,6 @@
 import type { CookieOptions, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { validateEnv } from '../config/env';
 import type { PublicCustomer } from '../types/publicCustomer';
 
 export const PUBLIC_CUSTOMER_COOKIE_NAME = 'sb_public_customer';
@@ -30,7 +31,8 @@ export function getPublicCustomerJwtFromRequest(req: Request): string | undefine
 
 export function verifyPublicCustomerJwt(token: string): PublicCustomer | null {
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'dev-secret') as Record<string, unknown>;
+    const env = validateEnv();
+    const decoded = jwt.verify(token, env.JWT_SECRET) as Record<string, unknown>;
     if (String(decoded.role) !== 'customer') return null;
     const customerId = decoded.customerId != null ? String(decoded.customerId) : null;
     const businessId = decoded.businessId != null ? String(decoded.businessId) : null;

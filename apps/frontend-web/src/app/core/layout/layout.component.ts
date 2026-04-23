@@ -52,7 +52,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly business = this.auth.business;
   readonly isSuperAdmin = computed(() => this.auth.isSuperAdmin());
   readonly isImpersonating = this.auth.isImpersonating;
-  readonly activeBusinessName = computed(() => this.auth.activeBusinessName());
+  readonly activeBusinessName = this.auth.activeBusinessName;
 
   /** Mobile: drawer open/close. Desktop: unused. */
   readonly isMobileMenuOpen = signal(false);

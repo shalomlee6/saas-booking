@@ -226,9 +226,7 @@ export class AuthService {
   }
 
   /** Active business name (own business or impersonated). */
-  activeBusinessName(): string | null {
-    return this.business()?.name ?? null;
-  }
+  readonly activeBusinessName = computed(() => this.business()?.name ?? null);
 
   /**
    * Begin impersonating a business.
