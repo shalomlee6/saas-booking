@@ -1,5 +1,12 @@
 import { Injectable, inject } from '@angular/core';
-import { Observable, BehaviorSubject, switchMap, map, shareReplay } from 'rxjs';
+import {
+  Observable,
+  BehaviorSubject,
+  switchMap,
+  map,
+  shareReplay,
+  combineLatest,
+} from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
 import type { Appointment, AppointmentListItem } from '../model/appointment';
 import type { CreateAppointmentDto } from '../dto/create-appointment.dto';
@@ -18,6 +25,8 @@ export class AppointmentsApiService {
   private readonly api = inject(ApiService);
 
   private readonly refresh$ = new BehaviorSubject<void>(undefined);
+  /** Bumps to drop shareReplay cache when switching tenant / user. */
+  private readonly tenantContext$ = new BehaviorSubject(0);
 
   /**
    * Reactive stream: re-fetches when refresh() is called.
@@ -25,13 +34,18 @@ export class AppointmentsApiService {
    * (see `getAppointmentsList` in the API).
    * Pass `{ from, to }` to `list()` for a custom window.
    */
-  readonly appointments$ = this.refresh$.pipe(
+  readonly appointments$ = combineLatest([this.refresh$, this.tenantContext$]).pipe(
     switchMap(() => this.list({})),
     shareReplay(1)
   );
 
   refresh(): void {
     this.refresh$.next();
+  }
+
+  /** Call on logout / unauthorized so tenant-scoped cache is not reused. */
+  invalidateTenantScope(): void {
+    this.tenantContext$.next(this.tenantContext$.value + 1);
   }
 
   /** GET /api/appointments?from=...&to=... Returns flattened DTO; map to Appointment with start/end as Date for calendar. */

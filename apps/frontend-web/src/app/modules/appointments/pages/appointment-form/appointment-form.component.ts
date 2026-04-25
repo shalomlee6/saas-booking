@@ -5,6 +5,8 @@ import {
   FormGroup,
   ReactiveFormsModule,
   Validators,
+  type ValidatorFn,
+  type AbstractControl,
 } from '@angular/forms';
 import { forkJoin, finalize } from 'rxjs';
 import { MessageService } from 'primeng/api';
@@ -32,6 +34,16 @@ const STATUS_OPTIONS: { label: string; value: 'confirmed' | 'pending' }[] = [
   { label: 'מאושר', value: 'confirmed' },
   { label: 'ממתין', value: 'pending' },
 ];
+
+const endAfterStartValidator: ValidatorFn = (
+  control: AbstractControl
+): Record<string, true> | null => {
+  const start = control.get('startTime')?.value;
+  const end = control.get('endTime')?.value;
+  if (!(start instanceof Date) || Number.isNaN(start.getTime())) return null;
+  if (!(end instanceof Date) || Number.isNaN(end.getTime())) return null;
+  return end.getTime() > start.getTime() ? null : { endBeforeStart: true };
+};
 
 @Component({
   selector: 'app-appointment-form',
@@ -74,7 +86,7 @@ export class AppointmentFormComponent implements OnInit {
     price: [null as number | null],
     status: ['confirmed' as 'confirmed' | 'pending', Validators.required],
     notes: [''],
-  });
+  }, { validators: endAfterStartValidator });
 
   get minDate(): Date {
     const tz = this.auth.businessTimezone();

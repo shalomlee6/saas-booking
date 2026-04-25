@@ -4,7 +4,7 @@ import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
 import { asyncHandler } from '../utils/asyncHandler';
-import { NotFoundError, ValidationError } from '../errors/httpErrors';
+import { ConflictError, NotFoundError, ValidationError } from '../errors/httpErrors';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
 import {
   appointmentCreateBodySchema,
@@ -26,10 +26,10 @@ import {
 import { Appointment } from '../models/Appointment';
 import {
   createAppointmentAtomic,
-  assertNoOverlap,
+  updateAppointmentAtomic,
 } from '../services/createAppointmentAtomic';
-import { assertAppointmentWithinSchedule } from '../services/appointmentScheduleRules';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
+import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
 
 export const appointmentsRouter = Router();
 
@@ -150,8 +150,6 @@ appointmentsRouter.put(
           },
         ]);
       }
-      await assertAppointmentWithinSchedule(new Types.ObjectId(businessId), newStart, newEnd);
-      await assertNoOverlap(new Types.ObjectId(businessId), newStart, newEnd, id);
     }
 
     const update: Record<string, unknown> = {};
@@ -160,17 +158,28 @@ appointmentsRouter.put(
       update.end = newEnd;
     }
     if (typeof status === 'string') {
+      if (
+        !isAllowedAppointmentStatusTransition(
+          existing.status,
+          status as 'pending' | 'confirmed' | 'completed' | 'cancelled'
+        )
+      ) {
+        throw new ConflictError('Invalid appointment status transition');
+      }
       update.status = status;
     }
     if (notes !== undefined) {
       update.notes = notes;
     }
 
-    const appointment = await Appointment.findOneAndUpdate(
-      { _id: id, businessId },
+    const appointment = await updateAppointmentAtomic({
+      businessId: new Types.ObjectId(businessId),
+      appointmentId: id,
+      nextStart: newStart,
+      nextEnd: newEnd,
       update,
-      { new: true }
-    );
+      checkWindowConstraints: timesChanged,
+    });
 
     if (!appointment) {
       throw new NotFoundError('Appointment not found');

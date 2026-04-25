@@ -2,16 +2,19 @@ import { Router } from 'express';
 import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
+import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
+import { asyncHandler } from '../utils/asyncHandler';
 import { Service } from '../models/Service';
 import { assertCanCreateService } from '../utils/planPolicy';
 
 export const servicesRouter = Router();
 
 servicesRouter.use(auth);
+servicesRouter.use(requireBackofficeRole);
 servicesRouter.use(requireBusinessContext);
 
 // GET /api/services
-servicesRouter.get('/', async (req: AuthRequest, res) => {
+servicesRouter.get('/', asyncHandler(async (req: AuthRequest, res) => {
   try {
     const businessId = req.effectiveBusinessId!;
     const services = await Service.find({ businessId, isActive: true }).sort({
@@ -22,10 +25,10 @@ servicesRouter.get('/', async (req: AuthRequest, res) => {
     console.error('Error GET /services:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
-});
+}));
 
 // POST /api/services
-servicesRouter.post('/', async (req: AuthRequest, res) => {
+servicesRouter.post('/', asyncHandler(async (req: AuthRequest, res) => {
   try {
     const businessId = req.effectiveBusinessId!;
     const { name, price, description, durationMinutes, colorHex, textColorHex } = req.body;
@@ -71,10 +74,10 @@ servicesRouter.post('/', async (req: AuthRequest, res) => {
     console.error('Error POST /services:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
-});
+}));
 
 // PUT /api/services/:id
-servicesRouter.put('/:id', async (req: AuthRequest, res) => {
+servicesRouter.put('/:id', asyncHandler(async (req: AuthRequest, res) => {
   try {
     const businessId = req.effectiveBusinessId!;
     const { id } = req.params;
@@ -95,4 +98,4 @@ servicesRouter.put('/:id', async (req: AuthRequest, res) => {
     console.error('Error PUT /services/:id:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
-});
+}));

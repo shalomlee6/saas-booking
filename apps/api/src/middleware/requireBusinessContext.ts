@@ -35,6 +35,12 @@ export async function requireBusinessContext(
       return;
     }
 
+    const exists = await Business.exists({ _id: businessId });
+    if (!exists) {
+      res.status(404).json({ message: 'Business not found' });
+      return;
+    }
+
     req.effectiveBusinessId = businessId;
     next();
   } catch (err) {

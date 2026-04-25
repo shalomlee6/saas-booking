@@ -6,6 +6,7 @@ import {
   computed,
   effect,
   afterNextRender,
+  DestroyRef,
 } from '@angular/core';
 import { DOCUMENT, DatePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
@@ -202,6 +203,8 @@ export class AppointmentsListComponent implements OnInit {
   private readonly growthBrain = inject(GrowthBrainService);
   private readonly doc = inject(DOCUMENT);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
+  private removeResizeListener: (() => void) | null = null;
 
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
@@ -647,6 +650,11 @@ export class AppointmentsListComponent implements OnInit {
       };
       update();
       win.addEventListener('resize', update);
+      this.removeResizeListener = () => win.removeEventListener('resize', update);
+      this.destroyRef.onDestroy(() => {
+        this.removeResizeListener?.();
+        this.removeResizeListener = null;
+      });
     });
   }
 

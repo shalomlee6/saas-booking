@@ -203,6 +203,10 @@ export class CustomerBookPageComponent implements OnInit {
             )
             .pipe(
               catchError((err: unknown) => {
+                if (this.handleUnauthorizedPublicSession(err)) {
+                  this.loadingSlots.set(false);
+                  return EMPTY;
+                }
                 this.loadingSlots.set(false);
                 this.slotsError.set(true);
                 this.slotsErrorDetail.set(
@@ -352,6 +356,9 @@ export class CustomerBookPageComponent implements OnInit {
       },
       error: (err) => {
         this.submitting.set(false);
+        if (this.handleUnauthorizedPublicSession(err)) {
+          return;
+        }
         if (err?.status === 409 && err?.error?.code === 'SLOT_TAKEN') {
           this.messageService.add({
             severity: 'warn',
@@ -424,6 +431,25 @@ export class CustomerBookPageComponent implements OnInit {
 
   private loadSlots(businessId: string, serviceId: string, dateStr: string): void {
     this.loadSlotsTrigger.next({ businessId, serviceId, dateStr });
+  }
+
+  /**
+   * Expired/invalid public customer token:
+   * clear local session so UI immediately exits logged-in mode and re-auth.
+   */
+  private handleUnauthorizedPublicSession(err: unknown): boolean {
+    const status =
+      typeof err === 'object' && err && 'status' in err
+        ? Number((err as { status?: unknown }).status)
+        : 0;
+    if (status !== 401) return false;
+    const slug = this.slug();
+    if (slug) {
+      this.session.clearSession(slug);
+      this.showError('ההתחברות פגה, יש להתחבר מחדש');
+      void this.router.navigate(['/b', slug, 'login']);
+    }
+    return true;
   }
 
   private showError(message: string): void {

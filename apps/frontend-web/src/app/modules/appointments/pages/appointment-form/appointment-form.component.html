@@ -95,6 +95,9 @@
           @if (form.get('endTime')?.invalid && form.get('endTime')?.touched) {
             <small class="appointment-form-error">שדה חובה</small>
           }
+          @if (form.hasError('endBeforeStart') && (form.get('startTime')?.touched || form.get('endTime')?.touched)) {
+            <small class="appointment-form-error">שעת סיום חייבת להיות אחרי שעת התחלה</small>
+          }
         </div>
 
         <div class="field col-12 md:col-6">

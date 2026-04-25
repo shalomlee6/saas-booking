@@ -4,13 +4,13 @@ import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
-import { NotFoundError, UnauthorizedError, ValidationError } from '../errors/httpErrors';
+import { ConflictError, NotFoundError, UnauthorizedError, ValidationError } from '../errors/httpErrors';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { toIsoUtcString } from '../dto/datetime';
 import { computeOwnerAvailableSlots } from '../services/appointmentQueryService';
-import { assertNoOverlap } from '../services/createAppointmentAtomic';
-import { assertAppointmentWithinSchedule } from '../services/appointmentScheduleRules';
+import { updateAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
+import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
 
 function requireBusinessId(req: AuthRequest): string {
   const businessId = getEffectiveBusinessId(req);
@@ -204,11 +204,6 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
     nextStart.getTime() !== existing.start.getTime() ||
     nextEnd.getTime() !== existing.end.getTime();
 
-  if (windowChanged) {
-    await assertAppointmentWithinSchedule(bid, nextStart, nextEnd);
-    await assertNoOverlap(bid, nextStart, nextEnd, id);
-  }
-
   const update: Record<string, unknown> = {
     serviceId: new Types.ObjectId(nextServiceId),
     start: nextStart,
@@ -232,14 +227,27 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
   }
 
   if (body.status !== undefined) {
+    if (
+      !isAllowedAppointmentStatusTransition(
+        existing.status,
+        body.status as 'pending' | 'confirmed' | 'completed' | 'cancelled'
+      )
+    ) {
+      throw new ConflictError('Invalid appointment status transition');
+    }
     update.status = body.status;
   }
   if (body.notes !== undefined) {
     update.notes = body.notes === '' ? undefined : body.notes;
   }
 
-  const appointment = await Appointment.findOneAndUpdate({ _id: id, businessId: bid }, update, {
-    new: true,
+  const appointment = await updateAppointmentAtomic({
+    businessId: bid,
+    appointmentId: id,
+    nextStart,
+    nextEnd,
+    update,
+    checkWindowConstraints: windowChanged,
   });
 
   if (!appointment) {

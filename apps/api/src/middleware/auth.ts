@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { validateEnv } from '../config/env';
 import { IBusinessSettings } from '../models/BusinessSettings';
+import { User } from '../models/User';
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
@@ -19,7 +20,7 @@ export interface AuthUser {
   impersonating?: boolean;
 }
 
-export function auth(req: AuthRequest, res: Response, next: NextFunction) {
+export async function auth(req: AuthRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     let token: string | undefined;
 
@@ -43,23 +44,43 @@ export function auth(req: AuthRequest, res: Response, next: NextFunction) {
     }
 
     if (!token) {
-      return res.status(401).json({ message: 'No token provided' });
+      res.status(401).json({ message: 'No token provided' });
+      return;
     }
 
     const env = validateEnv();
     const decoded = jwt.verify(token, env.JWT_SECRET) as Record<string, unknown>;
+    const userId = String(decoded.userId ?? decoded.sub ?? '');
+    if (!userId) {
+      res.status(401).json({ message: 'Invalid token' });
+      return;
+    }
+
+    const dbUser = await User.findById(userId).select('_id role email businessId status').lean();
+    if (!dbUser || dbUser.status === 'disabled') {
+      res.status(401).json({ message: 'Invalid token' });
+      return;
+    }
+
     req.user = {
-      userId: String(decoded.userId ?? decoded.sub ?? ''),
-      role: String(decoded.role ?? ''),
-      email: decoded.email != null ? String(decoded.email) : undefined,
-      businessId: decoded.businessId != null ? String(decoded.businessId) : undefined,
+      userId,
+      role: String(decoded.role ?? dbUser.role ?? ''),
+      email: dbUser.email ?? (decoded.email != null ? String(decoded.email) : undefined),
+      businessId:
+        decoded.businessId != null
+          ? String(decoded.businessId)
+          : dbUser.businessId != null
+            ? String(dbUser.businessId)
+            : undefined,
       impersonating: decoded.impersonating === true,
       impersonatingBusinessId:
         decoded.impersonatingBusinessId != null ? String(decoded.impersonatingBusinessId) : undefined,
     };
-    return next();
+    next();
+    return;
   } catch (err) {
     console.error('Invalid token', err);
-    return res.status(401).json({ message: 'Invalid token' });
+    res.status(401).json({ message: 'Invalid token' });
+    return;
   }
 }

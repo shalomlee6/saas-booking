@@ -20,13 +20,13 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 export const businessRouter = Router();
 
-businessRouter.get('/me', auth, async (req: AuthRequest, res) => {
+businessRouter.get('/me', auth, requireBusinessContext, asyncHandler(async (req: AuthRequest, res) => {
   try {
-    if (req.user!.role === 'super_admin' && req.user!.impersonating !== true) {
-      return res.status(403).json({ message: 'Not available without impersonation' });
+    const businessId = getEffectiveBusinessId(req);
+    if (!businessId) {
+      return res.status(400).json({ message: 'Business context is required' });
     }
-
-    const business = await Business.findOne({ ownerId: req.user!.userId });
+    const business = await Business.findById(businessId);
 
     if (!business) {
       return res.status(404).json({ message: 'Business not found' });
@@ -37,7 +37,7 @@ businessRouter.get('/me', auth, async (req: AuthRequest, res) => {
     console.error('Error in /business/me:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
-});
+}));
 
 // PATCH /api/business/ui – owner updates own business UI (tenant from JWT / impersonation)
 businessRouter.patch('/ui', auth, requireBusinessContext, async (req: AuthRequest, res) => {

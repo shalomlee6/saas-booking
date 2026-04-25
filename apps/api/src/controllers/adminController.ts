@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import jwt from 'jsonwebtoken';
+import { Types } from 'mongoose';
 import { validateEnv } from '../config/env';
 import { AuthRequest } from '../middleware/auth';
 import { Business } from '../models/Business';
@@ -162,6 +163,9 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
     if (!businessId) {
       return res.status(400).json({ message: 'businessId is required' });
     }
+    if (!Types.ObjectId.isValid(String(businessId))) {
+      return res.status(400).json({ message: 'Invalid businessId' });
+    }
 
     // Verify business exists
     const business = await Business.findById(businessId);
@@ -238,6 +242,9 @@ export async function adminStopImpersonate(req: AuthRequest, res: Response): Pro
 export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Promise<any> {
   try {
     const businessId = req.params.id;
+    if (!Types.ObjectId.isValid(String(businessId))) {
+      return res.status(400).json({ message: 'Invalid business id' });
+    }
     const result = validateBusinessUiBody(req.body);
     if (!result.valid) {
       return res.status(400).json({ message: result.message });

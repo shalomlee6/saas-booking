@@ -5,6 +5,8 @@ import { ApiService } from '../api/api.service';
 import type { BusinessUi } from '../config/theme.service';
 import { ThemeService } from '../config/theme.service';
 import { decodeJwtExpMs } from './jwt-session.util';
+import { AppointmentsApiService } from '../../modules/appointments/services/appointments-api.service';
+import { GrowthBrainService } from '../../modules/dashboard/services/growth-brain.service';
 
 export interface User {
   id: string;
@@ -72,6 +74,8 @@ export class AuthService {
   private readonly api = inject(ApiService);
   private readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
+  private readonly appointmentsApi = inject(AppointmentsApiService);
+  private readonly growthBrain = inject(GrowthBrainService);
 
   /** Prevents duplicate redirects when several API calls return 401 at once. */
   private loggingOut = false;
@@ -182,6 +186,8 @@ export class AuthService {
     this.business.set(null);
     this.businessSettings.set(null);
     this.clearSessionExpiryHint();
+    this.appointmentsApi.invalidateTenantScope();
+    this.growthBrain.invalidateTenantScope();
   }
 
   /**

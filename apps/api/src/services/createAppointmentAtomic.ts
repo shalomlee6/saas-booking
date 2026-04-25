@@ -38,6 +38,15 @@ export interface CreateAppointmentOptions {
   excludeAppointmentId?: Types.ObjectId | string;
 }
 
+export interface UpdateAppointmentAtomicInput {
+  businessId: Types.ObjectId;
+  appointmentId: Types.ObjectId | string;
+  nextStart: Date;
+  nextEnd: Date;
+  update: Record<string, unknown>;
+  checkWindowConstraints?: boolean;
+}
+
 /**
  * Reusable overlap assertion used by both creation and updates.
  * Throws AppointmentError(409, 'SLOT_TAKEN') when a conflicting appointment exists.
@@ -105,6 +114,12 @@ export async function createAppointmentAtomic(
 
   if (start >= end) {
     throw new AppointmentError(400, 'start must be before end');
+  }
+
+  const now = Date.now();
+  const PAST_GRACE_MS = 60 * 1000;
+  if (start.getTime() < now - PAST_GRACE_MS) {
+    throw new AppointmentError(400, 'start must not be in the past');
   }
 
   if (requireCustomerId && !payload.customerId) {
@@ -223,9 +238,60 @@ export async function createAppointmentAtomic(
         throw e;
       }
 
-      // Fallback path for standalone MongoDB (no transactions support)
+      if (process.env.NODE_ENV === 'production') {
+        throw new AppointmentError(
+          503,
+          'Database transaction support is required',
+          'TXN_REQUIRED'
+        );
+      }
+
+      // Dev-only fallback path for standalone MongoDB (no transactions support)
       return await runCreate(undefined);
     }
+  } finally {
+    await session.endSession();
+  }
+}
+
+/**
+ * Atomic appointment update for overlap-sensitive changes.
+ * Ensures overlap/schedule checks and write happen in one transaction.
+ */
+export async function updateAppointmentAtomic(
+  input: UpdateAppointmentAtomicInput
+): Promise<IAppointment | null> {
+  const {
+    businessId,
+    appointmentId,
+    nextStart,
+    nextEnd,
+    update,
+    checkWindowConstraints = true,
+  } = input;
+
+  const session = await mongoose.startSession();
+  try {
+    let updated: IAppointment | null = null;
+    await session.withTransaction(async () => {
+      const existing = await Appointment.findOne({ _id: appointmentId, businessId }).session(session);
+      if (!existing) {
+        return;
+      }
+
+      if (checkWindowConstraints) {
+        await assertAppointmentWithinSchedule(businessId, nextStart, nextEnd);
+        await assertNoOverlap(businessId, nextStart, nextEnd, appointmentId, session);
+      }
+
+      updated = await Appointment.findOneAndUpdate(
+        { _id: appointmentId, businessId },
+        update,
+        { new: true, session }
+      );
+    });
+
+    return updated;
   } finally {
     await session.endSession();
   }

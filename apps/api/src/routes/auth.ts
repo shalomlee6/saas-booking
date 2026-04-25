@@ -114,13 +114,13 @@ authRouter.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
+    if (user.status === 'disabled') {
+      return res.status(403).json({ message: 'Account is disabled' });
+    }
+
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid email or password' });
-    }
-
-    if (user.status === 'disabled') {
-      return res.status(403).json({ message: 'Account is disabled' });
     }
 
     user.lastLoginAt = new Date();

@@ -12,6 +12,10 @@ const otpStore = new Map<string, { code: string; expiresAt: number; firstName?: 
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const DEV_OTP_CODE = '123456';
 
+function isDevOtpBypassEnabled(): boolean {
+  return process.env.NODE_ENV !== 'production' && process.env.PUBLIC_DEV_OTP_BYPASS === 'true';
+}
+
 // Rate limiting (simple in-memory)
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -63,9 +67,10 @@ export async function requestOtp(req: Request, res: Response) {
       return res.status(404).json({ message: 'Business not found' });
     }
 
-    // In dev: always accept, store a dummy OTP
-    // In production: generate real OTP and send via SMS
-    const otpCode = DEV_OTP_CODE;
+    // In production use generated OTP; optional dev bypass only when explicitly enabled.
+    const otpCode = isDevOtpBypassEnabled()
+      ? DEV_OTP_CODE
+      : String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = Date.now() + OTP_EXPIRY_MS;
 
     // Store OTP with customer info for later use in verify-otp
@@ -110,8 +115,7 @@ export async function verifyOtp(req: Request, res: Response) {
     // Check OTP
     const stored = otpStore.get(`${businessSlug}:${phone}`);
     
-    // In dev: always accept "123456"
-    const isValid = code === DEV_OTP_CODE || (stored && stored.code === code && Date.now() < stored.expiresAt);
+    const isValid = !!stored && stored.code === code && Date.now() < stored.expiresAt;
 
     if (!isValid) {
       return res.status(401).json({ message: 'Invalid or expired code' });
