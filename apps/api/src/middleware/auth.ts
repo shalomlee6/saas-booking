@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { validateEnv } from '../config/env';
+import { logger } from '../utils/logger';
 import { IBusinessSettings } from '../models/BusinessSettings';
 import { User } from '../models/User';
 
@@ -79,7 +80,7 @@ export async function auth(req: AuthRequest, res: Response, next: NextFunction):
     next();
     return;
   } catch (err) {
-    console.error('Invalid token', err);
+    logger.error('auth_token_invalid', { error: err instanceof Error ? err.message : String(err) });
     res.status(401).json({ message: 'Invalid token' });
     return;
   }

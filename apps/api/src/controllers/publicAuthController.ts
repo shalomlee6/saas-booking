@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { validateEnv } from '../config/env';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
 import { setPublicCustomerSessionCookie } from '../utils/publicCustomerSession';
+import { logger } from '../utils/logger';
 
 // In-memory OTP storage (dev only)
 // In production, use Redis or similar
@@ -83,7 +84,7 @@ export async function requestOtp(req: Request, res: Response) {
 
     return res.json({ ok: true });
   } catch (err) {
-    console.error('Error POST /public/:businessSlug/auth/request-otp:', err);
+    logger.error('public_request_otp_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -182,7 +183,7 @@ export async function verifyOtp(req: Request, res: Response) {
       customerPhone: customer.phone ?? undefined,
     });
   } catch (err) {
-    console.error('Error POST /public/:businessSlug/auth/verify-otp:', err);
+    logger.error('public_verify_otp_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }

@@ -165,3 +165,21 @@
 .services-table tbody tr:last-child td {
   border-bottom: none;
 }
+
+@media (max-width: 640px) {
+  .services-page-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .services-search {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .services-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

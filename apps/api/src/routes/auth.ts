@@ -7,6 +7,9 @@ import { Business } from '../models/Business';
 import { generateSlug } from '../utils/slug';
 import { auth, AuthRequest } from '../middleware/auth';
 import { getMe } from '../controllers/authController';
+import { validateBody } from '../middleware/validateRequest';
+import { asyncHandler } from '../utils/asyncHandler';
+import { authLoginBodySchema, authRegisterBodySchema } from '../validation/schemas/auth';
 
 export const authRouter = Router();
 
@@ -33,17 +36,15 @@ function isPublicRegistrationAllowed(): boolean {
 }
 
 // POST /api/auth/register
-authRouter.post('/register', async (req, res) => {
-  try {
+authRouter.post(
+  '/register',
+  validateBody(authRegisterBodySchema),
+  asyncHandler(async (req, res) => {
     if (!isPublicRegistrationAllowed()) {
       return res.status(403).json({ message: 'Public registration is disabled' });
     }
 
-    const { email, password } = req.body as { email?: string; password?: string };
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
+    const { email, password } = req.body as { email: string; password: string };
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -62,7 +63,7 @@ authRouter.post('/register', async (req, res) => {
     // Create User business
     const business = await Business.create({
       ownerId: user._id,
-      name: email.split('@')[0] + "'s business", 
+      name: email.split('@')[0] + "'s business",
       slug: generateSlug(email.split('@')[0] + '-' + user._id.toString()),
     });
 
@@ -76,7 +77,7 @@ authRouter.post('/register', async (req, res) => {
         userId: user._id,
         role: user.role,
         email: user.email,
-        businessId: user.businessId, 
+        businessId: user.businessId,
       },
       env.JWT_SECRET,
       { expiresIn: '7d' }
@@ -94,20 +95,15 @@ authRouter.post('/register', async (req, res) => {
         businessId: user.businessId,
       },
     });
-  } catch (err) {
-    console.error('Error in /register:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  })
+);
 
 // POST /api/auth/login
-authRouter.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body as { email?: string; password?: string };
-
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Email and password are required' });
-    }
+authRouter.post(
+  '/login',
+  validateBody(authLoginBodySchema),
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body as { email: string; password: string };
 
     const user = await User.findOne({ email });
     if (!user) {
@@ -147,14 +143,11 @@ authRouter.post('/login', async (req, res) => {
         id: user._id,
         email: user.email,
         role: user.role,
-        businessId: user?.businessId
+        businessId: user?.businessId,
       },
     });
-  } catch (err) {
-    console.error('Error in /login:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  })
+);
 
 // GET /api/auth/me
 authRouter.get('/me', auth, getMe);
@@ -164,6 +157,3 @@ authRouter.post('/logout', (req, res) => {
   res.clearCookie('sb_token', clearAuthCookieOptions());
   return res.json({ success: true });
 });
-
-
-

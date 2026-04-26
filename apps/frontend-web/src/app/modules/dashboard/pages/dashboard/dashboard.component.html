@@ -2,7 +2,13 @@
   <h1 class="dashboard-page-title">לוח בקרה</h1>
 
   <section class="dashboard-stats">
-    @if (insights$ | async; as insights) {
+    @if (insightsState$ | async; as insightsState) {
+    @if (insightsState.error) {
+      <div class="dashboard-empty">
+        לא ניתן לטעון נתוני דשבורד.
+        <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+      </div>
+    } @else if (insightsState.insights; as insights) {
       <p-card styleClass="dashboard-stat-pcard dashboard-stat-wrap">
         <div class="dashboard-stat-inner">
           <i class="pi pi-wallet dashboard-stat-icon" aria-hidden="true"></i>
@@ -49,6 +55,7 @@
         </p-card>
       }
     }
+    }
   </section>
 
   <div class="dashboard-period-filter">
@@ -82,7 +89,14 @@
     <div class="dashboard-card dashboard-chart-card">
       <h2 class="dashboard-card-title">הכנסות לפי יום בשבוע</h2>
       @if (revenueByWeekdayChart$ | async; as chartData) {
-        <p-chart type="bar" [data]="chartData" [options]="chartOptions" [responsive]="true" />
+        @if (chartData) {
+          <p-chart type="bar" [data]="chartData" [options]="chartOptions" [responsive]="true" />
+        } @else {
+          <p class="dashboard-empty">
+            לא ניתן לטעון נתוני גרף.
+            <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+          </p>
+        }
       } @else {
         <p class="dashboard-empty">טוען…</p>
       }
@@ -90,7 +104,14 @@
     <div class="dashboard-card dashboard-chart-card">
       <h2 class="dashboard-card-title">הכנסות לפי שירות</h2>
       @if (revenueByServiceChart$ | async; as chartData) {
-        <p-chart type="bar" [data]="chartData" [options]="chartOptions" [responsive]="true" />
+        @if (chartData) {
+          <p-chart type="bar" [data]="chartData" [options]="chartOptions" [responsive]="true" />
+        } @else {
+          <p class="dashboard-empty">
+            לא ניתן לטעון נתוני גרף.
+            <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+          </p>
+        }
       } @else {
         <p class="dashboard-empty">טוען…</p>
       }
@@ -100,7 +121,13 @@
   <section class="dashboard-table-section">
     <div class="dashboard-card dashboard-table-card">
       <h2 class="dashboard-card-title">לקוחות מובילים</h2>
-      @if (insights$ | async; as insights) {
+      @if (insightsState$ | async; as insightsState) {
+      @if (insightsState.error) {
+        <p class="dashboard-empty">
+          לא ניתן לטעון לקוחות מובילים.
+          <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+        </p>
+      } @else if (insightsState.insights; as insights) {
         <p-table
           [value]="insights.topCustomers"
           [stripedRows]="true"
@@ -136,6 +163,7 @@
       } @else {
         <p class="dashboard-empty">טוען…</p>
       }
+      }
     </div>
   </section>
 
@@ -143,8 +171,15 @@
     <div class="dashboard-card dashboard-table-card">
       <h2 class="dashboard-card-title">תורים (עדכון אוטומטי)</h2>
       <div class="dashboard-table-placeholder">
-        @if (topAppointments$ | async; as list) {
-          @if (list.length === 0) {
+        @if (topAppointmentsState$ | async; as state) {
+          @if (state.error) {
+            <p class="dashboard-empty">
+              לא ניתן לטעון תורים.
+              <button type="button" class="dashboard-link" (click)="retryAppointments()">נסי שוב</button>
+            </p>
+          } @else if (state.loading) {
+            <p class="dashboard-empty">טוען…</p>
+          } @else if (state.list.length === 0) {
             <p class="dashboard-empty">אין תורים בטווח הנוכחי.</p>
           } @else {
             <table class="dashboard-table">
@@ -157,7 +192,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (a of list; track a._id) {
+                @for (a of state.list; track a._id) {
                   <tr>
                     <td>{{ a.start | date: 'HH:mm' }} – {{ a.end | date: 'HH:mm' }}</td>
                     <td>{{ a.customerName }}</td>
@@ -169,8 +204,6 @@
             </table>
           }
           <a routerLink="/appointments" class="dashboard-link">לכל התורים</a>
-        } @else {
-          <p class="dashboard-empty">טוען…</p>
         }
       </div>
     </div>

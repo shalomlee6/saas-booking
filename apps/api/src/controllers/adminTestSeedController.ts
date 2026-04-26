@@ -9,6 +9,7 @@ import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import type { SettingsPlan } from '../dto/enums';
+import { logger } from '../utils/logger';
 
 /**
  * POST /api/admin/test-seed
@@ -157,7 +158,7 @@ export async function postAdminTestSeed(req: Request, res: Response): Promise<vo
       businessIds: [b1.businessId.toString(), b2.businessId.toString()],
     });
   } catch (err) {
-    console.error('Error POST /admin/test-seed:', err);
+    logger.error('admin_test_seed_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }

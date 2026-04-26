@@ -1,12 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { map, shareReplay } from 'rxjs';
+import { catchError, map, of, shareReplay, startWith } from 'rxjs';
 import { TagModule } from 'primeng/tag';
 import { TableModule } from 'primeng/table';
 import { ChartModule } from 'primeng/chart';
 import { CardModule } from 'primeng/card';
 import { AppointmentsApiService } from '../../../appointments/services/appointments-api.service';
+import type { Appointment } from '../../../appointments/model/appointment';
 import {
   GrowthBrainService,
   type InsightsPeriod,
@@ -60,7 +61,8 @@ export class DashboardComponent {
         labels: WEEKDAY_LABELS,
         datasets: [{ label: 'הכנסות', data: totals }],
       };
-    })
+    }),
+    catchError(() => of(null))
   );
 
   /** Chart data: revenue by service */
@@ -71,12 +73,37 @@ export class DashboardComponent {
         labels: list.map((r) => r.serviceName || '—'),
         datasets: [{ label: 'הכנסות', data: list.map((r) => r.total) }],
       };
-    })
+    }),
+    catchError(() => of(null))
   );
 
   readonly vipThreshold = VIP_THRESHOLD;
 
+  readonly insightsState$ = this.insights$.pipe(
+    map((insights) => ({ loading: false, error: false, insights })),
+    startWith({ loading: true, error: false, insights: null }),
+    catchError(() =>
+      of({ loading: false, error: true, insights: null })
+    )
+  );
+
+  readonly topAppointmentsState$ = this.topAppointments$.pipe(
+    map((list) => ({ loading: false, error: false, list })),
+    startWith({ loading: true, error: false, list: [] as Appointment[] }),
+    catchError(() =>
+      of({ loading: false, error: true, list: [] as Appointment[] })
+    )
+  );
+
   setPeriod(p: InsightsPeriod): void {
     this.growthBrain.setPeriod(p);
+  }
+
+  retryInsights(): void {
+    this.growthBrain.refresh();
+  }
+
+  retryAppointments(): void {
+    this.appointmentsApi.refresh();
   }
 }

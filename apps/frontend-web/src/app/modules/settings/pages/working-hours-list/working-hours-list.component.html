@@ -9,6 +9,12 @@
     <p-tabpanels>
       <p-tabpanel [value]="0">
         <div class="wh-days-container">
+          @if (openingHoursLoadError(); as loadErr) {
+            <div class="wh-inline-message wh-inline-message-warn">
+              {{ loadErr }}
+              <button type="button" class="appointments-error-retry" (click)="retryOpeningHoursLoad()">נסי שוב</button>
+            </div>
+          }
           @if (loadingOpeningHours()) {
             @for (i of [1,2,3,4,5,6,7]; track i) {
               <p-skeleton width="100%" height="88px" class="wh-skeleton-card" />
@@ -45,6 +51,12 @@
 
       <p-tabpanel [value]="1">
         <div class="wh-card wh-card-calendar">
+          @if (overridesLoadError(); as overridesErr) {
+            <div class="wh-inline-message wh-inline-message-warn">
+              {{ overridesErr }}
+              <button type="button" class="appointments-error-retry" (click)="retryOverridesLoad()">נסי שוב</button>
+            </div>
+          }
           @if (loadingOverrides()) {
             <p-skeleton width="100%" height="320px" />
           } @else {

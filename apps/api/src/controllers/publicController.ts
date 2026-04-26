@@ -12,6 +12,7 @@ import { validateEnv } from '../config/env';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { toIsoUtcString } from '../dto/datetime';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
+import { logger } from '../utils/logger';
 
 /** Convert YYYY-MM-DD + HH:mm in a timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
@@ -60,7 +61,7 @@ export async function getPublicBusiness(req: Request, res: Response) {
       },
     });
   } catch (err) {
-    console.error('Error GET /public/:businessSlug/business:', err);
+    logger.error('get_public_business_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -91,7 +92,7 @@ export async function getPublicServices(req: Request, res: Response) {
       colorHex: defaultColors[idx % defaultColors.length],
     })));
   } catch (err) {
-    console.error('Error GET /public/:businessSlug/services:', err);
+    logger.error('get_public_services_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -220,7 +221,9 @@ export async function getPublicAvailableSlots(req: Request, res: Response) {
       mode,
     });
   } catch (err) {
-    console.error('Error GET /public/:businessSlug/available-slots:', err);
+    logger.error('get_public_available_slots_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -311,7 +314,9 @@ export async function createPublicAppointment(req: Request, res: Response) {
       throw e;
     }
   } catch (err) {
-    console.error('Error POST /public/:businessSlug/appointments:', err);
+    logger.error('create_public_appointment_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }

@@ -6,6 +6,7 @@ import {
   ensureBusinessSettings,
 } from '../utils/ensureBusinessSettings';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
+import { logger } from '../utils/logger';
 import type { IOpeningHours, IOpeningHoursDay, IOpeningHoursRange } from '../models/BusinessSettings';
 
 const HHMM_REGEX = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -124,7 +125,7 @@ export async function patchOpeningHours(req: AuthRequest, res: Response): Promis
     const openingHours = updated.openingHours ?? result.data;
     res.json({ openingHours });
   } catch (err) {
-    console.error('Error PATCH /business/settings/opening-hours:', err);
+    logger.error('patch_opening_hours_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }

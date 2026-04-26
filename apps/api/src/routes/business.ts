@@ -21,27 +21,25 @@ import { asyncHandler } from '../utils/asyncHandler';
 export const businessRouter = Router();
 
 businessRouter.get('/me', auth, requireBusinessContext, asyncHandler(async (req: AuthRequest, res) => {
-  try {
-    const businessId = getEffectiveBusinessId(req);
-    if (!businessId) {
-      return res.status(400).json({ message: 'Business context is required' });
-    }
-    const business = await Business.findById(businessId);
-
-    if (!business) {
-      return res.status(404).json({ message: 'Business not found' });
-    }
-
-    return res.json(business);
-  } catch (err) {
-    console.error('Error in /business/me:', err);
-    return res.status(500).json({ message: 'Internal server error' });
+  const businessId = getEffectiveBusinessId(req);
+  if (!businessId) {
+    return res.status(400).json({ message: 'Business context is required' });
   }
+  const business = await Business.findById(businessId);
+
+  if (!business) {
+    return res.status(404).json({ message: 'Business not found' });
+  }
+
+  return res.json(business);
 }));
 
 // PATCH /api/business/ui – owner updates own business UI (tenant from JWT / impersonation)
-businessRouter.patch('/ui', auth, requireBusinessContext, async (req: AuthRequest, res) => {
-  try {
+businessRouter.patch(
+  '/ui',
+  auth,
+  requireBusinessContext,
+  asyncHandler(async (req: AuthRequest, res) => {
     const canEditUi =
       req.user!.role === 'owner' ||
       (req.user!.role === 'super_admin' && req.user!.impersonating === true);
@@ -65,11 +63,8 @@ businessRouter.patch('/ui', auth, requireBusinessContext, async (req: AuthReques
     business.ui = merged as any;
     await business.save();
     return res.json({ ui: normalizeBusinessUi(business.ui) });
-  } catch (err) {
-    console.error('Error PATCH /business/ui:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
-});
+  })
+);
 
 // PATCH /api/business/settings/opening-hours – default weekly schedule
 businessRouter.patch('/settings/opening-hours', auth, requireBusinessContext, patchOpeningHours);

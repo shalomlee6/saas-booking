@@ -5,6 +5,7 @@ import { Business } from '../models/Business';
 import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 import { normalizeBusinessUi } from '../utils/businessUi';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { logger } from '../utils/logger';
 
 export async function getMe(req: AuthRequest, res: Response) {
   try {
@@ -80,7 +81,7 @@ export async function getMe(req: AuthRequest, res: Response) {
       role: user.role,
     });
   } catch (err) {
-    console.error('Error GET /auth/me:', err);
+    logger.error('get_auth_me_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }

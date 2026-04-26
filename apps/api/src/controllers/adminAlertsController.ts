@@ -6,6 +6,7 @@ import { Appointment } from '../models/Appointment';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { PlatformSettings } from '../models/PlatformSettings';
 import { recordAudit } from '../utils/recordAudit';
+import { logger } from '../utils/logger';
 
 export type AdminAlertSeverity = 'info' | 'warning' | 'error';
 
@@ -142,7 +143,7 @@ export async function getAdminAlerts(_req: AuthRequest, res: Response): Promise<
     const items = await collectAlerts();
     res.json({ items, activeCount: items.length });
   } catch (err) {
-    console.error('Error GET /admin/alerts:', err);
+    logger.error('get_admin_alerts_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -152,7 +153,7 @@ export async function getAdminAlertsCount(_req: AuthRequest, res: Response): Pro
     const items = await collectAlerts();
     res.json({ count: items.length });
   } catch (err) {
-    console.error('Error GET /admin/alerts/count:', err);
+    logger.error('get_admin_alerts_count_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -182,7 +183,7 @@ export async function dismissAdminAlert(req: AuthRequest, res: Response): Promis
     const items = await collectAlerts();
     res.json({ ok: true, activeCount: items.length });
   } catch (err) {
-    console.error('Error PATCH /admin/alerts dismiss:', err);
+    logger.error('dismiss_admin_alert_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -212,7 +213,7 @@ export async function resolveAdminAlert(req: AuthRequest, res: Response): Promis
     const items = await collectAlerts();
     res.json({ ok: true, activeCount: items.length });
   } catch (err) {
-    console.error('Error PATCH /admin/alerts resolve:', err);
+    logger.error('resolve_admin_alert_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }

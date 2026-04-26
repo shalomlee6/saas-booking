@@ -11,6 +11,7 @@ import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
 import { recordAudit } from '../utils/recordAudit';
 import { provisionTenant } from '../utils/provisionTenant';
+import { logger } from '../utils/logger';
 import type { PlanTier } from '../utils/planPolicy';
 
 // GET /api/admin/businesses
@@ -48,7 +49,9 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
 
     res.json(businessesWithOwner);
   } catch (err) {
-    console.error('Error GET /admin/businesses:', err);
+    logger.error('get_admin_businesses_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -150,7 +153,9 @@ export async function createAdminBusiness(req: AuthRequest, res: Response): Prom
       });
       return;
     }
-    console.error('Error POST /admin/businesses:', err);
+    logger.error('create_admin_business_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -177,7 +182,7 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    console.info('[AUDIT] impersonation_start', {
+    logger.info('audit_impersonation_start', {
       adminUserId: req.user.userId,
       businessId,
       at: new Date().toISOString(),
@@ -211,7 +216,7 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       impersonatingBusinessId: businessId,
     });
   } catch (err) {
-    console.error('Error POST /admin/impersonate:', err);
+    logger.error('admin_impersonate_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -219,7 +224,7 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
 // POST /api/admin/stop-impersonate
 export async function adminStopImpersonate(req: AuthRequest, res: Response): Promise<void> {
   try {
-    console.info('[AUDIT] impersonation_stop', {
+    logger.info('audit_impersonation_stop', {
       adminUserId: req.user?.userId,
       at: new Date().toISOString(),
     });
@@ -233,7 +238,9 @@ export async function adminStopImpersonate(req: AuthRequest, res: Response): Pro
     // Just return success - frontend will restore original token
     res.json({ ok: true });
   } catch (err) {
-    console.error('Error POST /admin/stop-impersonate:', err);
+    logger.error('admin_stop_impersonate_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -262,7 +269,9 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
     await business.save();
     return res.json({ ui: normalizeBusinessUi(business.ui) });
   } catch (err) {
-    console.error('Error PATCH /admin/businesses/:id/ui:', err);
+    logger.error('admin_patch_business_ui_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     res.status(500).json({ message: 'Internal server error' });
   }
 }

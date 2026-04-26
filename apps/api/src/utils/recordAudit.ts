@@ -1,4 +1,5 @@
 import { AuditLog } from '../models/AuditLog';
+import { logger } from './logger';
 
 export type AuditPayload = {
   actorUserId?: string;
@@ -21,6 +22,6 @@ export async function recordAudit(payload: AuditPayload): Promise<void> {
       createdAt: new Date(),
     });
   } catch (err) {
-    console.error('recordAudit failed:', err);
+    logger.error('record_audit_failed', { error: err instanceof Error ? err.message : String(err) });
   }
 }

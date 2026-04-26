@@ -3,6 +3,7 @@ import { AuthRequest } from './auth';
 import { Business } from '../models/Business';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
+import { logger } from '../utils/logger';
 
 export async function loadBusinessSettings(
   req: AuthRequest,
@@ -27,7 +28,9 @@ export async function loadBusinessSettings(
     // Always call next() - don't block if settings not found
     next();
   } catch (err) {
-    console.error('Error loading business settings:', err);
+    logger.error('load_business_settings_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
     // Don't block the request if settings loading fails
     next();
   }

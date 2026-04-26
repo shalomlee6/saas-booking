@@ -5,6 +5,7 @@ import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { assertTenantAnalyticsAllowed } from '../utils/planPolicy';
+import { logger } from '../utils/logger';
 
 type InsightsPeriod = 'week' | 'month' | 'year';
 
@@ -136,7 +137,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       period,
     });
   } catch (err) {
-    console.error('Error GET /business/insights:', err);
+    logger.error('get_business_insights_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
 }

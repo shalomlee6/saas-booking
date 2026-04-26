@@ -149,3 +149,21 @@
 .customers-table tbody tr:last-child td {
   border-bottom: none;
 }
+
+@media (max-width: 640px) {
+  .customers-page-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .customers-search {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .customers-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}

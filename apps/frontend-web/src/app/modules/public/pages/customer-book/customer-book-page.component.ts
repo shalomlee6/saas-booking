@@ -109,6 +109,8 @@ export class CustomerBookPageComponent implements OnInit {
   /** Inline copy for slot load failures (toast not used here to avoid duplicate surfaces). */
   readonly slotsErrorDetail = signal<string | null>(null);
   readonly submitting = signal(false);
+  readonly step1LoadError = signal<string | null>(null);
+  readonly submitError = signal<string | null>(null);
 
   // ── Step navigation ────────────────────────────────────────────────────────
   readonly currentStep = signal<BookStep>(1);
@@ -259,6 +261,7 @@ export class CustomerBookPageComponent implements OnInit {
   // ── Selection handlers — auto-advance ──────────────────────────────────────
 
   selectService(svc: PublicService): void {
+    this.submitError.set(null);
     if (this.selectedService()?.id !== svc.id) {
       // Clear downstream state when service changes.
       this.selectedDate.set(null);
@@ -286,6 +289,7 @@ export class CustomerBookPageComponent implements OnInit {
   }
 
   selectSlot(slot: string): void {
+    this.submitError.set(null);
     this.selectedSlot.set(slot);
     // Brief pause so the pill selection animation is visible, then advance.
     setTimeout(() => this.currentStep.set(3), 320);
@@ -294,6 +298,7 @@ export class CustomerBookPageComponent implements OnInit {
   // ── Step-2 helpers ─────────────────────────────────────────────────────────
 
   retryLoadSlots(): void {
+    this.submitError.set(null);
     const b = this.business();
     const svc = this.selectedService();
     const dateStr = this.selectedDateStr();
@@ -324,6 +329,7 @@ export class CustomerBookPageComponent implements OnInit {
     if (!loggedIn && !name) return;
 
     this.submitting.set(true);
+    this.submitError.set(null);
 
     const body = buildPublicCreateAppointmentBody({
       businessId: b.id,
@@ -374,7 +380,9 @@ export class CustomerBookPageComponent implements OnInit {
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
         } else {
-          this.showError(friendlyPublicBookingError(err));
+          const msg = friendlyPublicBookingError(err);
+          this.submitError.set(msg);
+          this.showError(msg);
           // Destroy and recreate hold-to-confirm so the ring resets.
           this.showHoldButton.set(false);
           setTimeout(() => this.showHoldButton.set(true), 50);
@@ -386,6 +394,14 @@ export class CustomerBookPageComponent implements OnInit {
   goToHome(): void {
     const slug = this.slug();
     if (slug) this.router.navigate(['/b', slug]);
+  }
+
+  retryInitialLoad(): void {
+    const slug = this.slug();
+    if (!slug) return;
+    this.step1LoadError.set(null);
+    this.loadBusiness(slug);
+    this.loadServices(slug);
   }
 
   // ── Private helpers ────────────────────────────────────────────────────────
@@ -405,10 +421,12 @@ export class CustomerBookPageComponent implements OnInit {
     this.publicApi.getBusinessForBooking(slug).subscribe({
       next: (data) => {
         this.business.set(data);
+        this.step1LoadError.set(null);
         this.loadingBusiness.set(false);
       },
       error: (err) => {
         this.loadingBusiness.set(false);
+        this.step1LoadError.set(err?.error?.message ?? 'שגיאה בטעינת העסק');
         this.showError(err?.error?.message ?? 'שגיאה בטעינת העסק');
       },
     });
@@ -419,11 +437,13 @@ export class CustomerBookPageComponent implements OnInit {
     this.publicApi.getServices(slug).subscribe({
       next: (data) => {
         this.services.set(data);
+        this.step1LoadError.set(null);
         this.loadingServices.set(false);
         this.applyPresetServiceFromQuery(data);
       },
       error: (err) => {
         this.loadingServices.set(false);
+        this.step1LoadError.set(err?.error?.message ?? 'שגיאה בטעינת השירותים');
         this.showError(err?.error?.message ?? 'שגיאה בטעינת השירותים');
       },
     });

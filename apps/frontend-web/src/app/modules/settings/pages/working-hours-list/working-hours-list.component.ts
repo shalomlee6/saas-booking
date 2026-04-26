@@ -72,6 +72,7 @@ export class WorkingHoursListComponent implements OnInit {
 
   readonly activeTab = signal<number>(0);
   readonly loadingOpeningHours = signal(true);
+  readonly openingHoursLoadError = signal<string | null>(null);
   readonly openingHours = signal<OpeningHours>({
     ...DEFAULT_OPENING_HOURS,
     days: DEFAULT_OPENING_HOURS.days.map(d => ({
@@ -92,6 +93,7 @@ export class WorkingHoursListComponent implements OnInit {
 
   readonly overrides = signal<Override[]>([]);
   readonly loadingOverrides = signal(false);
+  readonly overridesLoadError = signal<string | null>(null);
   readonly calendarMonth = signal<Date>(new Date());
   readonly overrideDrawerVisible = signal(false);
   readonly overrideDialogVisible = signal(false);
@@ -252,6 +254,7 @@ export class WorkingHoursListComponent implements OnInit {
 
   loadOpeningHours(): void {
     this.loadingOpeningHours.set(true);
+    this.openingHoursLoadError.set(null);
     this.api.get<{ openingHours?: OpeningHours }>('settings/me/settings').subscribe({
       next: res => {
         if (res?.openingHours?.days?.length === 7) {
@@ -267,8 +270,8 @@ export class WorkingHoursListComponent implements OnInit {
         }
         this.loadingOpeningHours.set(false);
       },
-      error: () => {
-        this.openingHours.set(DEFAULT_OPENING_HOURS);
+      error: err => {
+        this.openingHoursLoadError.set(err?.error?.message ?? 'לא ניתן לטעון שעות קבועות');
         this.loadingOpeningHours.set(false);
       },
     });
@@ -276,15 +279,28 @@ export class WorkingHoursListComponent implements OnInit {
 
   loadOverrides(from: string, to: string): void {
     this.loadingOverrides.set(true);
+    this.overridesLoadError.set(null);
     this.api
       .get<Override[]>(
         `business/overrides?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
       )
       .subscribe({
         next: list => this.overrides.set(Array.isArray(list) ? list : []),
-        error: () => this.overrides.set([]),
+        error: err => {
+          this.overrides.set([]);
+          this.overridesLoadError.set(err?.error?.message ?? 'לא ניתן לטעון חריגים');
+        },
         complete: () => this.loadingOverrides.set(false),
       });
+  }
+
+  retryOpeningHoursLoad(): void {
+    this.loadOpeningHours();
+  }
+
+  retryOverridesLoad(): void {
+    const { from, to } = this.calendarMonthRange();
+    this.loadOverrides(from, to);
   }
 
   openDayDrawer(dayIndex: number): void {

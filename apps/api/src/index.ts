@@ -4,7 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { connectDB } from './config/db';
+import { connectDB, isDatabaseReady } from './config/db';
 import { validateEnv } from './config/env';
 import { businessRouter } from './routes/business';
 import { authRouter } from './routes/auth';
@@ -21,6 +21,8 @@ import {
   apiRouteLimiter,
   adminRouteLimiter,
 } from './middleware/rateLimits';
+import { requestLogger } from './middleware/requestLogger';
+import { logger } from './utils/logger';
 
 const env = validateEnv();
 
@@ -60,6 +62,7 @@ app.use(
 );
 app.use(cookieParser());
 app.use(express.json());
+app.use(requestLogger);
 app.use('/api/auth', authRouteLimiter, authRouter);
 app.use('/api/business', apiRouteLimiter, businessRouter);
 app.use('/api/customers', apiRouteLimiter, customersRouter);
@@ -73,6 +76,14 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'saas-booking-api' });
 });
 
+app.get('/api/ready', (_req, res) => {
+  if (!isDatabaseReady()) {
+    res.status(503).json({ status: 'not_ready', db: 'down' });
+    return;
+  }
+  res.json({ status: 'ready', db: 'up' });
+});
+
 app.use((_req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
@@ -83,23 +94,23 @@ async function bootstrap() {
   await connectDB(env.MONGO_URI, env.NODE_ENV);
 
   app.listen(env.PORT, () => {
-    console.log(`🚀 API server running on http://localhost:${env.PORT}`);
+    logger.info('api_server_started', { port: env.PORT, nodeEnv: env.NODE_ENV });
     if (env.NODE_ENV === 'production') {
       if (process.env.ALLOW_PUBLIC_REGISTER === 'true') {
-        console.warn(
-          '⚠️ ALLOW_PUBLIC_REGISTER=true — public self-serve registration is enabled in production.'
-        );
+        logger.warn('public_registration_enabled_in_production');
       } else {
-        console.log('✓ Public registration disabled or gated (ALLOW_PUBLIC_REGISTER is not true).');
+        logger.info('public_registration_disabled_or_gated');
       }
       const origin = process.env.CLIENT_ORIGIN || 'http://localhost:4200';
-      console.log(`✓ CORS CLIENT_ORIGIN=${origin} (set to your deployed UI origin).`);
+      logger.info('cors_origin_configured', { origin });
     }
   });
 }
 
 bootstrap().catch((err) => {
-  console.error('❌ Failed to bootstrap server:', err);
+  logger.error('bootstrap_failed', {
+    error: err instanceof Error ? err.message : String(err),
+  });
   process.exit(1);
 });
 

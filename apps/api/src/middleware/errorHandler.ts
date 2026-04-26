@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
+import { logger } from '../utils/logger';
 import {
   ConflictError,
   ForbiddenError,
@@ -90,6 +91,8 @@ export function errorHandler(err: unknown, _req: Request, res: Response, next: N
     return;
   }
 
-  console.error(err);
+  logger.error('unhandled_error', {
+    error: err instanceof Error ? err.message : String(err),
+  });
   res.status(500).json({ message: 'Internal server error' });
 }

@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AvailabilityOverride } from '../models/AvailabilityOverride';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { AVAILABILITY_OVERRIDE_TYPES } from '../dto/enums';
+import { logger } from '../utils/logger';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const HHMM_REGEX = /^([01]?\d|2[0-3]):[0-5]\d$/;
@@ -48,7 +49,7 @@ export async function getOverrides(req: AuthRequest, res: Response): Promise<voi
       updatedAt: doc.updatedAt,
     })));
   } catch (err) {
-    console.error('Error GET /business/overrides:', err);
+    logger.error('get_overrides_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -137,7 +138,7 @@ export async function postOverride(req: AuthRequest, res: Response): Promise<voi
       updatedAt: doc!.updatedAt,
     });
   } catch (err) {
-    console.error('Error POST /business/overrides:', err);
+    logger.error('post_override_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -175,7 +176,7 @@ export async function deleteOverride(req: AuthRequest, res: Response): Promise<v
     await AvailabilityOverride.deleteOne({ _id: objectId });
     res.json({ ok: true });
   } catch (err) {
-    console.error('Error DELETE /business/overrides/:id:', err);
+    logger.error('delete_override_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }

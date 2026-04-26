@@ -1,5 +1,6 @@
 import { Response, NextFunction } from 'express';
 import { AuthRequest } from './auth';
+import { logger } from '../utils/logger';
 
 export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFunction): any {
   if (!req.user) {
@@ -13,7 +14,7 @@ export function requireSuperAdmin(req: AuthRequest, res: Response, next: NextFun
   // Check email against SUPER_ADMIN_EMAILS env var
   const superAdminEmails = process.env.SUPER_ADMIN_EMAILS;
   if (!superAdminEmails) {
-    console.warn('SUPER_ADMIN_EMAILS not configured');
+    logger.warn('super_admin_emails_not_configured', {});
     return res.status(403).json({ message: 'Super admin access not configured' });
   }
 

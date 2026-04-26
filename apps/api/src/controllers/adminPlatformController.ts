@@ -12,6 +12,7 @@ import { recordAudit } from '../utils/recordAudit';
 import { normalizePlan, type PlanTier } from '../utils/planPolicy';
 import { syncBusinessPlanDocuments } from '../utils/provisionTenant';
 import { normalizeBusinessSlugInput } from '../utils/slug';
+import { logger } from '../utils/logger';
 
 const USER_ROLES = ['super_admin', 'owner', 'staff', 'client'] as const;
 
@@ -154,7 +155,7 @@ export async function getAdminUsers(req: AuthRequest, res: Response): Promise<vo
 
     res.json({ items, total, page, limit });
   } catch (err) {
-    console.error('Error GET /admin/users:', err);
+    logger.error('get_admin_users_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -218,7 +219,7 @@ export async function getAdminUserById(req: AuthRequest, res: Response): Promise
       lastLoginAt: (u as { lastLoginAt?: Date }).lastLoginAt ?? null,
     });
   } catch (err) {
-    console.error('Error GET /admin/users/:id:', err);
+    logger.error('get_admin_user_by_id_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -234,7 +235,7 @@ export async function getAdminCheckSlug(req: AuthRequest, res: Response): Promis
     const taken = await Business.findOne({ slug }).select('_id').lean();
     res.json({ available: !taken });
   } catch (err) {
-    console.error('Error GET /admin/check-slug:', err);
+    logger.error('get_admin_check_slug_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -295,7 +296,7 @@ export async function patchAdminUserPlan(req: AuthRequest, res: Response): Promi
       lastLoginAt: user.lastLoginAt ?? null,
     });
   } catch (err) {
-    console.error('Error PATCH /admin/users/:id/plan:', err);
+    logger.error('patch_admin_user_plan_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -433,7 +434,7 @@ export async function patchAdminUser(req: AuthRequest, res: Response): Promise<v
       lastLoginAt: user.lastLoginAt ?? null,
     });
   } catch (err) {
-    console.error('Error PATCH /admin/users/:id:', err);
+    logger.error('patch_admin_user_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -473,7 +474,7 @@ export async function deleteAdminUser(req: AuthRequest, res: Response): Promise<
     });
     res.status(204).send();
   } catch (err) {
-    console.error('Error DELETE /admin/users/:id:', err);
+    logger.error('delete_admin_user_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -491,7 +492,7 @@ export async function getAdminSettings(_req: AuthRequest, res: Response): Promis
       updatedAt: doc.updatedAt,
     });
   } catch (err) {
-    console.error('Error GET /admin/settings:', err);
+    logger.error('get_admin_settings_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -541,7 +542,7 @@ export async function patchAdminSettings(req: AuthRequest, res: Response): Promi
       updatedAt: doc.updatedAt,
     });
   } catch (err) {
-    console.error('Error PATCH /admin/settings:', err);
+    logger.error('patch_admin_settings_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -733,7 +734,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
       },
     });
   } catch (err) {
-    console.error('Error GET /admin/analytics:', err);
+    logger.error('get_admin_analytics_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -905,7 +906,7 @@ export async function getAdminOverview(_req: AuthRequest, res: Response): Promis
       })),
     });
   } catch (err) {
-    console.error('Error GET /admin/overview:', err);
+    logger.error('get_admin_overview_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }
@@ -948,7 +949,7 @@ export async function getAdminAudit(req: AuthRequest, res: Response): Promise<vo
       limit,
     });
   } catch (err) {
-    console.error('Error GET /admin/audit:', err);
+    logger.error('get_admin_audit_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }
 }

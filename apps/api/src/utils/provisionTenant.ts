@@ -9,6 +9,7 @@ import { ensureBusinessSettings } from './ensureBusinessSettings';
 import { generateSlug, normalizeBusinessSlugInput } from './slug';
 import type { PlanTier } from './planPolicy';
 import { limitsFor } from './planPolicy';
+import { logger } from './logger';
 import type { SettingsPlan } from '../dto/enums';
 
 export interface ProvisionTenantInput {
@@ -177,7 +178,7 @@ export async function provisionTenant(input: ProvisionTenantInput): Promise<Prov
 
     // TODO: Replace with real transactional email service.
     // Send `tempPassword` via email to the owner — do NOT log it.
-    console.info('[provisionTenant] Tenant provisioned:', {
+    logger.info('tenant_provisioned', {
       to: email,
       businessName: input.businessName.trim(),
       slug,
