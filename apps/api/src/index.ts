@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import path from 'path';
+import type { Server } from 'http';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -45,7 +46,12 @@ app.use(
   helmet({
     contentSecurityPolicy: {
       directives: {
-        defaultSrc: ["'none'"],
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:', 'blob:'],
+        connectSrc: ["'self'"],
+        fontSrc: ["'self'"],
         frameAncestors: ["'none'"],
       },
     },
@@ -90,28 +96,48 @@ app.use((_req, res) => {
 
 app.use(errorHandler);
 
-async function bootstrap() {
-  await connectDB(env.MONGO_URI, env.NODE_ENV);
-
-  app.listen(env.PORT, () => {
-    logger.info('api_server_started', { port: env.PORT, nodeEnv: env.NODE_ENV });
-    if (env.NODE_ENV === 'production') {
-      if (process.env.ALLOW_PUBLIC_REGISTER === 'true') {
-        logger.warn('public_registration_enabled_in_production');
-      } else {
-        logger.info('public_registration_disabled_or_gated');
-      }
-      const origin = process.env.CLIENT_ORIGIN || 'http://localhost:4200';
-      logger.info('cors_origin_configured', { origin });
-    }
-  });
+function setupGracefulShutdown(server: Server): void {
+  const shutdown = (signal: string): void => {
+    logger.info('shutdown_signal', { signal });
+    const forceTimer = setTimeout(() => {
+      logger.error('shutdown_force_exit_timeout', {});
+      process.exit(1);
+    }, 5000);
+    forceTimer.unref();
+    server.close(() => {
+      clearTimeout(forceTimer);
+      process.exit(0);
+    });
+  };
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
 }
 
-bootstrap().catch((err) => {
-  logger.error('bootstrap_failed', {
-    error: err instanceof Error ? err.message : String(err),
+async function bootstrap(): Promise<void> {
+  await connectDB(env.MONGO_URI, env.NODE_ENV);
+}
+
+bootstrap()
+  .then(() => {
+    const server = app.listen(env.PORT, () => {
+      logger.info('api_server_started', { port: env.PORT, nodeEnv: env.NODE_ENV });
+      if (env.NODE_ENV === 'production') {
+        if (process.env.ALLOW_PUBLIC_REGISTER === 'true') {
+          logger.warn('public_registration_enabled_in_production');
+        } else {
+          logger.info('public_registration_disabled_or_gated');
+        }
+        const origin = process.env.CLIENT_ORIGIN || 'http://localhost:4200';
+        logger.info('cors_origin_configured', { origin });
+      }
+    });
+    setupGracefulShutdown(server);
+  })
+  .catch((err) => {
+    logger.error('bootstrap_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    process.exit(1);
   });
-  process.exit(1);
-});
 
 export { app };

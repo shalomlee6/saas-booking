@@ -7,7 +7,7 @@ const jsonMessage = { message: 'Too many requests, please try again later.' };
 /** Auth routes: login, register, refresh, etc. */
 export const authRouteLimiter = rateLimit({
   windowMs: WINDOW_MS,
-  max: 100,
+  max: 15,
   standardHeaders: true,
   legacyHeaders: false,
   message: jsonMessage,

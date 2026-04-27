@@ -33,11 +33,13 @@ const storage = multer.diskStorage({
   },
 });
 
+const allowedImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+
 export const landingImageUpload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
+    if (!allowedImageMimeTypes.has(file.mimetype)) {
       cb(new Error('INVALID_TYPE'));
       return;
     }

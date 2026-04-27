@@ -9,7 +9,9 @@ import {
   effect,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs';
 import { Store } from '@ngrx/store';
 import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
@@ -21,6 +23,19 @@ import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
 
 const BREAKPOINT_PX = 768;
+
+function topBarTitleFromUrl(url: string): string {
+  const path = url.split('?')[0] || '/';
+  if (path === '/' || path.startsWith('/dashboard')) return 'Dashboard';
+  if (path.startsWith('/appointments')) return 'Appointments';
+  if (path.startsWith('/services')) return 'Services';
+  if (path.startsWith('/customers')) return 'Customers';
+  if (path.startsWith('/settings/theme')) return 'Theme';
+  if (path.startsWith('/settings/landing')) return 'Landing page';
+  if (path.startsWith('/settings/working-hours')) return 'Working hours';
+  if (path.startsWith('/preview')) return 'Preview';
+  return 'SaaS Booking';
+}
 
 /** Stable object references for routerLinkActiveOptions — avoids recreating objects on every CD cycle. */
 const LINK_OPTS_EXACT = { exact: true } as const;
@@ -53,6 +68,16 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly isSuperAdmin = computed(() => this.auth.isSuperAdmin());
   readonly isImpersonating = this.auth.isImpersonating;
   readonly activeBusinessName = this.auth.activeBusinessName;
+
+  /** Top bar H1 from current route (owner shell). */
+  readonly pageTitle = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => topBarTitleFromUrl(e.urlAfterRedirects)),
+      startWith(topBarTitleFromUrl(this.router.url))
+    ),
+    { initialValue: topBarTitleFromUrl(this.router.url) }
+  );
 
   /** Mobile: drawer open/close. Desktop: unused. */
   readonly isMobileMenuOpen = signal(false);

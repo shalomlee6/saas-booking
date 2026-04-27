@@ -7,6 +7,14 @@ const DEFAULT_DEV_BASE_URL = 'http://localhost:4200';
 const DEFAULT_DEV_MONGO = 'mongodb://127.0.0.1:27017/saas-booking';
 const DEFAULT_DEV_JWT = 'dev-only-insecure-jwt-secret-min-32-chars!!';
 
+function parseSuperAdminEmails(raw: string | undefined): string[] {
+  if (raw === undefined || raw.trim() === '') return [];
+  return raw
+    .split(',')
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 0);
+}
+
 const productionSchema = z
   .object({
     NODE_ENV: z.literal('production'),
@@ -14,6 +22,7 @@ const productionSchema = z
     MONGO_URI: z.string().min(1, 'MONGO_URI is required'),
     JWT_SECRET: z.string().min(1, 'JWT_SECRET is required'),
     BASE_URL: z.string().min(1, 'BASE_URL is required').url('BASE_URL must be a valid URL'),
+    SUPER_ADMIN_EMAILS: z.string().optional(),
     GA_ID: z
       .string()
       .optional()
@@ -39,6 +48,8 @@ export type Env = {
   MONGO_URI: string;
   JWT_SECRET: string;
   BASE_URL: string;
+  /** Lowercased emails from SUPER_ADMIN_EMAILS (comma-separated in env). */
+  superAdminEmails: string[];
   GA_ID?: string;
   STRIPE_KEY?: string;
 };
@@ -111,6 +122,7 @@ export function validateEnv(): Env {
       MONGO_URI: result.data.MONGO_URI,
       JWT_SECRET: result.data.JWT_SECRET,
       BASE_URL: result.data.BASE_URL,
+      superAdminEmails: parseSuperAdminEmails(result.data.SUPER_ADMIN_EMAILS),
       GA_ID: result.data.GA_ID,
       STRIPE_KEY: result.data.STRIPE_KEY,
     };
@@ -171,6 +183,7 @@ export function validateEnv(): Env {
     MONGO_URI,
     JWT_SECRET,
     BASE_URL,
+    superAdminEmails: parseSuperAdminEmails(process.env.SUPER_ADMIN_EMAILS),
     GA_ID,
     STRIPE_KEY,
   };
