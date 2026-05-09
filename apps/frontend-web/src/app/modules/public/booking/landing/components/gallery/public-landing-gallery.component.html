@@ -44,6 +44,7 @@
   [modal]="true"
   [dismissableMask]="true"
   [style]="{ width: '100vw', maxWidth: '100vw', height: '100vh' }"
+  closeAriaLabel="סגירה - תמונה"
   styleClass="pl-gal__lightbox"
   [contentStyle]="{ padding: 0 }"
 >
@@ -63,6 +64,7 @@
   (visibleChange)="addDialogOpen.set($event)"
   [modal]="true"
   [style]="{ width: '22rem' }"
+  closeAriaLabel="סגירה"
   [dismissableMask]="true"
 >
   <div class="pl-gal__form" dir="rtl">

@@ -41,8 +41,6 @@ of the saas-booking monorepo.
   CLIENT_ORIGIN=https://your-domain.com
   SUPER_ADMIN_EMAILS=admin@your-domain.com
   ALLOW_PUBLIC_REGISTER=false
-  META_PIXEL_ID=<from Meta Business Manager>
-  META_ACCESS_TOKEN=<from Meta Business Manager>
 
 ## CI Pipeline (to implement — GitHub Actions)
 ```yaml
@@ -70,7 +68,6 @@ jobs:
 - [ ] CLIENT_ORIGIN matches deployed frontend URL exactly
 - [ ] SUPER_ADMIN_EMAILS set to real admin email
 - [ ] ALLOW_PUBLIC_REGISTER=false
-- [ ] META_PIXEL_ID and META_ACCESS_TOKEN set (analytics)
 - [ ] /uploads directory writable by Node process
 - [ ] Health check endpoint responding: GET /api/health → { status: 'ok' }
 

@@ -169,17 +169,20 @@
 
     <h1 class="layout-topbar-title">{{ pageTitle() }}</h1>
 
-    <div class="layout-topbar-search-wrap">
-      <label for="global-search" class="sr-only">Search</label>
-      <input
-        id="global-search"
-        type="search"
-        class="layout-topbar-search"
-        placeholder="Search..."
-        disabled
-        aria-disabled="true"
-      />
-    </div>
+    @if (isSuperAdmin() || isImpersonating()) {
+
+      <div class="layout-topbar-search-wrap">
+        <label for="global-search" class="sr-only">Search</label>
+        <input
+          id="global-search"
+          type="search"
+          class="layout-topbar-search"
+          placeholder="Search..."
+          disabled
+          aria-disabled="true"
+        />
+      </div>
+    }
 
     @if (!isMobile()) {
       <div class="layout-topbar-actions">
@@ -209,7 +212,7 @@
           >Impersonating</span>
         }
 
-        @if (business() && (!isSuperAdmin() || isImpersonating())) {
+        @if (business() && (isSuperAdmin() || isImpersonating())) {
           <button
             type="button"
             class="layout-theme-toggle"

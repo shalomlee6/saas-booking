@@ -122,7 +122,12 @@
     <div class="sa-charts">
       <p-card header="Appointments over time" styleClass="sa-chart-card">
         @if (lineChart(); as lc) {
-          <div class="sa-chart-wrap">
+          <div
+            class="sa-chart-wrap"
+            role="img"
+            aria-label="גרף קווי המציג תורים לאורך זמן בתקופה הנבחרת"
+          >
+            <span class="sr-only">גרף קווי המציג את מספר התורים לאורך הזמן בתקופה הנבחרת</span>
             <p-chart type="line" [data]="lc" [options]="chartOptions" />
           </div>
         } @else {
@@ -131,7 +136,12 @@
       </p-card>
       <p-card header="Revenue over time" styleClass="sa-chart-card">
         @if (revenueLineChart(); as rc) {
-          <div class="sa-chart-wrap">
+          <div
+            class="sa-chart-wrap"
+            role="img"
+            aria-label="גרף קווי המציג הכנסות לאורך זמן בתקופה הנבחרת"
+          >
+            <span class="sr-only">גרף קווי המציג את ההכנסות החודשיות לאורך הזמן בתקופה הנבחרת</span>
             <p-chart type="line" [data]="rc" [options]="chartOptions" />
           </div>
         } @else {
@@ -140,7 +150,12 @@
       </p-card>
       <p-card header="New businesses by week" styleClass="sa-chart-card">
         @if (barChart(); as bc) {
-          <div class="sa-chart-wrap">
+          <div
+            class="sa-chart-wrap"
+            role="img"
+            aria-label="גרף עמודות המציג עסקים חדשים לפי שבוע"
+          >
+            <span class="sr-only">גרף עמודות המציג את מספר העסקים החדשים שנרשמו לפי שבוע בתקופה הנבחרת</span>
             <p-chart type="bar" [data]="bc" [options]="chartOptions" />
           </div>
         } @else {
@@ -149,7 +164,12 @@
       </p-card>
       <p-card header="Plan distribution" styleClass="sa-chart-card sa-chart-card--pie">
         @if (pieChart(); as pc) {
-          <div class="sa-chart-wrap sa-chart-wrap--pie">
+          <div
+            class="sa-chart-wrap sa-chart-wrap--pie"
+            role="img"
+            aria-label="גרף עוגה המציג את התפלגות התוכניות בין העסקים"
+          >
+            <span class="sr-only">גרף עוגה המציג את התפלגות תוכניות המנוי (Free / Pro / Premium) בין העסקים הרשומים</span>
             <p-chart type="pie" [data]="pc" [options]="chartOptions" />
           </div>
         } @else {

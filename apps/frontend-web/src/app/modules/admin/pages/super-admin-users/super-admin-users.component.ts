@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
@@ -34,7 +34,7 @@ import {
   templateUrl: './super-admin-users.component.html',
   styleUrl: './super-admin-users.component.scss',
 })
-export class SuperAdminUsersComponent {
+export class SuperAdminUsersComponent implements OnInit {
   private readonly adminApi = inject(AdminApiService);
   private readonly messages = inject(MessageService);
   private readonly router = inject(Router);
@@ -117,6 +117,15 @@ export class SuperAdminUsersComponent {
   readonly roleFilterActive = computed(() => this.roleFilter() !== '');
   readonly statusFilterActive = computed(() => this.statusFilter() !== '');
   readonly planFilterActive = computed(() => this.planFilter() !== '');
+
+  ngOnInit(): void {
+    this.loadPage({
+      first: 0,
+      rows: this.pageSize(),
+      sortField: this.sortField(),
+      sortOrder: this.sortOrder(),
+    } as TableLazyLoadEvent);
+  }
 
   clearSearch(): void {
     this.searchInput.set('');
