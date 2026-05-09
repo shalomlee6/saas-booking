@@ -10,6 +10,8 @@
   --sa-accent: #38bdf8;
   --sa-accent-dim: rgba(56, 189, 248, 0.15);
 
+  direction: ltr;
+  text-align: left;
   display: grid;
   grid-template-columns: var(--sa-sidebar-w) 1fr;
   min-height: 100vh;

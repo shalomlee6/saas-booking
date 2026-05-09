@@ -91,8 +91,8 @@
 }
 
 .dashboard-pill-active {
-  background: #e8446a;
-  border-color: #e8446a;
+  background: #b5254f;
+  border-color: #b5254f;
   color: #fff;
 }
 
@@ -201,7 +201,7 @@
 .dashboard-empty {
   margin: 0;
   padding: 1rem 0;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 0.875rem;
 }
 
@@ -209,8 +209,13 @@
   display: inline-block;
   margin-top: 0.75rem;
   font-size: 0.875rem;
-  color: var(--color-primary);
+  color: #b5254f;
   text-decoration: none;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .dashboard-link:hover {

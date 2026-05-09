@@ -143,7 +143,7 @@ $breakpoint:      1024px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-placeholder);
+  color: var(--text-muted);
   padding: 0.75rem 0.625rem 0.25rem;
 }
 
@@ -194,6 +194,13 @@ $breakpoint:      1024px;
     background: var(--color-primary-subtle);
     color: var(--color-primary);
   }
+}
+
+// Light theme: darken active-link text from #e8446a (3.47:1) to #b5254f (5.69:1) on #fff0f3
+:host-context(body.theme-light) .layout-sidebar-link-active {
+  color: #b5254f;
+  .layout-sidebar-link-icon { color: #b5254f; }
+  &:hover { color: #b5254f; }
 }
 
 .layout-sidebar-link-icon {

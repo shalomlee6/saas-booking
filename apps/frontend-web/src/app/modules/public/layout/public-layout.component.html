@@ -8,6 +8,7 @@
   }
   @if (businessData) {
     <main class="public-layout-main" id="main-content" tabindex="-1">
+      <h1 class="sr-only">{{ businessData.name }}</h1>
       <router-outlet />
     </main>
   }

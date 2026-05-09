@@ -1,14 +1,14 @@
 <section class="pl-prod" aria-labelledby="pl-prod-title">
   <h2 id="pl-prod-title" class="pl-prod__title">הטיפולים המומלצים</h2>
-  <div class="pl-prod__scroll" role="list">
+  <ul class="pl-prod__scroll">
     @for (p of products(); track p.name + p.price) {
-      <article class="pl-prod__card" role="listitem">
+      <li class="pl-prod__card">
         <h3 class="pl-prod__name">{{ p.name }}</h3>
         @if (p.description) {
           <p class="pl-prod__desc">{{ p.description }}</p>
         }
         <p class="pl-prod__price">{{ p.price | currency: 'ILS' : 'symbol' : '1.0-0' }}</p>
-      </article>
+      </li>
     }
-  </div>
+  </ul>
 </section>

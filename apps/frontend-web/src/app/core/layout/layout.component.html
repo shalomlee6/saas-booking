@@ -21,14 +21,14 @@
   <div class="layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
 
   <!-- ─── Sidebar ───────────────────────────────────────────────────────── -->
-  <div class="layout-sidebar">
+  <aside class="layout-sidebar" aria-label="ניווט ראשי">
     <div class="layout-sidebar-header">
       <div class="layout-sidebar-logo-mark" aria-hidden="true">S</div>
       <span class="layout-sidebar-logo-text">SaaS Booking</span>
     </div>
 
-    <aside class="layout-sidebar-body" aria-label="ניווט ראשי">
-      <nav class="layout-sidebar-nav" aria-label="תפריט">
+    <div class="layout-sidebar-body">
+      <nav id="layout-sidebar-nav" class="layout-sidebar-nav" aria-label="תפריט">
         <span class="layout-sidebar-section-label" aria-hidden="true">תפריט</span>
 
         <a
@@ -138,7 +138,7 @@
           {{ business()?.name ?? '—' }}
         </div>
       }
-    </aside>
+    </div>
 
     <div class="layout-sidebar-footer">
       <button
@@ -151,7 +151,7 @@
         <span class="layout-sidebar-link-text">Logout</span>
       </button>
     </div>
-  </div>
+  </aside>
 
   <!-- ─── Topbar ────────────────────────────────────────────────────────── -->
   <header class="layout-topbar" role="banner">
@@ -160,7 +160,7 @@
       [rounded]="false"
       [text]="true"
       severity="secondary"
-      [attr.aria-label]="menuAriaLabel()"
+      [ariaLabel]="menuAriaLabel()"
       [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
       [attr.aria-controls]="'layout-sidebar-nav'"
       (onClick)="toggleSidebar()"

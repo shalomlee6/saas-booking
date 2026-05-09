@@ -1,5 +1,5 @@
 <div class="pl-hero-wrap">
-  <div class="pl-hero-slider" aria-hidden="true">
+  <div class="pl-hero-slider">
     <p-carousel
       [value]="carouselSlides()"
       [numVisible]="1"
@@ -26,7 +26,7 @@
   </div>
 
   <div class="pl-hero-intro" dir="rtl">
-    <h1 class="pl-hero-intro__name">{{ businessName() }}</h1>
+    <p class="pl-hero-intro__name">{{ businessName() }}</p>
     <p class="pl-hero-intro__tagline">{{ tagline() }}</p>
     @if (description().trim()) {
       <p class="pl-hero-intro__desc">{{ description() }}</p>
