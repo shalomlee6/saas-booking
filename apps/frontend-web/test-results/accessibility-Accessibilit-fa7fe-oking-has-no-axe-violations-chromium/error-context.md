@@ -11,7 +11,7 @@ Error: expect(received).toHaveLength(expected)
 Expected length: 0
 Received length: 1
 Received array:  [{"description": "Ensure that the page, or at least one of its frames contains a level-one heading", "help": "Page should contain a level-one heading", "helpUrl": "https://dequeuniversity.com/rules/axe/4.11/page-has-heading-one?application=playwright", "id": "page-has-heading-one", "impact": "moderate", "nodes": [{"all": [{"data": null, "id": "page-has-heading-one", "impact": "moderate", "message": "Page must have a level-one heading", "relatedNodes": []}], "any": [], "failureSummary": "Fix all of the following:
-  Page must have a level-one heading", "html": "<html lang=\"he\">", "impact": "moderate", "none": [], "target": ["html"]}], "tags": ["cat.semantics", "best-practice"]}]
+  Page must have a level-one heading", "html": "<html lang=\"en\">", "impact": "moderate", "none": [], "target": ["html"]}], "tags": ["cat.semantics", "best-practice"]}]
     at E:\saas-booking\apps\frontend-web\e2e\accessibility.spec.ts:70:32
 ```
 
