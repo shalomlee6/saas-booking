@@ -29,6 +29,10 @@ const env = validateEnv();
 
 const app = express();
 
+const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:4200')
+  .split(',')
+  .map((o) => o.trim());
+
 app.use(
   '/uploads',
   (_req, res, next) => {
@@ -60,7 +64,13 @@ app.use(
 
 app.use(
   cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:4200',
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin ${origin} not allowed`));
+      }
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-e2e-test-seed-secret'],
     credentials: true,

@@ -98,6 +98,9 @@
         },
         "serve": {
           "builder": "@angular/build:dev-server",
+          "options": {
+            "allowedHosts": ["chen-nails.local"]
+          },
           "configurations": {
             "production": {
               "buildTarget": "frontend-web:build:production"

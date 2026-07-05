@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 import { provideRouter, Router, withDisabledInitialNavigation } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
+import { catchError, lastValueFrom, of } from 'rxjs';
 import { provideStore, provideState } from '@ngrx/store';
 import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
@@ -68,7 +68,7 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const auth = inject(AuthService);
       const router = inject(Router);
-      return lastValueFrom(auth.init()).then(() => {
+      return lastValueFrom(auth.init().pipe(catchError(() => of(undefined)))).then(() => {
         router.initialNavigation();
       });
     }),

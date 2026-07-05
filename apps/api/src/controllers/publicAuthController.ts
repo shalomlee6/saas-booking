@@ -17,6 +17,24 @@ function isDevOtpBypassEnabled(): boolean {
   return process.env.NODE_ENV !== 'production' && process.env.PUBLIC_DEV_OTP_BYPASS === 'true';
 }
 
+/** Digits-only phone for consistent store keys and customer lookup. */
+function normalizePhone(phone: unknown): string {
+  if (phone == null) return '';
+  return String(phone).replace(/\D/g, '');
+}
+
+function normalizeBusinessSlug(slug: string): string {
+  return slug.trim();
+}
+
+function otpStoreKey(businessSlug: string, phone: unknown): string {
+  return `${normalizeBusinessSlug(businessSlug)}:${normalizePhone(phone)}`;
+}
+
+function normalizeOtpCode(code: unknown): string {
+  return String(code ?? '').trim();
+}
+
 // Rate limiting (simple in-memory)
 const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
@@ -40,46 +58,62 @@ function checkRateLimit(identifier: string): boolean {
 }
 
 function getClientIdentifier(req: Request): string {
-  // Use IP + phone for rate limiting
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const phone = (req.body.phone || '').toString();
+  const phone = normalizePhone(req.body?.phone);
   return `${ip}:${phone}`;
 }
 
 // POST /api/public/:businessSlug/auth/request-otp
 export async function requestOtp(req: Request, res: Response) {
   try {
-    const { businessSlug } = req.params;
-    const { phone, firstName, lastName } = req.body;
+    const businessSlug = normalizeBusinessSlug(String(req.params.businessSlug ?? ''));
+    const { phone, firstName, lastName } = req.body as {
+      phone?: unknown;
+      firstName?: string;
+      lastName?: string;
+    };
+    const normalizedPhone = normalizePhone(phone);
 
-    if (!phone) {
+    logger.info('OTP_REQUEST', {
+      businessSlug,
+      phoneRaw: phone,
+      phoneNormalized: normalizedPhone,
+      devBypass: isDevOtpBypassEnabled(),
+    });
+
+    if (!normalizedPhone) {
       return res.status(400).json({ message: 'phone is required' });
     }
 
-    // Rate limiting
     const identifier = getClientIdentifier(req);
     if (!checkRateLimit(identifier)) {
       return res.status(429).json({ message: 'Too many requests. Please try again later.' });
     }
 
-    // Resolve business
     const business = await Business.findOne({ slug: businessSlug });
     if (!business) {
+      logger.info('OTP_FAILURE', { stage: 'request', reason: 'business_not_found', businessSlug });
       return res.status(404).json({ message: 'Business not found' });
     }
 
-    // In production use generated OTP; optional dev bypass only when explicitly enabled.
     const otpCode = isDevOtpBypassEnabled()
       ? DEV_OTP_CODE
       : String(Math.floor(100000 + Math.random() * 900000));
     const expiresAt = Date.now() + OTP_EXPIRY_MS;
+    const storeKey = otpStoreKey(businessSlug, normalizedPhone);
 
-    // Store OTP with customer info for later use in verify-otp
-    otpStore.set(`${businessSlug}:${phone}`, { 
-      code: otpCode, 
+    otpStore.set(storeKey, {
+      code: otpCode,
       expiresAt,
       firstName: firstName || undefined,
       lastName: lastName || undefined,
+    });
+
+    logger.info('OTP_STORED', {
+      storeKey,
+      expiresAt,
+      codeLength: otpCode.length,
+      devBypass: isDevOtpBypassEnabled(),
     });
 
     return res.json({ ok: true });
@@ -92,74 +126,103 @@ export async function requestOtp(req: Request, res: Response) {
 // POST /api/public/:businessSlug/auth/verify-otp
 export async function verifyOtp(req: Request, res: Response) {
   try {
-    const { businessSlug } = req.params;
-    const { phone, code } = req.body;
+    const businessSlug = normalizeBusinessSlug(String(req.params.businessSlug ?? ''));
+    const { phone, code } = req.body as { phone?: unknown; code?: unknown };
+    const normalizedPhone = normalizePhone(phone);
+    const normalizedCode = normalizeOtpCode(code);
+    const storeKey = otpStoreKey(businessSlug, normalizedPhone);
 
-    if (!phone || !code) {
+    logger.info('OTP_VERIFY', {
+      businessSlug,
+      phoneRaw: phone,
+      phoneNormalized: normalizedPhone,
+      codeLength: normalizedCode.length,
+      storeKey,
+      devBypass: isDevOtpBypassEnabled(),
+    });
+
+    if (!normalizedPhone || !normalizedCode) {
       return res.status(400).json({ message: 'phone and code are required' });
     }
 
-    // Rate limiting
     const identifier = getClientIdentifier(req);
     if (!checkRateLimit(identifier)) {
       return res.status(429).json({ message: 'Too many requests. Please try again later.' });
     }
 
-    // Resolve business
     const business = await Business.findOne({ slug: businessSlug });
     if (!business) {
+      logger.info('OTP_FAILURE', { stage: 'verify', reason: 'business_not_found', businessSlug });
       return res.status(404).json({ message: 'Business not found' });
     }
 
     const businessId = business._id.toString();
+    const stored = otpStore.get(storeKey);
+    const now = Date.now();
 
-    // Check OTP
-    const stored = otpStore.get(`${businessSlug}:${phone}`);
-    
-    const isValid = !!stored && stored.code === code && Date.now() < stored.expiresAt;
+    logger.info('OTP_FOUND', {
+      storeKey,
+      found: !!stored,
+      expired: stored ? now >= stored.expiresAt : undefined,
+    });
+
+    let isValid =
+      !!stored && stored.code === normalizedCode && now < stored.expiresAt;
+
+    logger.info('OTP_COMPARE', {
+      storeKey,
+      match: stored ? stored.code === normalizedCode : false,
+      expired: stored ? now >= stored.expiresAt : undefined,
+    });
+
+    // Dev bypass: accept demo code even if store was lost (e.g. server restart) or never requested.
+    if (!isValid && isDevOtpBypassEnabled() && normalizedCode === DEV_OTP_CODE) {
+      logger.info('OTP_DEV_BYPASS', { storeKey });
+      isValid = true;
+    }
 
     if (!isValid) {
+      logger.info('OTP_FAILURE', {
+        storeKey,
+        reason: !stored ? 'not_found' : now >= (stored?.expiresAt ?? 0) ? 'expired' : 'code_mismatch',
+      });
       return res.status(401).json({ message: 'Invalid or expired code' });
     }
 
-    // Extract customer info from stored OTP data
     const firstName = stored?.firstName;
     const lastName = stored?.lastName;
 
-    // Clean up OTP
-    otpStore.delete(`${businessSlug}:${phone}`);
+    if (stored) {
+      otpStore.delete(storeKey);
+    }
 
-    // Find or create customer
-    let customer = await Customer.findOne({ phone, businessId: business._id });
+    let customer = await Customer.findOne({ phone: normalizedPhone, businessId: business._id });
 
     if (!customer) {
-      // Create customer with provided name or phone as fallback
-      const customerName = firstName && lastName 
-        ? `${firstName} ${lastName}`.trim()
-        : firstName || lastName || phone;
-      
+      const customerName =
+        firstName && lastName
+          ? `${firstName} ${lastName}`.trim()
+          : firstName || lastName || normalizedPhone;
+
       customer = await Customer.create({
         businessId: business._id,
         name: customerName,
-        phone,
+        phone: normalizedPhone,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
       });
-    } else {
-      // Update existing customer with new name if provided
-      if (firstName || lastName) {
-        const customerName = firstName && lastName 
+    } else if (firstName || lastName) {
+      const customerName =
+        firstName && lastName
           ? `${firstName} ${lastName}`.trim()
           : firstName || lastName || customer.name;
-        
-        customer.name = customerName;
-        if (firstName) customer.firstName = firstName;
-        if (lastName) customer.lastName = lastName;
-        await customer.save();
-      }
+
+      customer.name = customerName;
+      if (firstName) customer.firstName = firstName;
+      if (lastName) customer.lastName = lastName;
+      await customer.save();
     }
 
-    // Generate JWT token for client (role: 'customer' for public booking)
     const env = validateEnv();
     const token = jwt.sign(
       {
@@ -174,6 +237,12 @@ export async function verifyOtp(req: Request, res: Response) {
     );
 
     setPublicCustomerSessionCookie(res, token);
+
+    logger.info('OTP_SUCCESS', {
+      storeKey,
+      customerId: customer._id.toString(),
+      businessId,
+    });
 
     return res.json({
       token,
@@ -212,4 +281,3 @@ export async function getPublicAuthMe(req: RequestWithPublicCustomer, res: Respo
     email: customer.email ?? undefined,
   });
 }
-
