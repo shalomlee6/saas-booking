@@ -9,6 +9,5 @@ export const environment = {
   useMocks: false,
   mockPublicApi: false,
   apiUrl: '',
-  // TODO: replace with your actual admin/owner-portal domain (e.g. 'app.yourbrand.com')
-  adminDomain: '',
+  adminDomain: 'boki.co.il',
 };

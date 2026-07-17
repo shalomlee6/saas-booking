@@ -1,9 +1,16 @@
-export const environment = {
+export interface Environment {
+  production: boolean;
+  useMocks: boolean;
+  mockPublicApi: boolean;
+  apiUrl: string;
+  adminDomain: string;     // ← הוסף את זה
+}
+
+export const environment: Environment = {
   production: false,
   useMocks: false,
   mockPublicApi: false,
   /** Owner API base (empty = same-origin `/api` via proxy). */
   apiUrl: '',
-  // TODO: replace with your actual admin/owner-portal domain (e.g. 'app.yourbrand.com')
-  adminDomain: '',
+  adminDomain: 'boki.co.il',
 };

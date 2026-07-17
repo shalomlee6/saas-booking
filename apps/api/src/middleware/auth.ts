@@ -65,7 +65,7 @@ export async function auth(req: AuthRequest, res: Response, next: NextFunction):
 
     req.user = {
       userId,
-      role: String(decoded.role ?? dbUser.role ?? ''),
+      role: String(dbUser.role ?? ''),
       email: dbUser.email ?? (decoded.email != null ? String(decoded.email) : undefined),
       businessId:
         decoded.businessId != null

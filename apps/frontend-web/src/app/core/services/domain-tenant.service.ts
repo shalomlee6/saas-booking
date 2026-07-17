@@ -16,12 +16,17 @@ export class DomainTenantService {
   readonly originalPath: string | null = null;
 
   constructor() {
-    const hostname = window.location.hostname;
-    const isLocalhost =
-      hostname === 'localhost' || hostname === '127.0.0.1';
+    const raw = window.location.hostname;
+    // Strip a leading "www." so both bare and www-prefixed hostnames are handled
+    // consistently — both for the admin-domain check and for slug extraction.
+    const hostname = raw.startsWith('www.') ? raw.slice(4) : raw;
+
+    const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
     const isAdminDomain = hostname === (environment as any).adminDomain;
 
     if (!isLocalhost && !isAdminDomain) {
+      // hostname is now guaranteed to be stripped of "www.", so split('.')[0]
+      // gives the true business slug (e.g. "chen-nails" from "chen-nails.co.il").
       const slug = hostname.split('.')[0];
       this.tenantSlug.set(slug);
       this.originalPath = window.location.pathname;
