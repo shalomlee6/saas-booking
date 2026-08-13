@@ -8,10 +8,15 @@ import { DomainTenantService } from '../services/domain-tenant.service';
  * never has to know about the custom domain.
  *
  * Examples:
- *   chen-nails.co.il/        → /b/chen-nails/landing
+ *   chen-nails.co.il/        → /b/chen-nails
  *   chen-nails.co.il/book    → /b/chen-nails/book
  *
  * On the admin domain or localhost the guard is a no-op (returns true).
+ *
+ * IMPORTANT: this guard sits on the top-level '' route, which wraps ALL
+ * child routes including /b/:slug itself. Without the "already there" check
+ * below, it would redirect unconditionally on every navigation -- including
+ * the redirect target itself -- causing an infinite redirect loop.
  */
 export const domainTenantGuard: CanActivateFn = (route) => {
   const domainTenant = inject(DomainTenantService);
@@ -22,6 +27,12 @@ export const domainTenantGuard: CanActivateFn = (route) => {
     return true;
   }
 
+  // Already navigating within /b/:slug — don't redirect again.
+  const targetingUrl = router.getCurrentNavigation()?.extractedUrl.toString() ?? router.url;
+  if (targetingUrl === `/b/${slug}` || targetingUrl.startsWith(`/b/${slug}/`)) {
+    return true;
+  }
+
   // Use the path captured at bootstrap — before Angular's wildcard redirect
   // (`** → ''`) could erase it from the router state.
   const rawPath = domainTenant.originalPath ?? '/';
@@ -29,7 +40,7 @@ export const domainTenantGuard: CanActivateFn = (route) => {
 
   const target =
     segments.length === 0
-      ? ['/b', slug, 'landing']
+      ? ['/b', slug]
       : ['/b', slug, ...segments];
 
   return router.createUrlTree(target, { queryParams: route.queryParams });

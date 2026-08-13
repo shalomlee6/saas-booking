@@ -12,6 +12,10 @@ import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { getAvailabilityForBusiness } from '../services/publicAvailabilityService';
 import { toUtcDate } from '../services/publicBookingTime';
 import {
+  setPublicCustomerSessionCookie,
+  signPublicCustomerToken,
+} from '../utils/publicCustomerSession';
+import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -389,8 +393,24 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
       throw new ValidationError('customerName must be at most 200 characters');
     }
     resolvedCustomerName = customerName;
-    resolvedCustomerPhone =
-      typeof body.customerPhone === 'string' ? body.customerPhone.trim() || undefined : undefined;
+    const rawPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
+    const normalizedPhone = rawPhone.replace(/\D/g, '');
+    if (!normalizedPhone) {
+      throw new ValidationError('customerPhone is required', [
+        { path: 'customerPhone', message: 'customerPhone is required', code: 'custom' },
+      ]);
+    }
+    resolvedCustomerPhone = normalizedPhone;
+
+    let guest = await Customer.findOne({ phone: normalizedPhone, businessId });
+    if (!guest) {
+      guest = await Customer.create({
+        businessId,
+        name: customerName,
+        phone: normalizedPhone,
+      });
+    }
+    customerId = guest._id as Types.ObjectId;
   }
 
   const settings = await ensureBusinessSettings(businessId);
@@ -434,10 +454,30 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
     { requireCustomerId: false }
   );
 
-  res.status(201).json({
+  const payload: {
+    id: string;
+    status: string;
+    token?: string;
+    customerId?: string;
+    customerName?: string;
+  } = {
     id: appointment._id.toString(),
     status: appointment.status,
-  });
+  };
+
+  if (!publicCustomer && customerId) {
+    const token = signPublicCustomerToken({
+      customerId: customerId.toString(),
+      businessId: businessId.toString(),
+      slug: business.slug,
+    });
+    setPublicCustomerSessionCookie(res, token);
+    payload.token = token;
+    payload.customerId = customerId.toString();
+    payload.customerName = resolvedCustomerName;
+  }
+
+  res.status(201).json(payload);
 }
 
 // --- GET /api/public/appointments/upcoming
@@ -458,7 +498,7 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     customerId: new Types.ObjectId(publicCustomer.customerId),
     businessId: new Types.ObjectId(publicCustomer.businessId),
     status: { $nin: ['cancelled'] },
-    start: { $gt: now },
+    start: { $gte: now },
   })
     .sort({ start: 1 })
     .populate<{ serviceId: { name: string } }>('serviceId', 'name')

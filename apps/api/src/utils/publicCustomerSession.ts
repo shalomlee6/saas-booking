@@ -50,3 +50,23 @@ export function verifyPublicCustomerJwt(token: string): PublicCustomer | null {
 export function setPublicCustomerSessionCookie(res: Response, token: string): void {
   res.cookie(PUBLIC_CUSTOMER_COOKIE_NAME, token, publicCustomerCookieOptions());
 }
+
+/** JWT used by public customer OTP login and guest booking. */
+export function signPublicCustomerToken(args: {
+  customerId: string;
+  businessId: string;
+  slug: string;
+}): string {
+  const env = validateEnv();
+  return jwt.sign(
+    {
+      sub: args.customerId,
+      customerId: args.customerId,
+      businessId: args.businessId,
+      slug: args.slug,
+      role: 'customer',
+    },
+    env.JWT_SECRET,
+    { expiresIn: '30d' }
+  );
+}

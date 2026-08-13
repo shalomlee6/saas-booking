@@ -342,7 +342,6 @@ export class PublicLandingComponent implements OnInit {
           this.loadUpcoming();
         } else {
           this.upcomingApt.set(null);
-          this.justBookedApt.set(null);
           this.upcomingError.set(false);
           this.loadingUpcoming.set(false);
         }

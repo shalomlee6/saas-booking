@@ -1,15 +1,12 @@
 import { Request, Response } from 'express';
 import { Business } from '../models/Business';
 import { Customer } from '../models/Customer';
-import jwt from 'jsonwebtoken';
-import { validateEnv } from '../config/env';
+import { OtpChallenge } from '../models/OtpChallenge';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
-import { setPublicCustomerSessionCookie } from '../utils/publicCustomerSession';
+import { setPublicCustomerSessionCookie, signPublicCustomerToken } from '../utils/publicCustomerSession';
+import { isSmsConfigured, sendOtpSms, toE164 } from '../services/smsService';
 import { logger } from '../utils/logger';
 
-// In-memory OTP storage (dev only)
-// In production, use Redis or similar
-const otpStore = new Map<string, { code: string; expiresAt: number; firstName?: string; lastName?: string }>();
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const DEV_OTP_CODE = '123456';
 
@@ -99,22 +96,60 @@ export async function requestOtp(req: Request, res: Response) {
     const otpCode = isDevOtpBypassEnabled()
       ? DEV_OTP_CODE
       : String(Math.floor(100000 + Math.random() * 900000));
-    const expiresAt = Date.now() + OTP_EXPIRY_MS;
+    const expiresAt = new Date(Date.now() + OTP_EXPIRY_MS);
     const storeKey = otpStoreKey(businessSlug, normalizedPhone);
 
-    otpStore.set(storeKey, {
-      code: otpCode,
-      expiresAt,
-      firstName: firstName || undefined,
-      lastName: lastName || undefined,
-    });
+    await OtpChallenge.findOneAndUpdate(
+      { businessSlug, phone: normalizedPhone },
+      {
+        businessSlug,
+        phone: normalizedPhone,
+        code: otpCode,
+        expiresAt,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+      },
+      { upsert: true, new: true }
+    );
 
     logger.info('OTP_STORED', {
       storeKey,
-      expiresAt,
+      expiresAt: expiresAt.toISOString(),
       codeLength: otpCode.length,
       devBypass: isDevOtpBypassEnabled(),
     });
+
+    const smsReady = isSmsConfigured();
+    if (smsReady) {
+      const e164 = toE164(normalizedPhone);
+      if (!e164) {
+        await OtpChallenge.deleteOne({ businessSlug, phone: normalizedPhone });
+        return res.status(400).json({ message: 'Invalid phone number' });
+      }
+      try {
+        await sendOtpSms(e164, otpCode);
+      } catch (sendErr) {
+        logger.error('OTP_SMS_SEND_FAILED', {
+          storeKey,
+          error: sendErr instanceof Error ? sendErr.message : String(sendErr),
+        });
+        await OtpChallenge.deleteOne({ businessSlug, phone: normalizedPhone });
+        return res.status(502).json({ message: 'Failed to send verification code. Please try again.' });
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.error('OTP_SMS_NOT_CONFIGURED', { storeKey });
+      await OtpChallenge.deleteOne({ businessSlug, phone: normalizedPhone });
+      return res.status(503).json({
+        message: 'SMS provider is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_FROM_NUMBER.',
+      });
+    } else {
+      logger.warn('OTP_SMS_SKIPPED', {
+        storeKey,
+        reason: 'no_sms_provider',
+        devBypass: isDevOtpBypassEnabled(),
+        ...(isDevOtpBypassEnabled() ? { otpCode } : {}),
+      });
+    }
 
     return res.json({ ok: true });
   } catch (err) {
@@ -157,22 +192,23 @@ export async function verifyOtp(req: Request, res: Response) {
     }
 
     const businessId = business._id.toString();
-    const stored = otpStore.get(storeKey);
+    const stored = await OtpChallenge.findOne({ businessSlug, phone: normalizedPhone });
     const now = Date.now();
+    const storedExpiry = stored?.expiresAt.getTime() ?? 0;
 
     logger.info('OTP_FOUND', {
       storeKey,
       found: !!stored,
-      expired: stored ? now >= stored.expiresAt : undefined,
+      expired: stored ? now >= storedExpiry : undefined,
     });
 
     let isValid =
-      !!stored && stored.code === normalizedCode && now < stored.expiresAt;
+      !!stored && stored.code === normalizedCode && now < storedExpiry;
 
     logger.info('OTP_COMPARE', {
       storeKey,
       match: stored ? stored.code === normalizedCode : false,
-      expired: stored ? now >= stored.expiresAt : undefined,
+      expired: stored ? now >= storedExpiry : undefined,
     });
 
     // Dev bypass: accept demo code even if store was lost (e.g. server restart) or never requested.
@@ -184,7 +220,7 @@ export async function verifyOtp(req: Request, res: Response) {
     if (!isValid) {
       logger.info('OTP_FAILURE', {
         storeKey,
-        reason: !stored ? 'not_found' : now >= (stored?.expiresAt ?? 0) ? 'expired' : 'code_mismatch',
+        reason: !stored ? 'not_found' : now >= storedExpiry ? 'expired' : 'code_mismatch',
       });
       return res.status(401).json({ message: 'Invalid or expired code' });
     }
@@ -193,7 +229,7 @@ export async function verifyOtp(req: Request, res: Response) {
     const lastName = stored?.lastName;
 
     if (stored) {
-      otpStore.delete(storeKey);
+      await OtpChallenge.deleteOne({ _id: stored._id });
     }
 
     let customer = await Customer.findOne({ phone: normalizedPhone, businessId: business._id });
@@ -223,18 +259,11 @@ export async function verifyOtp(req: Request, res: Response) {
       await customer.save();
     }
 
-    const env = validateEnv();
-    const token = jwt.sign(
-      {
-        sub: customer._id.toString(),
-        customerId: customer._id.toString(),
-        businessId,
-        slug: businessSlug,
-        role: 'customer',
-      },
-      env.JWT_SECRET,
-      { expiresIn: '30d' }
-    );
+    const token = signPublicCustomerToken({
+      customerId: customer._id.toString(),
+      businessId,
+      slug: businessSlug,
+    });
 
     setPublicCustomerSessionCookie(res, token);
 

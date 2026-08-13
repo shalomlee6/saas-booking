@@ -98,7 +98,7 @@ publicRouter.post(
   createPublicAppointment
 );
 
-// OTP auth endpoints (dev stub)
+// OTP auth
 publicRouter.post(
   '/:businessSlug/auth/request-otp',
   validateParams(legacyBusinessSlugParamsSchema),

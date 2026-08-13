@@ -98,7 +98,7 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedSlot = signal<string | null>(null);
   /** Guest-only: customer full name. */
   readonly guestName = signal('');
-  /** Guest-only: customer phone (optional). */
+  /** Guest-only: customer phone (required). */
   readonly guestPhone = signal('');
 
   // ── Loading / error signals ────────────────────────────────────────────────
@@ -160,7 +160,8 @@ export class CustomerBookPageComponent implements OnInit {
   readonly canConfirm = computed(
     () =>
       !this.submitting() &&
-      (this.isLoggedIn() || this.guestName().trim().length > 0)
+      (this.isLoggedIn() ||
+        (this.guestName().trim().length > 0 && this.guestPhone().trim().length > 0))
   );
 
   // ── Two-way binding shim for p-datePicker [(ngModel)] ──────────────────────
@@ -324,9 +325,10 @@ export class CustomerBookPageComponent implements OnInit {
     const time = this.selectedSlot();
     const loggedIn = this.isLoggedIn();
     const name = this.guestName().trim();
+    const phone = this.guestPhone().replace(/\D/g, '');
 
     if (!b || !svc || !dateStr || !time) return;
-    if (!loggedIn && !name) return;
+    if (!loggedIn && (!name || !phone)) return;
 
     this.submitting.set(true);
     this.submitError.set(null);
@@ -337,18 +339,26 @@ export class CustomerBookPageComponent implements OnInit {
       date: dateStr,
       time,
       customerName: !loggedIn ? name : undefined,
-      customerPhone: !loggedIn ? this.guestPhone() : undefined,
+      customerPhone: !loggedIn ? phone : undefined,
     });
 
     this.publicApi.createAppointment(body).subscribe({
       next: (res) => {
         this.submitting.set(false);
         const slug = this.slug();
+        if (res.token && res.customerId && slug) {
+          this.session.setSession(
+            res.token,
+            slug,
+            res.customerId,
+            res.customerName ?? name
+          );
+        }
         if (slug) {
           this.router.navigate(['/b', slug], {
             state: {
               booked: true,
-              customerId: this.session.customerId(),
+              customerId: res.customerId ?? this.session.customerId(),
               apt: {
                 id: res.id,
                 date: dateStr,

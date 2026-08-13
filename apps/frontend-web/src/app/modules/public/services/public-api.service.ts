@@ -153,6 +153,9 @@ export interface CreateAppointmentBody {
 export interface CreateAppointmentResponse {
   id: string;
   status: string;
+  token?: string;
+  customerId?: string;
+  customerName?: string;
 }
 
 export interface UpcomingAppointment {

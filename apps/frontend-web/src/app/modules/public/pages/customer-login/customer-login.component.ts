@@ -14,6 +14,7 @@ import {
   formatParsedErrorForUi,
   parseHttpClientError,
 } from '../../../../shared/utils/http-field-errors.util';
+import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
 @Component({
   selector: 'app-customer-login',
@@ -34,10 +35,7 @@ export class CustomerLoginComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly business = signal<PublicBusiness | null>(null);
 
-  slug = computed(() => {
-    const p = this.route.parent?.parent?.snapshot.paramMap.get('slug');
-    return p ?? '';
-  });
+  slug = computed(() => readBusinessSlugFromPathFromRoot(this.route));
 
   formStep1: FormGroup;
   formStep2: FormGroup;
