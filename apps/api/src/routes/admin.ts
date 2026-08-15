@@ -28,13 +28,15 @@ import {
   dismissAdminAlert,
   resolveAdminAlert,
 } from '../controllers/adminAlertsController';
-import { validateBody } from '../middleware/validateRequest';
+import { validateBody, validateParams } from '../middleware/validateRequest';
 import {
+  adminUserIdParamsSchema,
   createAdminBusinessBodySchema,
   patchAdminUserBodySchema,
   patchAdminUserPlanBodySchema,
   patchPlatformSettingsBodySchema,
 } from '../validation/schemas/admin';
+import { adminResetUserPassword } from '../controllers/passwordResetController';
 
 export const adminRouter = Router();
 
@@ -56,6 +58,11 @@ adminRouter.patch('/users/:id/plan', validateBody(patchAdminUserPlanBodySchema),
 adminRouter.get('/users/:id', getAdminUserById);
 adminRouter.patch('/users/:id', validateBody(patchAdminUserBodySchema), patchAdminUser);
 adminRouter.delete('/users/:id', deleteAdminUser);
+adminRouter.post(
+  '/users/:id/reset-password',
+  validateParams(adminUserIdParamsSchema),
+  adminResetUserPassword
+);
 
 adminRouter.get('/settings', getAdminSettings);
 adminRouter.patch('/settings', validateBody(patchPlatformSettingsBodySchema), patchAdminSettings);

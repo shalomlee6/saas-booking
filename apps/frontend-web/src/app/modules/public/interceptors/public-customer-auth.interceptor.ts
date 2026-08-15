@@ -12,7 +12,7 @@ import { PublicSessionService } from '../services/public-session.service';
  *  - DELETE /api/public/appointments/:id      (customer cancellation)
  *  - GET    /api/public/auth/me               (hydrate session on load)
  *
- * The token is sourced from PublicSessionService (sessionStorage).
+ * The token is sourced from PublicSessionService (localStorage).
  * If no token exists the request proceeds without a Bearer header (the
  * browser may still send the public customer HTTP-only cookie on `/api/public/*`).
  */

@@ -1,6 +1,10 @@
 import type { Response, NextFunction } from 'express';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
-import { getPublicCustomerJwtFromRequest, verifyPublicCustomerJwt } from '../utils/publicCustomerSession';
+import {
+  getPublicCustomerJwtFromRequest,
+  renewPublicCustomerSession,
+  verifyPublicCustomerJwt,
+} from '../utils/publicCustomerSession';
 
 /**
  * Requires a valid public customer session (Bearer or HTTP-only cookie from verify-otp).
@@ -21,5 +25,6 @@ export function requirePublicCustomer(
     return;
   }
   req.publicCustomer = session;
+  renewPublicCustomerSession(res, session);
   next();
 }

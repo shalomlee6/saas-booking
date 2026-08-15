@@ -275,18 +275,31 @@ export class SuperAdminUserDetailComponent implements OnInit {
   }
 
   confirmResetPassword(): void {
+    const id = this.userId();
+    const u = this.serverUser();
+    if (!id || !u) return;
     this.confirm.confirm({
-      message:
-        'Password reset from the admin console is not fully enabled yet. You can still record this action for support.',
+      message: `Send a password reset link to ${u.email}? The link expires in 1 hour.`,
       header: 'Reset password',
-      icon: 'pi pi-info-circle',
-      acceptLabel: 'OK',
-      rejectVisible: false,
+      icon: 'pi pi-envelope',
+      acceptLabel: 'Send link',
+      rejectLabel: 'Cancel',
       accept: () => {
-        this.messages.add({
-          severity: 'info',
-          summary: 'Reset password',
-          detail: 'Contact the user directly or use your identity provider when available.',
+        this.adminApi.resetUserPassword(id).subscribe({
+          next: (res) => {
+            this.messages.add({
+              severity: 'success',
+              summary: 'Reset email sent',
+              detail: res.message,
+            });
+          },
+          error: (err: { error?: { message?: string } }) => {
+            this.messages.add({
+              severity: 'error',
+              summary: 'Reset failed',
+              detail: err?.error?.message ?? 'Could not send a reset email.',
+            });
+          },
         });
       },
     });

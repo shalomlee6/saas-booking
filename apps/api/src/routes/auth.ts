@@ -1,31 +1,27 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import { validateEnv } from '../config/env';
 import { User } from '../models/User';
 import { Business } from '../models/Business';
 import { generateSlug } from '../utils/slug';
-import { auth, AuthRequest } from '../middleware/auth';
+import { auth } from '../middleware/auth';
 import { getMe } from '../controllers/authController';
 import { validateBody } from '../middleware/validateRequest';
 import { asyncHandler } from '../utils/asyncHandler';
-import { authLoginBodySchema, authRegisterBodySchema } from '../validation/schemas/auth';
+import {
+  authForgotPasswordBodySchema,
+  authLoginBodySchema,
+  authRegisterBodySchema,
+  authResetPasswordBodySchema,
+} from '../validation/schemas/auth';
+import { forgotPassword, resetPassword } from '../controllers/passwordResetController';
+import {
+  STAFF_COOKIE_NAME,
+  clearStaffAuthCookieOptions,
+  signStaffSessionToken,
+  staffAuthCookieOptions,
+} from '../utils/staffSession';
 
 export const authRouter = Router();
-
-const authCookieOptions = () => ({
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
-
-const clearAuthCookieOptions = () => ({
-  path: '/',
-  httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'lax' as const,
-});
 
 /** Public self-serve registration: allowed when ALLOW_PUBLIC_REGISTER=true, or when unset in non-production. */
 function isPublicRegistrationAllowed(): boolean {
@@ -71,19 +67,14 @@ authRouter.post(
     user.businessId = business._id;
     await user.save();
 
-    const env = validateEnv();
-    const token = jwt.sign(
-      {
-        userId: user._id,
-        role: user.role,
-        email: user.email,
-        businessId: user.businessId,
-      },
-      env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
+    const token = signStaffSessionToken({
+      userId: user._id,
+      role: user.role,
+      email: user.email,
+      businessId: user.businessId,
+    });
 
-    res.cookie('sb_token', token, authCookieOptions());
+    res.cookie(STAFF_COOKIE_NAME, token, staffAuthCookieOptions());
 
     return res.status(201).json({
       token,
@@ -132,10 +123,9 @@ authRouter.post(
       payload.businessId = user.businessId;
     }
 
-    const env = validateEnv();
-    const token = jwt.sign(payload, env.JWT_SECRET, { expiresIn: '7d' });
+    const token = signStaffSessionToken(payload);
 
-    res.cookie('sb_token', token, authCookieOptions());
+    res.cookie(STAFF_COOKIE_NAME, token, staffAuthCookieOptions());
 
     return res.json({
       token,
@@ -149,11 +139,14 @@ authRouter.post(
   })
 );
 
+authRouter.post('/forgot-password', validateBody(authForgotPasswordBodySchema), asyncHandler(forgotPassword));
+authRouter.post('/reset-password', validateBody(authResetPasswordBodySchema), asyncHandler(resetPassword));
+
 // GET /api/auth/me
 authRouter.get('/me', auth, getMe);
 
 // logout
 authRouter.post('/logout', (req, res) => {
-  res.clearCookie('sb_token', clearAuthCookieOptions());
+  res.clearCookie(STAFF_COOKIE_NAME, clearStaffAuthCookieOptions());
   return res.json({ success: true });
 });

@@ -17,6 +17,7 @@ import { AuthService } from './core/auth/auth.service';
 import { authInterceptor, unauthorizedInterceptor } from './core/api/http.config';
 import { mockApiInterceptor } from './core/api/mock-api.interceptor';
 import { publicCustomerAuthInterceptor } from './modules/public/interceptors/public-customer-auth.interceptor';
+import { sessionRefreshInterceptor } from './core/api/session-refresh.interceptor';
 import { environment } from '../environments/environment';
 import {
   appointmentsFeatureKey,
@@ -59,9 +60,15 @@ export const appConfig: ApplicationConfig = {
               mockApiInterceptor,
               publicCustomerAuthInterceptor,
               authInterceptor,
+              sessionRefreshInterceptor,
               unauthorizedInterceptor,
             ]
-          : [publicCustomerAuthInterceptor, authInterceptor, unauthorizedInterceptor]
+          : [
+              publicCustomerAuthInterceptor,
+              authInterceptor,
+              sessionRefreshInterceptor,
+              unauthorizedInterceptor,
+            ]
       )
     ),
     provideRouter(routes, withDisabledInitialNavigation()),

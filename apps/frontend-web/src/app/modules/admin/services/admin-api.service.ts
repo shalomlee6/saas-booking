@@ -243,6 +243,10 @@ export class AdminApiService {
     return this.api.delete<void>(`admin/users/${id}`);
   }
 
+  resetUserPassword(id: string): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>(`admin/users/${id}/reset-password`, {});
+  }
+
   getSettings(): Observable<PlatformSettingsDto> {
     return this.api.get<PlatformSettingsDto>('admin/settings');
   }

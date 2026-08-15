@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mongoObjectIdString } from '../primitives';
 
 /**
  * POST /api/admin/businesses — full tenant provisioning (owner + business + settings + default service).
@@ -35,6 +36,12 @@ export const patchAdminUserBodySchema = z
         analyticsEnabled: z.boolean().optional(),
       })
       .optional(),
+  })
+  .strict();
+
+export const adminUserIdParamsSchema = z
+  .object({
+    id: mongoObjectIdString,
   })
   .strict();
 

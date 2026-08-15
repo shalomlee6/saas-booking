@@ -1,6 +1,10 @@
 import type { Response, NextFunction } from 'express';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
-import { getPublicCustomerJwtFromRequest, verifyPublicCustomerJwt } from '../utils/publicCustomerSession';
+import {
+  getPublicCustomerJwtFromRequest,
+  renewPublicCustomerSession,
+  verifyPublicCustomerJwt,
+} from '../utils/publicCustomerSession';
 
 export type { PublicCustomer, RequestWithPublicCustomer } from '../types/publicCustomer';
 
@@ -10,7 +14,7 @@ export type { PublicCustomer, RequestWithPublicCustomer } from '../types/publicC
  */
 export function optionalPublicCustomer(
   req: RequestWithPublicCustomer,
-  _res: Response,
+  res: Response,
   next: NextFunction
 ): void {
   const token = getPublicCustomerJwtFromRequest(req);
@@ -24,5 +28,6 @@ export function optionalPublicCustomer(
     return;
   }
   req.publicCustomer = session;
+  renewPublicCustomerSession(res, session);
   next();
 }

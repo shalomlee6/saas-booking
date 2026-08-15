@@ -73,6 +73,7 @@ app.use(
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-e2e-test-seed-secret'],
+    exposedHeaders: ['X-Refreshed-Token', 'X-Refreshed-Public-Token'],
     credentials: true,
   })
 );

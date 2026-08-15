@@ -4,13 +4,16 @@ import { validateEnv } from '../config/env';
 import type { PublicCustomer } from '../types/publicCustomer';
 
 export const PUBLIC_CUSTOMER_COOKIE_NAME = 'sb_public_customer';
+export const CUSTOMER_SESSION_TTL = '365d';
+export const CUSTOMER_SESSION_MAX_AGE_MS = 365 * 24 * 60 * 60 * 1000;
+export const REFRESHED_PUBLIC_TOKEN_HEADER = 'X-Refreshed-Public-Token';
 
 export function publicCustomerCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    maxAge: 30 * 24 * 60 * 60 * 1000, // align with verify-otp JWT (30d)
+    maxAge: CUSTOMER_SESSION_MAX_AGE_MS,
     path: '/api/public',
   };
 }
@@ -67,6 +70,18 @@ export function signPublicCustomerToken(args: {
       role: 'customer',
     },
     env.JWT_SECRET,
-    { expiresIn: '30d' }
+    { expiresIn: CUSTOMER_SESSION_TTL }
   );
+}
+
+/** Re-issues the public customer JWT + cookie after a successful session check. */
+export function renewPublicCustomerSession(res: Response, session: PublicCustomer): string {
+  const token = signPublicCustomerToken({
+    customerId: session.customerId,
+    businessId: session.businessId,
+    slug: session.slug ?? '',
+  });
+  setPublicCustomerSessionCookie(res, token);
+  res.setHeader(REFRESHED_PUBLIC_TOKEN_HEADER, token);
+  return token;
 }

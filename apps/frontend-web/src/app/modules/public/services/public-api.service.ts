@@ -233,7 +233,7 @@ export class PublicApiService {
 
   /**
    * GET /api/public/auth/me
-   * Uses Bearer (sessionStorage) and/or HTTP-only cookie (withCredentials).
+   * Uses Bearer (localStorage) and/or HTTP-only cookie (withCredentials).
    */
   getPublicAuthMe(): Observable<PublicAuthMeResult> {
     return this.api.get<PublicAuthMeResponse>('public/auth/me').pipe(

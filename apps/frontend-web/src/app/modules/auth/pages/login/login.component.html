@@ -48,15 +48,9 @@
       </button>
 
       <div class="login-form-forgot-wrap">
-        <button
-          type="button"
-          class="login-form-forgot"
-          disabled
-          title="Password reset is not available yet"
-          aria-label="Forgot password — not available yet"
-        >
+        <a routerLink="/auth/forgot-password" class="login-form-forgot">
           Forgot password?
-        </button>
+        </a>
       </div>
 
       @if (errorMessage()) {

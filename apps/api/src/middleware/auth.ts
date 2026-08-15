@@ -4,6 +4,7 @@ import { validateEnv } from '../config/env';
 import { logger } from '../utils/logger';
 import { IBusinessSettings } from '../models/BusinessSettings';
 import { User } from '../models/User';
+import { maybeRenewStaffSession } from '../utils/staffSession';
 
 export interface AuthRequest extends Request {
   user?: AuthUser;
@@ -77,6 +78,7 @@ export async function auth(req: AuthRequest, res: Response, next: NextFunction):
       impersonatingBusinessId:
         decoded.impersonatingBusinessId != null ? String(decoded.impersonatingBusinessId) : undefined,
     };
+    maybeRenewStaffSession(res, req.user, decoded);
     next();
     return;
   } catch (err) {

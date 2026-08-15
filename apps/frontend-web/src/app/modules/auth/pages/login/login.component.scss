@@ -155,9 +155,9 @@
   padding: 0;
   font-size: 0.8125rem;
   color: #64748b;
-  cursor: not-allowed;
+  cursor: pointer;
   text-decoration: none;
-  opacity: 0.55;
+  opacity: 1;
 }
 
 .login-form-forgot:not(:disabled):hover {

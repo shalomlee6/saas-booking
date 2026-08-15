@@ -34,6 +34,8 @@ export const unauthorizedInterceptor: HttpInterceptorFn = (req, next) => {
         url.includes('/api/public/') ||
         url.includes('/api/auth/login') ||
         url.includes('/api/auth/register') ||
+        url.includes('/api/auth/forgot-password') ||
+        url.includes('/api/auth/reset-password') ||
         url.includes('/api/auth/logout') ||
         url.includes('/api/auth/me')
       ) {

@@ -11,6 +11,36 @@ export interface PublicSession {
   customerId: string;
 }
 
+function storageAvailable(): boolean {
+  return typeof localStorage !== 'undefined';
+}
+
+/** Prefer localStorage; migrate leftover sessionStorage keys from the previous tab-scoped store. */
+function readPersisted(key: string): string | null {
+  if (!storageAvailable()) return null;
+  const fromLocal = localStorage.getItem(key);
+  if (fromLocal) return fromLocal;
+  if (typeof sessionStorage === 'undefined') return null;
+  const fromSession = sessionStorage.getItem(key);
+  if (!fromSession) return null;
+  localStorage.setItem(key, fromSession);
+  sessionStorage.removeItem(key);
+  return fromSession;
+}
+
+function writePersisted(key: string, value: string): void {
+  if (!storageAvailable()) return;
+  localStorage.setItem(key, value);
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem(key);
+  }
+}
+
+function removePersisted(key: string): void {
+  if (storageAvailable()) localStorage.removeItem(key);
+  if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key);
+}
+
 @Injectable({ providedIn: 'root' })
 export class PublicSessionService {
   private readonly tokenSignal = signal<string | null>(this.readToken());
@@ -26,44 +56,46 @@ export class PublicSessionService {
   readonly hasSession = computed(() => !!this.tokenSignal() && !!this.slugSignal());
 
   private readToken(): string | null {
-    if (typeof sessionStorage === 'undefined') return null;
-    return sessionStorage.getItem(STORAGE_KEY_TOKEN);
+    return readPersisted(STORAGE_KEY_TOKEN);
   }
 
   private readSlug(): string | null {
-    if (typeof sessionStorage === 'undefined') return null;
-    return sessionStorage.getItem(STORAGE_KEY_SLUG);
+    return readPersisted(STORAGE_KEY_SLUG);
   }
 
   private readCustomerId(): string | null {
-    if (typeof sessionStorage === 'undefined') return null;
-    return sessionStorage.getItem(STORAGE_KEY_CUSTOMER_ID);
+    return readPersisted(STORAGE_KEY_CUSTOMER_ID);
   }
 
   private readCustomerName(): string | null {
-    if (typeof sessionStorage === 'undefined') return null;
-    return sessionStorage.getItem(STORAGE_KEY_CUSTOMER_NAME);
+    return readPersisted(STORAGE_KEY_CUSTOMER_NAME);
   }
 
   setSession(token: string, businessSlug: string, customerId?: string, customerName?: string): void {
-    sessionStorage.setItem(STORAGE_KEY_TOKEN, token);
-    sessionStorage.setItem(STORAGE_KEY_SLUG, businessSlug);
+    writePersisted(STORAGE_KEY_TOKEN, token);
+    writePersisted(STORAGE_KEY_SLUG, businessSlug);
     if (customerId != null) {
-      sessionStorage.setItem(STORAGE_KEY_CUSTOMER_ID, customerId);
+      writePersisted(STORAGE_KEY_CUSTOMER_ID, customerId);
       this.customerIdSignal.set(customerId);
     } else {
-      sessionStorage.removeItem(STORAGE_KEY_CUSTOMER_ID);
+      removePersisted(STORAGE_KEY_CUSTOMER_ID);
       this.customerIdSignal.set(null);
     }
     if (customerName) {
-      sessionStorage.setItem(STORAGE_KEY_CUSTOMER_NAME, customerName);
+      writePersisted(STORAGE_KEY_CUSTOMER_NAME, customerName);
       this.customerNameSignal.set(customerName);
     } else {
-      sessionStorage.removeItem(STORAGE_KEY_CUSTOMER_NAME);
+      removePersisted(STORAGE_KEY_CUSTOMER_NAME);
       this.customerNameSignal.set(null);
     }
     this.tokenSignal.set(token);
     this.slugSignal.set(businessSlug);
+  }
+
+  /** Replace only the JWT after a sliding-session renewal (keeps slug / id / name). */
+  updateToken(token: string): void {
+    writePersisted(STORAGE_KEY_TOKEN, token);
+    this.tokenSignal.set(token);
   }
 
   getSession(slug: string): PublicSession | null {
@@ -84,10 +116,10 @@ export class PublicSessionService {
 
   clearSession(slug?: string): void {
     if (slug !== undefined && this.slugSignal() !== slug) return;
-    sessionStorage.removeItem(STORAGE_KEY_TOKEN);
-    sessionStorage.removeItem(STORAGE_KEY_SLUG);
-    sessionStorage.removeItem(STORAGE_KEY_CUSTOMER_ID);
-    sessionStorage.removeItem(STORAGE_KEY_CUSTOMER_NAME);
+    removePersisted(STORAGE_KEY_TOKEN);
+    removePersisted(STORAGE_KEY_SLUG);
+    removePersisted(STORAGE_KEY_CUSTOMER_ID);
+    removePersisted(STORAGE_KEY_CUSTOMER_NAME);
     this.tokenSignal.set(null);
     this.slugSignal.set(null);
     this.customerIdSignal.set(null);
