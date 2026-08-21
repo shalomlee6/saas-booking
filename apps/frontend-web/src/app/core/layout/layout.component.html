@@ -1,19 +1,16 @@
 <!--
-  layout.component.html — redesign
-  Changes:
-  - Logo: pink square mark + text (no more plain "SaaS" text on primary bg)
-  - Sidebar links: icon + text, active = pink tint bg, no border stripe
-  - Topbar: white bg, neutral, no more pink bar
-  - Removed two empty placeholder <span> squares
-  - Logout → /auth/logout (bug fix)
-  - Theme toggle: icon + label, aria-pressed
-  - Impersonation: amber instead of green (less alarming)
-  - All accessibility attrs preserved
+  layout.component.html — RTL shell redesign
+  - dir="rtl" set once here, at the shell root — the single source of truth for the
+    whole owner console (sidebar, topbar, and everything routed into <main>).
+  - Sidebar: pink "b" mark + "boki" wordmark, collapse chevron, nav badge, user footer.
+  - Topbar: page title + date, always-visible (disabled) search, customer-site link,
+    notification bell, "תור חדש" button. Menu-toggle is mobile-only (drawer trigger).
 -->
 <p-toast />
 
 <div
   class="layout"
+  dir="rtl"
   [class.layout--impersonating]="isImpersonating()"
   [class.layout--sidebar-collapsed]="!isMobile() && isSidebarCollapsed()"
   [class.layout--mobile-drawer-open]="isMobile() && isMobileMenuOpen()"
@@ -23,8 +20,17 @@
   <!-- ─── Sidebar ───────────────────────────────────────────────────────── -->
   <aside class="layout-sidebar" aria-label="ניווט ראשי">
     <div class="layout-sidebar-header">
-      <div class="layout-sidebar-logo-mark" aria-hidden="true">S</div>
-      <span class="layout-sidebar-logo-text">SaaS Booking</span>
+      <div class="layout-sidebar-logo-mark" aria-hidden="true">b</div>
+      <span class="layout-sidebar-logo-text">boki</span>
+      <button
+        type="button"
+        class="layout-sidebar-collapse-btn"
+        [attr.aria-label]="menuAriaLabel()"
+        [attr.aria-expanded]="!isSidebarCollapsed()"
+        (click)="toggleSidebar()"
+      >
+        <i class="pi pi-angle-down"></i>
+      </button>
     </div>
 
     <div class="layout-sidebar-body">
@@ -53,6 +59,9 @@
         >
           <i class="layout-sidebar-link-icon pi pi-calendar" aria-hidden="true"></i>
           <span class="layout-sidebar-link-text">Appointments</span>
+          @if (pendingAppointmentsCount() > 0) {
+            <span class="layout-sidebar-link-badge">{{ pendingAppointmentsCount() }}</span>
+          }
         </a>
 
         <a
@@ -141,51 +150,41 @@
     </div>
 
     <div class="layout-sidebar-footer">
+      <span class="layout-sidebar-user-avatar" aria-hidden="true">{{ userInitials() }}</span>
+      <span class="layout-sidebar-user-email">{{ user()?.email ?? '—' }}</span>
       <button
         type="button"
-        class="layout-sidebar-link layout-sidebar-link-footer layout-sidebar-logout-btn"
-        [attr.aria-label]="isSidebarCollapsed() ? 'Logout' : null"
+        class="layout-sidebar-logout-btn"
+        aria-label="Logout"
         (click)="onLogout()"
       >
-        <i class="layout-sidebar-link-icon pi pi-sign-out" aria-hidden="true"></i>
-        <span class="layout-sidebar-link-text">Logout</span>
+        <i class="pi pi-sign-out" aria-hidden="true"></i>
       </button>
     </div>
   </aside>
 
   <!-- ─── Topbar ────────────────────────────────────────────────────────── -->
   <header class="layout-topbar" role="banner">
-    <p-button
-      [icon]="menuToggleIcon()"
-      [rounded]="false"
-      [text]="true"
-      severity="secondary"
-      [ariaLabel]="menuAriaLabel()"
-      [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
-      [attr.aria-controls]="'layout-sidebar-nav'"
-      (onClick)="toggleSidebar()"
-      styleClass="layout-topbar-menu-btn"
-    />
+    <div class="layout-topbar-title-group">
+      <h1 class="layout-topbar-title">{{ pageTitle() }}</h1>
+      @if (showDateSubtitle()) {
+        <span class="layout-topbar-date">{{ dateLabel() }}</span>
+      }
+    </div>
 
-    <h1 class="layout-topbar-title">{{ pageTitle() }}</h1>
-
-    @if (isSuperAdmin() || isImpersonating()) {
-
-      <div class="layout-topbar-search-wrap">
-        <label for="global-search" class="sr-only">Search</label>
-        <input
-          id="global-search"
-          type="search"
-          class="layout-topbar-search"
-          placeholder="Search..."
-          disabled
-          aria-disabled="true"
-        />
-      </div>
-    }
-
-    @if (!isMobile()) {
-      <div class="layout-topbar-actions">
+    <div class="layout-topbar-actions">
+      @if (!isMobile()) {
+        <label class="layout-topbar-search-wrap">
+          <span class="sr-only">חיפוש לקוחה או תור</span>
+          <i class="pi pi-search layout-topbar-search-icon" aria-hidden="true"></i>
+          <input
+            type="search"
+            class="layout-topbar-search"
+            placeholder="חיפוש לקוחה או תור"
+            disabled
+            aria-disabled="true"
+          />
+        </label>
 
         @if (business()?.slug) {
           <a
@@ -199,17 +198,11 @@
             <i class="pi pi-arrow-up-right" aria-hidden="true" style="font-size:0.7rem"></i>
           </a>
         } @else if (business() && !business()?.slug) {
-          <span class="layout-topbar-customer-site-warning" role="note">
-            No slug set
-          </span>
+          <span class="layout-topbar-customer-site-warning" role="note">No slug set</span>
         }
 
         @if (isImpersonating()) {
-          <span
-            class="layout-topbar-impersonation-badge"
-            role="status"
-            aria-live="polite"
-          >Impersonating</span>
+          <span class="layout-topbar-impersonation-badge" role="status" aria-live="polite">Impersonating</span>
         }
 
         @if (business() && (isSuperAdmin() || isImpersonating())) {
@@ -229,16 +222,34 @@
             </span>
           </button>
         }
+      }
 
-        <span class="layout-topbar-user">
-          @if (activeBusinessName(); as bizName) {
-            <span class="layout-topbar-business-name">{{ bizName }}</span>
-            <span class="layout-topbar-user-sep" aria-hidden="true">·</span>
-          }
-          <span>{{ user()?.email ?? 'User' }}</span>
-        </span>
-      </div>
-    }
+      <a routerLink="/appointments" class="layout-topbar-bell" aria-label="תורים ממתינים לאישור">
+        <i class="pi pi-bell" aria-hidden="true"></i>
+        @if (pendingAppointmentsCount() > 0) {
+          <span class="layout-topbar-bell-dot" aria-hidden="true"></span>
+        }
+      </a>
+
+      <a routerLink="/appointments/new" class="layout-topbar-new-btn">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        תור חדש
+      </a>
+
+      @if (isMobile()) {
+        <p-button
+          [icon]="menuToggleIcon()"
+          [rounded]="false"
+          [text]="true"
+          severity="secondary"
+          [ariaLabel]="menuAriaLabel()"
+          [attr.aria-expanded]="isMobileMenuOpen()"
+          [attr.aria-controls]="'layout-sidebar-nav'"
+          (onClick)="toggleSidebar()"
+          styleClass="layout-topbar-menu-btn"
+        />
+      }
+    </div>
   </header>
 
   <!-- ─── Main ──────────────────────────────────────────────────────────── -->
