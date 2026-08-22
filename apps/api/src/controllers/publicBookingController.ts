@@ -23,6 +23,8 @@ import {
   ValidationError,
 } from '../errors/httpErrors';
 import { mergeSectionVisibility, normalizeGalleryItems, orderServicesById } from '../utils/publicLanding';
+import { rewriteStoredUploadUrl } from '../utils/publicUploadUrl';
+import { setNoStore } from '../utils/httpCache';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -66,7 +68,7 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
   const portfolioRaw = settings.portfolioImages ?? [];
   const portfolioImages = portfolioRaw
     .filter((u) => typeof u === 'string' && u.trim().length > 0)
-    .map((u) => u.trim())
+    .map((u) => rewriteStoredUploadUrl(u.trim()))
     .slice(0, 50);
 
   const products = (settings.landingProducts ?? []).filter(
@@ -80,7 +82,7 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
 
   const coverImageUrl =
     typeof settings.coverImageUrl === 'string' && settings.coverImageUrl.trim()
-      ? settings.coverImageUrl.trim()
+      ? rewriteStoredUploadUrl(settings.coverImageUrl.trim())
       : null;
 
   const phoneFromBusiness =
@@ -106,11 +108,10 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
     typeof settings.landingHeroDescription === 'string' ? settings.landingHeroDescription.trim() : '';
   const secondaryHeroImageUrl =
     typeof settings.landingSecondaryHeroImageUrl === 'string' && settings.landingSecondaryHeroImageUrl.trim()
-      ? settings.landingSecondaryHeroImageUrl.trim()
+      ? rewriteStoredUploadUrl(settings.landingSecondaryHeroImageUrl.trim())
       : null;
 
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
+  setNoStore(res);
 
   res.json({
     id: business._id.toString(),
@@ -184,7 +185,7 @@ export async function getPublicBusinessLanding(req: Request, res: Response): Pro
   const portfolioRaw = settings.portfolioImages ?? [];
   const portfolioImages = portfolioRaw
     .filter((u) => typeof u === 'string' && u.trim().length > 0)
-    .map((u) => u.trim())
+    .map((u) => rewriteStoredUploadUrl(u.trim()))
     .slice(0, 50);
 
   const products = (settings.landingProducts ?? []).filter(
@@ -198,7 +199,7 @@ export async function getPublicBusinessLanding(req: Request, res: Response): Pro
 
   const coverImageUrl =
     typeof settings.coverImageUrl === 'string' && settings.coverImageUrl.trim()
-      ? settings.coverImageUrl.trim()
+      ? rewriteStoredUploadUrl(settings.coverImageUrl.trim())
       : null;
 
   const phoneFromBusiness = typeof business.phone === 'string' ? business.phone.trim() : '';
@@ -222,11 +223,10 @@ export async function getPublicBusinessLanding(req: Request, res: Response): Pro
 
   const secondaryHero =
     typeof settings.landingSecondaryHeroImageUrl === 'string' && settings.landingSecondaryHeroImageUrl.trim()
-      ? settings.landingSecondaryHeroImageUrl.trim()
-      : galleryItems[1]?.imageUrl ?? null;
+      ? rewriteStoredUploadUrl(settings.landingSecondaryHeroImageUrl.trim())
+      : null;
 
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
+  setNoStore(res);
 
   res.json({
     businessName: business.name,

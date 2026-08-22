@@ -6,6 +6,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { ApiService } from '../../../../../../core/api/api.service';
 import { MessageService } from 'primeng/api';
 import type { PublicLandingGalleryItem } from '../../../../services/public-api.service';
+import { resolvePublicAssetUrl } from '../../../../../../shared/utils/public-asset-url';
 
 @Component({
   selector: 'app-public-landing-gallery',
@@ -31,7 +32,8 @@ export class PublicLandingGalleryComponent {
   readonly lightboxSrc = computed(() => {
     const imgs = this.items();
     const i = this.lightboxIndex();
-    return imgs[i]?.imageUrl ?? null;
+    const raw = imgs[i]?.imageUrl ?? null;
+    return raw ? resolvePublicAssetUrl(raw) : null;
   });
 
   readonly lightboxTitle = computed(() => {
@@ -39,6 +41,10 @@ export class PublicLandingGalleryComponent {
     const i = this.lightboxIndex();
     return imgs[i]?.title?.trim() ?? '';
   });
+
+  displaySrc(url: string): string {
+    return resolvePublicAssetUrl(url);
+  }
 
   openLightbox(index: number): void {
     this.lightboxIndex.set(index);

@@ -1,3 +1,4 @@
+import { rewriteStoredUploadUrl } from './publicUploadUrl';
 import { randomUUID } from 'crypto';
 
 export function orderServicesById<T extends { id: string }>(list: T[], order: string[] | undefined): T[] {
@@ -33,7 +34,7 @@ export function normalizeGalleryItems(
     return (landingGalleryItems as Record<string, unknown>[])
       .map((g) => ({
         id: String(g['id'] || randomUUID()),
-        imageUrl: String(g['imageUrl'] || '').trim(),
+        imageUrl: rewriteStoredUploadUrl(String(g['imageUrl'] || '').trim()),
         title: typeof g['title'] === 'string' ? g['title'].trim() : '',
         type: g['type'] === 'product' ? ('product' as const) : ('service' as const),
       }))
@@ -41,7 +42,7 @@ export function normalizeGalleryItems(
   }
   return portfolioImages.map((url, i) => ({
     id: `legacy-${i}`,
-    imageUrl: url,
+    imageUrl: rewriteStoredUploadUrl(url),
     title: '',
     type: 'service' as const,
   }));

@@ -10,6 +10,7 @@ import {
   findBusinessSettingsByBusinessId,
   updateBusinessSettingsPartial,
 } from '../services/businessSettingsService';
+import { settingsDocToClientJson } from '../utils/publicUploadUrl';
 
 export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<void> {
   if (!req.businessSettings) {
@@ -18,11 +19,11 @@ export async function getMyBusinessSettings(req: AuthRequest, res: Response): Pr
       throw new ValidationError('Business ID not found');
     }
     const settings = await ensureBusinessSettings(businessId);
-    res.json(settings);
+    res.json(settingsDocToClientJson(settings));
     return;
   }
 
-  res.json(req.businessSettings);
+  res.json(settingsDocToClientJson(req.businessSettings));
 }
 
 export async function updateMyBusinessSettings(req: AuthRequest, res: Response): Promise<void> {
@@ -49,7 +50,7 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     if (!current) {
       throw new NotFoundError('Settings not found');
     }
-    res.json(current);
+    res.json(settingsDocToClientJson(current));
     return;
   }
 
@@ -59,5 +60,5 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
     throw new NotFoundError('Settings not found');
   }
 
-  res.json(updated);
+  res.json(settingsDocToClientJson(updated));
 }

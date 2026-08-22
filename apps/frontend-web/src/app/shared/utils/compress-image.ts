@@ -7,12 +7,20 @@ export async function compressImageFile(
 ): Promise<Blob> {
   const maxBytes = options?.maxBytes ?? 2_000_000;
   const maxWidth = options?.maxWidth ?? 1920;
-
-  if (!file.type.startsWith('image/')) {
+  const type = (file.type || '').toLowerCase();
+  const looksHeic = type.includes('heic') || type.includes('heif') || /\.hei[cf]$/i.test(file.name);
+  const mimeOk = type.startsWith('image/') || type === '' || type === 'application/octet-stream';
+  if (!mimeOk) {
     throw new Error('NOT_IMAGE');
   }
 
-  const bitmap = await createImageBitmap(file);
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    throw new Error(looksHeic ? 'HEIC' : 'COMPRESS_FAIL');
+  }
+
   try {
     const scale = Math.min(1, maxWidth / bitmap.width);
     const w = Math.max(1, Math.round(bitmap.width * scale));
@@ -44,4 +52,18 @@ export async function compressImageFile(
   } finally {
     bitmap.close();
   }
+}
+
+export function compressImageErrorMessage(err: unknown): string {
+  const code = err instanceof Error ? err.message : '';
+  if (code === 'HEIC') {
+    return 'פורמט HEIC לא נתמך בדפדפן זה — שמרי את התמונה כ-JPEG או PNG ונסחי שוב';
+  }
+  if (code === 'NOT_IMAGE') {
+    return 'נא לבחור קובץ תמונה (JPEG, PNG, WebP או GIF)';
+  }
+  if (code === 'NO_CONTEXT' || code === 'COMPRESS_FAIL') {
+    return 'דחיסת התמונה נכשלה — נסי קובץ אחר או תמונה קטנה יותר';
+  }
+  return 'דחיסת תמונה נכשלה';
 }

@@ -24,7 +24,7 @@
           (click)="openLightbox(idx)"
         >
           <img
-            [src]="item.imageUrl"
+            [src]="displaySrc(item.imageUrl)"
             [alt]="item.title?.trim() ? item.title! : 'תמונת גלריה ' + (idx + 1)"
             loading="lazy"
             decoding="async"

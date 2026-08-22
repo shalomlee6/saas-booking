@@ -39,6 +39,7 @@ import { PublicLandingGalleryComponent } from '../components/gallery/public-land
 import { PublicLandingProductsComponent } from '../components/products/public-landing-products.component';
 import { PublicLandingReviewsComponent } from '../components/reviews/public-landing-reviews.component';
 import { PublicLandingBookingCtaComponent } from '../components/booking-cta/public-landing-booking-cta.component';
+import { resolvePublicAssetUrl } from '../../../../../shared/utils/public-asset-url';
 
 /** Map status values to Hebrew labels. */
 const STATUS_LABEL: Record<string, string> = {
@@ -165,7 +166,7 @@ export class PublicLandingComponent implements OnInit {
     const b = this.bookingBusiness();
     const ordered: string[] = [];
     const add = (u: string | null | undefined): void => {
-      const t = typeof u === 'string' ? u.trim() : '';
+      const t = resolvePublicAssetUrl(u);
       if (t && !ordered.includes(t)) ordered.push(t);
     };
     add(b?.landing?.coverImageUrl);
@@ -196,12 +197,15 @@ export class PublicLandingComponent implements OnInit {
     const landing = this.bookingBusiness()?.landing;
     const structured = landing?.galleryItems;
     if (structured && structured.length > 0) {
-      return structured;
+      return structured.map((g) => ({
+        ...g,
+        imageUrl: resolvePublicAssetUrl(g.imageUrl),
+      }));
     }
     const urls = landing?.portfolioImages ?? [];
     return urls.map((url, i) => ({
       id: `legacy-${i}`,
-      imageUrl: url,
+      imageUrl: resolvePublicAssetUrl(url),
       title: '',
       type: 'service' as const,
     }));

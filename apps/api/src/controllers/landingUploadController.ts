@@ -33,17 +33,27 @@ const storage = multer.diskStorage({
   },
 });
 
-const allowedImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const allowedImageMimeTypes = new Set([
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+]);
 
 export const landingImageUpload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (!allowedImageMimeTypes.has(file.mimetype)) {
-      cb(new Error('INVALID_TYPE'));
+    const mime = (file.mimetype || '').toLowerCase();
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    const extOk = ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+    const mimeMissing = mime === '' || mime === 'application/octet-stream';
+    if (allowedImageMimeTypes.has(mime) || (mimeMissing && extOk)) {
+      cb(null, true);
       return;
     }
-    cb(null, true);
+    cb(new Error('INVALID_TYPE'));
   },
 });
 
@@ -73,6 +83,10 @@ export function landingUploadErrorHandler(err: unknown, _req: Request, res: Resp
       res.status(400).json({ message: 'Business ID not found' });
       return;
     }
+    if (err.message === 'MKDIR') {
+      res.status(500).json({ message: 'Could not store uploaded file' });
+      return;
+    }
   }
   next(err);
 }
@@ -88,6 +102,6 @@ export async function postLandingImageUpload(req: AuthRequest, res: Response): P
     res.status(400).json({ message: 'No file uploaded' });
     return;
   }
-  const url = `/uploads/landing/${biz}/${f.filename}`;
+  const url = `/api/uploads/landing/${biz}/${f.filename}`;
   res.status(201).json({ url });
 }

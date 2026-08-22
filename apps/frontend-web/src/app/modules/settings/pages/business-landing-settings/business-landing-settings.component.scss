@@ -330,6 +330,35 @@
   position: relative;
 }
 
+.bls__product-card--error {
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.bls__field-error {
+  margin: 0.35rem 0 0;
+  font-size: 0.8125rem;
+  color: #b91c1c;
+}
+
+.bls__save-error {
+  margin: 0 0 0.75rem;
+}
+
+.bls__save-error-link {
+  display: inline;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #b91c1c;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .bls__remove {
   margin-top: 0.5rem;
   border: none;

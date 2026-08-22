@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 import { BusinessSettings } from '../models/BusinessSettings';
 import type { UpdateBusinessSettingsBody } from '../validation/schemas/businessSettings';
+import { rewriteStoredUploadUrl } from '../utils/publicUploadUrl';
 
 /**
  * Maps validated API body to Mongo `$set` payload (partial nested updates).
@@ -27,7 +28,8 @@ export function buildBusinessSettingsUpdateSet(
       if (Object.keys(colors).length) theme.colors = colors;
     }
     if (body.theme.logoUrl !== undefined) {
-      theme.logoUrl = body.theme.logoUrl;
+      theme.logoUrl =
+        body.theme.logoUrl === null ? null : rewriteStoredUploadUrl(body.theme.logoUrl);
     }
     if (body.theme.fontFamily !== undefined) {
       theme.fontFamily = body.theme.fontFamily;
@@ -70,10 +72,12 @@ export function buildBusinessSettingsUpdateSet(
     updateData.landingTagline = body.landingTagline;
   }
   if (body.coverImageUrl !== undefined) {
-    updateData.coverImageUrl = body.coverImageUrl;
+    updateData.coverImageUrl = rewriteStoredUploadUrl(body.coverImageUrl);
   }
   if (body.landingSecondaryHeroImageUrl !== undefined) {
-    updateData.landingSecondaryHeroImageUrl = body.landingSecondaryHeroImageUrl;
+    updateData.landingSecondaryHeroImageUrl = rewriteStoredUploadUrl(
+      body.landingSecondaryHeroImageUrl
+    );
   }
   if (body.landingHeroDescription !== undefined) {
     updateData.landingHeroDescription = body.landingHeroDescription;
@@ -81,7 +85,7 @@ export function buildBusinessSettingsUpdateSet(
   if (body.landingGalleryItems !== undefined) {
     const items = body.landingGalleryItems.map((g) => ({
       id: g.id,
-      imageUrl: g.imageUrl.trim(),
+      imageUrl: rewriteStoredUploadUrl(g.imageUrl.trim()),
       title: g.title?.trim() ? g.title.trim() : '',
       type: g.type === 'product' ? 'product' : 'service',
     }));
@@ -102,7 +106,7 @@ export function buildBusinessSettingsUpdateSet(
     updateData.landingSectionVisibility = body.landingSectionVisibility;
   }
   if (body.portfolioImages !== undefined) {
-    updateData.portfolioImages = body.portfolioImages;
+    updateData.portfolioImages = body.portfolioImages.map((u) => rewriteStoredUploadUrl(u));
   }
   if (body.landingProducts !== undefined) {
     updateData.landingProducts = body.landingProducts.map((p) => ({
