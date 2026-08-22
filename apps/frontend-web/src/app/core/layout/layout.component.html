@@ -165,6 +165,19 @@
 
   <!-- ─── Topbar ────────────────────────────────────────────────────────── -->
   <header class="layout-topbar" role="banner">
+    @if (isMobile()) {
+      <p-button
+        [icon]="menuToggleIcon()"
+        [rounded]="false"
+        [text]="true"
+        severity="secondary"
+        [ariaLabel]="menuAriaLabel()"
+        [attr.aria-expanded]="isMobileMenuOpen()"
+        [attr.aria-controls]="'layout-sidebar-nav'"
+        (onClick)="toggleSidebar()"
+        styleClass="layout-topbar-menu-btn"
+      />
+    }
     <div class="layout-topbar-title-group">
       <h1 class="layout-topbar-title">{{ pageTitle() }}</h1>
       @if (showDateSubtitle()) {
@@ -236,37 +249,27 @@
         תור חדש
       </a>
 
-      @if (isMobile()) {
-        <p-button
-          [icon]="menuToggleIcon()"
-          [rounded]="false"
-          [text]="true"
-          severity="secondary"
-          [ariaLabel]="menuAriaLabel()"
-          [attr.aria-expanded]="isMobileMenuOpen()"
-          [attr.aria-controls]="'layout-sidebar-nav'"
-          (onClick)="toggleSidebar()"
-          styleClass="layout-topbar-menu-btn"
-        />
-      }
+
     </div>
   </header>
 
   <!-- ─── Main ──────────────────────────────────────────────────────────── -->
   <main class="layout-main" id="main-content" tabindex="-1">
-    @if (isImpersonating()) {
-      <div class="layout-impersonation-banner" role="alert" aria-live="assertive">
-        <span class="layout-impersonation-banner-text">
-          Impersonating: {{ business()?.name ?? 'Business' }}
-          @if (business()?.ownerEmail) { ({{ business()?.ownerEmail }}) }
-        </span>
-        <button
-          type="button"
-          class="layout-impersonation-banner-btn"
-          (click)="exitImpersonation()"
-        >Exit</button>
-      </div>
-    }
-    <router-outlet></router-outlet>
+    <div class="main-wrapper">
+      @if (isImpersonating()) {
+        <div class="layout-impersonation-banner" role="alert" aria-live="assertive">
+          <span class="layout-impersonation-banner-text">
+            Impersonating: {{ business()?.name ?? 'Business' }}
+            @if (business()?.ownerEmail) { ({{ business()?.ownerEmail }}) }
+          </span>
+          <button
+            type="button"
+            class="layout-impersonation-banner-btn"
+            (click)="exitImpersonation()"
+          >Exit</button>
+        </div>
+      }
+      <router-outlet></router-outlet>
+    </div>
   </main>
 </div>

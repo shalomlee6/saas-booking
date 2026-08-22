@@ -630,6 +630,14 @@ $breakpoint:      1024px;
   &:focus { outline: none; }
 }
 
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .layout-main > router-outlet + * {
   flex: 1;
   min-height: 0;
