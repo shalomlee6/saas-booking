@@ -1,5 +1,4 @@
 import 'dotenv/config';
-import path from 'path';
 import type { Server } from 'http';
 import express from 'express';
 import cors from 'cors';
@@ -16,6 +15,7 @@ import { publicRouter } from './routes/public';
 import { settingsRouter } from './routes/settings';
 import { adminRouter } from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
+import { mountUploadStatic } from './middleware/serveUploads';
 import {
   authRouteLimiter,
   publicRouteLimiter,
@@ -33,14 +33,7 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:4200')
   .split(',')
   .map((o) => o.trim());
 
-app.use(
-  '/uploads',
-  (_req, res, next) => {
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-    next();
-  },
-  express.static(path.join(process.cwd(), 'uploads'))
-);
+mountUploadStatic(app);
 
 if (env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);

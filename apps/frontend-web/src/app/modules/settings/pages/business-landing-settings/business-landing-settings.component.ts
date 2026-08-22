@@ -22,7 +22,8 @@ import {
   type PublicLandingProductItem,
   type PublicService,
 } from '../../../public/services/public-api.service';
-import { compressImageFile } from '../../../../shared/utils/compress-image';
+import { compressImageFile, compressImageErrorMessage } from '../../../../shared/utils/compress-image';
+import { resolvePublicAssetUrl } from '../../../../shared/utils/public-asset-url';
 import {
   PublicLandingHeroComponent,
   PUBLIC_LANDING_DEFAULT_HERO_PHOTOS,
@@ -33,6 +34,13 @@ import { PublicLandingProductsComponent } from '../../../public/booking/landing/
 import { PublicLandingReviewsComponent } from '../../../public/booking/landing/components/reviews/public-landing-reviews.component';
 import { PublicLandingBookingCtaComponent } from '../../../public/booking/landing/components/booking-cta/public-landing-booking-cta.component';
 import type { PublicLandingReviewItem } from '../../../public/services/public-api.service';
+import {
+  collectProductRowIssues,
+  isBlankProductRow,
+  productRowIssue,
+  toLandingProductsPayload,
+  type LandingProductRowValue,
+} from './landing-product-rows.util';
 
 interface MeSettingsLanding {
   landingTagline?: string;
@@ -87,18 +95,23 @@ function galleryFromSettings(s: MeSettingsLanding): PublicLandingGalleryItem[] {
   if (s.landingGalleryItems && s.landingGalleryItems.length > 0) {
     return s.landingGalleryItems.map((g) => ({
       id: g.id,
-      imageUrl: g.imageUrl,
+      imageUrl: resolvePublicAssetUrl(g.imageUrl),
       title: g.title ?? '',
       type: g.type === 'product' ? 'product' : 'service',
     }));
   }
   return (s.portfolioImages ?? []).map((url, i) => ({
     id: `legacy-${i}`,
-    imageUrl: url,
+    imageUrl: resolvePublicAssetUrl(url),
     title: '',
     type: 'service' as const,
   }));
 }
+
+/** Original camera files before compression (hint used to say 5MB, which rejected typical phone photos). */
+const MAX_ORIGINAL_BYTES = 25 * 1024 * 1024;
+/** Must stay at or under the API multer limit after compression. */
+const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
 @Component({
   selector: 'app-business-landing-settings',
@@ -165,6 +178,9 @@ export class BusinessLandingSettingsComponent implements OnInit {
     { label: 'מוצר', value: 'product' as const },
   ];
 
+  /** Template helper so editor thumbs work with legacy `/uploads` URLs. */
+  protected readonly resolvePublicAssetUrl = resolvePublicAssetUrl;
+
   readonly form: FormGroup = this.fb.group({
     products: this.fb.array<FormGroup>([]),
   });
@@ -185,6 +201,20 @@ export class BusinessLandingSettingsComponent implements OnInit {
     this.previewProductsTick();
     return this.buildPreviewProducts();
   });
+
+  readonly productRowIssues = computed((): Array<string | null> => {
+    this.previewProductsTick();
+    const rows = this.products.getRawValue() as LandingProductRowValue[];
+    return rows.map((row, i) => productRowIssue(row, i));
+  });
+
+  readonly productSaveIssues = computed((): string[] =>
+    this.productRowIssues().filter((msg): msg is string => msg != null)
+  );
+
+  readonly firstProductIssueIndex = computed((): number =>
+    this.productRowIssues().findIndex((msg) => msg != null)
+  );
 
   readonly previewReviews = computed((): PublicLandingReviewItem[] =>
     this.reviews().map((r) => ({
@@ -216,13 +246,13 @@ export class BusinessLandingSettingsComponent implements OnInit {
   });
 
   readonly previewHeroLeft = computed(() => {
-    const u = this.coverImageUrl().trim();
+    const u = resolvePublicAssetUrl(this.coverImageUrl());
     if (u) return u;
     return PUBLIC_LANDING_DEFAULT_HERO_PHOTOS[0];
   });
 
   readonly previewHeroRight = computed(() => {
-    const u = this.secondaryHeroImageUrl().trim();
+    const u = resolvePublicAssetUrl(this.secondaryHeroImageUrl());
     if (u) return u;
     return PUBLIC_LANDING_DEFAULT_HERO_PHOTOS[1];
   });
@@ -279,9 +309,13 @@ export class BusinessLandingSettingsComponent implements OnInit {
         this.heroDescription.set(
           settings.landingHeroDescription ?? landing.heroSection.description ?? ''
         );
-        this.coverImageUrl.set(settings.coverImageUrl ?? landing.heroSection.heroImage ?? '');
+        this.coverImageUrl.set(
+          resolvePublicAssetUrl(settings.coverImageUrl ?? landing.heroSection.heroImage ?? '')
+        );
         this.secondaryHeroImageUrl.set(
-          settings.landingSecondaryHeroImageUrl ?? landing.heroSection.heroImageSecondary ?? ''
+          resolvePublicAssetUrl(
+            settings.landingSecondaryHeroImageUrl ?? landing.heroSection.heroImageSecondary ?? ''
+          )
         );
         this.businessPhonePublic.set(settings.businessPhonePublic ?? landing.contact.phone ?? '');
         this.publicRating.set(settings.publicRating ?? landing.stats.rating ?? 5);
@@ -314,6 +348,7 @@ export class BusinessLandingSettingsComponent implements OnInit {
         for (const p of settings.landingProducts ?? []) {
           this.products.push(this.productGroup(p.name, p.description ?? '', p.price));
         }
+        this.previewProductsTick.update((n) => n + 1);
 
         this.loading.set(false);
       },
@@ -325,25 +360,14 @@ export class BusinessLandingSettingsComponent implements OnInit {
   }
 
   private buildPreviewProducts(): PublicLandingProductItem[] {
-    const raw = this.products.getRawValue() as Array<{
-      name: string;
-      description: string;
-      price: number;
-    }>;
-    return raw
-      .filter((p) => p.name?.trim())
-      .map((p) => ({
-        name: p.name.trim(),
-        description: (p.description ?? '').trim(),
-        price: Number(p.price),
-      }));
+    return toLandingProductsPayload(this.products.getRawValue() as LandingProductRowValue[]);
   }
 
   private productGroup(name: string, description: string, price: number): FormGroup {
     return this.fb.group({
-      name: [name, [Validators.required, Validators.maxLength(200)]],
+      name: [name, [Validators.maxLength(200)]],
       description: [description, [Validators.maxLength(500)]],
-      price: [price, [Validators.required, Validators.min(0)]],
+      price: [price, [Validators.min(0)]],
     });
   }
 
@@ -386,28 +410,38 @@ export class BusinessLandingSettingsComponent implements OnInit {
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    if (!file.type.startsWith('image/')) {
+    if (!file.type.startsWith('image/') && file.type !== '' && file.type !== 'application/octet-stream') {
       this.messages.add({ severity: 'warn', summary: 'קובץ לא תקין', detail: 'נא לבחור תמונה' });
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > MAX_ORIGINAL_BYTES) {
       this.messages.add({
         severity: 'warn',
         summary: 'קובץ גדול מדי',
-        detail: 'מקסימום 5MB לפני דחיסה',
+        detail: 'מקסימום 25MB לקובץ מקורי (נדחס אוטומטית לפני ההעלאה)',
       });
       return;
     }
     this.uploading.set(true);
     try {
       const blob = await compressImageFile(file, { maxBytes: 2_000_000 });
+      if (blob.size > MAX_UPLOAD_BYTES) {
+        this.uploading.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: 'שגיאה',
+          detail: 'התמונה גדולה מדי גם אחרי דחיסה — נסי קובץ ברזולוציה נמוכה יותר',
+        });
+        return;
+      }
       const fd = new FormData();
       fd.append('file', blob, 'hero.jpg');
       this.api.postFormData<{ url: string }>('settings/me/landing/upload', fd).subscribe({
         next: (res) => {
           this.uploading.set(false);
-          if (which === 'cover') this.coverImageUrl.set(res.url);
-          else this.secondaryHeroImageUrl.set(res.url);
+          const url = resolvePublicAssetUrl(res.url);
+          if (which === 'cover') this.coverImageUrl.set(url);
+          else this.secondaryHeroImageUrl.set(url);
           this.messages.add({ severity: 'success', summary: 'הועלה', detail: 'התמונה עודכנה' });
         },
         error: (err: { error?: { message?: string } }) => {
@@ -419,9 +453,13 @@ export class BusinessLandingSettingsComponent implements OnInit {
           });
         },
       });
-    } catch {
+    } catch (err: unknown) {
       this.uploading.set(false);
-      this.messages.add({ severity: 'error', summary: 'שגיאה', detail: 'דחיסת תמונה נכשלה' });
+      this.messages.add({
+        severity: 'error',
+        summary: 'שגיאה',
+        detail: compressImageErrorMessage(err),
+      });
     }
   }
 
@@ -431,18 +469,36 @@ export class BusinessLandingSettingsComponent implements OnInit {
     input.value = '';
     if (!files?.length) return;
     this.uploading.set(true);
+    let added = 0;
     try {
       for (const file of Array.from(files)) {
-        if (!file.type.startsWith('image/')) continue;
-        if (file.size > 5 * 1024 * 1024) {
+        const typeOk =
+          file.type.startsWith('image/') || file.type === '' || file.type === 'application/octet-stream';
+        if (!typeOk) {
           this.messages.add({
             severity: 'warn',
             summary: 'דילוג',
-            detail: `${file.name}: מקסימום 5MB`,
+            detail: `${file.name}: לא קובץ תמונה`,
+          });
+          continue;
+        }
+        if (file.size > MAX_ORIGINAL_BYTES) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'דילוג',
+            detail: `${file.name}: מקסימום 25MB לקובץ מקורי`,
           });
           continue;
         }
         const blob = await compressImageFile(file, { maxBytes: 2_000_000 });
+        if (blob.size > MAX_UPLOAD_BYTES) {
+          this.messages.add({
+            severity: 'warn',
+            summary: 'דילוג',
+            detail: `${file.name}: גדולה מדי גם אחרי דחיסה`,
+          });
+          continue;
+        }
         const fd = new FormData();
         fd.append('file', blob, 'gallery.jpg');
         const res = await new Promise<{ url: string }>((resolve, reject) => {
@@ -453,12 +509,38 @@ export class BusinessLandingSettingsComponent implements OnInit {
         });
         this.galleryItems.update((items) => [
           ...items,
-          { id: newGalleryId(), imageUrl: res.url, title: '', type: 'service' },
+          {
+            id: newGalleryId(),
+            imageUrl: resolvePublicAssetUrl(res.url),
+            title: '',
+            type: 'service',
+          },
         ]);
+        added += 1;
+      }
+      if (added === 0) {
+        this.messages.add({
+          severity: 'warn',
+          summary: 'לא הועלו תמונות',
+          detail: 'אף קובץ לא הועלה. בדקי סוג הקובץ והגודל, או נסי שוב.',
+        });
+      } else {
+        this.messages.add({
+          severity: 'success',
+          summary: 'הועלה',
+          detail: added === 1 ? 'התמונה נוספה לגלריה — לחצי שמירה כדי לפרסם' : `${added} תמונות נוספו לגלריה — לחצי שמירה כדי לפרסם`,
+        });
       }
     } catch (err: unknown) {
-      const msg = err && typeof err === 'object' && 'error' in err ? String((err as { error?: { message?: string } }).error?.message) : 'העלאה נכשלה';
-      this.messages.add({ severity: 'error', summary: 'שגיאה', detail: msg });
+      const httpMsg =
+        err && typeof err === 'object' && 'error' in err
+          ? (err as { error?: { message?: string } }).error?.message
+          : undefined;
+      this.messages.add({
+        severity: 'error',
+        summary: 'שגיאה',
+        detail: httpMsg || compressImageErrorMessage(err),
+      });
     } finally {
       this.uploading.set(false);
     }
@@ -522,20 +604,35 @@ export class BusinessLandingSettingsComponent implements OnInit {
   }
 
   save(): void {
-    if (this.form.invalid || this.saving()) return;
+    console.log('[DEBUG] save() called');
+    if (this.saving()) return;
+    const issues = collectProductRowIssues(
+      this.products.getRawValue() as LandingProductRowValue[]
+    );
+    if (issues.length) {
+      this.products.markAllAsTouched();
+      this.previewProductsTick.update((n) => n + 1);
+      this.scrollToFirstProductIssue();
+      this.messages.add({
+        severity: 'warn',
+        summary: 'יש לתקן את המוצרים',
+        detail: issues[0],
+      });
+      return;
+    }
     this.saving.set(true);
     const landingProducts = this.buildPreviewProducts();
     this.api
       .put<unknown>('settings/me/settings', {
         landingTagline: this.landingTagline().trim(),
-        coverImageUrl: this.coverImageUrl().trim(),
-        landingSecondaryHeroImageUrl: this.secondaryHeroImageUrl().trim(),
+        coverImageUrl: resolvePublicAssetUrl(this.coverImageUrl()),
+        landingSecondaryHeroImageUrl: resolvePublicAssetUrl(this.secondaryHeroImageUrl()),
         landingHeroDescription: this.heroDescription().trim(),
         businessPhonePublic: this.businessPhonePublic().trim(),
         publicRating: Number(this.publicRating()),
         landingGalleryItems: this.galleryItems().map((g) => ({
           id: g.id,
-          imageUrl: g.imageUrl.trim(),
+          imageUrl: resolvePublicAssetUrl(g.imageUrl),
           title: (g.title ?? '').trim(),
           type: g.type,
         })),
@@ -558,6 +655,7 @@ export class BusinessLandingSettingsComponent implements OnInit {
       .subscribe({
         next: () => {
           this.saving.set(false);
+          this.stripBlankProductRows();
           this.messages.add({
             severity: 'success',
             summary: 'נשמר',
@@ -571,8 +669,27 @@ export class BusinessLandingSettingsComponent implements OnInit {
             summary: 'שגיאה',
             detail: err?.error?.message ?? 'שמירה נכשלה',
           });
-        },
-      });
+      },
+    });
+  }
+
+  scrollToFirstProductIssue(): void {
+    const index = this.firstProductIssueIndex();
+    if (index < 0 || typeof document === 'undefined') return;
+    document.getElementById(`bls-product-row-${index}`)?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+  }
+
+  private stripBlankProductRows(): void {
+    const rows = this.products.getRawValue() as LandingProductRowValue[];
+    for (let i = rows.length - 1; i >= 0; i--) {
+      if (isBlankProductRow(rows[i])) {
+        this.products.removeAt(i);
+      }
+    }
+    this.previewProductsTick.update((n) => n + 1);
   }
 
   private reloadReviews(): void {

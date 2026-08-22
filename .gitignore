@@ -29,6 +29,7 @@ pids/
 # Env
 .env
 apps/*/.env
+apps/api/uploads/
 libs/*/.env
 
 # IDE

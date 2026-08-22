@@ -277,15 +277,21 @@
           </label>
         </section>
 
-        <section class="bls__section" aria-labelledby="bls-products-title">
+        <section class="bls__section" id="bls-products" aria-labelledby="bls-products-title">
           <div class="bls__section-head">
             <h2 id="bls-products-title" class="bls__section-title">מוצרים / טיפולים מומלצים</h2>
             <button type="button" class="bls__linkish" (click)="addProductRow()">+ שורה</button>
           </div>
+          <p class="bls__hint">שורה ריקה לא תפורסם ולא תחסום שמירה. מלאי שם למוצר, או הסירי את השורה.</p>
           <form [formGroup]="form">
             <div formArrayName="products" class="bls__products">
               @for (g of products.controls; track $index; let i = $index) {
-                <div class="bls__product-card" [formGroupName]="i">
+                <div
+                  class="bls__product-card"
+                  [class.bls__product-card--error]="!!productRowIssues()[i]"
+                  [id]="'bls-product-row-' + i"
+                  [formGroupName]="i"
+                >
                   <label class="bls__field">
                     <span class="bls__label">שם</span>
                     <input
@@ -315,6 +321,9 @@
                       (input)="onProductFieldChange()"
                     />
                   </label>
+                  @if (productRowIssues()[i]; as rowIssue) {
+                    <p class="bls__field-error" role="alert">{{ rowIssue }}</p>
+                  }
                   <button type="button" class="bls__remove" (click)="removeProductRow(i)">הסרה</button>
                 </div>
               }
@@ -323,15 +332,24 @@
         </section>
 
         <div class="bls__actions">
+          @if (productSaveIssues(); as issues) {
+            @if (issues.length) {
+              <p class="bls__save-error" role="alert">
+                <button type="button" class="bls__save-error-link" (click)="scrollToFirstProductIssue()">
+                  {{ issues[0] }}
+                </button>
+              </p>
+            }
+          }
           <button
             pButton
             type="button"
             label="שמירה ופרסום לדף הציבורי"
             icon="pi pi-check"
             iconPos="right"
-            [disabled]="form.invalid || saving()"
+            [disabled]="saving() || productSaveIssues().length > 0"
             [loading]="saving()"
-            (onClick)="save()"
+            (click)="save()"
           ></button>
         </div>
 
