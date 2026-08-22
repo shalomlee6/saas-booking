@@ -1,7 +1,9 @@
 // layout.component.scss — full redesign
 // Cal.com / Linear aesthetic: clean white, neutral sidebar, pink as accent only.
+// RTL: dir="rtl" is set once on .layout in the template — CSS Grid's column tracks and
+// all `inline-*` logical properties below resolve relative to that automatically.
 
-$sidebar-width:   224px;
+$sidebar-width:   240px;
 $sidebar-collapsed: 64px;
 $topbar-height:   56px;
 $breakpoint:      1024px;
@@ -24,6 +26,9 @@ $breakpoint:      1024px;
 }
 
 // ─── Root grid ────────────────────────────────────────────────────────────────
+// No transition on grid-template-columns here: Chromium does not reliably animate
+// (or even just re-apply) grid track lists — the sidebar's own width/transform
+// transitions below already give the collapse a smooth feel.
 .layout {
   display: grid;
   grid-template-columns: $sidebar-width 1fr;
@@ -32,7 +37,6 @@ $breakpoint:      1024px;
   overflow: hidden;
   background: var(--bg-app);
   color: var(--text-primary);
-  transition: grid-template-columns 0.2s ease;
 }
 
 .layout--sidebar-collapsed {
@@ -119,6 +123,39 @@ $breakpoint:      1024px;
 .layout--sidebar-collapsed .layout-sidebar-header {
   justify-content: center;
   padding: 0;
+}
+
+// Collapse chevron, next to the wordmark
+.layout-sidebar-collapse-btn {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-placeholder);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  font-size: 0.75rem;
+  transition: color 0.12s, background 0.12s;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-app);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+}
+
+.layout--sidebar-collapsed .layout-sidebar-collapse-btn {
+  display: flex;
+  transform: rotate(90deg);
 }
 
 // Nav body
@@ -227,24 +264,90 @@ $breakpoint:      1024px;
   display: none;
 }
 
-// Footer (logout)
+// Pending-count badge (e.g. on "Appointments")
+.layout-sidebar-link-badge {
+  margin-inline-start: auto;
+  flex-shrink: 0;
+  background: var(--color-primary);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 0 0.4375rem;
+}
+
+.layout--sidebar-collapsed .layout-sidebar-link-badge {
+  display: none;
+}
+
+// Footer (user + logout)
 .layout-sidebar-footer {
-  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5625rem;
+  padding: 0.625rem;
   border-top: 1px solid var(--border-color);
 }
 
-.layout-sidebar-link-footer {
-  margin-top: 0;
-  width: 100%;
+.layout-sidebar-user-avatar {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: var(--color-primary-subtle);
+  color: #b5254f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.layout-sidebar-user-email {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  direction: ltr;
+  text-align: end;
+}
+
+.layout--sidebar-collapsed .layout-sidebar-user-email {
+  display: none;
 }
 
 .layout-sidebar-logout-btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   background: none;
   border: none;
+  border-radius: var(--radius-md, 8px);
+  color: var(--text-placeholder);
   cursor: pointer;
-  font: inherit;
-  color: inherit;
-  text-align: inherit;
+  font-size: 0.875rem;
+  transition: color 0.12s, background 0.12s;
+
+  &:hover {
+    color: var(--text-primary);
+    background: var(--bg-app);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 1px;
+  }
+}
+
+.layout--sidebar-collapsed .layout-sidebar-footer {
+  justify-content: center;
 }
 
 // Impersonation badge in sidebar
@@ -277,12 +380,177 @@ $breakpoint:      1024px;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0 1.25rem 0 1rem;
+  gap: 0.875rem;
+  padding: 0 1.5rem;
   z-index: 5;
 }
 
-// Menu toggle button
+// Page title + date (start of the topbar, next to the sidebar)
+.layout-topbar-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex-shrink: 0;
+}
+
+.layout-topbar-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.layout-topbar-date {
+  font-size: 0.71875rem;
+  color: var(--text-muted);
+}
+
+// Actions cluster (end of the topbar)
+.layout-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin-inline-start: auto;
+  min-width: 0;
+}
+
+// Search
+.layout-topbar-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 216px;
+  flex-shrink: 1;
+}
+
+.layout-topbar-search-icon {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--text-placeholder);
+  pointer-events: none;
+}
+
+.layout-topbar-search {
+  width: 100%;
+  height: 36px;
+  padding-inline-start: 2rem;
+  padding-inline-end: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  outline: none;
+  transition: border-color 0.15s;
+
+  &::placeholder { color: var(--text-placeholder); }
+  &:focus { border-color: var(--color-primary); }
+  &:disabled { opacity: 0.7; cursor: not-allowed; }
+}
+
+.layout-topbar-customer-site {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 36px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0 0.625rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+
+  &:hover {
+    background: var(--bg-app);
+    border-color: var(--border-color-strong);
+    color: var(--text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.layout-topbar-customer-site-warning {
+  font-size: 0.8125rem;
+  color: var(--text-placeholder);
+  padding: 0.375rem 0.5rem;
+  flex-shrink: 0;
+}
+
+// Notification bell
+.layout-topbar-bell {
+  position: relative;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: var(--bg-app);
+    color: var(--text-primary);
+    border-color: var(--border-color-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.layout-topbar-bell-dot {
+  position: absolute;
+  top: 6px;
+  inset-inline-end: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-primary);
+}
+
+// New appointment button
+.layout-topbar-new-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 36px;
+  padding: 0 0.875rem;
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background 0.12s;
+
+  i { font-size: 0.6875rem; }
+
+  &:hover { background: var(--color-primary-hover); }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+// Menu toggle button (mobile-only drawer trigger)
 .layout-topbar-menu-btn {
   flex-shrink: 0;
 
@@ -304,77 +572,6 @@ $breakpoint:      1024px;
   }
 }
 
-// Page title (dynamic via router)
-.layout-topbar-title {
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-
-// Search
-.layout-topbar-search-wrap {
-  flex: 1;
-  max-width: 280px;
-}
-
-.layout-topbar-search {
-  width: 100%;
-  padding: 0.4375rem 0.75rem;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  background: var(--bg-app);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 8px);
-  outline: none;
-  transition: border-color 0.15s;
-
-  &::placeholder { color: var(--text-placeholder); }
-  &:focus { border-color: var(--color-primary); }
-  &:disabled { opacity: 0.45; cursor: not-allowed; }
-}
-
-// Right side actions
-.layout-topbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-inline-start: auto;
-}
-
-.layout-topbar-customer-site {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-decoration: none;
-  padding: 0.375rem 0.625rem;
-  border-radius: var(--radius-md, 8px);
-  border: 1px solid var(--border-color);
-  background: transparent;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
-
-  &:hover {
-    background: var(--bg-app);
-    border-color: var(--border-color-strong);
-    color: var(--text-primary);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
-  }
-}
-
-.layout-topbar-customer-site-warning {
-  font-size: 0.8125rem;
-  color: var(--text-placeholder);
-  padding: 0.375rem 0.5rem;
-}
-
 // Theme toggle
 .layout-theme-toggle {
   display: inline-flex;
@@ -388,6 +585,7 @@ $breakpoint:      1024px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md, 8px);
   cursor: pointer;
+  flex-shrink: 0;
   transition: color 0.12s, border-color 0.12s;
 
   &:hover {
@@ -416,24 +614,7 @@ $breakpoint:      1024px;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   border: 1px solid #fde68a;
-}
-
-// User info
-.layout-topbar-user {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.875rem;
-  color: var(--text-muted);
-}
-
-.layout-topbar-business-name {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.layout-topbar-user-sep {
-  color: var(--border-color-strong);
+  flex-shrink: 0;
 }
 
 // ─── Main content ─────────────────────────────────────────────────────────────
@@ -447,6 +628,14 @@ $breakpoint:      1024px;
   flex-direction: column;
 
   &:focus { outline: none; }
+}
+
+.main-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .layout-main > router-outlet + * {
@@ -503,7 +692,9 @@ $breakpoint:      1024px;
     inset-inline-start: 0;
     width: $sidebar-width;
     min-width: $sidebar-width;
-    transform: translateX(-100%);
+    // Sidebar sits at the RTL inline-start edge (the right, under dir="rtl"); slide it
+    // out past that same edge (further right) to hide it, matching the drawer's side.
+    transform: translateX(100%);
     box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
   }
 

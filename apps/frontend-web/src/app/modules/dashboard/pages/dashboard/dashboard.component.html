@@ -1,211 +1,248 @@
 <div class="dashboard-page">
-  <h1 class="dashboard-page-title">לוח בקרה</h1>
 
-  <section class="dashboard-stats">
-    @if (insightsState$ | async; as insightsState) {
-    @if (insightsState.error) {
-      <div class="dashboard-empty">
-        לא ניתן לטעון נתוני דשבורד.
-        <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
-      </div>
-    } @else if (insightsState.insights; as insights) {
-      <p-card styleClass="dashboard-stat-pcard dashboard-stat-wrap">
-        <div class="dashboard-stat-inner">
-          <i class="pi pi-wallet dashboard-stat-icon" aria-hidden="true"></i>
-          <div class="dashboard-stat-text">
-            <span class="dashboard-stat-label">סה״כ הכנסות</span>
-            <span class="dashboard-stat-value">{{ insights.totalRevenue | currency: 'ILS' }}</span>
-          </div>
-        </div>
-      </p-card>
-      <p-card styleClass="dashboard-stat-pcard dashboard-stat-wrap">
-        <div class="dashboard-stat-inner">
-          <i class="pi pi-users dashboard-stat-icon" aria-hidden="true"></i>
-          <div class="dashboard-stat-text">
-            <span class="dashboard-stat-label">לקוחות לא פעילים</span>
-            <span class="dashboard-stat-value">{{ insights.inactiveCustomersCount }}</span>
-          </div>
-        </div>
-      </p-card>
-      <p-card styleClass="dashboard-stat-pcard dashboard-stat-wrap">
-        <div class="dashboard-stat-inner">
-          <i class="pi pi-calendar dashboard-stat-icon" aria-hidden="true"></i>
-          <div class="dashboard-stat-text">
-            <span class="dashboard-stat-label">תורים</span>
-            <span class="dashboard-stat-value">{{ insights.appointmentsCount }}</span>
-          </div>
-        </div>
-      </p-card>
-      <p-card styleClass="dashboard-stat-pcard dashboard-stat-wrap">
-        <div class="dashboard-stat-inner">
-          <i class="pi pi-star dashboard-stat-icon" aria-hidden="true"></i>
-          <div class="dashboard-stat-text">
-            <span class="dashboard-stat-label">לקוחות מובילים</span>
-            <span class="dashboard-stat-value">{{ insights.topCustomers.length }}</span>
-          </div>
-        </div>
-      </p-card>
-    } @else {
-      @for (i of [1, 2, 3, 4]; track i) {
-        <p-card styleClass="dashboard-stat-pcard dashboard-stat-wrap">
-          <div class="dashboard-stat-inner">
-            <span class="dashboard-stat-label">&nbsp;</span>
-            <span class="dashboard-stat-value">—</span>
-          </div>
-        </p-card>
-      }
-    }
-    }
-  </section>
-
-  <div class="dashboard-period-filter">
-    <button
-      type="button"
-      class="dashboard-pill"
-      [class.dashboard-pill-active]="selectedPeriod() === 'week'"
-      (click)="setPeriod('week')"
-    >
-      שבוע
-    </button>
-    <button
-      type="button"
-      class="dashboard-pill"
-      [class.dashboard-pill-active]="selectedPeriod() === 'month'"
-      (click)="setPeriod('month')"
-    >
-      חודש
-    </button>
-    <button
-      type="button"
-      class="dashboard-pill"
-      [class.dashboard-pill-active]="selectedPeriod() === 'year'"
-      (click)="setPeriod('year')"
-    >
-      שנה
-    </button>
+  <div class="dashboard-hero">
+    <div class="dashboard-hero-text">
+      <h1 class="dashboard-greeting">{{ greeting }} ✨</h1>
+      <p class="dashboard-subtitle">{{ todaySummaryText$ | async }}</p>
+    </div>
+    <div class="dashboard-period-filter" role="tablist" aria-label="טווח נתונים">
+      <button
+        type="button"
+        class="dashboard-pill"
+        [class.dashboard-pill-active]="selectedPeriod() === 'week'"
+        (click)="setPeriod('week')"
+      >
+        שבוע
+      </button>
+      <button
+        type="button"
+        class="dashboard-pill"
+        [class.dashboard-pill-active]="selectedPeriod() === 'month'"
+        (click)="setPeriod('month')"
+      >
+        חודש
+      </button>
+      <button
+        type="button"
+        class="dashboard-pill"
+        [class.dashboard-pill-active]="selectedPeriod() === 'year'"
+        (click)="setPeriod('year')"
+      >
+        שנה
+      </button>
+    </div>
   </div>
 
-  <section class="dashboard-charts">
-    <div class="dashboard-card dashboard-chart-card">
-      <h2 class="dashboard-card-title">הכנסות לפי יום בשבוע</h2>
-      @if (revenueByWeekdayChart$ | async; as chartData) {
-        @if (chartData) {
-          <p-chart type="bar" [data]="chartData" [options]="chartOptions" [responsive]="true" />
-        } @else {
-          <p class="dashboard-empty">
-            לא ניתן לטעון נתוני גרף.
-            <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
-          </p>
-        }
-      } @else {
-        <p class="dashboard-empty">טוען…</p>
-      }
-    </div>
-    <div class="dashboard-card dashboard-chart-card">
-      <h2 class="dashboard-card-title">הכנסות לפי שירות</h2>
-      @if (revenueByServiceChart$ | async; as chartData) {
-        @if (chartData) {
-          <p-chart type="bar" [data]="chartData" [options]="chartOptions" [responsive]="true" />
-        } @else {
-          <p class="dashboard-empty">
-            לא ניתן לטעון נתוני גרף.
-            <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
-          </p>
-        }
-      } @else {
-        <p class="dashboard-empty">טוען…</p>
-      }
-    </div>
-  </section>
-
-  <section class="dashboard-table-section">
-    <div class="dashboard-card dashboard-table-card">
-      <h2 class="dashboard-card-title">לקוחות מובילים</h2>
-      @if (insightsState$ | async; as insightsState) {
+  <section class="dashboard-kpis">
+    @if (insightsState$ | async; as insightsState) {
       @if (insightsState.error) {
-        <p class="dashboard-empty">
-          לא ניתן לטעון לקוחות מובילים.
+        <div class="dashboard-empty">
+          לא ניתן לטעון נתוני דשבורד.
           <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
-        </p>
+        </div>
       } @else if (insightsState.insights; as insights) {
-        <p-table
-          [value]="insights.topCustomers"
-          [stripedRows]="true"
-          styleClass="dashboard-top-customers-table"
-          [tableStyle]="{ 'min-width': '100%' }"
-        >
-          <ng-template pTemplate="header">
-            <tr>
-              <th class="col-name">שם</th>
-              <th class="col-total">סה״כ</th>
-              <th class="col-status">סטטוס</th>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="body" let-customer>
-            <tr>
-              <td class="col-name">{{ customer.name || '—' }}</td>
-              <td class="col-total">{{ customer.total | currency: 'ILS' }}</td>
-              <td class="col-status">
-                @if (customer.total >= vipThreshold) {
-                  <span class="dashboard-vip-pill">VIP</span>
-                } @else {
-                  <span class="dashboard-status-regular">—</span>
-                }
-              </td>
-            </tr>
-          </ng-template>
-          <ng-template pTemplate="emptymessage">
-            <tr>
-              <td colspan="3">אין נתונים עדיין.</td>
-            </tr>
-          </ng-template>
-        </p-table>
+        <div class="dashboard-kpi">
+          <div class="dashboard-kpi-head">
+            <span class="dashboard-kpi-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-label">הכנסות {{ periodLabel() }}</span>
+          </div>
+          <span class="dashboard-kpi-value" dir="ltr">{{ insights.totalRevenue | currency: 'ILS' }}</span>
+          @if (revenueSparkline$ | async; as bars) {
+            <div class="dashboard-kpi-sparkline" aria-hidden="true">
+              @for (h of bars; track $index) {
+                <span class="dashboard-kpi-bar" [style.height.%]="h || 4"></span>
+              }
+            </div>
+          }
+        </div>
+
+        <div class="dashboard-kpi">
+          <div class="dashboard-kpi-head">
+            <span class="dashboard-kpi-icon"><i class="pi pi-calendar" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-label">תורים {{ periodLabel() }}</span>
+          </div>
+          <span class="dashboard-kpi-value">{{ insights.appointmentsCount }}</span>
+          <span class="dashboard-kpi-sub">&nbsp;</span>
+        </div>
+
+        <div class="dashboard-kpi">
+          <div class="dashboard-kpi-head">
+            <span class="dashboard-kpi-icon"><i class="pi pi-star" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-label">ממוצע לתור</span>
+          </div>
+          <span class="dashboard-kpi-value" dir="ltr">{{ avgPerAppointment$ | async | currency: 'ILS' }}</span>
+          <span class="dashboard-kpi-sub">
+            @if (topServiceName$ | async; as svc) {
+              {{ svc }} הוא השירות המבוקש
+            } @else {
+              &nbsp;
+            }
+          </span>
+        </div>
+
+        <div class="dashboard-kpi">
+          <div class="dashboard-kpi-head">
+            <span class="dashboard-kpi-icon"><i class="pi pi-users" aria-hidden="true"></i></span>
+            <span class="dashboard-kpi-label">לקוחות לא פעילות</span>
+          </div>
+          <span class="dashboard-kpi-value">{{ insights.inactiveCustomersCount }}</span>
+          <a routerLink="/customers" class="dashboard-kpi-cta">לצפייה בלקוחות ←</a>
+        </div>
       } @else {
-        <p class="dashboard-empty">טוען…</p>
+        @for (i of [1, 2, 3, 4]; track i) {
+          <div class="dashboard-kpi dashboard-kpi-loading">
+            <span class="dashboard-kpi-label">&nbsp;</span>
+            <span class="dashboard-kpi-value">—</span>
+          </div>
+        }
       }
-      }
-    </div>
+    }
   </section>
 
-  <section class="dashboard-table-section">
-    <div class="dashboard-card dashboard-table-card">
-      <h2 class="dashboard-card-title">תורים (עדכון אוטומטי)</h2>
-      <div class="dashboard-table-placeholder">
-        @if (topAppointmentsState$ | async; as state) {
-          @if (state.error) {
-            <p class="dashboard-empty">
-              לא ניתן לטעון תורים.
-              <button type="button" class="dashboard-link" (click)="retryAppointments()">נסי שוב</button>
-            </p>
-          } @else if (state.loading) {
-            <p class="dashboard-empty">טוען…</p>
-          } @else if (state.list.length === 0) {
-            <p class="dashboard-empty">אין תורים בטווח הנוכחי.</p>
-          } @else {
-            <table class="dashboard-table">
-              <thead>
-                <tr>
-                  <th>שעה</th>
-                  <th>לקוח</th>
-                  <th>שירות</th>
-                  <th>סטטוס</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (a of state.list; track a._id) {
-                  <tr>
-                    <td>{{ a.start | date: 'HH:mm' }} – {{ a.end | date: 'HH:mm' }}</td>
-                    <td>{{ a.customerName }}</td>
-                    <td>{{ a.serviceName }}</td>
-                    <td><p-tag [value]="a.status" /></td>
-                  </tr>
+  <section class="dashboard-main-grid">
+
+    <div class="dashboard-card dashboard-agenda-card">
+      <div class="dashboard-card-header">
+        <span class="dashboard-card-title">התורים של היום</span>
+        @if (todayAgendaState$ | async; as state) {
+          <span class="dashboard-count-badge">{{ state.rows.length }}</span>
+        }
+        <a routerLink="/appointments" class="dashboard-link dashboard-card-header-link">לכל התורים</a>
+      </div>
+
+      @if (todayAgendaState$ | async; as state) {
+        @if (state.error) {
+          <p class="dashboard-empty">
+            לא ניתן לטעון תורים.
+            <button type="button" class="dashboard-link" (click)="retryAppointments()">נסי שוב</button>
+          </p>
+        } @else if (state.loading) {
+          <p class="dashboard-empty">טוען…</p>
+        } @else if (state.rows.length === 0) {
+          <p class="dashboard-empty">אין תורים היום.</p>
+        } @else {
+          <div class="dashboard-agenda-list">
+            @for (row of state.rows; track row.apt._id) {
+              <div
+                class="dashboard-agenda-row"
+                [class.dashboard-agenda-row-next]="row.isNext"
+                [class.dashboard-agenda-row-past]="row.isPast"
+              >
+                <span class="dashboard-agenda-time" dir="ltr">{{ row.apt.start | date: 'HH:mm' }}–{{ row.apt.end | date: 'HH:mm' }}</span>
+                <span class="dashboard-agenda-stripe" [class]="'dashboard-agenda-stripe--' + row.tone"></span>
+                <span class="dashboard-agenda-info">
+                  <span class="dashboard-agenda-name">{{ row.apt.customerName || '—' }}</span>
+                  <span class="dashboard-agenda-meta">
+                    {{ row.apt.serviceName || '—' }}
+                    @if (row.apt.durationMinutes) {
+                      <span> · {{ row.apt.durationMinutes }} min</span>
+                    }
+                    @if (row.apt.price) {
+                      <span> · <span dir="ltr">{{ row.apt.price | currency: 'ILS' }}</span></span>
+                    }
+                  </span>
+                </span>
+
+                @if (row.isNext) {
+                  <span class="dashboard-next-badge">הבא בתור</span>
+                  @if (row.whatsapp) {
+                    <a [href]="row.whatsapp" target="_blank" rel="noopener noreferrer" class="dashboard-whatsapp-btn">
+                      <i class="pi pi-comments" aria-hidden="true"></i>הודעה
+                    </a>
+                  }
+                } @else {
+                  <span class="dashboard-status-pill" [class]="'dashboard-status-pill--' + row.tone">{{ row.label }}</span>
+                  @if (row.tone === 'warn') {
+                    <button
+                      type="button"
+                      class="dashboard-confirm-btn"
+                      [disabled]="confirmingId() === row.apt._id"
+                      (click)="confirmAppointment(row.apt._id)"
+                    >
+                      <i class="pi pi-check" aria-hidden="true"></i>אשרי
+                    </button>
+                  }
                 }
-              </tbody>
-            </table>
+              </div>
+            }
+          </div>
+        }
+      }
+
+      @if (workingHoursClosedToday()) {
+        <div class="dashboard-agenda-footer">
+          <i class="pi pi-info-circle" aria-hidden="true"></i>
+          <span>היום עדיין ללא שעות עבודה — הלקוחות לא יכולות להזמין.</span>
+          <a routerLink="/settings/working-hours" class="dashboard-link">הגדירי שעות</a>
+        </div>
+      }
+    </div>
+
+    <div class="dashboard-side-col">
+      <div class="dashboard-card dashboard-chart-card">
+        <div class="dashboard-card-header">
+          <span class="dashboard-card-title">הכנסות לפי יום</span>
+        </div>
+        @if (revenueByWeekdayChart$ | async; as chart) {
+          @if (chart.loading) {
+            <p class="dashboard-empty">טוען…</p>
+          } @else if (chart.error) {
+            <p class="dashboard-empty">
+              לא ניתן לטעון נתוני גרף.
+              <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+            </p>
+          } @else {
+            <div class="dashboard-chart-wrap">
+              <p-chart type="bar" [data]="chart.data" [options]="chartOptions" [responsive]="true" />
+            </div>
           }
-          <a routerLink="/appointments" class="dashboard-link">לכל התורים</a>
+        }
+        @if (topServicesBreakdown$ | async; as services) {
+          @if (services.length) {
+            <div class="dashboard-service-breakdown">
+              @for (s of services; track s.serviceName) {
+                <div class="dashboard-service-stat">
+                  <span class="dashboard-service-name">{{ s.serviceName || '—' }}</span>
+                  <span class="dashboard-service-total" dir="ltr">{{ s.total | currency: 'ILS' }}</span>
+                  <span class="dashboard-service-bar"><span [style.width.%]="s.pct"></span></span>
+                </div>
+              }
+            </div>
+          }
+        }
+      </div>
+
+      <div class="dashboard-card dashboard-customers-card">
+        <div class="dashboard-card-header">
+          <span class="dashboard-card-title">לקוחות מובילות</span>
+          <a routerLink="/customers" class="dashboard-link dashboard-card-header-link">לכל הלקוחות</a>
+        </div>
+        @if (insightsState$ | async; as insightsState) {
+          @if (insightsState.error) {
+            <p class="dashboard-empty">לא ניתן לטעון לקוחות מובילות.</p>
+          } @else if (topCustomersView$ | async; as customers) {
+            @if (customers.length === 0) {
+              <p class="dashboard-empty">אין נתונים עדיין.</p>
+            } @else {
+              <div class="dashboard-customers-list">
+                @for (c of customers; track c.name) {
+                  <div class="dashboard-customer-row">
+                    <span class="dashboard-customer-avatar">{{ c.initials }}</span>
+                    <span class="dashboard-customer-name">{{ c.name || '—' }}</span>
+                    <span class="dashboard-customer-total" dir="ltr">{{ c.total | currency: 'ILS' }}</span>
+                    @if (c.vip) {
+                      <span class="dashboard-vip-pill">VIP</span>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          } @else {
+            <p class="dashboard-empty">טוען…</p>
+          }
         }
       </div>
     </div>
+
   </section>
 </div>
