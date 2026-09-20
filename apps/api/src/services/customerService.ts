@@ -1,7 +1,34 @@
-import { Customer } from '../models/Customer';
+import { Customer, type ICustomerPreferences } from '../models/Customer';
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export interface CustomerPreferencesInput {
+  preferredStaffId?: string;
+  preferredTimeOfDay?: ICustomerPreferences['preferredTimeOfDay'];
+  allergies?: string;
+  tags?: string[];
+}
+
+/** Builds `$set` entries for the fields actually provided, so a partial update never wipes
+ *  sibling preference fields the caller didn't mention (Mongoose would otherwise replace the
+ *  whole embedded `preferences` subdocument on a plain `{ preferences: {...} }` $set). */
+function buildPreferencesSet(preferences: CustomerPreferencesInput): Record<string, unknown> {
+  const set: Record<string, unknown> = {};
+  if (preferences.preferredStaffId !== undefined) {
+    set['preferences.preferredStaffId'] = preferences.preferredStaffId || undefined;
+  }
+  if (preferences.preferredTimeOfDay !== undefined) {
+    set['preferences.preferredTimeOfDay'] = preferences.preferredTimeOfDay;
+  }
+  if (preferences.allergies !== undefined) {
+    set['preferences.allergies'] = preferences.allergies.trim();
+  }
+  if (preferences.tags !== undefined) {
+    set['preferences.tags'] = preferences.tags;
+  }
+  return set;
 }
 
 export async function listCustomersForTenant(businessId: string, search: string) {
@@ -19,7 +46,13 @@ export async function listCustomersForTenant(businessId: string, search: string)
 
 export async function createCustomerForTenant(
   businessId: string,
-  input: { name: string; phone: string; email?: string; notes?: string }
+  input: {
+    name: string;
+    phone: string;
+    email?: string;
+    notes?: string;
+    preferences?: CustomerPreferencesInput;
+  }
 ) {
   const name = input.name.trim();
   const phone = input.phone.trim();
@@ -31,6 +64,7 @@ export async function createCustomerForTenant(
     phone,
     email: email === '' ? undefined : email,
     notes,
+    preferences: input.preferences,
   });
 }
 
@@ -41,7 +75,13 @@ export async function getCustomerForTenant(businessId: string, customerId: strin
 export async function updateCustomerForTenant(
   businessId: string,
   customerId: string,
-  body: { name?: string; phone?: string; email?: string; notes?: string }
+  body: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    notes?: string;
+    preferences?: CustomerPreferencesInput;
+  }
 ) {
   const update: Record<string, unknown> = {};
   if (body.name !== undefined) update.name = body.name.trim();
@@ -51,6 +91,9 @@ export async function updateCustomerForTenant(
     update.email = email === '' ? undefined : email;
   }
   if (body.notes !== undefined) update.notes = body.notes.trim();
+  if (body.preferences !== undefined) {
+    Object.assign(update, buildPreferencesSet(body.preferences));
+  }
 
   return Customer.findOneAndUpdate(
     { _id: customerId, businessId },

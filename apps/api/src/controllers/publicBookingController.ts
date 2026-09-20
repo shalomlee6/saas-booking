@@ -10,6 +10,7 @@ import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCust
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { getAvailabilityForBusiness } from '../services/publicAvailabilityService';
+import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
 import { toUtcDate } from '../services/publicBookingTime';
 import {
   setPublicCustomerSessionCookie,
@@ -314,7 +315,13 @@ export async function getAvailability(req: Request, res: Response): Promise<void
     throw new NotFoundError('Business not found');
   }
 
-  const result = await getAvailabilityForBusiness(business._id, serviceId, dateStr);
+  const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+  const result = await getAvailabilityForBusiness(
+    business._id,
+    serviceId,
+    dateStr,
+    publicCustomer?.customerId
+  );
   res.json(result);
 }
 
@@ -331,7 +338,13 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
     throw new NotFoundError('Business not found');
   }
 
-  const result = await getAvailabilityForBusiness(business._id, serviceId, dateStr);
+  const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+  const result = await getAvailabilityForBusiness(
+    business._id,
+    serviceId,
+    dateStr,
+    publicCustomer?.customerId
+  );
   res.json(result);
 }
 
@@ -424,7 +437,8 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   }
 
   const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
-  const durationMinutes = service.durationMinutes ?? 30;
+  const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
+  const durationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
 
   let startAt: Date;
   try {

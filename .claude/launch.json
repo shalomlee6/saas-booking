@@ -4,8 +4,8 @@
     {
       "name": "frontend-mock",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "start:mock", "--prefix", "apps/frontend-web"],
-      "port": 4200
+      "runtimeArgs": ["run", "start:mock", "--prefix", "apps/frontend-web", "--", "--port", "4201"],
+      "port": 4201
     }
   ]
 }

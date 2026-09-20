@@ -29,3 +29,11 @@ export const settingsLanguageZod = z.enum(SETTINGS_LANGUAGES);
 export const AVAILABILITY_OVERRIDE_TYPES = ['closed', 'custom'] as const;
 export type AvailabilityOverrideType = (typeof AVAILABILITY_OVERRIDE_TYPES)[number];
 export const availabilityOverrideTypeZod = z.enum(AVAILABILITY_OVERRIDE_TYPES);
+
+/**
+ * Coarse part-of-day bucket. Shared by Customer.preferences.preferredTimeOfDay (manually set)
+ * and the customer-stats service's derived `preferredTimeOfDay` (computed from booking history).
+ */
+export const TIME_OF_DAY_BUCKETS = ['morning', 'afternoon', 'evening', 'night'] as const;
+export type TimeOfDayBucket = (typeof TIME_OF_DAY_BUCKETS)[number];
+export const timeOfDayBucketZod = z.enum(TIME_OF_DAY_BUCKETS);

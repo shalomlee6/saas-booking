@@ -523,6 +523,32 @@ $breakpoint:      1024px;
   background: var(--color-primary);
 }
 
+// Settings shortcut (routes to /settings/theme)
+.layout-topbar-settings {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-color);
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+
+  &:hover {
+    background: var(--bg-app);
+    color: var(--text-primary);
+    border-color: var(--border-color-strong);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
 // New appointment button
 .layout-topbar-new-btn {
   display: inline-flex;

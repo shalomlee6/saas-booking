@@ -5,6 +5,7 @@ import { Service } from '../models/Service';
 import type { AppointmentSource, AppointmentStatus } from '../dto/enums';
 import { AppointmentError } from './appointmentErrors';
 import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
+import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 
 export type { AppointmentSource };
 export { AppointmentError } from './appointmentErrors';
@@ -163,6 +164,11 @@ export async function createAppointmentAtomic(
       session
     );
 
+    // Per-customer, per-service override (see CustomerServiceConfig) takes precedence over
+    // the service's own catalog duration. Only meaningful when a customer is on file.
+    const override = await getServiceOverrideForCustomer(businessId, payload.customerId, serviceId);
+    const resolvedDurationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
+
     const resolvedPrice =
       typeof payload.price === 'number' && !isNaN(payload.price)
         ? payload.price
@@ -182,7 +188,7 @@ export async function createAppointmentAtomic(
             customerName: payload.customerName,
             customerPhone: payload.customerPhone,
             price: resolvedPrice,
-            durationMinutes: service.durationMinutes ?? 30,
+            durationMinutes: resolvedDurationMinutes,
             start,
             end,
             status: resolvedStatus,
@@ -202,7 +208,7 @@ export async function createAppointmentAtomic(
       customerName: payload.customerName,
       customerPhone: payload.customerPhone,
       price: resolvedPrice,
-      durationMinutes: service.durationMinutes ?? 30,
+      durationMinutes: resolvedDurationMinutes,
       start,
       end,
       status: resolvedStatus,
@@ -270,28 +276,57 @@ export async function updateAppointmentAtomic(
     checkWindowConstraints = true,
   } = input;
 
+  // Shared core logic, optionally wrapped in a MongoDB transaction (mirrors createAppointmentAtomic).
+  const runUpdate = async (session?: ClientSession): Promise<IAppointment | null> => {
+    const existingQuery = Appointment.findOne({ _id: appointmentId, businessId });
+    if (session) existingQuery.session(session);
+    const existing = await existingQuery;
+    if (!existing) {
+      return null;
+    }
+
+    if (checkWindowConstraints) {
+      await assertAppointmentWithinSchedule(businessId, nextStart, nextEnd);
+      await assertNoOverlap(businessId, nextStart, nextEnd, appointmentId, session);
+    }
+
+    return Appointment.findOneAndUpdate(
+      { _id: appointmentId, businessId },
+      update,
+      { new: true, session }
+    );
+  };
+
   const session = await mongoose.startSession();
   try {
-    let updated: IAppointment | null = null;
-    await session.withTransaction(async () => {
-      const existing = await Appointment.findOne({ _id: appointmentId, businessId }).session(session);
-      if (!existing) {
-        return;
+    try {
+      let updated: IAppointment | null = null;
+      await session.withTransaction(async () => {
+        updated = await runUpdate(session);
+      });
+      return updated;
+    } catch (e: any) {
+      const msg = String(e?.message ?? '');
+      const codeName = e?.codeName as string | undefined;
+      const isTxnUnsupported =
+        codeName === 'IllegalOperation' ||
+        msg.includes('Transaction numbers are only allowed');
+
+      if (!isTxnUnsupported) {
+        throw e;
       }
 
-      if (checkWindowConstraints) {
-        await assertAppointmentWithinSchedule(businessId, nextStart, nextEnd);
-        await assertNoOverlap(businessId, nextStart, nextEnd, appointmentId, session);
+      if (process.env.NODE_ENV === 'production') {
+        throw new AppointmentError(
+          503,
+          'Database transaction support is required',
+          'TXN_REQUIRED'
+        );
       }
 
-      updated = await Appointment.findOneAndUpdate(
-        { _id: appointmentId, businessId },
-        update,
-        { new: true, session }
-      );
-    });
-
-    return updated;
+      // Dev-only fallback path for standalone MongoDB (no transactions support).
+      return await runUpdate(undefined);
+    }
   } finally {
     await session.endSession();
   }

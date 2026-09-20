@@ -1,7 +1,17 @@
 import { z } from 'zod';
 import { mongoObjectIdString } from '../primitives';
+import { timeOfDayBucketZod } from '../../dto/enums';
 
 const optionalEmail = z.union([z.string().email(), z.literal('')]).optional();
+
+const customerPreferencesBodySchema = z
+  .object({
+    preferredStaffId: z.union([mongoObjectIdString, z.literal('')]).optional(),
+    preferredTimeOfDay: timeOfDayBucketZod.optional(),
+    allergies: z.string().max(2_000).optional(),
+    tags: z.array(z.string().min(1).max(60)).max(50).optional(),
+  })
+  .strict();
 
 export const customerCreateBodySchema = z
   .object({
@@ -9,6 +19,7 @@ export const customerCreateBodySchema = z
     phone: z.string().min(1).max(40).trim(),
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
+    preferences: customerPreferencesBodySchema.optional(),
   })
   .strict();
 
@@ -18,6 +29,7 @@ export const customerUpdateBodySchema = z
     phone: z.string().min(1).max(40).trim().optional(),
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
+    preferences: customerPreferencesBodySchema.optional(),
   })
   .strict()
   .refine((d) => Object.keys(d).length > 0, {

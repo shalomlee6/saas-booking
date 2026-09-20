@@ -13,6 +13,8 @@ import {
 import {
   createCustomer,
   getCustomer,
+  getCustomerAppointmentHistory,
+  getCustomerCardStats,
   listCustomers,
   updateCustomer,
 } from '../controllers/customersController';
@@ -46,4 +48,16 @@ customersRouter.put(
   validateParams(customerIdParamsSchema),
   validateBody(customerUpdateBodySchema),
   asyncHandler((req: AuthRequest, res) => updateCustomer(req, res))
+);
+
+customersRouter.get(
+  '/:id/appointments',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => getCustomerAppointmentHistory(req, res))
+);
+
+customersRouter.get(
+  '/:id/stats',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => getCustomerCardStats(req, res))
 );

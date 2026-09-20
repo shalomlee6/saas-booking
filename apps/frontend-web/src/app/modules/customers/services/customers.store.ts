@@ -19,7 +19,7 @@ export class CustomersStore {
         this.loading.set(false);
       },
       error: (err) => {
-        this.error.set(err?.error?.message || 'Failed to load customers');
+        this.error.set(err?.error?.message || 'לא ניתן היה לטעון את רשימת הלקוחות');
         this.loading.set(false);
       },
     });

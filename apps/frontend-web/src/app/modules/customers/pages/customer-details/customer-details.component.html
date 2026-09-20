@@ -1,3 +1,346 @@
 <div class="customer-details-page">
-  <p class="customer-details-placeholder">Customer details coming soon.</p>
+  @if (loadingCustomer()) {
+    <p class="cd-loading">טוענת…</p>
+  } @else if (customerError()) {
+    <p class="cd-error">{{ customerError() }}</p>
+  } @else if (customer(); as c) {
+    <a routerLink="/customers" class="cd-back">
+      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+      לקוחות
+    </a>
+
+    <div class="cd-header">
+      <div class="cd-header-text">
+        <h1 class="cd-name">{{ c.name }}</h1>
+        <div class="cd-contact" dir="ltr">
+          <span>{{ c.phone }}</span>
+          @if (c.email) {
+            <span>· {{ c.email }}</span>
+          }
+        </div>
+      </div>
+      @if (stats(); as s) {
+        <span class="cd-badge" [class.cd-badge-new]="s.isNewCustomer">
+          {{ s.isNewCustomer ? 'לקוחה חדשה' : 'לקוחה חוזרת' }}
+        </span>
+      }
+    </div>
+
+    @if (stats()?.isNewCustomer) {
+      <div class="cd-new-customer-note">
+        <i class="pi pi-sparkles" aria-hidden="true"></i>
+        <div>
+          <p class="cd-new-customer-title">לקוחה חדשה</p>
+          <p class="cd-new-customer-text">עדיין אין ביקורים שהושלמו עבור לקוחה זו.</p>
+        </div>
+      </div>
+    }
+
+    @if (bannerInsights().length > 0) {
+      <div class="cd-insights">
+        @for (insight of bannerInsights(); track insight.code) {
+          <div class="cd-insight" [class.cd-insight-warning]="insight.severity === 'warning'">
+            <i
+              class="pi"
+              [class.pi-info-circle]="insight.severity !== 'warning'"
+              [class.pi-exclamation-triangle]="insight.severity === 'warning'"
+              aria-hidden="true"
+            ></i>
+            {{ insightText(insight) }}
+          </div>
+        }
+      </div>
+    }
+
+    @if (loadingStats()) {
+      <p class="cd-loading">טוענת נתונים…</p>
+    } @else if (stats(); as s) {
+      <div class="cd-stats-grid">
+        <div class="cd-stat">
+          <span class="cd-stat-label">ביקורים שהושלמו</span>
+          <span class="cd-stat-value">{{ s.completedVisits }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">ביטולים</span>
+          <span class="cd-stat-value">{{ s.cancellations }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">אי-הופעות</span>
+          <span class="cd-stat-value">{{ s.noShows }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">הכנסה כוללת</span>
+          <span class="cd-stat-value">{{ s.totalRevenue | currency: 'ILS' }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">ממוצע ביקור</span>
+          <span class="cd-stat-value">{{ s.averageSpend | currency: 'ILS' }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">תדירות ביקורים</span>
+          <span class="cd-stat-value">{{ s.visitFrequencyDays !== null ? 'כל ' + s.visitFrequencyDays + ' ימים' : '—' }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">זמן מועדף</span>
+          <span class="cd-stat-value">{{ timeOfDayLabel(s.preferredTimeOfDay) }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">תור אחרון</span>
+          <span class="cd-stat-value">{{ s.lastAppointment ? (s.lastAppointment.start | date: 'd בMMMM y') : '—' }}</span>
+        </div>
+        <div class="cd-stat">
+          <span class="cd-stat-label">תור הבא</span>
+          <span class="cd-stat-value">{{ s.nextAppointment ? (s.nextAppointment.start | date: 'd בMMMM y') : '—' }}</span>
+        </div>
+      </div>
+
+      @if (s.mostBookedServices.length > 0) {
+        <div class="customers-card cd-section">
+          <h2 class="cd-section-title">שירותים מבוקשים</h2>
+          <ul class="cd-service-breakdown">
+            @for (svc of s.mostBookedServices; track svc.serviceId) {
+              <li>{{ svc.serviceName || 'שירות לא ידוע' }} — {{ svc.count }} ביקורים</li>
+            }
+          </ul>
+        </div>
+      }
+    }
+
+    <div class="customers-card cd-section">
+      <div class="cd-section-header">
+        <h2 class="cd-section-title">פרופיל לקוחה</h2>
+        @if (!editingProfile()) {
+          <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="startEditProfile()">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+            עריכה
+          </button>
+        }
+      </div>
+
+      @if (!editingProfile()) {
+        <div class="cd-profile-view">
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">הערות</span>
+            <span class="cd-profile-value">{{ c.notes || '—' }}</span>
+          </div>
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">זמן מועדף</span>
+            <span class="cd-profile-value">{{ timeOfDayLabel(c.preferences?.preferredTimeOfDay) }}</span>
+          </div>
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">אלרגיות</span>
+            <span class="cd-profile-value">{{ c.preferences?.allergies || '—' }}</span>
+          </div>
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">תגיות</span>
+            <span class="cd-tags">
+              @for (tag of c.preferences?.tags ?? []; track tag) {
+                <span class="cd-tag">{{ tag }}</span>
+              }
+              @if (!c.preferences?.tags?.length) {
+                <span class="cd-profile-value">—</span>
+              }
+            </span>
+          </div>
+        </div>
+      } @else {
+        <form class="cd-profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+          <div class="customer-form-field">
+            <label for="cd-notes">הערות</label>
+            <textarea id="cd-notes" formControlName="notes" class="customer-form-input customer-form-textarea" rows="3"></textarea>
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-tod">זמן מועדף</label>
+            <select id="cd-tod" formControlName="preferredTimeOfDay" class="customer-form-input">
+              <option value="">—</option>
+              @for (opt of timeOfDayOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-allergies">אלרגיות</label>
+            <textarea id="cd-allergies" formControlName="allergies" class="customer-form-input customer-form-textarea" rows="2"></textarea>
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-tags">תגיות (מופרדות בפסיקים)</label>
+            <input id="cd-tags" type="text" formControlName="tags" class="customer-form-input" placeholder="VIP, עור רגיש" />
+          </div>
+          <div class="customer-form-actions">
+            <button type="submit" class="customers-btn customers-btn-primary" [disabled]="savingProfile()">
+              {{ savingProfile() ? 'שומרת…' : 'שמירה' }}
+            </button>
+            <button type="button" class="customers-btn customers-btn-ghost" (click)="cancelEditProfile()">ביטול</button>
+          </div>
+        </form>
+      }
+    </div>
+
+    <div class="customers-card cd-section">
+      <div class="cd-section-header">
+        <h2 class="cd-section-title">התאמות שירות אישיות</h2>
+        @if (!showOverrideForm()) {
+          <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="startAddOverride()">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+            הוספת התאמה
+          </button>
+        }
+      </div>
+
+      @if (showOverrideForm()) {
+        <form class="cd-profile-form" [formGroup]="overrideForm" (ngSubmit)="submitOverrideForm()">
+          <div class="customer-form-field">
+            <label for="cd-svc">שירות</label>
+            <select
+              id="cd-svc"
+              formControlName="serviceId"
+              class="customer-form-input"
+              [class.customer-form-input-invalid]="overrideForm.get('serviceId')?.invalid && overrideForm.get('serviceId')?.touched"
+            >
+              <option value="" disabled>בחרי שירות…</option>
+              @for (svc of services(); track svc._id) {
+                <option [value]="svc._id">{{ svc.name }} ({{ svc.durationMinutes }} דק')</option>
+              }
+            </select>
+            @if (editingConfigId()) {
+              <p class="cd-hint">לא ניתן לשנות את השירות לאחר היצירה — יש למחוק וליצור מחדש.</p>
+            }
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-dur">משך זמן מותאם (דקות)</label>
+            <input
+              id="cd-dur"
+              type="number"
+              min="1"
+              formControlName="durationOverrideMinutes"
+              class="customer-form-input"
+              placeholder="השאירי ריק כדי להשתמש בברירת המחדל"
+            />
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-price">מחיר מותאם</label>
+            <input
+              id="cd-price"
+              type="number"
+              min="0"
+              formControlName="priceOverride"
+              class="customer-form-input"
+              placeholder="השאירי ריק כדי להשתמש בברירת המחדל"
+            />
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-cfg-notes">הערות</label>
+            <textarea id="cd-cfg-notes" formControlName="notes" class="customer-form-input customer-form-textarea" rows="2"></textarea>
+          </div>
+          @if (overrideFormError()) {
+            <p class="customer-form-error">{{ overrideFormError() }}</p>
+          }
+          <div class="customer-form-actions">
+            <button type="submit" class="customers-btn customers-btn-primary" [disabled]="savingOverride()">
+              {{ savingOverride() ? 'שומרת…' : editingConfigId() ? 'שמירה' : 'הוספה' }}
+            </button>
+            <button type="button" class="customers-btn customers-btn-ghost" (click)="cancelOverrideForm()">ביטול</button>
+          </div>
+        </form>
+      }
+
+      @if (loadingConfigs()) {
+        <p class="cd-loading">טוענת…</p>
+      } @else if (serviceConfigs().length === 0) {
+        <p class="cd-empty">עדיין אין התאמות שירות אישיות.</p>
+      } @else {
+        <div class="customers-table-wrap">
+          <table class="customers-table">
+            <thead>
+              <tr>
+                <th>שירות</th>
+                <th>משך זמן</th>
+                <th>מחיר</th>
+                <th>הערות</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (cfg of serviceConfigs(); track cfg._id) {
+                <tr>
+                  <td>{{ serviceNameMap().get(cfg.serviceId)?.name || cfg.serviceId }}</td>
+                  <td>{{ cfg.durationOverrideMinutes ? cfg.durationOverrideMinutes + ' דק׳' : '—' }}</td>
+                  <td>{{ cfg.priceOverride != null ? (cfg.priceOverride | currency: 'ILS') : '—' }}</td>
+                  <td>{{ cfg.notes || '—' }}</td>
+                  <td class="cd-row-actions">
+                    <button type="button" class="cd-link-btn" (click)="startEditOverride(cfg)">עריכה</button>
+                    <button type="button" class="cd-link-btn cd-link-btn-danger" (click)="deleteOverride(cfg)">מחיקה</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <div class="customers-card cd-section">
+      <h2 class="cd-section-title">תורים קרובים</h2>
+      @if (loadingHistory()) {
+        <p class="cd-loading">טוענת…</p>
+      } @else if (upcomingAppointments().length === 0) {
+        <p class="cd-empty">אין תורים קרובים.</p>
+      } @else {
+        <div class="customers-table-wrap">
+          <table class="customers-table">
+            <thead>
+              <tr>
+                <th>תאריך</th>
+                <th>שירות</th>
+                <th>סטטוס</th>
+                <th>מחיר</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of upcomingAppointments(); track a.appointmentId) {
+                <tr>
+                  <td>{{ a.start | date: 'd בMMMM y, HH:mm' }}</td>
+                  <td>{{ a.serviceName || '—' }}</td>
+                  <td>{{ statusLabel(a.status) }}</td>
+                  <td>{{ a.price != null ? (a.price | currency: 'ILS') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <div class="customers-card cd-section">
+      <h2 class="cd-section-title">תורים קודמים</h2>
+      @if (loadingHistory()) {
+        <p class="cd-loading">טוענת…</p>
+      } @else if (pastAppointments().length === 0) {
+        <p class="cd-empty">אין תורים קודמים.</p>
+      } @else {
+        <div class="customers-table-wrap">
+          <table class="customers-table">
+            <thead>
+              <tr>
+                <th>תאריך</th>
+                <th>שירות</th>
+                <th>סטטוס</th>
+                <th>מחיר</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a of pastAppointments(); track a.appointmentId) {
+                <tr>
+                  <td>{{ a.start | date: 'd בMMMM y, HH:mm' }}</td>
+                  <td>{{ a.serviceName || '—' }}</td>
+                  <td>{{ statusLabel(a.status) }}</td>
+                  <td>{{ a.price != null ? (a.price | currency: 'ILS') : '—' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+  }
 </div>

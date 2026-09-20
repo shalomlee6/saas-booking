@@ -40,6 +40,7 @@ publicRouter.get('/auth/me', requirePublicCustomer, asyncHandler(getPublicAuthMe
 publicRouter.get(
   '/availability',
   validateQuery(publicAvailabilityQuerySchema),
+  optionalPublicCustomer,
   asyncHandler(getPublicAvailability)
 );
 publicRouter.get(
@@ -61,6 +62,7 @@ publicRouter.get(
   '/businesses/:slug/availability',
   validateParams(slugParamsSchema),
   validateQuery(slugAvailabilityQuerySchema),
+  optionalPublicCustomer,
   asyncHandler(getAvailability)
 );
 publicRouter.post(

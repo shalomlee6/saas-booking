@@ -1,4 +1,4 @@
-import { isDevMode } from '@angular/core';
+import { isDevMode, LOCALE_ID } from '@angular/core';
 import {
   ApplicationConfig,
   inject,
@@ -6,6 +6,8 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZoneChangeDetection,
 } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeHe from '@angular/common/locales/he';
 import { provideRouter, Router, withDisabledInitialNavigation } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { catchError, lastValueFrom, of } from 'rxjs';
@@ -32,8 +34,11 @@ import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
 
+registerLocaleData(localeHe);
+
 export const appConfig: ApplicationConfig = {
   providers: [
+    { provide: LOCALE_ID, useValue: 'he' },
     MessageService,
     provideStore(),
     provideState(appointmentsFeatureKey, appointmentsReducer),

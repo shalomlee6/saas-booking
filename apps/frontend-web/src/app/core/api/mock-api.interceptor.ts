@@ -63,8 +63,32 @@ function isServicesPut(req: HttpRequest<unknown>): boolean {
   return (req.method === 'PUT' || req.method === 'PATCH') && /\/api\/services\/[^/]+$/.test(req.url);
 }
 
+/** GET /api/customers (list only, no extra path segment). */
 function isCustomersGet(req: HttpRequest<unknown>): boolean {
-  return req.method === 'GET' && req.url.includes('/api/customers');
+  return req.method === 'GET' && /\/api\/customers\/?(\?.*)?$/.test(req.url);
+}
+
+function isCustomerSingleGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customers\/[^/?]+\/?(\?.*)?$/.test(req.url);
+}
+
+function isCustomerAppointmentsGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customers\/[^/]+\/appointments\/?(\?.*)?$/.test(req.url);
+}
+
+function isCustomerStatsGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customers\/[^/]+\/stats\/?(\?.*)?$/.test(req.url);
+}
+
+/** Extracts the `:id` segment right after `/api/customers/`. */
+function customerIdFromUrl(req: HttpRequest<unknown>): string | null {
+  const match = req.url.match(/\/api\/customers\/([^/?]+)/);
+  return match ? match[1] : null;
+}
+
+/** GET /api/customer-service-configs (list only — no mock CRUD for this new resource yet). */
+function isCustomerServiceConfigsGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customer-service-configs\/?(\?.*)?$/.test(req.url);
 }
 
 function isAuthMeGet(req: HttpRequest<unknown>): boolean {
@@ -735,7 +759,58 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
 
+  // ——— Customer service overrides (read-only in mock mode — no real CRUD/storage here) ———
+  if (isCustomerServiceConfigsGet(req)) {
+    return from([new HttpResponse({ status: 200, body: [] })]);
+  }
+
   // ——— Customers (read-only) ———
+  if (isCustomerAppointmentsGet(req)) {
+    // No customer/appointment linkage in the mock fixtures — an empty history is an honest
+    // answer (the real API would return the same for a customer with no bookings yet).
+    return from([new HttpResponse({ status: 200, body: [] })]);
+  }
+
+  if (isCustomerStatsGet(req)) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          stats: {
+            totalAppointments: 0,
+            completedVisits: 0,
+            cancellations: 0,
+            noShows: 0,
+            isNewCustomer: true,
+            lastAppointment: null,
+            nextAppointment: null,
+            visitFrequencyDays: null,
+            mostBookedServices: [],
+            totalRevenue: 0,
+            averageSpend: 0,
+            preferredTimeOfDay: null,
+            recentCancellations: 0,
+          },
+          insights: [{ code: 'NEW_CUSTOMER', severity: 'info', data: {} }],
+        },
+      }),
+    ]);
+  }
+
+  if (isCustomerSingleGet(req)) {
+    const id = customerIdFromUrl(req);
+    return from(loadInitialCustomers()).pipe(
+      map((list) => {
+        const withIds = withMockBusinessIds(list);
+        const found = withIds.find((c) => String(c['_id']) === id);
+        if (!found) {
+          return new HttpResponse({ status: 404, body: { message: 'Customer not found' } });
+        }
+        return new HttpResponse({ status: 200, body: found });
+      })
+    );
+  }
+
   if (isCustomersGet(req)) {
     const imp = getImpersonationFromRequest(req);
     return from(loadInitialCustomers()).pipe(

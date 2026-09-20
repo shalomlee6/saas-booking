@@ -34,7 +34,7 @@ function topBarTitleFromUrl(url: string): string {
   if (path.startsWith('/customers')) return 'לקוחות';
   if (path.startsWith('/settings/theme')) return 'עיצוב';
   if (path.startsWith('/settings/landing')) return 'דף נחיתה';
-  if (path.startsWith('/settings/working-hours')) return 'שעות עבודה';
+  if (path.startsWith('/settings/working-hours')) return 'שעות פעילות';
   if (path.startsWith('/preview')) return 'תצוגה מקדימה';
   return 'boki';
 }
@@ -174,9 +174,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   readonly menuAriaLabel = computed<string>(() => {
     if (this.isMobile()) {
-      return this.isMobileMenuOpen() ? 'Close menu' : 'Open menu';
+      return this.isMobileMenuOpen() ? 'סגירת תפריט' : 'פתיחת תפריט';
     }
-    return this.isSidebarCollapsed() ? 'Expand sidebar' : 'Collapse sidebar';
+    return this.isSidebarCollapsed() ? 'הרחבת סרגל הצד' : 'כיווץ סרגל הצד';
   });
 
   /** Icon for menu toggle: pi-bars when sidebar closed, pi-times when open. */

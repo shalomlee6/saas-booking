@@ -11,6 +11,7 @@ import { computeOwnerAvailableSlots } from '../services/appointmentQueryService'
 import { updateAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
+import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
 
 function requireBusinessId(req: AuthRequest): string {
   const businessId = getEffectiveBusinessId(req);
@@ -189,9 +190,12 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
   const startChanged = body.start !== undefined;
   const endProvided = body.end !== undefined;
 
+  const nextCustomerId = body.customerId ?? existing.customerId?.toString();
+  const override = await getServiceOverrideForCustomer(bid, nextCustomerId, nextServiceId);
+  const resolvedDurationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
+
   if ((startChanged || serviceIdChanged) && !endProvided) {
-    const dur = service.durationMinutes ?? 30;
-    nextEnd = new Date(nextStart.getTime() + dur * 60 * 1000);
+    nextEnd = new Date(nextStart.getTime() + resolvedDurationMinutes * 60 * 1000);
   }
 
   if (nextStart.getTime() >= nextEnd.getTime()) {
@@ -208,7 +212,7 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
     serviceId: new Types.ObjectId(nextServiceId),
     start: nextStart,
     end: nextEnd,
-    durationMinutes: service.durationMinutes ?? 30,
+    durationMinutes: resolvedDurationMinutes,
   };
 
   if (body.customerId !== undefined) {

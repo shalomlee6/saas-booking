@@ -42,11 +42,11 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="{ exact: true }"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Dashboard' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? 'דשבורד' : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-home" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Dashboard</span>
+          <span class="layout-sidebar-link-text">דשבורד</span>
         </a>
 
         <a
@@ -54,11 +54,11 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="{ exact: false }"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Appointments' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? 'תורים' : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-calendar" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Appointments</span>
+          <span class="layout-sidebar-link-text">תורים</span>
           @if (pendingAppointmentsCount() > 0) {
             <span class="layout-sidebar-link-badge">{{ pendingAppointmentsCount() }}</span>
           }
@@ -69,11 +69,11 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Services' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? 'שירותים' : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-briefcase" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Services</span>
+          <span class="layout-sidebar-link-text">שירותים</span>
         </a>
 
         <a
@@ -81,11 +81,11 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Customers' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? 'לקוחות' : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-users" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Customers</span>
+          <span class="layout-sidebar-link-text">לקוחות</span>
         </a>
 
         @if (business()) {
@@ -96,11 +96,11 @@
             routerLinkActive="layout-sidebar-link-active"
             [routerLinkActiveOptions]="{ exact: true }"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Theme' : null"
+            [attr.aria-label]="isSidebarCollapsed() ? 'עיצוב' : null"
             (click)="closeMobileMenu()"
           >
             <i class="layout-sidebar-link-icon pi pi-palette" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">Theme</span>
+            <span class="layout-sidebar-link-text">עיצוב</span>
           </a>
 
           <a
@@ -108,7 +108,7 @@
             routerLinkActive="layout-sidebar-link-active"
             [routerLinkActiveOptions]="{ exact: true }"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Landing page' : null"
+            [attr.aria-label]="isSidebarCollapsed() ? 'דף נחיתה' : null"
             (click)="closeMobileMenu()"
           >
             <i class="layout-sidebar-link-icon pi pi-megaphone" aria-hidden="true"></i>
@@ -119,11 +119,11 @@
             routerLink="/settings/working-hours"
             routerLinkActive="layout-sidebar-link-active"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Working hours' : null"
+            [attr.aria-label]="isSidebarCollapsed() ? 'שעות פעילות' : null"
             (click)="closeMobileMenu()"
           >
             <i class="layout-sidebar-link-icon pi pi-clock" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">Working hours</span>
+            <span class="layout-sidebar-link-text">שעות פעילות</span>
           </a>
 
           @if (business()?.slug) {
@@ -132,11 +132,11 @@
               routerLinkActive="layout-sidebar-link-active"
               [routerLinkActiveOptions]="{ exact: true }"
               class="layout-sidebar-link"
-              [attr.aria-label]="isSidebarCollapsed() ? 'Preview site' : null"
+              [attr.aria-label]="isSidebarCollapsed() ? 'תצוגה מקדימה' : null"
               (click)="closeMobileMenu()"
             >
               <i class="layout-sidebar-link-icon pi pi-eye" aria-hidden="true"></i>
-              <span class="layout-sidebar-link-text">Preview site</span>
+              <span class="layout-sidebar-link-text">תצוגה מקדימה</span>
             </a>
           }
         }
@@ -155,7 +155,7 @@
       <button
         type="button"
         class="layout-sidebar-logout-btn"
-        aria-label="Logout"
+        aria-label="התנתקות"
         (click)="onLogout()"
       >
         <i class="pi pi-sign-out" aria-hidden="true"></i>
@@ -205,24 +205,24 @@
             target="_blank"
             rel="noopener noreferrer"
             class="layout-topbar-customer-site"
-            aria-label="Open customer site in new tab"
+            aria-label="פתיחת אתר הלקוחות בכרטיסייה חדשה"
           >
-            Customer site
+            אתר הלקוחות
             <i class="pi pi-arrow-up-right" aria-hidden="true" style="font-size:0.7rem"></i>
           </a>
         } @else if (business() && !business()?.slug) {
-          <span class="layout-topbar-customer-site-warning" role="note">No slug set</span>
+          <span class="layout-topbar-customer-site-warning" role="note">לא הוגדרה כתובת אתר</span>
         }
 
         @if (isImpersonating()) {
-          <span class="layout-topbar-impersonation-badge" role="status" aria-live="polite">Impersonating</span>
+          <span class="layout-topbar-impersonation-badge" role="status" aria-live="polite">מחוברת בתור עסק אחר</span>
         }
 
         @if (business() && (isSuperAdmin() || isImpersonating())) {
           <button
             type="button"
             class="layout-theme-toggle"
-            [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
+            [attr.aria-label]="themeService.currentMode() === 'light' ? 'מעבר למצב כהה' : 'מעבר למצב בהיר'"
             [attr.aria-pressed]="themeService.currentMode() === 'dark'"
             (click)="toggleTheme()"
           >
@@ -231,7 +231,7 @@
               aria-hidden="true"
             ></i>
             <span class="layout-topbar-btn-label">
-              {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
+              {{ themeService.currentMode() === 'light' ? 'כהה' : 'בהיר' }}
             </span>
           </button>
         }
@@ -244,12 +244,14 @@
         }
       </a>
 
+      <a routerLink="/settings/theme" class="layout-topbar-settings" aria-label="הגדרות">
+        <i class="pi pi-cog" aria-hidden="true"></i>
+      </a>
+
       <a routerLink="/appointments/new" class="layout-topbar-new-btn">
         <i class="pi pi-plus" aria-hidden="true"></i>
         תור חדש
       </a>
-
-
     </div>
   </header>
 
@@ -259,14 +261,14 @@
       @if (isImpersonating()) {
         <div class="layout-impersonation-banner" role="alert" aria-live="assertive">
           <span class="layout-impersonation-banner-text">
-            Impersonating: {{ business()?.name ?? 'Business' }}
+            מחוברת בתור: {{ business()?.name ?? 'עסק' }}
             @if (business()?.ownerEmail) { ({{ business()?.ownerEmail }}) }
           </span>
           <button
             type="button"
             class="layout-impersonation-banner-btn"
             (click)="exitImpersonation()"
-          >Exit</button>
+          >יציאה</button>
         </div>
       }
       <router-outlet></router-outlet>

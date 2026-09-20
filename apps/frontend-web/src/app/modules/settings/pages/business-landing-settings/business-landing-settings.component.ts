@@ -465,7 +465,10 @@ export class BusinessLandingSettingsComponent implements OnInit {
 
   async onGalleryFiles(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
-    const files = input.files;
+    const fileList = input.files;
+    if (!fileList?.length) return;
+
+    const files = Array.from(fileList);
     input.value = '';
     if (!files?.length) return;
     this.uploading.set(true);

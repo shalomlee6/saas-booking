@@ -65,7 +65,7 @@ export class CustomerFormComponent {
       error: (err) => {
         this.loading.set(false);
         this.serverError.set(
-          err?.error?.message || 'Failed to create customer. Please try again.'
+          err?.error?.message || 'לא ניתן היה ליצור את הלקוחה. נסי שוב.'
         );
       },
     });
