@@ -4,10 +4,12 @@ import type { Service } from '../model/service';
 import type { CreateServiceDto } from '../dto/create-service.dto';
 import type { UpdateServiceDto } from '../dto/update-service.dto';
 import { ServicesApiService } from './services-api.service';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 @Injectable({ providedIn: 'root' })
 export class ServicesStore {
   private readonly api = inject(ServicesApiService);
+  private readonly language = inject(LanguageService);
 
   readonly items = signal<Service[]>([]);
   readonly loading = signal(false);
@@ -21,8 +23,8 @@ export class ServicesStore {
         this.items.set(list);
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err?.error?.message || 'Failed to load services');
+      error: () => {
+        this.error.set(this.language.t('services.loadError'));
         this.loading.set(false);
       },
     });
@@ -33,8 +35,7 @@ export class ServicesStore {
     return this.api.create(dto).pipe(
       tap({
         next: (created) => this.items.update((prev) => [created, ...prev]),
-        error: (err) =>
-          this.error.set(err?.error?.message || 'Failed to create service'),
+        error: () => this.error.set(this.language.t('services.createError')),
       })
     );
   }
@@ -47,8 +48,7 @@ export class ServicesStore {
           this.items.update((prev) =>
             prev.map((s) => (s._id === id ? updated : s))
           ),
-        error: (err) =>
-          this.error.set(err?.error?.message || 'Failed to update service'),
+        error: () => this.error.set(this.language.t('services.updateError')),
       })
     );
   }

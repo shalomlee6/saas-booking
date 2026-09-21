@@ -7,11 +7,13 @@ import {
   Validators,
 } from '@angular/forms';
 import { CustomersApiService } from '../../services/customers-api.service';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-customer-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './customer-form.component.html',
   styleUrl: './customer-form.component.scss',
 })
@@ -19,6 +21,7 @@ export class CustomerFormComponent {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(CustomersApiService);
   private readonly router = inject(Router);
+  readonly language = inject(LanguageService);
 
   readonly loading = signal(false);
   readonly serverError = signal<string | null>(null);
@@ -62,11 +65,9 @@ export class CustomerFormComponent {
       next: () => {
         this.router.navigate(['/customers']);
       },
-      error: (err) => {
+      error: () => {
         this.loading.set(false);
-        this.serverError.set(
-          err?.error?.message || 'לא ניתן היה ליצור את הלקוחה. נסי שוב.'
-        );
+        this.serverError.set(this.language.t('customers.createError'));
       },
     });
   }

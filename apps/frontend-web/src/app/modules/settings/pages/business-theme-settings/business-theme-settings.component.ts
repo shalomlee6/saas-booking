@@ -4,11 +4,13 @@ import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ApiService } from '../../../../core/api/api.service';
 import { ThemeService } from '../../../../core/config/theme.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { LanguageService, type AppLanguage } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-business-theme-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './business-theme-settings.component.html',
   styleUrl: './business-theme-settings.component.scss',
 })
@@ -17,6 +19,7 @@ export class BusinessThemeSettingsComponent {
   private readonly api = inject(ApiService);
   private readonly theme = inject(ThemeService);
   private readonly auth = inject(AuthService);
+  readonly language = inject(LanguageService);
 
   readonly form: FormGroup;
   readonly saving = signal(false);
@@ -26,9 +29,13 @@ export class BusinessThemeSettingsComponent {
     const business = this.auth.business();
     this.form = this.fb.group({
       themeMode: [business?.ui?.themeMode ?? 'light'],
-      primaryColor: [business?.ui?.primaryColor ?? '#3787F6'],
+      primaryColor: [business?.ui?.primaryColor ?? '#F35271'],
       sidebarColor: [business?.ui?.sidebarColor ?? '#0F172A'],
     });
+  }
+
+  setLanguage(lang: AppLanguage): void {
+    this.language.setLanguage(lang);
   }
 
   save(): void {
@@ -42,7 +49,7 @@ export class BusinessThemeSettingsComponent {
         this.saving.set(false);
       },
       error: (err) => {
-        this.error.set(err?.error?.message || 'Failed to save');
+        this.error.set(err?.error?.message || this.language.t('settings.saveError'));
         this.saving.set(false);
       },
     });

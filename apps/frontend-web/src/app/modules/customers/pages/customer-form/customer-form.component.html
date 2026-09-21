@@ -1,15 +1,15 @@
 <div class="customer-form-page">
   <a routerLink="/customers" class="customer-form-back">
-    <i class="pi pi-arrow-right" aria-hidden="true"></i>
-    לקוחות
+    <i [class]="language.isRtl ? 'pi pi-arrow-right' : 'pi pi-arrow-left'" aria-hidden="true"></i>
+    {{ 'navigation.customers' | translate }}
   </a>
 
-  <h1 class="customer-form-title">לקוחה חדשה</h1>
+  <h1 class="customer-form-title">{{ 'customers.newCustomer' | translate }}</h1>
 
   <div class="customers-card customer-form-card">
     <form class="customer-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
       <div class="customer-form-field">
-        <label for="name">שם</label>
+        <label for="name">{{ 'common.name' | translate }}</label>
         <input
           id="name"
           type="text"
@@ -18,12 +18,12 @@
           [class.customer-form-input-invalid]="name?.invalid && (name?.touched || name?.dirty)"
         />
         @if (name?.invalid && (name?.touched || name?.dirty)) {
-          <p class="customer-form-error">יש להזין שם.</p>
+          <p class="customer-form-error">{{ 'customers.nameRequired' | translate }}</p>
         }
       </div>
 
       <div class="customer-form-field">
-        <label for="phone">טלפון</label>
+        <label for="phone">{{ 'common.phone' | translate }}</label>
         <input
           id="phone"
           type="text"
@@ -33,12 +33,12 @@
           [class.customer-form-input-invalid]="phone?.invalid && (phone?.touched || phone?.dirty)"
         />
         @if (phone?.invalid && (phone?.touched || phone?.dirty)) {
-          <p class="customer-form-error">יש להזין מספר טלפון.</p>
+          <p class="customer-form-error">{{ 'customers.phoneRequired' | translate }}</p>
         }
       </div>
 
       <div class="customer-form-field">
-        <label for="email">אימייל</label>
+        <label for="email">{{ 'common.email' | translate }}</label>
         <input
           id="email"
           type="email"
@@ -49,7 +49,7 @@
       </div>
 
       <div class="customer-form-field">
-        <label for="notes">הערות</label>
+        <label for="notes">{{ 'common.notes' | translate }}</label>
         <textarea
           id="notes"
           formControlName="notes"
@@ -68,9 +68,9 @@
           class="customers-btn customers-btn-primary"
           [disabled]="form.invalid || loading()"
         >
-          {{ loading() ? 'שומרת…' : 'יצירת לקוחה' }}
+          {{ loading() ? ('common.saving' | translate) : ('customers.createCustomer' | translate) }}
         </button>
-        <a routerLink="/customers" class="customers-btn customers-btn-ghost">ביטול</a>
+        <a routerLink="/customers" class="customers-btn customers-btn-ghost">{{ 'common.cancel' | translate }}</a>
       </div>
     </form>
   </div>

@@ -1,6 +1,6 @@
 // layout.component.scss — full redesign
 // Cal.com / Linear aesthetic: clean white, neutral sidebar, pink as accent only.
-// RTL: dir="rtl" is set once on .layout in the template — CSS Grid's column tracks and
+// RTL/LTR: `dir` lives on <html>, set by LanguageService — CSS Grid's column tracks and
 // all `inline-*` logical properties below resolve relative to that automatically.
 
 $sidebar-width:   240px;
@@ -233,11 +233,11 @@ $breakpoint:      1024px;
   }
 }
 
-// Light theme: darken active-link text from #e8446a (3.47:1) to #b5254f (5.69:1) on #fff0f3
+// Light theme: darken active-link text from #e8446a (3.47:1) to var(--color-primary-ink) (5.69:1) on #fff0f3
 :host-context(body.theme-light) .layout-sidebar-link-active {
-  color: #b5254f;
-  .layout-sidebar-link-icon { color: #b5254f; }
-  &:hover { color: #b5254f; }
+  color: var(--color-primary-ink);
+  .layout-sidebar-link-icon { color: var(--color-primary-ink); }
+  &:hover { color: var(--color-primary-ink); }
 }
 
 .layout-sidebar-link-icon {
@@ -296,7 +296,7 @@ $breakpoint:      1024px;
   flex-shrink: 0;
   border-radius: 999px;
   background: var(--color-primary-subtle);
-  color: #b5254f;
+  color: var(--color-primary-ink);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -718,10 +718,15 @@ $breakpoint:      1024px;
     inset-inline-start: 0;
     width: $sidebar-width;
     min-width: $sidebar-width;
-    // Sidebar sits at the RTL inline-start edge (the right, under dir="rtl"); slide it
-    // out past that same edge (further right) to hide it, matching the drawer's side.
+    // Hidden state slides the drawer out past its own inline-start edge — which side
+    // that physically is depends on document direction, so `translateX` sign flips below.
     transform: translateX(100%);
     box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
+  }
+
+  // LTR: inline-start = left, so the hidden drawer must slide left instead of right.
+  :host-context([dir="ltr"]) .layout-sidebar {
+    transform: translateX(-100%);
   }
 
   .layout--mobile-drawer-open .layout-sidebar {

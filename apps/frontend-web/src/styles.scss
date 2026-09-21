@@ -6,10 +6,11 @@
 // --color-primary = the one true pink. Everything else is neutral.
 
 body.theme-light {
-  --color-primary:        #e8446a;
-  --color-primary-hover:  #d13660;
-  --color-primary-subtle: #fff0f3;
-  --color-primary-muted:  #ffd6df;
+  --color-primary:        #F35271;
+  --color-primary-hover:  #de3b5c;
+  --color-primary-subtle: #fef1f4;
+  --color-primary-muted:  #fbc7d3;
+  --color-primary-ink:    #96263d;
 
   --bg-app:               #f5f5f7;
   --bg-card:              #ffffff;
@@ -52,7 +53,7 @@ body.theme-light {
   --p-surface-card:        #ffffff;
   --p-surface-overlay:     #ffffff;
   --p-surface-border:      #e5e7eb;
-  --p-primary-color:       #e8446a;
+  --p-primary-color:       #F35271;
   --p-primary-contrast-color: #ffffff;
   --p-text-color:          #111827;
   --p-text-muted-color:    #6b7280;
@@ -63,6 +64,7 @@ body.theme-dark {
   --color-primary-hover:  #f8849f;
   --color-primary-subtle: #2a1520;
   --color-primary-muted:  #4a2030;
+  --color-primary-ink:    #f8849f;
 
   --bg-app:               #0d0d0f;
   --bg-card:              #18181b;
@@ -164,7 +166,7 @@ body.layout-drawer-open { overflow: hidden; }
 .skip-to-content {
   position: absolute;
   top: -100%;
-  left: 1rem;
+  inset-inline-start: 1rem;
   z-index: 9999;
   padding: 0.5rem 1rem;
   background: var(--color-primary);

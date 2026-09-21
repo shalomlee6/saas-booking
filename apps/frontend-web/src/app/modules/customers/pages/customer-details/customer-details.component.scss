@@ -227,7 +227,7 @@ textarea.customer-form-input {
 
 .cd-badge-new {
   background: var(--color-primary-subtle, #fff0f3);
-  color: #b5254f;
+  color: var(--color-primary-ink);
   border-color: transparent;
 }
 
@@ -240,7 +240,7 @@ textarea.customer-form-input {
   background: var(--color-primary-subtle, #fff0f3);
   border: 1px solid var(--color-primary-muted, #ffd6df);
   border-radius: var(--radius-lg, 12px);
-  color: #b5254f;
+  color: var(--color-primary-ink);
 
   i {
     font-size: 1rem;
@@ -257,7 +257,7 @@ textarea.customer-form-input {
 .cd-new-customer-text {
   margin: 0.125rem 0 0;
   font-size: 0.8125rem;
-  color: #b5254f;
+  color: var(--color-primary-ink);
   opacity: 0.85;
 }
 

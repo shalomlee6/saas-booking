@@ -48,10 +48,21 @@ import { TagModule } from 'primeng/tag';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import type { DaySummaryLabels } from '../../../../core/working-hours/working-hours.util';
 
 type ViewMode = 'day' | 'week';
 
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+/** 'done' is a legacy status value some records still carry — treated the same as 'completed'. */
+const STATUS_KEYS: Record<string, string> = {
+  pending: 'status.pending',
+  confirmed: 'status.confirmed',
+  completed: 'status.completed',
+  done: 'status.completed',
+  cancelled: 'status.cancelled',
+  canceled: 'status.cancelled',
+};
 
 const STATUS_SEVERITY_MAP: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
   confirmed: 'success',
@@ -113,6 +124,7 @@ export interface AppointmentCardVm {
   customerDisplay: string;
   serviceDisplay: string;
   priceDisplay: string;
+  statusLabel: string;
   severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 }
 
@@ -191,6 +203,7 @@ const TABLET_BREAKPOINT_PX = 1024;
     ButtonModule,
     DatePickerModule,
     DatePipe,
+    TranslatePipe,
   ],
   templateUrl: './appointments-list.component.html',
   styleUrl: './appointments-list.component.scss',
@@ -204,7 +217,22 @@ export class AppointmentsListComponent implements OnInit {
   private readonly doc = inject(DOCUMENT);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
+  readonly language = inject(LanguageService);
   private removeResizeListener: (() => void) | null = null;
+
+  private statusLabel(status: string | undefined): string {
+    const key = (status ?? '').toLowerCase();
+    const translationKey = STATUS_KEYS[key];
+    return translationKey ? this.language.t(translationKey) : status ?? '—';
+  }
+
+  private daySummaryLabels(): DaySummaryLabels {
+    return {
+      closed: this.language.t('appointments.closed'),
+      open: this.language.t('appointments.open'),
+      blocksSuffix: (count) => this.language.t('appointments.blocksSuffix', { count }),
+    };
+  }
 
   readonly viewMode = signal<ViewMode>('week');
   readonly searchQuery = signal('');
@@ -249,15 +277,16 @@ export class AppointmentsListComponent implements OnInit {
   /** Human-readable label for the selected mobile day (e.g. "Wednesday, Mar 28" or "Today, Mar 28"). */
   readonly mobileSelectedDayLabel = computed<string>(() => {
     const tz = this.timezone();
+    const locale = this.language.intlLocale();
     const day = this.visibleStartDate();
     const isToday = toDateKey(day, tz) === this.todayKeyTz();
-    const datePart = new Intl.DateTimeFormat('en-US', {
+    const datePart = new Intl.DateTimeFormat(locale, {
       timeZone: tz,
       month: 'short',
       day: 'numeric',
     }).format(day);
-    if (isToday) return `Today, ${datePart}`;
-    return new Intl.DateTimeFormat('en-US', {
+    if (isToday) return `${this.language.t('common.today')}, ${datePart}`;
+    return new Intl.DateTimeFormat(locale, {
       timeZone: tz,
       weekday: 'long',
       month: 'short',
@@ -339,6 +368,7 @@ export class AppointmentsListComponent implements OnInit {
   readonly mobileDayGroups = computed<MobileDayGroup[]>(() => {
     const days = this.visibleDays();
     const tz = this.timezone();
+    const locale = this.language.intlLocale();
     const todayKey = this.todayKeyTz();
 
     // Derive tomorrow's date-key in the business timezone.
@@ -353,27 +383,27 @@ export class AppointmentsListComponent implements OnInit {
       let subLabel: string;
 
       if (day.key === todayKey) {
-        heading = 'Today';
-        subLabel = new Intl.DateTimeFormat('en-US', {
+        heading = this.language.t('common.today');
+        subLabel = new Intl.DateTimeFormat(locale, {
           timeZone: tz,
           weekday: 'short',
           month: 'short',
           day: 'numeric',
         }).format(day.date);
       } else if (day.key === tomorrowKey) {
-        heading = 'Tomorrow';
-        subLabel = new Intl.DateTimeFormat('en-US', {
+        heading = this.language.t('appointments.tomorrow');
+        subLabel = new Intl.DateTimeFormat(locale, {
           timeZone: tz,
           weekday: 'short',
           month: 'short',
           day: 'numeric',
         }).format(day.date);
       } else {
-        heading = new Intl.DateTimeFormat('en-US', {
+        heading = new Intl.DateTimeFormat(locale, {
           timeZone: tz,
           weekday: 'long',
         }).format(day.date);
-        subLabel = new Intl.DateTimeFormat('en-US', {
+        subLabel = new Intl.DateTimeFormat(locale, {
           timeZone: tz,
           month: 'short',
           day: 'numeric',
@@ -412,6 +442,7 @@ export class AppointmentsListComponent implements OnInit {
       customerDisplay: getCustomerDisplay(apt),
       serviceDisplay: getServiceDisplay(apt),
       priceDisplay: getPriceDisplay(apt),
+      statusLabel: this.statusLabel(apt.status),
       severity: getStatusSeverity(apt.status ?? ''),
     }))
   );
@@ -433,9 +464,12 @@ export class AppointmentsListComponent implements OnInit {
     const start = this.visibleStartDate();
     const count = this.visibleDaysCount();
     const tz = this.timezone();
+    const locale = this.language.intlLocale();
     const todayKey = this.todayKeyTz();
     const wh = this.workingHours();
     const byDay = this.byDay();
+    const dayNameFmt = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: tz });
+    const daySummaryLabels = this.daySummaryLabels();
 
     // Derive the first column's date string in the business timezone so that
     // advancing by whole days stays on the correct calendar boundary even when
@@ -468,16 +502,16 @@ export class AppointmentsListComponent implements OnInit {
       days.push({
         date: dayMidnightUtc,
         key,
-        dayName: DAY_NAMES[dayParts.dayOfWeek] ?? '',
+        dayName: dayNameFmt.format(anchorUtc),
         dateLabel: `${dayParts.month}/${dayParts.day}`,
         isToday: key === todayKey,
         workingTitle: wh
-          ? getWorkingHoursSummary(dayParts.dayOfWeek, wh)
-          : 'Working hours not set',
+          ? getWorkingHoursSummary(dayParts.dayOfWeek, wh, daySummaryLabels)
+          : this.language.t('appointments.workingHoursNotSet'),
         disabledRanges: getDisabledRangesForDay(anchorUtc, wh, tz),
         slots: getSlotsForDay(anchorUtc, wh, tz).map((slot) => ({
           ...slot,
-          ariaLabel: slot.disabled ? null : `Add appointment at ${slot.time}`,
+          ariaLabel: slot.disabled ? null : this.language.t('appointments.addAppointmentAt', { time: slot.time }),
         })),
         blocks,
       });
@@ -489,10 +523,11 @@ export class AppointmentsListComponent implements OnInit {
   readonly visibleDateRangeLabel = computed<string>(() => {
     const days = this.visibleDays();
     const tz = this.timezone();
+    const locale = this.language.intlLocale();
     if (days.length === 0) return '';
 
     const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat('en-US', { ...opts, timeZone: tz }).format(d);
+      new Intl.DateTimeFormat(locale, { ...opts, timeZone: tz }).format(d);
 
     if (days.length === 1) {
       return fmt(days[0].date, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -515,6 +550,7 @@ export class AppointmentsListComponent implements OnInit {
       customerDisplay: getCustomerDisplay(apt),
       serviceDisplay: getServiceDisplay(apt),
       priceDisplay: getPriceDisplay(apt),
+      statusLabel: this.statusLabel(apt.status),
       severity: getStatusSeverity(apt.status ?? ''),
     };
   });
@@ -788,16 +824,14 @@ export class AppointmentsListComponent implements OnInit {
         this.messageService.add({
           severity: 'success',
           summary: '',
-          detail: 'התור בוטל',
+          detail: this.language.t('appointments.cancelledToast'),
         });
       },
-      error: (err) => {
+      error: () => {
         this.cancellingDetail.set(false);
-        const msg: string =
-          (err as { error?: { message?: string } })?.error?.message ??
-          'Failed to cancel appointment. Please try again.';
+        const msg = this.language.t('appointments.cancelFailed');
         this.store.dispatch(AppointmentsActions.loadFailure({ error: msg }));
-        this.messageService.add({ severity: 'error', summary: 'שגיאה', detail: msg });
+        this.messageService.add({ severity: 'error', summary: this.language.t('common.error'), detail: msg });
       },
     });
   }

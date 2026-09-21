@@ -1,18 +1,20 @@
 import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CustomersStore } from '../../services/customers.store';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-customers-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, DatePipe],
+  imports: [RouterLink, FormsModule, TranslatePipe],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
 })
 export class CustomersListComponent implements OnInit {
   private readonly store = inject(CustomersStore);
+  readonly language = inject(LanguageService);
 
   readonly searchQuery = signal('');
   readonly list = this.store.list;
@@ -37,6 +39,14 @@ export class CustomersListComponent implements OnInit {
 
   onSearchInput(value: string): void {
     this.searchQuery.set(value);
+  }
+
+  formatCreatedAt(date: string | Date): string {
+    return new Intl.DateTimeFormat(this.language.intlLocale(), {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(date));
   }
 
   reload(): void {

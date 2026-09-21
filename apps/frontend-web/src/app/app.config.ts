@@ -33,8 +33,35 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { providePrimeNG } from 'primeng/config';
 import { MessageService } from 'primeng/api';
 import Aura from '@primeuix/themes/aura';
+import { definePreset } from '@primeuix/themes';
 
 registerLocaleData(localeHe);
+
+/**
+ * PrimeNG's own primary palette (used internally by many component states — button
+ * hover/active, tag backgrounds, focus rings, etc.) is independent of the app's
+ * `--color-primary` custom property. Without this, components that don't explicitly
+ * reference `--color-primary` fall back to Aura's default primitive palette (emerald),
+ * which is why some controls showed up green instead of Boki pink. This maps PrimeNG's
+ * entire primary scale to the brand color (#F35271) so every PrimeNG component matches.
+ */
+const BokiPreset = definePreset(Aura, {
+  semantic: {
+    primary: {
+      50: '#fef1f4',
+      100: '#fde3e9',
+      200: '#fbc7d3',
+      300: '#f79fb4',
+      400: '#f37b98',
+      500: '#F35271',
+      600: '#de3b5c',
+      700: '#b92e4a',
+      800: '#96263d',
+      900: '#7a2233',
+      950: '#43101b',
+    },
+  },
+});
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -88,7 +115,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync(),
     providePrimeNG({
       theme: {
-        preset: Aura,
+        preset: BokiPreset,
         options: {
           // Tie PrimeNG dark mode to the app's own .theme-dark body class
           // (managed by ThemeService) instead of the default 'system' which

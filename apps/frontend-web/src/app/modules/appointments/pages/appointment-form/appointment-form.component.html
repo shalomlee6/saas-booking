@@ -1,13 +1,13 @@
-<div class="appointment-form-page" dir="rtl">
-  <h1 class="appointment-form-title">תור חדש</h1>
+<div class="appointment-form-page">
+  <h1 class="appointment-form-title">{{ 'appointments.newAppointment' | translate }}</h1>
 
   @if (loading()) {
-    <p class="appointment-form-loading">טוען…</p>
+    <p class="appointment-form-loading">{{ 'common.loading' | translate }}</p>
   } @else {
     <div class="appointment-form-card p-fluid">
       <form class="formgrid grid" [formGroup]="form" (ngSubmit)="onSubmit()">
         <div class="field col-12 md:col-6">
-          <label for="customer-ac" class="appointment-form-label">לקוח <span class="req">*</span></label>
+          <label for="customer-ac" class="appointment-form-label">{{ 'appointments.customerLabel' | translate }} <span class="req">*</span></label>
           <p-autocomplete
             inputId="customer-ac"
             formControlName="customer"
@@ -16,7 +16,7 @@
             [dropdown]="true"
             field="fullName"
             [forceSelection]="true"
-            placeholder="חיפוש לפי שם או טלפון"
+            [placeholder]="'appointments.searchByNameOrPhone' | translate"
             styleClass="w-full"
             (onDropdownClick)="onCustomerDropdownClick()"
           >
@@ -25,34 +25,34 @@
             </ng-template>
           </p-autocomplete>
           @if (form.get('customer')?.invalid && form.get('customer')?.touched) {
-            <small class="appointment-form-error">שדה חובה</small>
+            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
           }
         </div>
 
         <div class="field col-12 md:col-6">
-          <label for="serviceId" class="appointment-form-label">שירות <span class="req">*</span></label>
+          <label for="serviceId" class="appointment-form-label">{{ 'common.service' | translate }} <span class="req">*</span></label>
           <p-select
             inputId="serviceId"
             formControlName="serviceId"
             [options]="services()"
             optionLabel="name"
             optionValue="_id"
-            placeholder="בחרי שירות"
+            [placeholder]="'appointments.selectService' | translate"
             styleClass="w-full"
             [showClear]="true"
             (onChange)="onServiceChange()"
           >
             <ng-template let-svc pTemplate="item">
-              <span>{{ svc.name }} · {{ svc.durationMinutes }} דק׳ · {{ svc.price ?? 0 }} ₪</span>
+              <span>{{ svc.name }} · {{ svc.durationMinutes }} {{ 'common.minutesShort' | translate }} · {{ svc.price ?? 0 }} ₪</span>
             </ng-template>
           </p-select>
           @if (form.get('serviceId')?.invalid && form.get('serviceId')?.touched) {
-            <small class="appointment-form-error">שדה חובה</small>
+            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
           }
         </div>
 
         <div class="field col-12 md:col-6">
-          <label for="aptDate" class="appointment-form-label">תאריך <span class="req">*</span></label>
+          <label for="aptDate" class="appointment-form-label">{{ 'appointments.dateLabel' | translate }} <span class="req">*</span></label>
           <p-datepicker
             inputId="aptDate"
             formControlName="date"
@@ -62,12 +62,12 @@
             styleClass="w-full"
           />
           @if (form.get('date')?.invalid && form.get('date')?.touched) {
-            <small class="appointment-form-error">שדה חובה</small>
+            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
           }
         </div>
 
         <div class="field col-12 md:col-6">
-          <label for="startTime" class="appointment-form-label">שעת התחלה <span class="req">*</span></label>
+          <label for="startTime" class="appointment-form-label">{{ 'appointments.startTimeLabel' | translate }} <span class="req">*</span></label>
           <p-datepicker
             inputId="startTime"
             formControlName="startTime"
@@ -78,12 +78,12 @@
             (onSelect)="onStartTimeChange()"
           />
           @if (form.get('startTime')?.invalid && form.get('startTime')?.touched) {
-            <small class="appointment-form-error">שדה חובה</small>
+            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
           }
         </div>
 
         <div class="field col-12 md:col-6">
-          <label for="endTime" class="appointment-form-label">שעת סיום <span class="req">*</span></label>
+          <label for="endTime" class="appointment-form-label">{{ 'appointments.endTimeLabel' | translate }} <span class="req">*</span></label>
           <p-datepicker
             inputId="endTime"
             formControlName="endTime"
@@ -93,15 +93,15 @@
             styleClass="w-full"
           />
           @if (form.get('endTime')?.invalid && form.get('endTime')?.touched) {
-            <small class="appointment-form-error">שדה חובה</small>
+            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
           }
           @if (form.hasError('endBeforeStart') && (form.get('startTime')?.touched || form.get('endTime')?.touched)) {
-            <small class="appointment-form-error">שעת סיום חייבת להיות אחרי שעת התחלה</small>
+            <small class="appointment-form-error">{{ 'appointments.endAfterStartError' | translate }}</small>
           }
         </div>
 
         <div class="field col-12 md:col-6">
-          <label for="price" class="appointment-form-label">מחיר</label>
+          <label for="price" class="appointment-form-label">{{ 'appointments.priceLabel' | translate }}</label>
           <p-inputNumber
             inputId="price"
             formControlName="price"
@@ -114,7 +114,7 @@
         </div>
 
         <div class="field col-12">
-          <label for="status" class="appointment-form-label">סטטוס</label>
+          <label for="status" class="appointment-form-label">{{ 'appointments.statusLabel' | translate }}</label>
           <p-select
             inputId="status"
             formControlName="status"
@@ -126,28 +126,28 @@
         </div>
 
         <div class="field col-12">
-          <label for="notes" class="appointment-form-label">הערות</label>
+          <label for="notes" class="appointment-form-label">{{ 'common.notes' | translate }}</label>
           <textarea
             pTextarea
             id="notes"
             formControlName="notes"
             rows="3"
             class="w-full"
-            placeholder="אופציונלי"
+            [placeholder]="'appointments.notesOptional' | translate"
           ></textarea>
         </div>
 
         <div class="col-12 flex flex-column md:flex-row gap-2 appointment-form-actions">
           <p-button
             type="submit"
-            label="צור תור"
+            [label]="'appointments.createButton' | translate"
             [loading]="saving()"
             [disabled]="form.invalid || saving()"
             styleClass="flex-1 appointment-form-btn-create"
           />
           <p-button
             type="button"
-            label="ביטול"
+            [label]="'common.cancel' | translate"
             [outlined]="true"
             severity="secondary"
             styleClass="flex-1 md:flex-initial appointment-form-btn-cancel"

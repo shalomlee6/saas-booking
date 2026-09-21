@@ -8,7 +8,7 @@
     <!-- Single-row compact toolbar -->
     <header class="apt-toolbar">
       <div class="apt-toolbar-start">
-        <h1 class="apt-toolbar-title">Appointments</h1>
+        <h1 class="apt-toolbar-title">{{ 'appointments.title' | translate }}</h1>
         <div class="apt-toolbar-nav">
           <button
             pButton
@@ -16,7 +16,7 @@
             icon="pi pi-chevron-left"
             class="p-button-text p-button-sm apt-nav-btn"
             (click)="prevRange()"
-            aria-label="Previous range"
+            [attr.aria-label]="'appointments.previousRange' | translate"
           ></button>
           <span class="apt-date-range">{{ vm.dateRangeLabel }}</span>
           <button
@@ -25,7 +25,7 @@
             icon="pi pi-chevron-right"
             class="p-button-text p-button-sm apt-nav-btn"
             (click)="nextRange()"
-            aria-label="Next range"
+            [attr.aria-label]="'appointments.nextRange' | translate"
           ></button>
         </div>
       </div>
@@ -34,7 +34,7 @@
         <input
           type="text"
           class="apt-search"
-          placeholder="Search by customer, service…"
+          [placeholder]="'appointments.searchPlaceholder' | translate"
           [ngModel]="vm.searchQuery"
           (ngModelChange)="onSearchInput($event)"
         />
@@ -44,17 +44,17 @@
             class="apt-view-btn"
             [class.apt-view-btn--active]="vm.isDayMode"
             (click)="setViewMode('day')"
-          >Day</button>
+          >{{ 'appointments.day' | translate }}</button>
           <button
             type="button"
             class="apt-view-btn"
             [class.apt-view-btn--active]="vm.isWeekMode"
             (click)="setViewMode('week')"
-          >Week</button>
+          >{{ 'appointments.week' | translate }}</button>
         </div>
         <a routerLink="/appointments/new" class="apt-btn-primary">
           <i class="pi pi-plus" aria-hidden="true"></i>
-          New Appointment
+          {{ 'appointments.newAppointment' | translate }}
         </a>
       </div>
     </header>
@@ -64,19 +64,19 @@
       @if (vm.error) {
         <p class="appointments-error">
           {{ vm.error }}
-          <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
+          <button type="button" class="appointments-error-retry" (click)="reload()">{{ 'common.retry' | translate }}</button>
         </p>
       }
 
       @if (vm.loading) {
-        <div class="appointments-loading">Loading appointments…</div>
+        <div class="appointments-loading">{{ 'appointments.loading' | translate }}</div>
       }
 
       @if (vm.showEmptyCalendar) {
         <div class="apt-week-empty" role="status">
           <i class="pi pi-calendar apt-week-empty-icon" aria-hidden="true"></i>
-          <p class="apt-week-empty-text">אין תורים השבוע</p>
-          <a routerLink="/appointments/new" class="apt-btn-primary apt-week-empty-cta">צור תור ראשון</a>
+          <p class="apt-week-empty-text">{{ 'appointments.noAppointmentsThisWeek' | translate }}</p>
+          <a routerLink="/appointments/new" class="apt-btn-primary apt-week-empty-cta">{{ 'appointments.createFirst' | translate }}</a>
         </div>
       }
 
@@ -180,14 +180,14 @@
       <!-- Compact appointment list below the calendar -->
       @if (vm.showCards) {
         <section class="appointments-cards-section">
-          <h2 class="appointments-cards-title">תורים</h2>
+          <h2 class="appointments-cards-title">{{ 'appointments.title' | translate }}</h2>
           <div class="appointments-cards-list">
             @for (card of vm.cards; track card.apt._id) {
               <div class="appointment-card" (click)="openAppointment(card.apt)">
                 <div class="appointment-card-time">{{ card.apt.start | date:'HH:mm' }} – {{ card.apt.end | date:'HH:mm' }}</div>
                 <div class="appointment-card-customer">{{ card.customerDisplay }}</div>
                 <div class="appointment-card-service">{{ card.serviceDisplay }}</div>
-                <p-tag [value]="card.apt.status" [severity]="card.severity" />
+                <p-tag [value]="card.statusLabel" [severity]="card.severity" />
               </div>
             }
           </div>
@@ -206,10 +206,10 @@
 
     <!-- Mobile top bar (FAB handles "New Appointment" — no duplicate button here) -->
     <div class="apt-mobile-bar">
-      <h1 class="apt-mobile-title">Appointments</h1>
+      <h1 class="apt-mobile-title">{{ 'appointments.title' | translate }}</h1>
       <div class="apt-mobile-bar-actions">
         @if (!vm.isAtToday) {
-          <button type="button" class="apt-today-chip" (click)="goToToday()">Today</button>
+          <button type="button" class="apt-today-chip" (click)="goToToday()">{{ 'common.today' | translate }}</button>
         }
       </div>
     </div>
@@ -222,7 +222,7 @@
         icon="pi pi-chevron-left"
         class="p-button-text apt-nav-btn"
         (click)="prevRange()"
-        aria-label="Previous 3 days"
+        [attr.aria-label]="'appointments.previous3Days' | translate"
       ></button>
 
       <!-- Tapping the date range opens the date picker drawer -->
@@ -230,7 +230,7 @@
         type="button"
         class="apt-date-range-btn"
         (click)="openDatePicker()"
-        aria-label="Pick date"
+        [attr.aria-label]="'appointments.pickDate' | translate"
       >
         <span>{{ vm.dateRangeLabel }}</span>
         <i class="pi pi-calendar-clock" aria-hidden="true"></i>
@@ -242,7 +242,7 @@
         icon="pi pi-chevron-right"
         class="p-button-text apt-nav-btn"
         (click)="nextRange()"
-        aria-label="Next 3 days"
+        [attr.aria-label]="'appointments.next3Days' | translate"
       ></button>
     </div>
 
@@ -257,7 +257,7 @@
       <ng-template pTemplate="header">
         <div class="apt-dpicker-header">
           <i class="pi pi-calendar" aria-hidden="true"></i>
-          <span>בחר תאריך</span>
+          <span>{{ 'appointments.pickDate' | translate }}</span>
         </div>
       </ng-template>
       <div class="apt-dpicker-body">
@@ -274,7 +274,7 @@
     @if (vm.error) {
       <p class="appointments-error apt-mobile-error">
         {{ vm.error }}
-        <button type="button" class="appointments-error-retry" (click)="reload()">Retry</button>
+        <button type="button" class="appointments-error-retry" (click)="reload()">{{ 'common.retry' | translate }}</button>
       </p>
     }
 
@@ -294,7 +294,7 @@
       @if (vm.loading) {
         <div class="apt-3day-loading">
           <i class="pi pi-spin pi-spinner" aria-hidden="true"></i>
-          Loading…
+          {{ 'common.loading' | translate }}
         </div>
       }
 
@@ -315,8 +315,8 @@
             <div class="apt-3day-body">
               @if (group.blocks.length === 0) {
                 <div class="apt-3day-empty">
-                  <span class="apt-3day-empty-text">אין תורים ביום זה</span>
-                  <a routerLink="/appointments/new" class="apt-3day-empty-cta">לקביעת תור</a>
+                  <span class="apt-3day-empty-text">{{ 'appointments.noAppointmentsThisDay' | translate }}</span>
+                  <a routerLink="/appointments/new" class="apt-3day-empty-cta">{{ 'appointments.bookAppointment' | translate }}</a>
                 </div>
               }
               @for (block of group.blocks; track block.appointment._id) {
@@ -345,7 +345,7 @@
     <a
       routerLink="/appointments/new"
       class="apt-mobile-fab"
-      aria-label="New Appointment"
+      [attr.aria-label]="'appointments.newAppointment' | translate"
     >
       <i class="pi pi-plus" aria-hidden="true"></i>
     </a>
@@ -360,41 +360,41 @@
     @if (detail.selected; as vm) {
     @if (!detail.isMobile) {
       <p-dialog
-        header="פרטי תור"
+        [header]="'appointments.detailsTitle' | translate"
         [draggable]="false"
         [resizable]="false"
         [visible]="true"
         [modal]="true"
         [closable]="true"
         [style]="{ width: '400px' }"
-        closeAriaLabel="סגירה"
+        [closeAriaLabel]="'appointments.close' | translate"
         (visibleChange)="onDetailVisibleChange($event)"
         styleClass="appointments-detail-dialog"
       >
         <div class="appointments-detail">
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">לקוח</span>
+            <span class="appointments-detail-label">{{ 'appointments.customer' | translate }}</span>
             <span class="appointments-detail-value">{{ vm.customerDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">שירות</span>
+            <span class="appointments-detail-label">{{ 'appointments.service' | translate }}</span>
             <span class="appointments-detail-value">{{ vm.serviceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">מחיר</span>
+            <span class="appointments-detail-label">{{ 'appointments.price' | translate }}</span>
             <span class="appointments-detail-value">{{ vm.priceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">סטטוס</span>
+            <span class="appointments-detail-label">{{ 'appointments.status' | translate }}</span>
             <span class="appointments-detail-value">
-              <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
+              <p-tag [value]="vm.statusLabel" [severity]="vm.severity" />
             </span>
           </div>
         </div>
         <ng-template pTemplate="footer">
           <div class="appointments-detail-footer">
-            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" />
-            <p-button label="ביטול תור" severity="danger" [outlined]="true" [loading]="cancellingDetail()" [disabled]="cancellingDetail()" (onClick)="onDetailCancel()" />
+            <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" />
+            <p-button [label]="'appointments.cancelAppointment' | translate" severity="danger" [outlined]="true" [loading]="cancellingDetail()" [disabled]="cancellingDetail()" (onClick)="onDetailCancel()" />
           </div>
         </ng-template>
       </p-dialog>
@@ -409,30 +409,30 @@
         styleClass="appointments-detail-drawer"
       >
         <ng-template pTemplate="header">
-          <span>פרטי תור</span>
+          <span>{{ 'appointments.detailsTitle' | translate }}</span>
         </ng-template>
         <div class="appointments-detail appointments-detail-drawer-body">
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">לקוח</span>
+            <span class="appointments-detail-label">{{ 'appointments.customer' | translate }}</span>
             <span class="appointments-detail-value">{{ vm.customerDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">שירות</span>
+            <span class="appointments-detail-label">{{ 'appointments.service' | translate }}</span>
             <span class="appointments-detail-value">{{ vm.serviceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">מחיר</span>
+            <span class="appointments-detail-label">{{ 'appointments.price' | translate }}</span>
             <span class="appointments-detail-value">{{ vm.priceDisplay }}</span>
           </div>
           <div class="appointments-detail-row">
-            <span class="appointments-detail-label">סטטוס</span>
+            <span class="appointments-detail-label">{{ 'appointments.status' | translate }}</span>
             <span class="appointments-detail-value">
-              <p-tag [value]="vm.apt.status" [severity]="vm.severity" />
+              <p-tag [value]="vm.statusLabel" [severity]="vm.severity" />
             </span>
           </div>
           <div class="appointments-detail-actions">
-            <p-button label="עריכה" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />
-            <p-button label="ביטול תור" severity="danger" [outlined]="true" [loading]="cancellingDetail()" [disabled]="cancellingDetail()" (onClick)="onDetailCancel()" styleClass="appointments-detail-btn" />
+            <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />
+            <p-button [label]="'appointments.cancelAppointment' | translate" severity="danger" [outlined]="true" [loading]="cancellingDetail()" [disabled]="cancellingDetail()" (onClick)="onDetailCancel()" styleClass="appointments-detail-btn" />
           </div>
         </div>
       </p-drawer>

@@ -109,11 +109,18 @@ export function formatParsedErrorForUi(parsed: ParsedHttpClientError): string | 
   return keys.map((k) => `${k}: ${parsed.fieldMessages[k]}`).join(' · ');
 }
 
-/** Owner / dashboard (English) — maps stable API codes to clearer copy. */
-const OWNER_ERROR_BY_CODE: Record<string, string> = {
-  SLOT_TAKEN: 'That time slot is no longer available. Pick another time.',
-  CLOSED_DAY: 'The business is closed on this date.',
-  OUTSIDE_HOURS: 'That time is outside working hours.',
+export interface OwnerAppointmentErrorLabels {
+  slotTaken: string;
+  closedDay: string;
+  outsideHours: string;
+  fallback: string;
+}
+
+const OWNER_ERROR_LABELS_EN: OwnerAppointmentErrorLabels = {
+  slotTaken: 'That time slot is no longer available. Pick another time.',
+  closedDay: 'The business is closed on this date.',
+  outsideHours: 'That time is outside working hours.',
+  fallback: 'Something went wrong. Please try again.',
 };
 
 /** Public booking (Hebrew) — maps stable API codes to clearer copy. */
@@ -125,13 +132,23 @@ const PUBLIC_BOOKING_ERROR_BY_CODE: Record<string, string> = {
 
 /**
  * User-facing message for owner appointment APIs (create overlay, NgRx error).
+ * `labels` defaults to English for backward compatibility; pass the active
+ * language's labels (see `LanguageService`) so this respects the language toggle.
  */
-export function friendlyOwnerAppointmentError(err: unknown): string {
+export function friendlyOwnerAppointmentError(
+  err: unknown,
+  labels: OwnerAppointmentErrorLabels = OWNER_ERROR_LABELS_EN
+): string {
   const p = parseHttpClientError(err);
-  if (p.errorCode && OWNER_ERROR_BY_CODE[p.errorCode]) {
-    return OWNER_ERROR_BY_CODE[p.errorCode];
+  const byCode: Record<string, string> = {
+    SLOT_TAKEN: labels.slotTaken,
+    CLOSED_DAY: labels.closedDay,
+    OUTSIDE_HOURS: labels.outsideHours,
+  };
+  if (p.errorCode && byCode[p.errorCode]) {
+    return byCode[p.errorCode];
   }
-  return formatParsedErrorForUi(p) ?? 'Something went wrong. Please try again.';
+  return formatParsedErrorForUi(p) ?? labels.fallback;
 }
 
 /**

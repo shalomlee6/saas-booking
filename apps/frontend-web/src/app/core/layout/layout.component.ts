@@ -18,38 +18,27 @@ import { AuthService } from '../auth/auth.service';
 import { AdminApiService } from '../../modules/admin/services/admin-api.service';
 import { GrowthBrainService } from '../../modules/dashboard/services/growth-brain.service';
 import { AppointmentsApiService } from '../../modules/appointments/services/appointments-api.service';
-import { getLocalParts, type TzDateParts } from '../../modules/appointments/utils/calendar.utils';
 import * as AppointmentsActions from '../../modules/appointments/state/appointments.actions';
 import { DOCUMENT } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
+import { LanguageService } from '../i18n/language.service';
+import { TranslatePipe } from '../i18n/translate.pipe';
 
 const BREAKPOINT_PX = 768;
 
-function topBarTitleFromUrl(url: string): string {
+/** Translation-key namespace for the topbar's page title, derived from the current route. */
+function pageTitleKeyFromUrl(url: string): string {
   const path = url.split('?')[0] || '/';
-  if (path === '/' || path.startsWith('/dashboard')) return 'לוח בקרה';
-  if (path.startsWith('/appointments')) return 'תורים';
-  if (path.startsWith('/services')) return 'שירותים';
-  if (path.startsWith('/customers')) return 'לקוחות';
-  if (path.startsWith('/settings/theme')) return 'עיצוב';
-  if (path.startsWith('/settings/landing')) return 'דף נחיתה';
-  if (path.startsWith('/settings/working-hours')) return 'שעות פעילות';
-  if (path.startsWith('/preview')) return 'תצוגה מקדימה';
-  return 'boki';
-}
-
-const HE_WEEKDAYS = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'];
-/** "ב" + short month, matching the mockup's "18 באוג׳ 2026" style. */
-const HE_MONTHS_WITH_PREFIX = [
-  'בינו׳', 'בפבר׳', 'במרץ', 'באפר׳', 'במאי', 'ביוני',
-  'ביולי', 'באוג׳', 'בספט׳', 'באוק׳', 'בנוב׳', 'בדצמ׳',
-];
-
-function formatHebrewDate(parts: TzDateParts): string {
-  const weekday = HE_WEEKDAYS[parts.dayOfWeek] ?? '';
-  const month = HE_MONTHS_WITH_PREFIX[parts.month - 1] ?? '';
-  return `${weekday} · ${parts.day} ${month} ${parts.year}`;
+  if (path === '/' || path.startsWith('/dashboard')) return 'navigation.dashboard';
+  if (path.startsWith('/appointments')) return 'navigation.appointments';
+  if (path.startsWith('/services')) return 'navigation.services';
+  if (path.startsWith('/customers')) return 'navigation.customers';
+  if (path.startsWith('/settings/theme')) return 'navigation.theme';
+  if (path.startsWith('/settings/landing')) return 'navigation.landingPage';
+  if (path.startsWith('/settings/working-hours')) return 'navigation.workingHours';
+  if (path.startsWith('/preview')) return 'navigation.previewSite';
+  return '';
 }
 
 /** Stable object references for routerLinkActiveOptions — avoids recreating objects on every CD cycle. */
@@ -59,7 +48,7 @@ const LINK_OPTS_PREFIX = { exact: false } as const;
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule, TranslatePipe],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
@@ -68,6 +57,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly title = inject(Title);
   readonly themeService = inject(ThemeService);
   readonly auth = inject(AuthService);
+  readonly language = inject(LanguageService);
   private readonly adminApi = inject(AdminApiService);
   private readonly router = inject(Router);
   private readonly store = inject(Store);
@@ -76,7 +66,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   private readonly _titleSync = effect(() => {
     const name = this.auth.business()?.name?.trim();
-    this.title.setTitle(name ? `${name} · SaaS Booking` : 'SaaS Booking');
+    this.title.setTitle(name ? `${name} · boki` : 'boki');
   });
 
   readonly user = this.auth.user;
@@ -95,8 +85,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
     { initialValue: this.router.url.split('?')[0] || '/' }
   );
 
-  /** Top bar H1 from current route (owner shell). */
-  readonly pageTitle = computed(() => topBarTitleFromUrl(this.currentPath()));
+  /** Translation key for the topbar H1; empty string falls back to the "boki" wordmark. */
+  private readonly pageTitleKey = computed(() => pageTitleKeyFromUrl(this.currentPath()));
+  readonly pageTitle = computed(() =>
+    this.pageTitleKey() ? this.language.t(this.pageTitleKey()) : 'boki'
+  );
 
   /** The mockup's date subtitle only makes sense on the dashboard's "today" view. */
   readonly showDateSubtitle = computed(() => {
@@ -104,10 +97,16 @@ export class LayoutComponent implements OnInit, OnDestroy {
     return p === '/' || p.startsWith('/dashboard');
   });
 
-  /** Business-timezone-aware "יום שלישי · 18 באוג׳ 2026" label. */
-  readonly dateLabel = computed(() =>
-    formatHebrewDate(getLocalParts(new Date(), this.auth.businessTimezone()))
-  );
+  /** Business-timezone- and language-aware "יום שלישי · 18 באוג׳ 2026" / "Tue, Aug 18, 2026" label. */
+  readonly dateLabel = computed(() => {
+    const now = new Date();
+    const tz = this.auth.businessTimezone();
+    // Reads `language()` so this recomputes on language switch.
+    const locale = this.language.intlLocale();
+    const weekdayFmt = new Intl.DateTimeFormat(locale, { timeZone: tz, weekday: 'long' });
+    const dateFmt = new Intl.DateTimeFormat(locale, { timeZone: tz, day: 'numeric', month: 'short', year: 'numeric' });
+    return `${weekdayFmt.format(now)} · ${dateFmt.format(now)}`;
+  });
 
   /** Count of pending (awaiting owner confirmation) appointments, for the sidebar badge + topbar bell dot. */
   readonly pendingAppointmentsCount = toSignal(
@@ -173,10 +172,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
   }
 
   readonly menuAriaLabel = computed<string>(() => {
-    if (this.isMobile()) {
-      return this.isMobileMenuOpen() ? 'סגירת תפריט' : 'פתיחת תפריט';
-    }
-    return this.isSidebarCollapsed() ? 'הרחבת סרגל הצד' : 'כיווץ סרגל הצד';
+    // Reuses navigation.menu ("Menu"/"תפריט") rather than a bespoke open/close pair —
+    // aria-expanded already communicates open/closed state to assistive tech.
+    return this.language.t('navigation.menu');
   });
 
   /** Icon for menu toggle: pi-bars when sidebar closed, pi-times when open. */

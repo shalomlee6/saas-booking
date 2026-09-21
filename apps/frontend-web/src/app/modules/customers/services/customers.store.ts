@@ -1,10 +1,12 @@
 import { Injectable, signal, inject } from '@angular/core';
 import type { Customer } from '../model/customer';
 import { CustomersApiService } from './customers-api.service';
+import { LanguageService } from '../../../core/i18n/language.service';
 
 @Injectable({ providedIn: 'root' })
 export class CustomersStore {
   private readonly api = inject(CustomersApiService);
+  private readonly language = inject(LanguageService);
 
   readonly list = signal<Customer[]>([]);
   readonly loading = signal(false);
@@ -18,8 +20,8 @@ export class CustomersStore {
         this.list.set(customers);
         this.loading.set(false);
       },
-      error: (err) => {
-        this.error.set(err?.error?.message || 'לא ניתן היה לטעון את רשימת הלקוחות');
+      error: () => {
+        this.error.set(this.language.t('customers.loadListError'));
         this.loading.set(false);
       },
     });

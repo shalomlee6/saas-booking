@@ -21,8 +21,60 @@
   max-width: 400px;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-lg, 12px);
   padding: 1.25rem;
+}
+
+.business-theme-settings-card-title {
+  margin: 0 0 0.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.business-theme-settings-card-subtitle {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
+// ─── Language toggle ────────────────────────────────────────────────────────
+.language-toggle {
+  display: inline-flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--bg-app);
+  border-radius: var(--radius-md, 8px);
+}
+
+.language-toggle-btn {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.language-toggle-btn:hover {
+  color: var(--text-primary);
+}
+
+.language-toggle-btn--active {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.language-toggle-btn--active:hover {
+  color: #fff;
+}
+
+.language-toggle-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
 
 .business-theme-settings-form {
@@ -71,16 +123,21 @@
 .business-theme-settings-btn {
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
-  font-weight: 500;
-  border-radius: 6px;
+  font-weight: 600;
+  border-radius: var(--radius-md, 8px);
   border: 1px solid transparent;
   cursor: pointer;
   text-decoration: none;
+  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
 }
 
 .business-theme-settings-btn-primary {
   background: var(--color-primary);
   color: #fff;
+}
+
+.business-theme-settings-btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover, var(--color-primary));
 }
 
 .business-theme-settings-btn-primary:disabled {
@@ -90,6 +147,16 @@
 
 .business-theme-settings-btn-ghost {
   background: transparent;
-  color: var(--text-muted);
+  color: var(--text-secondary, var(--text-muted));
   border-color: var(--border-color);
+}
+
+.business-theme-settings-btn-ghost:hover {
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.business-theme-settings-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }

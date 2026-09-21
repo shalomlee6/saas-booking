@@ -1,10 +1,10 @@
-<div class="wh-page" dir="rtl">
-  <h1 class="wh-page-title">שעות וזמינות</h1>
+<div class="wh-page">
+  <h1 class="wh-page-title">{{ 'workingHours.title' | translate }}</h1>
 
   <p-tabs [value]="activeTab()" (valueChange)="onTabChange($event)" class="wh-tabs">
     <p-tablist>
-      <p-tab [value]="0">שעות קבועות</p-tab>
-      <p-tab [value]="1">שעות עבודה בפועל</p-tab>
+      <p-tab [value]="0">{{ 'workingHours.fixedHoursTab' | translate }}</p-tab>
+      <p-tab [value]="1">{{ 'workingHours.actualHoursTab' | translate }}</p-tab>
     </p-tablist>
     <p-tabpanels>
       <p-tabpanel [value]="0">
@@ -12,7 +12,7 @@
           @if (openingHoursLoadError(); as loadErr) {
             <div class="wh-inline-message wh-inline-message-warn">
               {{ loadErr }}
-              <button type="button" class="appointments-error-retry" (click)="retryOpeningHoursLoad()">נסי שוב</button>
+              <button type="button" class="appointments-error-retry" (click)="retryOpeningHoursLoad()">{{ 'common.retry' | translate }}</button>
             </div>
           }
           @if (loadingOpeningHours()) {
@@ -28,19 +28,19 @@
                     [ngModel]="item.isOpen"
                     (ngModelChange)="setDayOpen(item.day, $event)"
                     [disabled]="savingHours()"
-                    ariaLabel="פתוח/סגור"
+                    [ariaLabel]="'workingHours.openClosedAriaLabel' | translate"
                     class="wh-day-toggle"
                   />
                 </div>
                 <div class="wh-day-card-summary">{{ item.summary }}</div>
                 <div class="wh-day-card-actions">
                   <p-button
-                    label="עריכה"
+                    [label]="'workingHours.editButton' | translate"
                     icon="pi pi-pencil"
                     [outlined]="true"
                     styleClass="p-button-sm wh-edit-btn"
                     (onClick)="openDayDrawer(item.day)"
-                    ariaLabel="עריכת יום"
+                    [ariaLabel]="'workingHours.editDayAriaLabel' | translate"
                   />
                 </div>
               </div>
@@ -54,7 +54,7 @@
           @if (overridesLoadError(); as overridesErr) {
             <div class="wh-inline-message wh-inline-message-warn">
               {{ overridesErr }}
-              <button type="button" class="appointments-error-retry" (click)="retryOverridesLoad()">נסי שוב</button>
+              <button type="button" class="appointments-error-retry" (click)="retryOverridesLoad()">{{ 'common.retry' | translate }}</button>
             </div>
           }
           @if (loadingOverrides()) {
@@ -84,10 +84,10 @@
             </div>
             <div class="wh-legend">
               <span class="wh-legend-item wh-legend-closed">
-                <span class="wh-legend-dot wh-legend-dot--closed" aria-hidden="true"></span> סגור
+                <span class="wh-legend-dot wh-legend-dot--closed" aria-hidden="true"></span> {{ 'workingHours.closedLegend' | translate }}
               </span>
               <span class="wh-legend-item wh-legend-custom">
-                <span class="wh-legend-dot wh-legend-dot--custom" aria-hidden="true"></span> שעות מיוחדות
+                <span class="wh-legend-dot wh-legend-dot--custom" aria-hidden="true"></span> {{ 'workingHours.specialHoursLegend' | translate }}
               </span>
             </div>
           }
@@ -117,7 +117,7 @@
     [draggable]="false"
     [resizable]="false"
     [style]="{ width: 'min(100vw - 2rem, 420px)' }"
-    closeAriaLabel="סגירה"
+    [closeAriaLabel]="'workingHours.closeAriaLabel' | translate"
     (onHide)="closeDayDrawer()"
     styleClass="wh-dialog-day"
   >
@@ -130,14 +130,14 @@
         <p-toggleSwitch
           [ngModel]="editDayIsOpen()"
           (ngModelChange)="editDayIsOpen.set($event)"
-          ariaLabel="פתוח היום"
+          [ariaLabel]="'workingHours.openToday' | translate"
         />
-        <label class="wh-editor-label">פתוח היום</label>
+        <label class="wh-editor-label">{{ 'workingHours.openToday' | translate }}</label>
       </div>
 
       @if (editDayIsOpen()) {
         <div class="wh-editor-ranges">
-          <span class="wh-editor-ranges-title">טווחי שעות (24 שעות)</span>
+          <span class="wh-editor-ranges-title">{{ 'workingHours.hourRanges' | translate }}</span>
           @if (editDayGeneralError(); as genErr) {
             <div class="wh-inline-message wh-inline-message-warn">{{ genErr }}</div>
           }
@@ -145,7 +145,7 @@
             <div class="wh-range-block">
               <div class="wh-range-row wh-range-row-selects">
                 <div class="wh-range-group">
-                  <span class="wh-range-label">התחלה</span>
+                  <span class="wh-range-label">{{ 'workingHours.startLabel' | translate }}</span>
                   <div class="wh-time-select-wrap">
                     <p-select
                       class="wh-pselect wh-pselect-hour"
@@ -155,7 +155,7 @@
                       [(ngModel)]="vm.startHour"
                       (ngModelChange)="touchEditDayVms()"
                       [appendTo]="'body'"
-                      placeholder="שעה"
+                      [placeholder]="'workingHours.hourPlaceholder' | translate"
                     />
                     <p-select
                       class="wh-pselect wh-pselect-min"
@@ -165,13 +165,13 @@
                       [(ngModel)]="vm.startMinute"
                       (ngModelChange)="touchEditDayVms()"
                       [appendTo]="'body'"
-                      placeholder="דק'"
+                      [placeholder]="'workingHours.minutePlaceholder' | translate"
                     />
                   </div>
                 </div>
                 <span class="wh-range-sep">–</span>
                 <div class="wh-range-group">
-                  <span class="wh-range-label">סיום</span>
+                  <span class="wh-range-label">{{ 'workingHours.endLabel' | translate }}</span>
                   <div class="wh-time-select-wrap">
                     <p-select
                       class="wh-pselect wh-pselect-hour"
@@ -181,7 +181,7 @@
                       [(ngModel)]="vm.endHour"
                       (ngModelChange)="touchEditDayVms()"
                       [appendTo]="'body'"
-                      placeholder="שעה"
+                      [placeholder]="'workingHours.hourPlaceholder' | translate"
                     />
                     <p-select
                       class="wh-pselect wh-pselect-min"
@@ -191,7 +191,7 @@
                       [(ngModel)]="vm.endMinute"
                       (ngModelChange)="touchEditDayVms()"
                       [appendTo]="'body'"
-                      placeholder="דק'"
+                      [placeholder]="'workingHours.minutePlaceholder' | translate"
                     />
                   </div>
                 </div>
@@ -202,7 +202,7 @@
                     [rounded]="true"
                     severity="secondary"
                     (onClick)="removeEditRange($index)"
-                    ariaLabel="הסר טווח"
+                    [ariaLabel]="'workingHours.removeRangeAriaLabel' | translate"
                     styleClass="wh-range-remove"
                   />
                 }
@@ -213,7 +213,7 @@
             </div>
           }
           <p-button
-            label="הוסף טווח"
+            [label]="'workingHours.addRange' | translate"
             icon="pi pi-plus"
             [text]="true"
             severity="secondary"
@@ -225,14 +225,14 @@
 
       <div class="wh-editor-actions">
         <p-button
-          label="שמירה"
+          [label]="'workingHours.saveButton' | translate"
           icon="pi pi-check"
           [loading]="savingHours()"
           (onClick)="saveDay()"
           [disabled]="editDayIsOpen() && hasEditDayErrorsSignal()"
         />
         <p-button
-          label="ביטול"
+          [label]="'workingHours.cancelButton' | translate"
           [outlined]="true"
           severity="secondary"
           (onClick)="closeDayDrawer()"
@@ -262,7 +262,7 @@
     [draggable]="false"
     [resizable]="false"
     [style]="{ width: 'min(100vw - 2rem, 440px)' }"
-    closeAriaLabel="סגירה"
+    [closeAriaLabel]="'workingHours.closeAriaLabel' | translate"
     (onHide)="closeOverrideDrawer()"
     styleClass="wh-dialog-override"
   >
@@ -272,7 +272,7 @@
   <ng-template #overrideEditorContent>
     <div class="wh-drawer-body">
       <div class="wh-override-type-group mb-3">
-        <span class="wh-override-type-label">סוג חריג</span>
+        <span class="wh-override-type-label">{{ 'workingHours.overrideTypeLabel' | translate }}</span>
         <div class="wh-override-type-options">
           <label
             class="wh-override-type-option"
@@ -288,7 +288,7 @@
             />
             <span class="wh-override-type-text">
               <i class="pi pi-clock" aria-hidden="true"></i>
-              שעות מיוחדות
+              {{ 'workingHours.specialHoursOption' | translate }}
             </span>
           </label>
           <label
@@ -305,14 +305,14 @@
             />
             <span class="wh-override-type-text">
               <i class="pi pi-ban" aria-hidden="true"></i>
-              סגור כל היום
+              {{ 'workingHours.closedAllDayOption' | translate }}
             </span>
           </label>
         </div>
       </div>
       @if (overrideType() === 'custom') {
         <div class="wh-editor-ranges">
-          <span class="wh-editor-ranges-title">טווחי שעות (24 שעות)</span>
+          <span class="wh-editor-ranges-title">{{ 'workingHours.hourRanges' | translate }}</span>
           @if (overrideGeneralError(); as oGen) {
             <div class="wh-inline-message wh-inline-message-warn">{{ oGen }}</div>
           }
@@ -320,7 +320,7 @@
             <div class="wh-range-block">
               <div class="wh-range-row wh-range-row-selects">
                 <div class="wh-range-group">
-                  <span class="wh-range-label">התחלה</span>
+                  <span class="wh-range-label">{{ 'workingHours.startLabel' | translate }}</span>
                   <div class="wh-time-select-wrap">
                     <p-select
                       class="wh-pselect wh-pselect-hour"
@@ -344,7 +344,7 @@
                 </div>
                 <span class="wh-range-sep">–</span>
                 <div class="wh-range-group">
-                  <span class="wh-range-label">סיום</span>
+                  <span class="wh-range-label">{{ 'workingHours.endLabel' | translate }}</span>
                   <div class="wh-time-select-wrap">
                     <p-select
                       class="wh-pselect wh-pselect-hour"
@@ -383,7 +383,7 @@
             </div>
           }
           <p-button
-            label="הוסף טווח"
+            [label]="'workingHours.addRange' | translate"
             icon="pi pi-plus"
             [text]="true"
             severity="secondary"
@@ -393,7 +393,7 @@
         </div>
       }
       @if (loadingOverrideConflicts()) {
-        <p class="wh-conflict-loading">בודק תורים…</p>
+        <p class="wh-conflict-loading">{{ 'workingHours.checkingAppointments' | translate }}</p>
       }
       @if (overrideConflictWarningText(); as cmsg) {
         <div class="wh-inline-message wh-conflict-warn" role="alert">
@@ -401,19 +401,19 @@
         </div>
       }
       <div class="wh-note-field mb-3">
-        <label class="wh-note-label" for="overrideNote">הערה (אופציונלי)</label>
+        <label class="wh-note-label" for="overrideNote">{{ 'workingHours.noteOptionalLabel' | translate }}</label>
         <input
           id="overrideNote"
           pInputText
           [ngModel]="overrideNote()"
           (ngModelChange)="overrideNote.set($event)"
-          placeholder="למשל: רופא שיניים"
+          [placeholder]="'workingHours.notePlaceholder' | translate"
           class="wh-note-input w-full"
         />
       </div>
       <div class="wh-editor-actions flex-wrap">
         <p-button
-          label="שמירה"
+          [label]="'workingHours.saveButton' | translate"
           icon="pi pi-check"
           [loading]="savingOverride()"
           (onClick)="saveOverride()"
@@ -421,7 +421,7 @@
         />
         @if (selectedOverrideId()) {
           <p-button
-            label="מחיקה"
+            [label]="'workingHours.deleteButton' | translate"
             icon="pi pi-trash"
             severity="danger"
             [outlined]="true"
@@ -430,7 +430,7 @@
           />
         }
         <p-button
-          label="סגור"
+          [label]="'workingHours.closeButton' | translate"
           [outlined]="true"
           severity="secondary"
           (onClick)="closeOverrideDrawer()"

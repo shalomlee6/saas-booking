@@ -52,14 +52,14 @@
 }
 
 ::ng-deep .appointment-form-btn-create.p-button {
-  background: #e8446a;
-  border-color: #e8446a;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
   color: #fff;
 }
 
 ::ng-deep .appointment-form-btn-create.p-button:not(:disabled):hover {
-  background: #d63a5f;
-  border-color: #d63a5f;
+  background: var(--color-primary-hover, var(--color-primary));
+  border-color: var(--color-primary-hover, var(--color-primary));
 }
 
 @media (max-width: 768px) {

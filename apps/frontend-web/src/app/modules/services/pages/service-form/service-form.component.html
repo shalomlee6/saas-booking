@@ -1,13 +1,13 @@
 <div class="service-form-page">
-  <h1 class="service-form-title">{{ isEdit() ? 'Edit Service' : 'New Service' }}</h1>
+  <h1 class="service-form-title">{{ (isEdit() ? 'services.editTitle' : 'services.newTitle') | translate }}</h1>
 
   <div class="services-card service-form-card">
     @if (loading() && isEdit() && !form.dirty) {
-      <div class="services-loading">Loading service…</div>
+      <div class="services-loading">{{ 'services.loadingService' | translate }}</div>
     } @else {
       <form class="service-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
         <div class="service-form-field">
-          <label for="name">Name</label>
+          <label for="name">{{ 'services.nameLabel' | translate }}</label>
           <input
             id="name"
             type="text"
@@ -16,12 +16,12 @@
             [class.service-form-input-invalid]="name?.invalid && (name?.touched || name?.dirty)"
           />
           @if (name?.invalid && (name?.touched || name?.dirty)) {
-            <p class="service-form-error">Name is required.</p>
+            <p class="service-form-error">{{ 'services.nameRequired' | translate }}</p>
           }
         </div>
 
         <div class="service-form-field">
-          <label for="durationMinutes">Duration (minutes)</label>
+          <label for="durationMinutes">{{ 'services.durationLabel' | translate }}</label>
           <input
             id="durationMinutes"
             type="number"
@@ -31,12 +31,12 @@
             [class.service-form-input-invalid]="durationMinutes?.invalid && (durationMinutes?.touched || durationMinutes?.dirty)"
           />
           @if (durationMinutes?.invalid && (durationMinutes?.touched || durationMinutes?.dirty)) {
-            <p class="service-form-error">Duration is required and must be at least 5 minutes.</p>
+            <p class="service-form-error">{{ 'services.durationRequired' | translate }}</p>
           }
         </div>
 
         <div class="service-form-field">
-          <label for="price">Price (optional)</label>
+          <label for="price">{{ 'services.priceOptionalLabel' | translate }}</label>
           <input
             id="price"
             type="number"
@@ -48,7 +48,7 @@
         </div>
 
         <div class="service-form-field">
-          <label for="description">Description (optional)</label>
+          <label for="description">{{ 'services.descriptionOptionalLabel' | translate }}</label>
           <textarea
             id="description"
             formControlName="description"
@@ -60,7 +60,7 @@
         <div class="service-form-field service-form-field-row">
           <label>
             <input type="checkbox" formControlName="isActive" />
-            Active
+            {{ 'services.activeLabel' | translate }}
           </label>
         </div>
 
@@ -74,9 +74,9 @@
             class="services-btn services-btn-primary"
             [disabled]="form.invalid || loading()"
           >
-            {{ loading() ? 'Saving…' : (isEdit() ? 'Save' : 'Create Service') }}
+            {{ (loading() ? 'common.saving' : (isEdit() ? 'common.save' : 'services.createButton')) | translate }}
           </button>
-          <a routerLink="/services" class="services-btn services-btn-ghost">Cancel</a>
+          <a routerLink="/services" class="services-btn services-btn-ghost">{{ 'common.cancel' | translate }}</a>
         </div>
       </form>
     }

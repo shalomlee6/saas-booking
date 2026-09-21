@@ -29,11 +29,8 @@ import {
   DEFAULT_APPOINTMENT_DURATION_MINUTES,
 } from '../../utils/calendar.utils';
 import { friendlyOwnerAppointmentError } from '../../../../shared/utils/http-field-errors.util';
-
-const STATUS_OPTIONS: { label: string; value: 'confirmed' | 'pending' }[] = [
-  { label: 'מאושר', value: 'confirmed' },
-  { label: 'ממתין', value: 'pending' },
-];
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 const endAfterStartValidator: ValidatorFn = (
   control: AbstractControl
@@ -56,6 +53,7 @@ const endAfterStartValidator: ValidatorFn = (
     SelectModule,
     TextareaModule,
     AutoCompleteModule,
+    TranslatePipe,
   ],
   templateUrl: './appointment-form.component.html',
   styleUrl: './appointment-form.component.scss',
@@ -69,13 +67,17 @@ export class AppointmentFormComponent implements OnInit {
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  readonly language = inject(LanguageService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly allCustomers = signal<Customer[]>([]);
   readonly filteredCustomers = signal<Customer[]>([]);
   readonly services = signal<Service[]>([]);
-  readonly statusOptions = STATUS_OPTIONS;
+  readonly statusOptions: { label: string; value: 'confirmed' | 'pending' }[] = [
+    { label: this.language.t('appointments.confirmedStatus'), value: 'confirmed' },
+    { label: this.language.t('appointments.pendingStatus'), value: 'pending' },
+  ];
 
   readonly form: FormGroup = this.fb.group({
     customer: [null as Customer | null, Validators.required],
@@ -115,8 +117,8 @@ export class AppointmentFormComponent implements OnInit {
         error: () => {
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: 'לא ניתן לטעון לקוחות או שירותים',
+            summary: this.language.t('common.error'),
+            detail: this.language.t('appointments.loadCustomersServicesError'),
           });
         },
       });
@@ -224,8 +226,8 @@ export class AppointmentFormComponent implements OnInit {
     if (!startUtc || !endUtc) {
       this.messageService.add({
         severity: 'error',
-        summary: 'שגיאה',
-        detail: 'תאריך או שעה לא תקינים',
+        summary: this.language.t('common.error'),
+        detail: this.language.t('appointments.invalidDateTime'),
       });
       return;
     }
@@ -247,7 +249,7 @@ export class AppointmentFormComponent implements OnInit {
           this.messageService.add({
             severity: 'success',
             summary: '',
-            detail: 'התור נוצר בהצלחה',
+            detail: this.language.t('appointments.createdSuccess'),
           });
           this.appointmentsApi.refresh();
           void this.router.navigate(['/appointments']);
@@ -255,8 +257,8 @@ export class AppointmentFormComponent implements OnInit {
         error: (err) => {
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: friendlyOwnerAppointmentError(err),
+            summary: this.language.t('common.error'),
+            detail: friendlyOwnerAppointmentError(err, this.language.ownerAppointmentErrorLabels),
           });
         },
       });

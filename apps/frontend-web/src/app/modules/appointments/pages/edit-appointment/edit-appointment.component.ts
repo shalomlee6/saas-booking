@@ -27,13 +27,8 @@ import {
   businessWallTimeToUtc,
 } from '../../utils/calendar.utils';
 import type { AppointmentDetailDto } from '../../services/appointments-api.service';
-
-const STATUS_OPTIONS: { label: string; value: string }[] = [
-  { label: 'מאושר', value: 'confirmed' },
-  { label: 'ממתין', value: 'pending' },
-  { label: 'הושלם', value: 'completed' },
-  { label: 'בוטל', value: 'cancelled' },
-];
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-edit-appointment',
@@ -48,6 +43,7 @@ const STATUS_OPTIONS: { label: string; value: string }[] = [
     TextareaModule,
     ProgressSpinnerModule,
     ToastModule,
+    TranslatePipe,
   ],
   templateUrl: './edit-appointment.component.html',
   styleUrl: './edit-appointment.component.scss',
@@ -61,12 +57,18 @@ export class EditAppointmentComponent implements OnInit {
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  readonly language = inject(LanguageService);
 
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly customers = signal<Customer[]>([]);
   readonly services = signal<Service[]>([]);
-  readonly statusOptions = STATUS_OPTIONS;
+  readonly statusOptions: { label: string; value: string }[] = [
+    { label: this.language.t('status.confirmed'), value: 'confirmed' },
+    { label: this.language.t('status.pending'), value: 'pending' },
+    { label: this.language.t('status.completed'), value: 'completed' },
+    { label: this.language.t('status.cancelled'), value: 'cancelled' },
+  ];
 
   appointmentId = '';
   private detail: AppointmentDetailDto | null = null;
@@ -108,8 +110,8 @@ export class EditAppointmentComponent implements OnInit {
         error: () => {
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: 'לא ניתן לטעון את התור',
+            summary: this.language.t('common.error'),
+            detail: this.language.t('appointments.loadAppointmentError'),
           });
           this.router.navigate(['/appointments']);
         },
@@ -196,16 +198,16 @@ export class EditAppointmentComponent implements OnInit {
     if (!startUtc || !endUtc) {
       this.messageService.add({
         severity: 'error',
-        summary: 'שגיאה',
-        detail: 'תאריך או שעה לא תקינים',
+        summary: this.language.t('common.error'),
+        detail: this.language.t('appointments.invalidDateTime'),
       });
       return;
     }
     if (startUtc.getTime() >= endUtc.getTime()) {
       this.messageService.add({
         severity: 'error',
-        summary: 'שגיאה',
-        detail: 'שעת הסיום חייבת להיות אחרי שעת ההתחלה',
+        summary: this.language.t('common.error'),
+        detail: this.language.t('appointments.endAfterStartErrorAlt'),
       });
       return;
     }
@@ -226,20 +228,16 @@ export class EditAppointmentComponent implements OnInit {
         next: () => {
           this.messageService.add({
             severity: 'success',
-            summary: 'נשמר',
-            detail: 'התור עודכן בהצלחה',
+            summary: this.language.t('appointments.savedToast'),
+            detail: this.language.t('appointments.updatedSuccess'),
           });
           this.router.navigate(['/appointments']);
         },
-        error: (err) => {
-          const msg =
-            err?.error?.message ??
-            err?.message ??
-            'עדכון התור נכשל';
+        error: () => {
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: typeof msg === 'string' ? msg : 'עדכון נכשל',
+            summary: this.language.t('common.error'),
+            detail: this.language.t('appointments.updateFailedGeneric'),
           });
         },
       });

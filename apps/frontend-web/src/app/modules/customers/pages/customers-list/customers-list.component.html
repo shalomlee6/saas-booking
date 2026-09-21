@@ -1,8 +1,8 @@
 <div class="customers-page">
   <div class="customers-page-header">
     <div class="customers-page-heading">
-      <h1 class="customers-page-title">לקוחות</h1>
-      <span class="customers-page-count">{{ filteredList().length }} לקוחות</span>
+      <h1 class="customers-page-title">{{ 'customers.title' | translate }}</h1>
+      <span class="customers-page-count">{{ filteredList().length }} {{ 'customers.countSuffix' | translate }}</span>
     </div>
     <div class="customers-page-actions">
       <label class="customers-search-wrap">
@@ -10,14 +10,14 @@
         <input
           type="text"
           class="customers-search"
-          placeholder="חיפוש לפי שם, טלפון או אימייל"
+          [placeholder]="'customers.searchPlaceholder' | translate"
           [ngModel]="searchQuery()"
           (ngModelChange)="onSearchInput($event)"
         />
       </label>
       <a routerLink="/customers/new" class="customers-btn customers-btn-primary">
         <i class="pi pi-plus" aria-hidden="true"></i>
-        לקוחה חדשה
+        {{ 'customers.newCustomer' | translate }}
       </a>
     </div>
   </div>
@@ -26,20 +26,20 @@
     @if (error()) {
       <p class="customers-error">
         {{ error() }}
-        <button type="button" class="customers-error-retry" (click)="reload()">נסי שוב</button>
+        <button type="button" class="customers-error-retry" (click)="reload()">{{ 'common.retry' | translate }}</button>
       </p>
     }
 
     @if (loading()) {
-      <div class="customers-loading">טוענת לקוחות…</div>
+      <div class="customers-loading">{{ 'customers.loading' | translate }}</div>
     }
 
     @if (!loading() && filteredList().length === 0) {
       <div class="customers-empty">
         <i class="pi pi-users customers-empty-icon" aria-hidden="true"></i>
-        <p class="customers-empty-title">עדיין אין לקוחות</p>
-        <p class="customers-empty-text">כל הלקוחות שתוסיפי יופיעו כאן.</p>
-        <a routerLink="/customers/new" class="customers-btn customers-btn-primary">הוספת לקוחה ראשונה</a>
+        <p class="customers-empty-title">{{ 'customers.emptyTitle' | translate }}</p>
+        <p class="customers-empty-text">{{ 'customers.emptyText' | translate }}</p>
+        <a routerLink="/customers/new" class="customers-btn customers-btn-primary">{{ 'customers.addFirst' | translate }}</a>
       </div>
     }
 
@@ -48,10 +48,10 @@
         <table class="customers-table">
           <thead>
             <tr>
-              <th>שם</th>
-              <th>טלפון</th>
-              <th>אימייל</th>
-              <th>נוצרה בתאריך</th>
+              <th>{{ 'common.name' | translate }}</th>
+              <th>{{ 'common.phone' | translate }}</th>
+              <th>{{ 'common.email' | translate }}</th>
+              <th>{{ 'common.created' | translate }}</th>
               <th class="customers-table-actions-head"></th>
             </tr>
           </thead>
@@ -61,10 +61,10 @@
                 <td class="customers-table-name">{{ customer.name }}</td>
                 <td class="customers-table-muted" dir="ltr">{{ customer.phone }}</td>
                 <td class="customers-table-muted">{{ customer.email || '—' }}</td>
-                <td class="customers-table-muted">{{ customer.createdAt | date : 'd בMMMM y' }}</td>
+                <td class="customers-table-muted">{{ formatCreatedAt(customer.createdAt) }}</td>
                 <td class="customers-table-actions">
                   <a [routerLink]="['/customers', customer._id]" class="customers-btn customers-btn-ghost customers-btn-sm">
-                    צפייה
+                    {{ 'common.view' | translate }}
                   </a>
                 </td>
               </tr>

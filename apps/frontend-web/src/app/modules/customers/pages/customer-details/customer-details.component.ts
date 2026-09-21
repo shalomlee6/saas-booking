@@ -1,10 +1,12 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { CurrencyPipe, DatePipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CustomersApiService } from '../../services/customers-api.service';
 import { CustomerServiceConfigApiService } from '../../services/customer-service-config-api.service';
 import { ServicesApiService } from '../../../services/services/services-api.service';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import type { Customer, TimeOfDayBucket } from '../../model/customer';
 import type {
   CustomerAppointmentHistoryItem,
@@ -14,59 +16,27 @@ import type {
 import type { CustomerServiceConfig } from '../../model/customer-service-config';
 import type { Service } from '../../../services/model/service';
 
-const TIME_OF_DAY_OPTIONS: { value: TimeOfDayBucket; label: string }[] = [
-  { value: 'morning', label: 'בוקר' },
-  { value: 'afternoon', label: 'צהריים' },
-  { value: 'evening', label: 'ערב' },
-  { value: 'night', label: 'לילה' },
-];
-
-const TIME_OF_DAY_LABELS: Record<TimeOfDayBucket, string> = {
-  morning: 'בוקר',
-  afternoon: 'צהריים',
-  evening: 'ערב',
-  night: 'לילה',
+const TIME_OF_DAY_KEYS: Record<TimeOfDayBucket, string> = {
+  morning: 'timeOfDay.morning',
+  afternoon: 'timeOfDay.afternoon',
+  evening: 'timeOfDay.evening',
+  night: 'timeOfDay.night',
 };
 
-function timeOfDayLabel(bucket: TimeOfDayBucket | null | undefined): string {
-  return bucket ? TIME_OF_DAY_LABELS[bucket] ?? bucket : '—';
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'ממתין לאישור',
-  confirmed: 'מאושר',
-  completed: 'הושלם',
-  done: 'הושלם',
-  cancelled: 'בוטל',
-  canceled: 'בוטל',
+/** 'done' is a legacy status value some records still carry — treated the same as 'completed'. */
+const STATUS_KEYS: Record<string, string> = {
+  pending: 'status.pending',
+  confirmed: 'status.confirmed',
+  completed: 'status.completed',
+  done: 'status.completed',
+  cancelled: 'status.cancelled',
+  canceled: 'status.cancelled',
 };
-
-function statusLabel(status: string | undefined): string {
-  const key = (status ?? '').toLowerCase();
-  return STATUS_LABELS[key] ?? status ?? '—';
-}
-
-/** Rule-based insight text — excludes NEW_CUSTOMER, which gets its own dedicated empty-state UI. */
-function insightText(insight: CustomerInsight): string {
-  const d = insight.data;
-  switch (insight.code) {
-    case 'RETURNS_PERIODICALLY':
-      return `חוזרת בממוצע כל ${d['weeks']} שבועות (מרווח ממוצע של ${d['days']} ימים).`;
-    case 'DUE_FOR_REBOOKING':
-      return `כדאי לתאם תור חדש — עברו ${d['daysSinceLast']} ימים מהביקור האחרון (המרווח הרגיל כ-${d['avgIntervalDays']} ימים).`;
-    case 'FREQUENT_CANCELLATIONS':
-      return `ביטלה ${d['count']} תורים ב-${d['windowDays']} הימים האחרונים.`;
-    case 'HAS_UPCOMING_NO_SHOW_RISK':
-      return 'ייתכן וקיים סיכון לאי-הגעה בהתבסס על היסטוריית ההתנהגות.';
-    default:
-      return '';
-  }
-}
 
 @Component({
   selector: 'app-customer-details',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule, DatePipe, CurrencyPipe],
+  imports: [RouterLink, ReactiveFormsModule, CurrencyPipe, TranslatePipe],
   templateUrl: './customer-details.component.html',
   styleUrl: './customer-details.component.scss',
 })
@@ -76,13 +46,49 @@ export class CustomerDetailsComponent implements OnInit {
   private readonly customersApi = inject(CustomersApiService);
   private readonly configApi = inject(CustomerServiceConfigApiService);
   private readonly servicesApi = inject(ServicesApiService);
+  readonly language = inject(LanguageService);
 
   private readonly customerId = this.route.snapshot.paramMap.get('id')!;
 
-  readonly timeOfDayOptions = TIME_OF_DAY_OPTIONS;
-  readonly insightText = insightText;
-  readonly timeOfDayLabel = timeOfDayLabel;
-  readonly statusLabel = statusLabel;
+  readonly timeOfDayOptions: { value: TimeOfDayBucket; label: string }[] = (
+    ['morning', 'afternoon', 'evening', 'night'] as const
+  ).map((value) => ({ value, label: this.language.t(TIME_OF_DAY_KEYS[value]) }));
+
+  timeOfDayLabel(bucket: TimeOfDayBucket | null | undefined): string {
+    return bucket ? this.language.t(TIME_OF_DAY_KEYS[bucket] ?? '') || bucket : '—';
+  }
+
+  statusLabel(status: string | undefined): string {
+    const key = (status ?? '').toLowerCase();
+    const translationKey = STATUS_KEYS[key];
+    return translationKey ? this.language.t(translationKey) : status ?? '—';
+  }
+
+  /** Rule-based insight text — excludes NEW_CUSTOMER, which gets its own dedicated empty-state UI. */
+  insightText(insight: CustomerInsight): string {
+    const d = insight.data;
+    switch (insight.code) {
+      case 'RETURNS_PERIODICALLY':
+        return this.language.t('customerCard.insightReturnsPeriodically', {
+          weeks: d['weeks'],
+          days: d['days'],
+        });
+      case 'DUE_FOR_REBOOKING':
+        return this.language.t('customerCard.insightDueForRebooking', {
+          daysSinceLast: d['daysSinceLast'],
+          avgIntervalDays: d['avgIntervalDays'],
+        });
+      case 'FREQUENT_CANCELLATIONS':
+        return this.language.t('customerCard.insightFrequentCancellations', {
+          count: d['count'],
+          windowDays: d['windowDays'],
+        });
+      case 'HAS_UPCOMING_NO_SHOW_RISK':
+        return this.language.t('customerCard.insightNoShowRisk');
+      default:
+        return '';
+    }
+  }
 
   /** Rule-based insight banners, excluding NEW_CUSTOMER — that one gets its own dedicated empty-state card. */
   readonly bannerInsights = computed(() => this.insights().filter((i) => i.code !== 'NEW_CUSTOMER'));
@@ -159,7 +165,7 @@ export class CustomerDetailsComponent implements OnInit {
         this.resetProfileForm(customer);
       },
       error: () => {
-        this.customerError.set('לא ניתן היה לטעון את פרטי הלקוחה.');
+        this.customerError.set(this.language.t('customerCard.loadError'));
         this.loadingCustomer.set(false);
       },
     });
@@ -326,18 +332,34 @@ export class CustomerDetailsComponent implements OnInit {
         this.editingConfigId.set(null);
         this.loadServiceConfigs();
       },
-      error: (err) => {
+      error: () => {
         this.savingOverride.set(false);
-        this.overrideFormError.set(
-          err?.error?.message || 'לא ניתן היה לשמור את ההתאמה. נסי שוב.'
-        );
+        this.overrideFormError.set(this.language.t('customerCard.overrideSaveError'));
       },
     });
   }
 
+  formatDate(date: string | Date): string {
+    return new Intl.DateTimeFormat(this.language.intlLocale(), {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(new Date(date));
+  }
+
+  formatDateTime(date: string | Date): string {
+    return new Intl.DateTimeFormat(this.language.intlLocale(), {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(date));
+  }
+
   deleteOverride(config: CustomerServiceConfig): void {
-    const serviceName = this.serviceNameMap().get(config.serviceId)?.name ?? 'השירות';
-    if (!confirm(`להסיר את ההתאמה עבור ${serviceName}?`)) return;
+    const serviceName = this.serviceNameMap().get(config.serviceId)?.name ?? this.language.t('common.service');
+    if (!confirm(this.language.t('customerCard.removeOverrideConfirm', { service: serviceName }))) return;
     this.configApi.delete(config._id).subscribe({
       next: () => this.loadServiceConfigs(),
     });

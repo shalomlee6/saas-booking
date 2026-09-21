@@ -39,7 +39,7 @@ function validHex(s: string | undefined): boolean {
 }
 
 const DEFAULTS = {
-  primaryColor: '#3787F6',
+  primaryColor: '#F35271',
   sidebarColor: '#0F172A',
   backgroundColor: '#F6F8FB',
 };

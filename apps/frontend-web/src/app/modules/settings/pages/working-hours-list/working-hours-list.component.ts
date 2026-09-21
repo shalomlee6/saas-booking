@@ -18,7 +18,6 @@ import {
   OpeningHoursRange,
   Override,
   DEFAULT_OPENING_HOURS,
-  DAY_NAMES_HE,
 } from './working-hours.types';
 import { TabsModule } from 'primeng/tabs';
 import { DrawerModule } from 'primeng/drawer';
@@ -30,6 +29,8 @@ import { RadioButtonModule } from 'primeng/radiobutton';
 import { InputTextModule } from 'primeng/inputtext';
 import { SkeletonModule } from 'primeng/skeleton';
 import { SelectModule } from 'primeng/select';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 export interface SelectOption {
   label: string;
@@ -60,6 +61,7 @@ export interface EditableRangeVm {
     InputTextModule,
     SkeletonModule,
     SelectModule,
+    TranslatePipe,
   ],
   templateUrl: './working-hours-list.component.html',
   styleUrl: './working-hours-list.component.scss',
@@ -69,6 +71,7 @@ export class WorkingHoursListComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly doc = inject(DOCUMENT);
+  readonly language = inject(LanguageService);
 
   readonly activeTab = signal<number>(0);
   readonly loadingOpeningHours = signal(true);
@@ -109,7 +112,7 @@ export class WorkingHoursListComponent implements OnInit {
   readonly overrideConflictWarning = signal<string | null>(null);
   readonly loadingOverrideConflicts = signal(false);
 
-  readonly dayNamesHe = DAY_NAMES_HE;
+  readonly dayNames = computed(() => Array.from({ length: 7 }, (_, i) => this.language.t(`weekday.${i}`)));
 
   /**
    * Stable style object for the day-editor bottom drawer.
@@ -145,7 +148,7 @@ export class WorkingHoursListComponent implements OnInit {
   );
 
   readonly editDayErrors = computed(() =>
-    getRangesValidationErrors(this.editDayRangesFromVm()),
+    getRangesValidationErrors(this.editDayRangesFromVm(), this.language),
   );
   readonly editDayErrorsByIndex = computed(() => this.editDayErrors().byIndex);
   readonly editDayGeneralError = computed(() => this.editDayErrors().general ?? null);
@@ -154,7 +157,7 @@ export class WorkingHoursListComponent implements OnInit {
   );
 
   readonly overrideErrors = computed(() =>
-    getRangesValidationErrors(this.overrideRangesFromVm()),
+    getRangesValidationErrors(this.overrideRangesFromVm(), this.language),
   );
   readonly overrideErrorsByIndex = computed(() => this.overrideErrors().byIndex);
   readonly overrideGeneralError = computed(() => this.overrideErrors().general ?? null);
@@ -184,14 +187,14 @@ export class WorkingHoursListComponent implements OnInit {
 
   readonly editDayHeader = computed(() => {
     const idx = this.editingDayIndex();
-    if (idx == null) return 'עריכת יום';
-    return `עריכת ${this.dayNamesHe[idx] ?? ''}`;
+    if (idx == null) return this.language.t('workingHours.editDayTitle');
+    return this.language.t('workingHours.editDayTitleWithName', { day: this.dayNames()[idx] ?? '' });
   });
 
   readonly overrideHeader = computed(() => {
     const d = this.overrideDate();
-    if (!d) return 'חריג';
-    return d.toLocaleDateString('he-IL', {
+    if (!d) return this.language.t('workingHours.overrideTitle');
+    return d.toLocaleDateString(this.language.intlLocale(), {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -201,12 +204,15 @@ export class WorkingHoursListComponent implements OnInit {
 
   readonly daysWithSummary = computed(() => {
     const oh = this.openingHours();
+    const names = this.dayNames();
+    const closedLabel = this.language.t('workingHours.closed');
+    const openLabel = this.language.t('workingHours.open');
     return (oh.days ?? []).map((d, i) => {
-      const name = DAY_NAMES_HE[i] ?? '';
+      const name = names[i] ?? '';
       const isOpen = d.isOpen ?? false;
-      if (!isOpen || !d.ranges?.length) return { day: d.day, name, isOpen, summary: 'סגור' };
+      if (!isOpen || !d.ranges?.length) return { day: d.day, name, isOpen, summary: closedLabel };
       const s = d.ranges.map(r => `${to24h(r.start)}–${to24h(r.end)}`).join(', ');
-      return { day: d.day, name, isOpen, summary: `פתוח: ${s}` };
+      return { day: d.day, name, isOpen, summary: `${openLabel}: ${s}` };
     });
   });
 
@@ -270,8 +276,8 @@ export class WorkingHoursListComponent implements OnInit {
         }
         this.loadingOpeningHours.set(false);
       },
-      error: err => {
-        this.openingHoursLoadError.set(err?.error?.message ?? 'לא ניתן לטעון שעות קבועות');
+      error: () => {
+        this.openingHoursLoadError.set(this.language.t('workingHours.loadFixedHoursError'));
         this.loadingOpeningHours.set(false);
       },
     });
@@ -286,9 +292,9 @@ export class WorkingHoursListComponent implements OnInit {
       )
       .subscribe({
         next: list => this.overrides.set(Array.isArray(list) ? list : []),
-        error: err => {
+        error: () => {
           this.overrides.set([]);
-          this.overridesLoadError.set(err?.error?.message ?? 'לא ניתן לטעון חריגים');
+          this.overridesLoadError.set(this.language.t('workingHours.loadOverridesError'));
         },
         complete: () => this.loadingOverrides.set(false),
       });
@@ -342,17 +348,17 @@ export class WorkingHoursListComponent implements OnInit {
           this.savingHours.set(false);
           this.messageService.add({
             severity: 'success',
-            summary: 'נשמר',
-            detail: 'העדכון נשמר',
+            summary: this.language.t('workingHours.savedToast'),
+            detail: this.language.t('workingHours.updateSavedDetail'),
             life: 3000,
           });
         },
-        error: err => {
+        error: () => {
           this.savingHours.set(false);
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: err?.error?.message ?? 'שגיאה בשמירה',
+            summary: this.language.t('workingHours.saveErrorSummary'),
+            detail: this.language.t('workingHours.saveErrorDetail'),
             life: 5000,
           });
         },
@@ -398,17 +404,17 @@ export class WorkingHoursListComponent implements OnInit {
           this.closeDayDrawer();
           this.messageService.add({
             severity: 'success',
-            summary: 'נשמר',
-            detail: 'שעות קבועות עודכנו',
+            summary: this.language.t('workingHours.savedToast'),
+            detail: this.language.t('workingHours.fixedHoursUpdatedDetail'),
             life: 3000,
           });
         },
-        error: err => {
+        error: () => {
           this.savingHours.set(false);
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: err?.error?.message ?? 'שגיאה בשמירה',
+            summary: this.language.t('workingHours.saveErrorSummary'),
+            detail: this.language.t('workingHours.saveErrorDetail'),
             life: 5000,
           });
         },
@@ -470,7 +476,7 @@ export class WorkingHoursListComponent implements OnInit {
           this.loadingOverrideConflicts.set(false);
           if (list.length > 0) {
             this.overrideConflictWarning.set(
-              'יש כבר תורים ביום הזה. סגירת היום תשאיר אותם בתור.',
+              this.language.t('workingHours.hasAppointmentsWarning'),
             );
           } else {
             this.overrideConflictWarning.set(null);
@@ -503,8 +509,8 @@ export class WorkingHoursListComponent implements OnInit {
         if (conflictCount > 0) {
           this.overrideConflictWarning.set(
             conflictCount === 1
-              ? 'תור אחד חורג מהטווחים החדשים או מתנגש עם השעות'
-              : `יש ${conflictCount} תורים שמחוץ לטווחים או בהתנגשות`,
+              ? this.language.t('workingHours.oneAppointmentConflict')
+              : this.language.t('workingHours.multipleAppointmentsConflict', { count: conflictCount }),
           );
         } else {
           this.overrideConflictWarning.set(null);
@@ -543,8 +549,8 @@ export class WorkingHoursListComponent implements OnInit {
     if (type === 'custom' && !ranges.length) {
       this.messageService.add({
         severity: 'warn',
-        summary: 'חסר',
-        detail: 'הוסף טווח שעות',
+        summary: this.language.t('workingHours.missingSummary'),
+        detail: this.language.t('workingHours.addHourRangeDetail'),
         life: 3000,
       });
       return;
@@ -570,17 +576,17 @@ export class WorkingHoursListComponent implements OnInit {
           this.closeOverrideDrawer();
           this.messageService.add({
             severity: 'success',
-            summary: 'נשמר',
-            detail: 'חריג עודכן',
+            summary: this.language.t('workingHours.savedToast'),
+            detail: this.language.t('workingHours.overrideUpdatedDetail'),
             life: 3000,
           });
         },
-        error: err => {
+        error: () => {
           this.savingOverride.set(false);
           this.messageService.add({
             severity: 'error',
-            summary: 'שגיאה',
-            detail: err?.error?.message ?? 'שגיאה בשמירה',
+            summary: this.language.t('workingHours.saveErrorSummary'),
+            detail: this.language.t('workingHours.saveErrorDetail'),
             life: 5000,
           });
         },
@@ -599,17 +605,17 @@ export class WorkingHoursListComponent implements OnInit {
         this.closeOverrideDrawer();
         this.messageService.add({
           severity: 'success',
-          summary: 'נמחק',
-          detail: 'חריג הוסר',
+          summary: this.language.t('workingHours.deletedSummary'),
+          detail: this.language.t('workingHours.overrideRemovedDetail'),
           life: 3000,
         });
       },
-      error: err => {
+      error: () => {
         this.deletingOverride.set(false);
         this.messageService.add({
           severity: 'error',
-          summary: 'שגיאה',
-          detail: err?.error?.message ?? 'שגיאה במחיקה',
+          summary: this.language.t('workingHours.saveErrorSummary'),
+          detail: this.language.t('workingHours.deleteErrorDetail'),
           life: 5000,
         });
       },
@@ -633,16 +639,17 @@ function compareTime(a: string, b: string): number {
 
 function getRangesValidationErrors(
   ranges: OpeningHoursRange[],
+  language: LanguageService,
 ): { byIndex: Record<number, string>; general?: string } {
   const byIndex: Record<number, string> = {};
   for (let i = 0; i < ranges.length; i++) {
     const r = ranges[i];
     if (!r.start?.trim() || !r.end?.trim()) {
-      byIndex[i] = 'חסרים שעות התחלה או סיום';
+      byIndex[i] = language.t('workingHours.missingStartEnd');
       continue;
     }
     if (compareTime(r.start, r.end) >= 0) {
-      byIndex[i] = 'שעת סיום חייבת להיות אחרי שעת התחלה';
+      byIndex[i] = language.t('workingHours.endAfterStart');
     }
   }
   const sorted = ranges
@@ -653,14 +660,14 @@ function getRangesValidationErrors(
     const prev = sorted[i - 1];
     const curr = sorted[i];
     if (compareTime(curr.start, prev.end) < 0) {
-      byIndex[curr.index] = 'טווחים חופפים';
-      if (!byIndex[prev.index]) byIndex[prev.index] = 'טווחים חופפים';
+      byIndex[curr.index] = language.t('workingHours.overlappingRanges');
+      if (!byIndex[prev.index]) byIndex[prev.index] = language.t('workingHours.overlappingRanges');
     }
   }
   const hasInvalid = Object.keys(byIndex).length > 0;
   const hasEmpty = ranges.some(r => !r.start?.trim() || !r.end?.trim());
   const general =
-    hasInvalid && hasEmpty ? 'תקן את השדות הריקים והטווחים החופפים' : undefined;
+    hasInvalid && hasEmpty ? language.t('workingHours.fixEmptyAndOverlapping') : undefined;
   return { byIndex, general };
 }
 
