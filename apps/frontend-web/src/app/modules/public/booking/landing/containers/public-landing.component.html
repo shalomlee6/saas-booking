@@ -18,7 +18,7 @@
       />
     }
 
-    <div class="pl-section pl-section--base pl-welcome">
+    <div class="pl-section pl-section--base pl-welcome" plReveal>
       <div class="pl-welcome-inner">
         <div class="pl-greeting">
           <h2 class="pl-greeting__title">{{ greetingTitle() }}</h2>
@@ -41,7 +41,7 @@
     </div>
 
     @if (sectionVisibility().services) {
-      <div class="pl-section pl-section--accent">
+      <div class="pl-section pl-section--accent" plReveal plRevealStagger>
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-services
             [services]="servicesList()"
@@ -52,7 +52,7 @@
     }
 
     @if (sectionVisibility().gallery) {
-      <div class="pl-section pl-section--base">
+      <div class="pl-section pl-section--base" plReveal plRevealStagger>
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-gallery
             [items]="landingGalleryItems()"
@@ -63,7 +63,7 @@
     }
 
     @if (sectionVisibility().products && showProductsSection()) {
-      <div class="pl-section pl-section--accent">
+      <div class="pl-section pl-section--accent" plReveal plRevealStagger>
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-products [products]="landingProducts()" />
         </div>
@@ -71,7 +71,7 @@
     }
 
     @if (sectionVisibility().reviews && showReviewsSection()) {
-      <div class="pl-section pl-section--base">
+      <div class="pl-section pl-section--base" plReveal plRevealStagger>
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-reviews [reviews]="landingReviews()" />
         </div>
@@ -79,7 +79,7 @@
     }
 
     @if (sectionVisibility().cta) {
-      <div class="pl-section pl-section--base">
+      <div class="pl-section pl-section--base" plReveal>
         <div class="pl-inner">
           <app-public-landing-booking-cta
             [phone]="landingPhone()"

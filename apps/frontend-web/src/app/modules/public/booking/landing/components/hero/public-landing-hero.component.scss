@@ -9,6 +9,7 @@
 .pl-hero-slider {
   width: 100%;
   border-radius: 0;
+  overflow: hidden;
 }
 
 ::ng-deep .pl-hero-carousel {
@@ -128,8 +129,8 @@
 // `translateY` instead of `translateX`). Reduced-motion is handled globally in
 // `styles.scss` (zeroes all animation durations), so no local override is needed.
 .pl-hero-wrap--play-entrance {
-  .pl-hero-entrance-item--media {
-    animation: pl-hero-fade-in 0.4s ease-out both;
+  .pl-hero-entrance-item--media .pl-hero-carousel__img {
+    animation: pl-hero-media-in 0.4s ease-out both;
   }
 
   .pl-hero-entrance-item--brand {
@@ -147,12 +148,14 @@
   }
 }
 
-@keyframes pl-hero-fade-in {
+@keyframes pl-hero-media-in {
   from {
     opacity: 0;
+    transform: scale(1.04);
   }
   to {
     opacity: 1;
+    transform: scale(1);
   }
 }
 

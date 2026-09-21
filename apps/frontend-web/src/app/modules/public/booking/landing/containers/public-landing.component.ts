@@ -39,6 +39,7 @@ import { PublicLandingGalleryComponent } from '../components/gallery/public-land
 import { PublicLandingProductsComponent } from '../components/products/public-landing-products.component';
 import { PublicLandingReviewsComponent } from '../components/reviews/public-landing-reviews.component';
 import { PublicLandingBookingCtaComponent } from '../components/booking-cta/public-landing-booking-cta.component';
+import { PlRevealDirective } from '../directives/pl-reveal.directive';
 import { resolvePublicAssetUrl } from '../../../../../shared/utils/public-asset-url';
 
 /** Map status values to Hebrew labels. */
@@ -122,6 +123,7 @@ function shouldPlayEntranceAnimation(slug: string): boolean {
     PublicLandingProductsComponent,
     PublicLandingReviewsComponent,
     PublicLandingBookingCtaComponent,
+    PlRevealDirective,
   ],
   templateUrl: './public-landing.component.html',
   styleUrl: './public-landing.component.scss',

@@ -83,6 +83,73 @@
   color: $pl-text-muted;
 }
 
+// ─── Scroll reveal (one-shot, below-fold sections) ────────────────────────────
+// Transform/opacity only — layout space is reserved (no CLS). Same ease-out as
+// the hero. Reduced-motion: initial hidden state is skipped here so content is
+// visible immediately; the global styles.scss rule still zeroes durations.
+.pl-reveal:not(.pl-reveal-stagger) {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.5s ease-out,
+    transform 0.5s ease-out;
+}
+
+.pl-reveal:not(.pl-reveal-stagger).pl-reveal-in {
+  opacity: 1;
+  transform: none;
+}
+
+.pl-reveal-stagger {
+  ::ng-deep .pl-svc__card,
+  ::ng-deep .pl-gal__thumb,
+  ::ng-deep .pl-prod__card,
+  ::ng-deep .pl-rev__card {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+      opacity 0.5s ease-out,
+      transform 0.5s ease-out;
+  }
+}
+
+.pl-reveal-stagger.pl-reveal-in {
+  ::ng-deep .pl-svc__card,
+  ::ng-deep .pl-gal__thumb,
+  ::ng-deep .pl-prod__card,
+  ::ng-deep .pl-rev__card {
+    opacity: 1;
+    transform: none;
+  }
+
+  @for $i from 1 through 6 {
+    ::ng-deep .pl-svc__card:nth-child(#{$i}),
+    ::ng-deep .pl-gal__thumb:nth-child(#{$i}),
+    ::ng-deep .pl-prod__card:nth-child(#{$i}),
+    ::ng-deep .pl-rev__card:nth-child(#{$i}) {
+      transition-delay: #{($i - 1) * 0.05}s;
+    }
+  }
+
+  ::ng-deep .pl-svc__card:nth-child(n + 7),
+  ::ng-deep .pl-gal__thumb:nth-child(n + 7),
+  ::ng-deep .pl-prod__card:nth-child(n + 7),
+  ::ng-deep .pl-rev__card:nth-child(n + 7) {
+    transition-delay: 0.25s;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pl-reveal:not(.pl-reveal-stagger),
+  .pl-reveal-stagger ::ng-deep .pl-svc__card,
+  .pl-reveal-stagger ::ng-deep .pl-gal__thumb,
+  .pl-reveal-stagger ::ng-deep .pl-prod__card,
+  .pl-reveal-stagger ::ng-deep .pl-rev__card {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 // ─── Mobile sticky bar ─────────────────────────────────────────────────────────
 .pl-sticky-bar {
   display: none;
