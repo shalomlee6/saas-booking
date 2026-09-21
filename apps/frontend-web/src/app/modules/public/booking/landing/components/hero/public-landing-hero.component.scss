@@ -119,3 +119,50 @@
   border: none;
   color: #fff;
 }
+
+// ─── Entrance animation (plays once per tenant per browser session) ───────────
+// Default state (no `--play-entrance` modifier): every item already sits in its
+// final, fully-visible position — a session that has seen the animation before,
+// or a browser without JS/sessionStorage, still renders the hero correctly.
+// Only `transform`/`opacity` are animated (no CLS, GPU-accelerated, RTL-safe —
+// `translateY` instead of `translateX`). Reduced-motion is handled globally in
+// `styles.scss` (zeroes all animation durations), so no local override is needed.
+.pl-hero-wrap--play-entrance {
+  .pl-hero-entrance-item--media {
+    animation: pl-hero-fade-in 0.4s ease-out both;
+  }
+
+  .pl-hero-entrance-item--brand {
+    animation: pl-hero-fade-up 0.4s ease-out 0.2s both;
+  }
+
+  .pl-hero-entrance-item--copy {
+    animation: pl-hero-fade-up 0.4s ease-out 0.4s both;
+  }
+
+  ::ng-deep .pl-hero-entrance-item--cta.p-button {
+    animation: pl-hero-fade-up 0.4s ease-out 0.6s both;
+    // Stays clickable through its own fade-in — never gated behind the animation.
+    pointer-events: auto;
+  }
+}
+
+@keyframes pl-hero-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pl-hero-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

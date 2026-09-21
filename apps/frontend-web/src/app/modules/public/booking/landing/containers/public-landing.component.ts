@@ -77,6 +77,34 @@ const CANCELLABLE_STATUSES = new Set(['confirmed', 'pending']);
 
 const DEFAULT_TAGLINE = 'יופי מקצועי, תוצאות מושלמות';
 
+/** sessionStorage key prefix for the once-per-session hero entrance animation, scoped per tenant slug. */
+const ENTRANCE_SEEN_KEY_PREFIX = 'boki:landingEntranceSeen:';
+
+/**
+ * Decides whether the hero entrance animation should play for this tenant slug,
+ * and records that it has been shown so it does not replay later in the same
+ * browser session (e.g. navigating back to the landing page, or re-rendering
+ * after booking). Guarded so a page with sessionStorage unavailable (private
+ * browsing, SSR) still renders normally — it just may play the animation again.
+ */
+function shouldPlayEntranceAnimation(slug: string): boolean {
+  if (typeof window === 'undefined' || !slug) return false;
+  const key = `${ENTRANCE_SEEN_KEY_PREFIX}${slug}`;
+  try {
+    if (window.sessionStorage.getItem(key)) {
+      return false;
+    }
+  } catch {
+    // sessionStorage read blocked — fall through and allow the animation once.
+  }
+  try {
+    window.sessionStorage.setItem(key, '1');
+  } catch {
+    // sessionStorage write blocked — nothing to persist; rendering is unaffected.
+  }
+  return true;
+}
+
 @Component({
   selector: 'app-public-landing',
   standalone: true,
@@ -125,6 +153,12 @@ export class PublicLandingComponent implements OnInit {
 
   /** Reactive slug from parent route (`/b/:slug`). */
   readonly businessSlug = signal('');
+
+  /**
+   * Whether the hero entrance animation should play. True at most once per
+   * tenant per browser session — see `shouldPlayEntranceAnimation`.
+   */
+  readonly playHeroEntrance = signal(false);
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
@@ -333,6 +367,7 @@ export class PublicLandingComponent implements OnInit {
       )
       .subscribe((slug) => {
         this.businessSlug.set(slug);
+        this.playHeroEntrance.set(shouldPlayEntranceAnimation(slug));
         if (!slug) {
           this.loadingPageData.set(false);
           this.pageLoadError.set('חסר מזהה עסק');

@@ -1,5 +1,5 @@
-<div class="pl-hero-wrap">
-  <div class="pl-hero-slider">
+<div class="pl-hero-wrap" [class.pl-hero-wrap--play-entrance]="playEntrance()">
+  <div class="pl-hero-slider pl-hero-entrance-item pl-hero-entrance-item--media">
     <p-carousel
       [value]="carouselSlides()"
       [numVisible]="1"
@@ -26,16 +26,22 @@
   </div>
 
   <div class="pl-hero-intro" dir="rtl">
-    <p class="pl-hero-intro__name">{{ businessName() }}</p>
-    <p class="pl-hero-intro__tagline">{{ tagline() }}</p>
+    <p class="pl-hero-intro__name pl-hero-entrance-item pl-hero-entrance-item--brand">
+      {{ businessName() }}
+    </p>
+    <p class="pl-hero-intro__tagline pl-hero-entrance-item pl-hero-entrance-item--copy">
+      {{ tagline() }}
+    </p>
     @if (description().trim()) {
-      <p class="pl-hero-intro__desc">{{ description() }}</p>
+      <p class="pl-hero-intro__desc pl-hero-entrance-item pl-hero-entrance-item--copy">
+        {{ description() }}
+      </p>
     }
     <p-button
       label="קביעת תור"
       icon="pi pi-calendar-plus"
       iconPos="right"
-      styleClass="pl-hero-intro__cta"
+      styleClass="pl-hero-intro__cta pl-hero-entrance-item pl-hero-entrance-item--cta"
       (onClick)="book.emit()"
     />
   </div>

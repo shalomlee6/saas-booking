@@ -23,6 +23,12 @@ export class PublicLandingHeroComponent {
   readonly description = input('');
   readonly imageLeft = input.required<string>();
   readonly imageRight = input.required<string>();
+  /**
+   * Plays the premium entrance animation (hero media → branding → copy → CTA)
+   * once. Container decides this per tenant/session — see `PublicLandingComponent`.
+   * When false, all elements render immediately in their final state.
+   */
+  readonly playEntrance = input(false);
 
   readonly carouselSlides = computed(() => {
     const a = this.imageLeft();
