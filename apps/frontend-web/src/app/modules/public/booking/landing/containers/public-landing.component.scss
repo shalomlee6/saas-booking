@@ -1,9 +1,9 @@
-@use '../utils/public-landing-palette' as *;
+﻿@use '../utils/public-landing-palette' as *;
 
 .pl-page {
   min-height: 100dvh;
   background: $pl-bg-page;
-  text-align: right;
+  text-align: start;
   box-sizing: border-box;
 }
 
@@ -47,6 +47,25 @@
   box-sizing: border-box;
 }
 
+.pl-scroll-anchor {
+  scroll-margin-top: 72px;
+}
+
+// #public-location only: it's the LAST section on the page, so "scroll it to the top"
+// can't fully happen — there's nothing below it to scroll into (the browser clamps to
+// end-of-document, leaving the section stranded mid-viewport instead of flush at the
+// top). Giving it real height and vertically centering its content means that clamped
+// landing spot still looks deliberate — the card sits centered in the section rather
+// than pinned to its bottom edge — and the extra height itself buys back some of the
+// missing scroll room. (#public-upcoming, the other scroll-anchor, doesn't need this —
+// it already has full content below it, so it reaches the top on its own.)
+.pl-scroll-anchor--trailing {
+  min-height: min(80vh, 560px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .pl-welcome-inner {
   max-width: 720px;
   margin-inline: auto;
@@ -83,8 +102,8 @@
   color: $pl-text-muted;
 }
 
-// ─── Scroll reveal (one-shot, below-fold sections) ────────────────────────────
-// Transform/opacity only — layout space is reserved (no CLS). Same ease-out as
+// ג”€ג”€ג”€ Scroll reveal (one-shot, below-fold sections) ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
+// Transform/opacity only ג€” layout space is reserved (no CLS). Same ease-out as
 // the hero. Reduced-motion: initial hidden state is skipped here so content is
 // visible immediately; the global styles.scss rule still zeroes durations.
 .pl-reveal:not(.pl-reveal-stagger) {
@@ -150,7 +169,7 @@
   }
 }
 
-// ─── Mobile sticky bar ─────────────────────────────────────────────────────────
+// ג”€ג”€ג”€ Mobile sticky bar ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€ג”€
 .pl-sticky-bar {
   display: none;
 }
@@ -232,187 +251,3 @@
   }
 }
 
-// ─── PrimeNG drawer base tweak ────────────────────────────────────────────────
-::ng-deep .p-drawer {
-  height: fit-content;
-}
-
-// ─── Cancellation drawer ──────────────────────────────────────────────────────
-::ng-deep .cancel-drawer {
-  border-radius: 24px 24px 0 0;
-  overflow: hidden;
-  height: auto !important;
-
-  .p-drawer-header {
-    padding: 1.25rem 1.25rem 0.75rem;
-    border-bottom: 1px solid $pl-border;
-  }
-
-  .p-drawer-content {
-    padding: 0;
-    overflow-y: auto;
-  }
-}
-
-.cancel-drawer-header {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
-.cancel-drawer-icon {
-  font-size: 1.25rem;
-  color: $pl-primary;
-}
-
-.cancel-drawer-title {
-  font-size: 1.0625rem;
-  font-weight: 600;
-  color: $pl-text-heading;
-}
-
-.cancel-drawer-body {
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.125rem;
-}
-
-.cancel-apt-summary {
-  background: $pl-bg-section-alt;
-  border-radius: 12px;
-  padding: 0.875rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.cancel-apt-summary-row {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  font-size: 0.9rem;
-  color: $pl-text-body;
-
-  .pi {
-    color: $pl-primary;
-    font-size: 0.875rem;
-    width: 1rem;
-    text-align: center;
-    flex-shrink: 0;
-  }
-}
-
-.apt-time-ltr {
-  direction: ltr;
-  display: inline-block;
-}
-
-.cancel-confirm-text {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: $pl-text-heading;
-  font-weight: 500;
-  text-align: right;
-}
-
-.cancel-reason-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.cancel-reason-label {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: $pl-text-heading;
-}
-
-.cancel-reason-required {
-  color: var(--color-danger, #dc2626);
-  margin-inline-start: 0.125rem;
-}
-
-.cancel-reason-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  border-radius: 10px;
-  border: 1px solid $pl-border;
-  padding: 0.75rem 0.875rem;
-  font-size: 0.9375rem;
-  font-family: inherit;
-  color: $pl-text-body;
-  background: $pl-primary-pale;
-  resize: vertical;
-  min-height: 80px;
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s;
-  direction: rtl;
-  text-align: right;
-
-  &:focus {
-    outline: none;
-    border-color: $pl-primary-light;
-    box-shadow: 0 0 0 3px rgba(183, 110, 121, 0.15);
-  }
-
-  &--invalid {
-    border-color: var(--color-danger, #dc2626);
-
-    &:focus {
-      border-color: var(--color-danger, #dc2626);
-      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-danger, #dc2626) 15%, transparent);
-    }
-  }
-
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-  }
-}
-
-.cancel-reason-error {
-  font-size: 0.8125rem;
-  color: var(--color-danger, #dc2626);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.cancel-server-error {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1rem;
-  background: color-mix(in srgb, var(--color-danger, #dc2626) 8%, #fff);
-  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 25%, transparent);
-  border-radius: 10px;
-  font-size: 0.875rem;
-  color: var(--color-danger, #dc2626);
-
-  .pi {
-    flex-shrink: 0;
-    font-size: 1rem;
-  }
-}
-
-.cancel-drawer-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  padding-bottom: 0.5rem;
-}
-
-.cancel-confirm-btn {
-  ::ng-deep .p-button {
-    width: 100%;
-    border-radius: 50px;
-    justify-content: center;
-    font-size: 1rem;
-    font-weight: 500;
-    padding: 0.875rem 1.5rem;
-    min-height: 52px;
-    gap: 0.5rem;
-  }
-}

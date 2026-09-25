@@ -12,10 +12,11 @@
     <div class="cd-header">
       <div class="cd-header-text">
         <h1 class="cd-name">{{ c.name }}</h1>
-        <div class="cd-contact" dir="ltr">
-          <span>{{ c.phone }}</span>
+        <div class="cd-contact">
+          <span dir="ltr">{{ c.phone }}</span>
           @if (c.email) {
-            <span>· {{ c.email }}</span>
+            <span>· </span>
+            <span dir="ltr">{{ c.email }}</span>
           }
         </div>
       </div>
@@ -55,54 +56,65 @@
     @if (loadingStats()) {
       <p class="cd-loading">{{ 'common.loading' | translate }}</p>
     } @else if (stats(); as s) {
-      <div class="cd-stats-grid">
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.completedVisits' | translate }}</span>
-          <span class="cd-stat-value">{{ s.completedVisits }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.cancellations' | translate }}</span>
-          <span class="cd-stat-value">{{ s.cancellations }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.noShows' | translate }}</span>
-          <span class="cd-stat-value">{{ s.noShows }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.totalRevenue' | translate }}</span>
-          <span class="cd-stat-value">{{ s.totalRevenue | currency: 'ILS' }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.averageSpend' | translate }}</span>
-          <span class="cd-stat-value">{{ s.averageSpend | currency: 'ILS' }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.visitFrequency' | translate }}</span>
-          <span class="cd-stat-value">{{ s.visitFrequencyDays !== null ? ('customerCard.everyNDays' | translate: { n: s.visitFrequencyDays }) : '—' }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.preferredTime' | translate }}</span>
-          <span class="cd-stat-value">{{ timeOfDayLabel(s.preferredTimeOfDay) }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.lastAppointment' | translate }}</span>
-          <span class="cd-stat-value">{{ s.lastAppointment ? formatDate(s.lastAppointment.start) : '—' }}</span>
-        </div>
-        <div class="cd-stat">
-          <span class="cd-stat-label">{{ 'customerCard.nextAppointment' | translate }}</span>
-          <span class="cd-stat-value">{{ s.nextAppointment ? formatDate(s.nextAppointment.start) : '—' }}</span>
-        </div>
-      </div>
+      @if (!s.isNewCustomer) {
+        <div class="cd-stats-grid">
+          <div class="cd-stat cd-stat--headline">
+            <span class="cd-stat-label">{{ 'customerCard.totalRevenue' | translate }}</span>
+            <span class="cd-stat-value cd-stat-value--headline">{{ s.totalRevenue | currency: 'ILS' }}</span>
+          </div>
+          <div class="cd-stat cd-stat--headline">
+            <span class="cd-stat-label">{{ 'customerCard.averageSpend' | translate }}</span>
+            <span class="cd-stat-value cd-stat-value--headline">{{ s.averageSpend | currency: 'ILS' }}</span>
+          </div>
 
-      @if (s.mostBookedServices.length > 0) {
-        <div class="customers-card cd-section">
-          <h2 class="cd-section-title">{{ 'customerCard.topServicesTitle' | translate }}</h2>
-          <ul class="cd-service-breakdown">
-            @for (svc of s.mostBookedServices; track svc.serviceId) {
-              <li>{{ svc.serviceName || ('customerCard.unknownService' | translate) }} — {{ svc.count }} {{ 'customerCard.visitsSuffix' | translate }}</li>
-            }
-          </ul>
+          <div class="cd-stat cd-stat--group">
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.completedVisits' | translate }}</span>
+              <span class="cd-stat-value">{{ s.completedVisits }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.cancellations' | translate }}</span>
+              <span class="cd-stat-value">{{ s.cancellations }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.noShows' | translate }}</span>
+              <span class="cd-stat-value">{{ s.noShows }}</span>
+            </div>
+          </div>
+
+          <div class="cd-stat cd-stat--group">
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.lastAppointment' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ s.lastAppointment ? formatDate(s.lastAppointment.start) : '—' }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.nextAppointment' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ s.nextAppointment ? formatDate(s.nextAppointment.start) : '—' }}</span>
+            </div>
+          </div>
+
+          <div class="cd-stat cd-stat--group">
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.visitFrequency' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ s.visitFrequencyDays !== null ? ('customerCard.everyNDays' | translate: { n: s.visitFrequencyDays }) : '—' }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.preferredTime' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ timeOfDayLabel(s.preferredTimeOfDay) }}</span>
+            </div>
+          </div>
         </div>
+
+        @if (s.mostBookedServices.length > 0) {
+          <div class="customers-card cd-section">
+            <h2 class="cd-section-title">{{ 'customerCard.topServicesTitle' | translate }}</h2>
+            <ul class="cd-service-breakdown">
+              @for (svc of s.mostBookedServices; track svc.serviceId) {
+                <li>{{ svc.serviceName || ('customerCard.unknownService' | translate) }} — {{ svc.count }} {{ 'customerCard.visitsSuffix' | translate }}</li>
+              }
+            </ul>
+          </div>
+        }
       }
     }
 
@@ -280,66 +292,65 @@
     </div>
 
     <div class="customers-card cd-section">
-      <h2 class="cd-section-title">{{ 'customerCard.upcomingAppointments' | translate }}</h2>
-      @if (loadingHistory()) {
-        <p class="cd-loading">{{ 'common.loading' | translate }}</p>
-      } @else if (upcomingAppointments().length === 0) {
-        <p class="cd-empty">{{ 'customerCard.noUpcoming' | translate }}</p>
-      } @else {
-        <div class="customers-table-wrap">
-          <table class="customers-table">
-            <thead>
-              <tr>
-                <th>{{ 'common.date' | translate }}</th>
-                <th>{{ 'common.service' | translate }}</th>
-                <th>{{ 'common.status' | translate }}</th>
-                <th>{{ 'common.price' | translate }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a of upcomingAppointments(); track a.appointmentId) {
-                <tr>
-                  <td>{{ formatDateTime(a.start) }}</td>
-                  <td>{{ a.serviceName || '—' }}</td>
-                  <td>{{ statusLabel(a.status) }}</td>
-                  <td>{{ a.price != null ? (a.price | currency: 'ILS') : '—' }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      }
-    </div>
+      <div class="cd-history-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="cd-history-tab"
+          [class.cd-history-tab--active]="historyTab() === 'upcoming'"
+          [attr.aria-selected]="historyTab() === 'upcoming'"
+          (click)="historyTab.set('upcoming')"
+        >
+          {{ 'customerCard.upcomingAppointments' | translate }}
+          @if (upcomingAppointments().length > 0) {
+            <span class="cd-history-tab-count">{{ upcomingAppointments().length }}</span>
+          }
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="cd-history-tab"
+          [class.cd-history-tab--active]="historyTab() === 'past'"
+          [attr.aria-selected]="historyTab() === 'past'"
+          (click)="historyTab.set('past')"
+        >
+          {{ 'customerCard.pastAppointments' | translate }}
+          @if (pastAppointments().length > 0) {
+            <span class="cd-history-tab-count">{{ pastAppointments().length }}</span>
+          }
+        </button>
+      </div>
 
-    <div class="customers-card cd-section">
-      <h2 class="cd-section-title">{{ 'customerCard.pastAppointments' | translate }}</h2>
       @if (loadingHistory()) {
         <p class="cd-loading">{{ 'common.loading' | translate }}</p>
-      } @else if (pastAppointments().length === 0) {
-        <p class="cd-empty">{{ 'customerCard.noPast' | translate }}</p>
       } @else {
-        <div class="customers-table-wrap">
-          <table class="customers-table">
-            <thead>
-              <tr>
-                <th>{{ 'common.date' | translate }}</th>
-                <th>{{ 'common.service' | translate }}</th>
-                <th>{{ 'common.status' | translate }}</th>
-                <th>{{ 'common.price' | translate }}</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a of pastAppointments(); track a.appointmentId) {
+        @let rows = historyTab() === 'upcoming' ? upcomingAppointments() : pastAppointments();
+        @if (rows.length === 0) {
+          <p class="cd-empty">{{ (historyTab() === 'upcoming' ? 'customerCard.noUpcoming' : 'customerCard.noPast') | translate }}</p>
+        } @else {
+          <div class="customers-table-wrap">
+            <table class="customers-table">
+              <thead>
                 <tr>
-                  <td>{{ formatDateTime(a.start) }}</td>
-                  <td>{{ a.serviceName || '—' }}</td>
-                  <td>{{ statusLabel(a.status) }}</td>
-                  <td>{{ a.price != null ? (a.price | currency: 'ILS') : '—' }}</td>
+                  <th>{{ 'common.date' | translate }}</th>
+                  <th>{{ 'common.service' | translate }}</th>
+                  <th>{{ 'common.status' | translate }}</th>
+                  <th>{{ 'common.price' | translate }}</th>
                 </tr>
-              }
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                @for (a of rows; track a.appointmentId) {
+                  <tr>
+                    <td>{{ formatDateTime(a.start) }}</td>
+                    <td>{{ a.serviceName || '—' }}</td>
+                    <td>{{ statusLabel(a.status) }}</td>
+                    <td>{{ a.price != null ? (a.price | currency: 'ILS') : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
       }
     </div>
   }

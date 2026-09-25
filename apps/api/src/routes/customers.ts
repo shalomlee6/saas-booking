@@ -8,10 +8,13 @@ import {
   customerCreateBodySchema,
   customerIdParamsSchema,
   customerUpdateBodySchema,
+  customersBulkDeleteBodySchema,
   customersListQuerySchema,
 } from '../validation/schemas/customers';
 import {
+  bulkDeleteCustomers,
   createCustomer,
+  deleteCustomer,
   getCustomer,
   getCustomerAppointmentHistory,
   getCustomerCardStats,
@@ -37,6 +40,12 @@ customersRouter.post(
   asyncHandler((req: AuthRequest, res) => createCustomer(req, res))
 );
 
+customersRouter.post(
+  '/bulk-delete',
+  validateBody(customersBulkDeleteBodySchema),
+  asyncHandler((req: AuthRequest, res) => bulkDeleteCustomers(req, res))
+);
+
 customersRouter.get(
   '/:id',
   validateParams(customerIdParamsSchema),
@@ -48,6 +57,12 @@ customersRouter.put(
   validateParams(customerIdParamsSchema),
   validateBody(customerUpdateBodySchema),
   asyncHandler((req: AuthRequest, res) => updateCustomer(req, res))
+);
+
+customersRouter.delete(
+  '/:id',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => deleteCustomer(req, res))
 );
 
 customersRouter.get(

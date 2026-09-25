@@ -1,0 +1,151 @@
+@use '../../booking/landing/utils/public-landing-palette' as *;
+
+.public-apt-details-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: $pl-text-heading;
+}
+
+.public-apt-details-body {
+  padding: 0.25rem 0 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.public-apt-details-summary {
+  background: $pl-bg-section-alt;
+  border-radius: 12px;
+  padding: 0.875rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.public-apt-details-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.9rem;
+  color: $pl-text-body;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.public-apt-details-row .pi {
+  color: $pl-primary;
+  font-size: 0.875rem;
+  width: 1rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.public-apt-details-time {
+  direction: ltr;
+  display: inline-block;
+}
+
+.public-apt-details-confirm {
+  margin: 0;
+  font-size: 0.9375rem;
+  color: $pl-text-heading;
+  font-weight: 500;
+  text-align: start;
+}
+
+.public-apt-details-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.public-apt-details-reason-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: $pl-text-heading;
+}
+
+.public-apt-details-required {
+  color: var(--color-danger, #dc2626);
+  margin-inline-start: 0.125rem;
+}
+
+.public-apt-details-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 10px;
+  border: 1px solid $pl-border;
+  padding: 0.75rem 0.875rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  color: $pl-text-body;
+  background: $pl-primary-pale;
+  resize: vertical;
+  min-height: 80px;
+  text-align: start;
+}
+
+.public-apt-details-textarea:focus {
+  outline: none;
+  border-color: $pl-primary-light;
+  box-shadow: 0 0 0 3px rgba(183, 110, 121, 0.15);
+}
+
+.public-apt-details-textarea-invalid {
+  border-color: var(--color-danger, #dc2626);
+}
+
+.public-apt-details-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.public-apt-details-reason-error,
+.public-apt-details-error {
+  font-size: 0.8125rem;
+  color: var(--color-danger, #dc2626);
+}
+
+.public-apt-details-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: color-mix(in srgb, var(--color-danger, #dc2626) 8%, #fff);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #dc2626) 25%, transparent);
+  border-radius: 10px;
+  font-size: 0.875rem;
+}
+
+::ng-deep .public-apt-details-drawer {
+  border-radius: 24px 24px 0 0;
+  overflow: hidden;
+  height: auto !important;
+}
+
+::ng-deep .public-apt-details-drawer .p-drawer-header {
+  padding: 1.25rem 1.25rem 0.75rem;
+  border-bottom: 1px solid $pl-border;
+}
+
+::ng-deep .public-apt-details-drawer .p-drawer-content {
+  padding: 1.25rem;
+}
+
+::ng-deep .public-apt-details-cancel-btn.p-button {
+  width: 100%;
+  border-radius: 50px;
+  justify-content: center;
+  min-height: 52px;
+}
+
+::ng-deep .public-apt-details-edit-btn.p-button {
+  border-radius: 50px;
+}
+
+::ng-deep .public-apt-details-edit-btn.p-button:focus-visible,
+::ng-deep .public-apt-details-cancel-btn.p-button:focus-visible {
+  outline: 2px solid $pl-primary;
+  outline-offset: 2px;
+}

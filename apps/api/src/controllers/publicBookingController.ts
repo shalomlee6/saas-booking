@@ -494,40 +494,9 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   res.status(201).json(payload);
 }
 
-// --- GET /api/public/appointments/upcoming
-/**
- * Returns the customer's nearest upcoming (non-cancelled, future) appointment.
- * Requires a valid public-customer Bearer JWT (role=customer).
- * Returns { appointment: null } when unauthenticated or no future appointment exists.
- */
-export async function getUpcomingCustomerAppointment(req: Request, res: Response): Promise<void> {
-  const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  if (!publicCustomer) {
-    res.json({ appointment: null });
-    return;
-  }
+type PopulatedUpcomingService = { _id: Types.ObjectId; name: string };
 
-  const now = new Date();
-  const apt = await Appointment.findOne({
-    customerId: new Types.ObjectId(publicCustomer.customerId),
-    businessId: new Types.ObjectId(publicCustomer.businessId),
-    status: { $nin: ['cancelled'] },
-    start: { $gte: now },
-  })
-    .sort({ start: 1 })
-    .populate<{ serviceId: { name: string } }>('serviceId', 'name')
-    .lean();
-
-  if (!apt) {
-    res.json({ appointment: null });
-    return;
-  }
-
-  const settings = await BusinessSettings.findOne({
-    businessId: new Types.ObjectId(publicCustomer.businessId),
-  });
-  const timezone = settings?.localization?.timezone ?? 'Asia/Jerusalem';
-
+function formatPublicAppointmentClock(start: Date, timezone: string): { date: string; time: string } {
   const dtParts = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
@@ -536,23 +505,80 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     hour: '2-digit',
     minute: '2-digit',
     hour12: false,
-  }).formatToParts(apt.start);
+  }).formatToParts(start);
   const getPart = (type: string) => dtParts.find((p) => p.type === type)?.value ?? '00';
   const rawHour = getPart('hour');
-  const aptDate = `${getPart('year')}-${getPart('month')}-${getPart('day')}`;
-  const aptTime = `${rawHour === '24' ? '00' : rawHour}:${getPart('minute')}`;
+  return {
+    date: `${getPart('year')}-${getPart('month')}-${getPart('day')}`,
+    time: `${rawHour === '24' ? '00' : rawHour}:${getPart('minute')}`,
+  };
+}
+
+function toPublicUpcomingAppointment(
+  apt: {
+    _id: Types.ObjectId;
+    start: Date;
+    status: string;
+    serviceId?: PopulatedUpcomingService | Types.ObjectId | null;
+  },
+  timezone: string
+) {
+  const { date, time } = formatPublicAppointmentClock(apt.start, timezone);
+  const service =
+    apt.serviceId && typeof apt.serviceId === 'object' && 'name' in apt.serviceId
+      ? apt.serviceId
+      : null;
+  return {
+    id: apt._id.toString(),
+    date,
+    time,
+    status: apt.status,
+    serviceName: service?.name ?? '',
+    serviceId: service?._id?.toString() ?? '',
+  };
+}
+
+const EMPTY_UPCOMING = { appointment: null, appointments: [] as ReturnType<typeof toPublicUpcomingAppointment>[] };
+
+// --- GET /api/public/appointments/upcoming
+/**
+ * Returns the authenticated customer's upcoming (non-cancelled, future) appointments,
+ * sorted soonest-first. `appointment` is the nearest item (or null) for the home preview;
+ * `appointments` is the full list for the Upcoming Appointments page.
+ * Unauthenticated callers receive empty results (never another customer's data).
+ */
+export async function getUpcomingCustomerAppointment(req: Request, res: Response): Promise<void> {
+  const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+  if (!publicCustomer) {
+    res.json(EMPTY_UPCOMING);
+    return;
+  }
+
+  const now = new Date();
+  const apts = await Appointment.find({
+    customerId: new Types.ObjectId(publicCustomer.customerId),
+    businessId: new Types.ObjectId(publicCustomer.businessId),
+    status: { $nin: ['cancelled'] },
+    start: { $gte: now },
+  })
+    .sort({ start: 1 })
+    .populate<{ serviceId: PopulatedUpcomingService }>('serviceId', 'name')
+    .lean();
+
+  if (!apts.length) {
+    res.json(EMPTY_UPCOMING);
+    return;
+  }
+
+  const settings = await BusinessSettings.findOne({
+    businessId: new Types.ObjectId(publicCustomer.businessId),
+  });
+  const timezone = settings?.localization?.timezone ?? 'Asia/Jerusalem';
+  const appointments = apts.map((apt) => toPublicUpcomingAppointment(apt, timezone));
 
   res.json({
-    appointment: {
-      id: apt._id.toString(),
-      date: aptDate,
-      time: aptTime,
-      status: apt.status,
-      serviceName:
-        apt.serviceId && typeof apt.serviceId === 'object' && 'name' in apt.serviceId
-          ? (apt.serviceId as { name: string }).name
-          : '',
-    },
+    appointment: appointments[0] ?? null,
+    appointments,
   });
 }
 

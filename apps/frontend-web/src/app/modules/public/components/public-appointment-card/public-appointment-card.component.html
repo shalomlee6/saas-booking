@@ -1,0 +1,44 @@
+<article
+  class="public-apt-card"
+  [class.public-apt-card-clickable]="clickable()"
+  [attr.role]="clickable() ? 'link' : undefined"
+  [attr.tabindex]="clickable() ? 0 : null"
+  (click)="onCardClick()"
+  (keydown)="onCardKeydown($event)"
+>
+  <div class="public-apt-head">
+    <p-tag [value]="statusLabel()" [severity]="statusSeverity()" styleClass="public-apt-tag" />
+    @if (canEdit()) {
+      <span (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+        <p-button
+          [label]="'appointments.editAppointment' | translate"
+          icon="pi pi-pencil"
+          iconPos="right"
+          styleClass="public-apt-edit"
+          (onClick)="onEditClick($event)"
+        />
+      </span>
+    }
+  </div>
+  @if (countdownLabel()) {
+    <p class="public-apt-countdown">{{ countdownLabel() }}</p>
+  }
+  <div class="public-apt-row">
+    <i class="pi pi-sparkles public-apt-ico public-apt-ico-sparkle" aria-hidden="true"></i>
+    <span class="public-apt-strong">{{ apt().serviceName }}</span>
+  </div>
+  @if (staffLine()) {
+    <div class="public-apt-row">
+      <i class="pi pi-user public-apt-ico" aria-hidden="true"></i>
+      <span class="public-apt-muted">{{ staffLine() }}</span>
+    </div>
+  }
+  <div class="public-apt-row">
+    <i class="pi pi-calendar public-apt-ico" aria-hidden="true"></i>
+    <span>{{ formattedDate() }}</span>
+  </div>
+  <div class="public-apt-row">
+    <i class="pi pi-clock public-apt-ico" aria-hidden="true"></i>
+    <span class="public-apt-time">{{ apt().time }}</span>
+  </div>
+</article>

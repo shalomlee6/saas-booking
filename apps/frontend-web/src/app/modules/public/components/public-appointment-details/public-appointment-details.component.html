@@ -1,0 +1,114 @@
+@if (appointment(); as apt) {
+  @if (isMobile()) {
+    <p-drawer
+      [visible]="true"
+      (visibleChange)="onVisibleChange($event)"
+      position="bottom"
+      styleClass="public-apt-details-drawer"
+      [modal]="true"
+      [dismissible]="!cancelling()"
+      [closeOnEscape]="!cancelling()"
+    >
+      <ng-template pTemplate="header">
+        <span class="public-apt-details-title">{{ 'appointments.detailsTitle' | translate }}</span>
+      </ng-template>
+      <ng-container *ngTemplateOutlet="detailsBody; context: { $implicit: apt }" />
+    </p-drawer>
+  } @else {
+    <p-dialog
+      [header]="'appointments.detailsTitle' | translate"
+      [visible]="true"
+      [modal]="true"
+      [draggable]="false"
+      [resizable]="false"
+      [closable]="!cancelling()"
+      [closeOnEscape]="!cancelling()"
+      [style]="{ width: '26rem', maxWidth: 'calc(100vw - 2rem)' }"
+      [closeAriaLabel]="'appointments.close' | translate"
+      (visibleChange)="onVisibleChange($event)"
+      styleClass="public-apt-details-dialog"
+    >
+      <ng-container *ngTemplateOutlet="detailsBody; context: { $implicit: apt }" />
+    </p-dialog>
+  }
+}
+
+<ng-template #detailsBody let-apt>
+  <div class="public-apt-details-body">
+    <div class="public-apt-details-summary">
+      <div class="public-apt-details-row">
+        <i class="pi pi-sparkles" aria-hidden="true"></i>
+        <span>{{ apt.serviceName }}</span>
+      </div>
+      <div class="public-apt-details-row">
+        <i class="pi pi-calendar" aria-hidden="true"></i>
+        <span>{{ formattedDate() }}</span>
+      </div>
+      <div class="public-apt-details-row">
+        <i class="pi pi-clock" aria-hidden="true"></i>
+        <span class="public-apt-details-time">{{ apt.time }}</span>
+      </div>
+    </div>
+
+    <div class="public-apt-details-edit">
+      <p-button
+        [label]="'appointments.changeAppointment' | translate"
+        icon="pi pi-pencil"
+        iconPos="right"
+        [outlined]="true"
+        [disabled]="cancelling()"
+        styleClass="public-apt-details-edit-btn"
+        (onClick)="onEdit()"
+      />
+    </div>
+
+    @if (canCancel()) {
+      <p class="public-apt-details-confirm">{{ 'appointments.cancelConfirmQuestion' | translate }}</p>
+
+      <div class="public-apt-details-reason">
+        <label class="public-apt-details-reason-label" for="publicAptCancelReason">
+          {{ 'appointments.cancelReasonLabel' | translate }}
+          <span class="public-apt-details-required" aria-hidden="true">*</span>
+        </label>
+        <textarea
+          id="publicAptCancelReason"
+          class="public-apt-details-textarea"
+          [class.public-apt-details-textarea-invalid]="reasonInvalid()"
+          pTextarea
+          rows="3"
+          [placeholder]="'appointments.cancelReasonPlaceholder' | translate"
+          [ngModel]="reason()"
+          (ngModelChange)="reason.set($event)"
+          (blur)="reasonTouched.set(true)"
+          [disabled]="cancelling()"
+          aria-required="true"
+          [attr.aria-invalid]="reasonInvalid()"
+          [attr.aria-describedby]="reasonInvalid() ? 'publicAptCancelReasonError' : null"
+        ></textarea>
+        @if (reasonInvalid()) {
+          <span id="publicAptCancelReasonError" class="public-apt-details-reason-error" role="alert">
+            {{ 'appointments.cancelReasonRequired' | translate }}
+          </span>
+        }
+      </div>
+
+      @if (cancelError()) {
+        <div class="public-apt-details-error" role="alert">
+          <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+          {{ cancelError() }}
+        </div>
+      }
+
+      <p-button
+        [label]="cancelling() ? ('appointments.cancelInProgress' | translate) : ('appointments.cancelConfirmButton' | translate)"
+        icon="pi pi-times-circle"
+        iconPos="right"
+        styleClass="public-apt-details-cancel-btn"
+        severity="danger"
+        [disabled]="cancelDisabled()"
+        [loading]="cancelling()"
+        (onClick)="confirmCancel()"
+      />
+    }
+  </div>
+</ng-template>

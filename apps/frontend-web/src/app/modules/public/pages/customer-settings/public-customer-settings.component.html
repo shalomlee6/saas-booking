@@ -1,0 +1,27 @@
+<div class="public-settings">
+  <h1 class="public-settings-title">{{ 'navigation.settings' | translate }}</h1>
+  <div class="public-settings-card">
+    <h2 class="public-settings-card-title">{{ 'settings.languageCardTitle' | translate }}</h2>
+    <p class="public-settings-card-sub">{{ 'settings.languageCardDescription' | translate }}</p>
+    <div class="public-settings-lang" role="group" [attr.aria-label]="'settings.languageCardTitle' | translate">
+      <button
+        type="button"
+        class="public-settings-lang-btn"
+        [class.public-settings-lang-btn-active]="language.language() === 'he'"
+        [attr.aria-pressed]="language.language() === 'he'"
+        (click)="setLanguage('he')"
+      >
+        {{ 'settings.hebrew' | translate }}
+      </button>
+      <button
+        type="button"
+        class="public-settings-lang-btn"
+        [class.public-settings-lang-btn-active]="language.language() === 'en'"
+        [attr.aria-pressed]="language.language() === 'en'"
+        (click)="setLanguage('en')"
+      >
+        {{ 'settings.english' | translate }}
+      </button>
+    </div>
+  </div>
+</div>

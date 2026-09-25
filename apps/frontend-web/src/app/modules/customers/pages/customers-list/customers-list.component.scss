@@ -122,6 +122,99 @@
   background: var(--bg-app);
 }
 
+.customers-btn-danger {
+  background: #fff;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.customers-btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.customers-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+// ─── Bulk selection bar ─────────────────────────────────────────────────────
+.customers-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  background: var(--color-primary-subtle);
+  border: 1px solid var(--color-primary-muted, var(--border-color));
+  border-radius: var(--radius-md, 8px);
+}
+
+.customers-bulk-count {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-inline-end: auto;
+}
+
+.customers-table-select-head,
+.customers-table-select {
+  width: 1%;
+  padding-inline-end: 0 !important;
+}
+
+.customers-table-select-head input,
+.customers-table-select input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+.customers-table-row--selected {
+  background: var(--color-primary-subtle);
+}
+
+// ─── Confirmation dialog ────────────────────────────────────────────────────
+.customers-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.customers-confirm-dialog {
+  background: var(--bg-card);
+  border-radius: var(--radius-lg, 12px);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.16));
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 100%;
+}
+
+.customers-confirm-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.customers-confirm-text {
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.customers-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+}
+
 // ─── Card / table shell ───────────────────────────────────────────────────
 .customers-card {
   background: var(--bg-card);
@@ -217,7 +310,7 @@
 }
 
 .customers-table td {
-  text-align: right;
+  text-align: end;
   padding: 0.875rem 1.25rem;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);

@@ -8,7 +8,7 @@ import { PublicSessionService } from '../services/public-session.service';
  * Rule: any request whose URL contains `/api/public/appointments` or
  * `/api/public/auth/me` gets the token when present. This covers:
  *  - POST   /api/public/appointments          (booking creation)
- *  - GET    /api/public/appointments/upcoming (home page upcoming appointment)
+ *  - GET    /api/public/appointments/upcoming (customer upcoming appointments)
  *  - DELETE /api/public/appointments/:id      (customer cancellation)
  *  - GET    /api/public/auth/me               (hydrate session on load)
  *

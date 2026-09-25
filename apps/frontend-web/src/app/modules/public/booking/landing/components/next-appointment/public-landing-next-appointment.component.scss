@@ -1,7 +1,7 @@
 @use '../../utils/public-landing-palette' as *;
 
 .pl-next {
-  text-align: right;
+  text-align: start;
 }
 
 :host-context(.pl-welcome) .pl-next__heading {

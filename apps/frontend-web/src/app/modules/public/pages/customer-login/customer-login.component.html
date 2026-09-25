@@ -34,12 +34,15 @@
           type="tel"
           formControlName="phone"
           class="customer-login-input"
-          placeholder="+972 50 123 4567"
+          placeholder="0501234567"
           autocomplete="tel"
+          inputmode="numeric"
+          maxlength="10"
+          (input)="onPhoneInput($event)"
           [attr.aria-invalid]="phone?.invalid && (phone?.touched || phone?.dirty) ? true : null"
         />
         @if (phone?.invalid && (phone?.touched || phone?.dirty)) {
-          <span class="customer-login-error">Valid phone (digits, +, spaces)</span>
+          <span class="customer-login-error">10-digit phone number starting with 0</span>
         }
       </div>
       @if (error()) {

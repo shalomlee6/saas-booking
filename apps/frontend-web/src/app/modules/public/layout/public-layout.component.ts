@@ -4,11 +4,13 @@ import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
 import { ThemeService } from '../../../core/config/theme.service';
 import { ToastModule } from 'primeng/toast';
+import { PublicCustomerNavComponent } from './public-customer-nav/public-customer-nav.component';
+import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-public-layout',
   standalone: true,
-  imports: [RouterOutlet, ToastModule],
+  imports: [RouterOutlet, ToastModule, PublicCustomerNavComponent, TranslatePipe],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.scss',
 })

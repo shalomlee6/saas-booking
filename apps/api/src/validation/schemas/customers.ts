@@ -42,6 +42,12 @@ export const customerIdParamsSchema = z
   })
   .strict();
 
+export const customersBulkDeleteBodySchema = z
+  .object({
+    ids: z.array(mongoObjectIdString).min(1).max(200),
+  })
+  .strict();
+
 export const customersListQuerySchema = z.object({
   search: z.preprocess(
     (v) => (Array.isArray(v) ? v[0] : v),

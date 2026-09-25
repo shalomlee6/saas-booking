@@ -115,6 +115,8 @@ export class CustomerDetailsComponent implements OnInit {
   // ─── Appointment history ─────────────────────────────────────────────────
   readonly history = signal<CustomerAppointmentHistoryItem[]>([]);
   readonly loadingHistory = signal(true);
+  /** Single history card toggles between these instead of showing two separate cards. */
+  readonly historyTab = signal<'upcoming' | 'past'>('upcoming');
 
   readonly upcomingAppointments = computed(() => {
     const now = Date.now();

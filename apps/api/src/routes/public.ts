@@ -16,7 +16,7 @@ import {
   getUpcomingCustomerAppointment,
   cancelCustomerAppointment,
 } from '../controllers/publicBookingController';
-import { getPublicAuthMe, requestOtp, verifyOtp } from '../controllers/publicAuthController';
+import { getPublicAuthMe, logoutPublicCustomer, requestOtp, verifyOtp } from '../controllers/publicAuthController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { requirePublicCustomer } from '../middleware/requirePublicCustomer';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
@@ -35,6 +35,7 @@ import {
 export const publicRouter = Router();
 
 publicRouter.get('/auth/me', requirePublicCustomer, asyncHandler(getPublicAuthMe));
+publicRouter.post('/auth/logout', logoutPublicCustomer);
 
 // --- Public booking API (used by customer UI at /b/:slug/book)
 publicRouter.get(

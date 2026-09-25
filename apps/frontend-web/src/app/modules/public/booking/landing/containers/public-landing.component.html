@@ -1,4 +1,4 @@
-<div class="pl-page" dir="rtl">
+<div class="pl-page">
   @if (pageLoadError(); as err) {
     <div class="pl-page__error" role="alert">{{ err }}</div>
   } @else if (loadingPageData() && !bookingBusiness()) {
@@ -18,7 +18,7 @@
       />
     }
 
-    <div class="pl-section pl-section--base pl-welcome" plReveal>
+    <div class="pl-section pl-section--base pl-welcome pl-scroll-anchor" plReveal id="public-upcoming">
       <div class="pl-welcome-inner">
         <div class="pl-greeting">
           <h2 class="pl-greeting__title">{{ greetingTitle() }}</h2>
@@ -29,13 +29,10 @@
           [loading]="loadingUpcoming()"
           [apt]="displayApt()"
           [error]="upcomingError()"
-          [statusLabel]="statusLabel()"
-          [statusSeverity]="statusSeverity()"
-          [formattedDate]="formattedDate()"
           [staffLine]="''"
-          [canCancel]="canCancelApt()"
           (book)="goToBook()"
-          (cancel)="openCancelDrawer()"
+          (open)="goToUpcoming()"
+          (edit)="openAppointmentDetails()"
         />
       </div>
     </div>
@@ -79,7 +76,7 @@
     }
 
     @if (sectionVisibility().cta) {
-      <div class="pl-section pl-section--base" plReveal>
+      <div class="pl-section pl-section--base pl-scroll-anchor pl-scroll-anchor--trailing" plReveal id="public-location">
         <div class="pl-inner">
           <app-public-landing-booking-cta
             [phone]="landingPhone()"
@@ -127,87 +124,9 @@
   </nav>
 </div>
 
-<p-drawer
-  [visible]="cancelDrawerOpen()"
-  (visibleChange)="cancelDrawerOpen.set($event)"
-  position="bottom"
-  styleClass="cancel-drawer"
-  [modal]="true"
-  [dismissible]="!cancelling()"
-  [closeOnEscape]="!cancelling()"
->
-  <ng-template pTemplate="header">
-    <div class="cancel-drawer-header" dir="rtl">
-      <i class="pi pi-calendar-times cancel-drawer-icon" aria-hidden="true"></i>
-      <span class="cancel-drawer-title">ביטול תור</span>
-    </div>
-  </ng-template>
-
-  <div class="cancel-drawer-body" dir="rtl">
-    @if (displayApt(); as apt) {
-      <div class="cancel-apt-summary">
-        <div class="cancel-apt-summary-row">
-          <i class="pi pi-wrench" aria-hidden="true"></i>
-          <span>{{ apt.serviceName }}</span>
-        </div>
-        <div class="cancel-apt-summary-row">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
-          <span>{{ formattedDate() }}</span>
-        </div>
-        <div class="cancel-apt-summary-row">
-          <i class="pi pi-clock" aria-hidden="true"></i>
-          <span class="apt-time-ltr">{{ apt.time }}</span>
-        </div>
-      </div>
-    }
-
-    <p class="cancel-confirm-text">האם את בטוחה שברצונך לבטל את התור?</p>
-
-    <div class="cancel-reason-field">
-      <label class="cancel-reason-label" for="cancelReasonInput">
-        סיבת ביטול התור
-        <span class="cancel-reason-required" aria-hidden="true">*</span>
-      </label>
-      <textarea
-        id="cancelReasonInput"
-        class="cancel-reason-textarea"
-        [class.cancel-reason-textarea--invalid]="cancelReasonInvalid()"
-        pTextarea
-        rows="3"
-        placeholder="למשל: לא יכולה להגיע ביום זה"
-        [ngModel]="cancelReason()"
-        (ngModelChange)="cancelReason.set($event)"
-        (blur)="cancelReasonTouched.set(true)"
-        [disabled]="cancelling()"
-        aria-required="true"
-        [attr.aria-invalid]="cancelReasonInvalid()"
-        [attr.aria-describedby]="cancelReasonInvalid() ? 'cancelReasonError' : null"
-      ></textarea>
-      @if (cancelReasonInvalid()) {
-        <span id="cancelReasonError" class="cancel-reason-error" role="alert">
-          יש להזין סיבת ביטול
-        </span>
-      }
-    </div>
-
-    @if (cancelError()) {
-      <div class="cancel-server-error" role="alert">
-        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-        {{ cancelError() }}
-      </div>
-    }
-
-    <div class="cancel-drawer-actions">
-      <p-button
-        [label]="cancelling() ? 'מבטלת תור...' : 'לחצי כאן לביטול התור'"
-        icon="pi pi-times-circle"
-        iconPos="right"
-        styleClass="cancel-confirm-btn"
-        severity="danger"
-        [disabled]="cancelBtnDisabled()"
-        [loading]="cancelling()"
-        (onClick)="confirmCancel()"
-      />
-    </div>
-  </div>
-</p-drawer>
+<app-public-appointment-details
+  [appointment]="detailsApt()"
+  (closed)="detailsApt.set(null)"
+  (cancelled)="onAppointmentCancelled()"
+  (edit)="onEditAppointment()"
+/>

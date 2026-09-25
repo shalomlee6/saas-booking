@@ -1,0 +1,129 @@
+@use '../../booking/landing/utils/public-landing-palette' as *;
+
+.upcoming-page {
+  padding: 0.75rem 1.25rem 5rem;
+  max-width: 32rem;
+  margin-inline: auto;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.upcoming-page-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.upcoming-page-back {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: none;
+  background: $pl-primary-pale;
+  color: $pl-text-heading;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  font-family: inherit;
+}
+
+.upcoming-page-back:hover {
+  background: $pl-primary-light;
+}
+
+.upcoming-page-back:focus-visible {
+  outline: 2px solid $pl-primary;
+  outline-offset: 2px;
+}
+
+.upcoming-page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: $pl-text-heading;
+  overflow-wrap: anywhere;
+}
+
+.upcoming-page-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.upcoming-page-list li {
+  min-width: 0;
+}
+
+.upcoming-page-skeleton {
+  background: $pl-bg-card;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px $pl-shadow;
+  border: 1px solid $pl-border;
+  padding: 1rem;
+  min-height: 7rem;
+}
+
+.upcoming-page-state {
+  background: $pl-bg-card;
+  border-radius: 16px;
+  border: 1px solid $pl-border;
+  box-shadow: 0 2px 16px $pl-shadow;
+  padding: 2rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.upcoming-page-state-error {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.upcoming-page-state-ico {
+  font-size: 1.5rem;
+  color: #dc2626;
+}
+
+.upcoming-page-empty-illu {
+  font-size: 2.5rem;
+  line-height: 1;
+  color: $pl-primary-light;
+}
+
+.upcoming-page-state-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: $pl-text-heading;
+}
+
+.upcoming-page-state-sub {
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  color: $pl-text-muted;
+}
+
+::ng-deep .upcoming-page-book.p-button,
+::ng-deep .upcoming-page-retry.p-button {
+  @include pl-btn-primary;
+}
+
+::ng-deep .upcoming-page-book.p-button .p-button-icon,
+::ng-deep .upcoming-page-retry.p-button .p-button-icon {
+  color: #fff;
+}
+
+::ng-deep .upcoming-page-book.p-button:not(:disabled):hover,
+::ng-deep .upcoming-page-retry.p-button:not(:disabled):hover {
+  background: $pl-primary-hover;
+  border: none;
+  color: #fff;
+}

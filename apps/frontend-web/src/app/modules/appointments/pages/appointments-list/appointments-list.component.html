@@ -13,7 +13,7 @@
           <button
             pButton
             type="button"
-            icon="pi pi-chevron-right"
+            icon="pi pi-chevron-left"
             class="p-button-text p-button-sm apt-nav-btn"
             (click)="prevRange()"
             [attr.aria-label]="'appointments.previousRange' | translate"
@@ -22,7 +22,7 @@
           <button
             pButton
             type="button"
-            icon="pi pi-chevron-left"
+            icon="pi pi-chevron-right"
             class="p-button-text p-button-sm apt-nav-btn"
             (click)="nextRange()"
             [attr.aria-label]="'appointments.nextRange' | translate"
@@ -390,6 +390,10 @@
               <p-tag [value]="vm.statusLabel" [severity]="vm.severity" />
             </span>
           </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">{{ 'appointments.preferredTimeLabel' | translate }}</span>
+            <span class="appointments-detail-value">{{ vm.preferredTimeLabel }}</span>
+          </div>
         </div>
         <ng-template pTemplate="footer">
           <div class="appointments-detail-footer">
@@ -429,6 +433,10 @@
             <span class="appointments-detail-value">
               <p-tag [value]="vm.statusLabel" [severity]="vm.severity" />
             </span>
+          </div>
+          <div class="appointments-detail-row">
+            <span class="appointments-detail-label">{{ 'appointments.preferredTimeLabel' | translate }}</span>
+            <span class="appointments-detail-value">{{ vm.preferredTimeLabel }}</span>
           </div>
           <div class="appointments-detail-actions">
             <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />

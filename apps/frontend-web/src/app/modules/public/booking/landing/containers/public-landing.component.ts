@@ -11,12 +11,6 @@ import {
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
-import { ButtonModule } from 'primeng/button';
-import { DrawerModule } from 'primeng/drawer';
-import { TextareaModule } from 'primeng/textarea';
-import { SkeletonModule } from 'primeng/skeleton';
-import { TagModule } from 'primeng/tag';
-import { FormsModule } from '@angular/forms';
 import { forkJoin, distinctUntilChanged, map } from 'rxjs';
 import {
   PublicApiService,
@@ -34,6 +28,7 @@ import {
   PUBLIC_LANDING_DEFAULT_HERO_PHOTOS,
 } from '../components/hero/public-landing-hero.component';
 import { PublicLandingNextAppointmentComponent } from '../components/next-appointment/public-landing-next-appointment.component';
+import { PublicAppointmentDetailsComponent } from '../../../components/public-appointment-details/public-appointment-details.component';
 import { PublicLandingServicesComponent } from '../components/services/public-landing-services.component';
 import { PublicLandingGalleryComponent } from '../components/gallery/public-landing-gallery.component';
 import { PublicLandingProductsComponent } from '../components/products/public-landing-products.component';
@@ -41,40 +36,6 @@ import { PublicLandingReviewsComponent } from '../components/reviews/public-land
 import { PublicLandingBookingCtaComponent } from '../components/booking-cta/public-landing-booking-cta.component';
 import { PlRevealDirective } from '../directives/pl-reveal.directive';
 import { resolvePublicAssetUrl } from '../../../../../shared/utils/public-asset-url';
-
-/** Map status values to Hebrew labels. */
-const STATUS_LABEL: Record<string, string> = {
-  confirmed: 'מאושר',
-  pending: 'ממתין',
-  completed: 'הושלם',
-  cancelled: 'בוטל',
-};
-
-/** Map status values to PrimeNG tag severity. */
-const STATUS_SEVERITY: Record<
-  string,
-  'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast'
-> = {
-  confirmed: 'success',
-  pending: 'warn',
-  completed: 'secondary',
-  cancelled: 'danger',
-};
-
-/** Format YYYY-MM-DD → Hebrew-friendly long date (e.g. "שישי, 14 בפברואר 2025"). */
-function formatDateHe(dateStr: string): string {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  const date = new Date(y, m - 1, d);
-  return date.toLocaleDateString('he-IL', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-/** Statuses that allow a customer to cancel their appointment. */
-const CANCELLABLE_STATUSES = new Set(['confirmed', 'pending']);
 
 const DEFAULT_TAGLINE = 'יופי מקצועי, תוצאות מושלמות';
 
@@ -110,14 +71,9 @@ function shouldPlayEntranceAnimation(slug: string): boolean {
   selector: 'app-public-landing',
   standalone: true,
   imports: [
-    ButtonModule,
-    DrawerModule,
-    FormsModule,
-    TextareaModule,
-    SkeletonModule,
-    TagModule,
     PublicLandingHeroComponent,
     PublicLandingNextAppointmentComponent,
+    PublicAppointmentDetailsComponent,
     PublicLandingServicesComponent,
     PublicLandingGalleryComponent,
     PublicLandingProductsComponent,
@@ -147,6 +103,13 @@ export class PublicLandingComponent implements OnInit {
           this.justBookedApt.set(null);
           this.upcomingError.set(false);
           this.loadingUpcoming.set(false);
+          // A logout clears customerId to null — nothing to fetch. A login (or switching
+          // to a different customer without navigating away) sets a new id — the stale
+          // clear above is not enough on its own, this must actually re-fetch or the
+          // previous customer's appointment can appear to "stick" after switching identity.
+          if (currentId && this.session.hasSessionFor(this.businessSlug())) {
+            this.loadUpcoming();
+          }
         });
       }
       prevCustomerId = currentId;
@@ -322,41 +285,7 @@ export class PublicLandingComponent implements OnInit {
     () => this.upcomingApt() ?? this.justBookedApt()
   );
 
-  readonly cancelDrawerOpen = signal(false);
-  readonly cancelReason = signal('');
-  readonly cancelReasonTouched = signal(false);
-  readonly cancelling = signal(false);
-  readonly cancelError = signal<string | null>(null);
-
-  readonly canCancelApt = computed(() => {
-    const apt = this.displayApt();
-    return !!apt && CANCELLABLE_STATUSES.has(apt.status);
-  });
-
-  readonly cancelReasonInvalid = computed(
-    () => this.cancelReasonTouched() && this.cancelReason().trim().length === 0
-  );
-
-  readonly cancelBtnDisabled = computed(
-    () => this.cancelling() || this.cancelReason().trim().length === 0
-  );
-
-  readonly statusLabel = computed(() => {
-    const apt = this.displayApt();
-    return apt ? (STATUS_LABEL[apt.status] ?? apt.status) : '';
-  });
-
-  readonly statusSeverity = computed(() => {
-    const apt = this.displayApt();
-    return apt
-      ? (STATUS_SEVERITY[apt.status] ?? 'secondary')
-      : 'secondary';
-  });
-
-  readonly formattedDate = computed(() => {
-    const apt = this.displayApt();
-    return apt ? formatDateHe(apt.date) : '';
-  });
+  readonly detailsApt = signal<UpcomingAppointment | null>(null);
 
   ngOnInit(): void {
     this.auth.init().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
@@ -387,6 +316,10 @@ export class PublicLandingComponent implements OnInit {
           this.loadingUpcoming.set(false);
         }
       });
+
+    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => {
+      this.scrollToLandingFragment(id);
+    });
   }
 
   private reloadLandingData(slug: string): void {
@@ -402,11 +335,19 @@ export class PublicLandingComponent implements OnInit {
         this.bookingBusiness.set(biz);
         this.servicesList.set(svc);
         this.loadingPageData.set(false);
+        this.scrollToLandingFragment(this.route.snapshot.fragment);
       },
       error: (err: { error?: { message?: string } }) => {
         this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
         this.loadingPageData.set(false);
       },
+    });
+  }
+
+  private scrollToLandingFragment(id: string | null): void {
+    if (!id || typeof document === 'undefined') return;
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
@@ -454,57 +395,18 @@ export class PublicLandingComponent implements OnInit {
     });
   }
 
-  openCancelDrawer(): void {
-    this.cancelReason.set('');
-    this.cancelReasonTouched.set(false);
-    this.cancelError.set(null);
-    this.cancelDrawerOpen.set(true);
-  }
-
-  closeCancelDrawer(): void {
-    if (this.cancelling()) return;
-    this.cancelDrawerOpen.set(false);
-  }
-
-  confirmCancel(): void {
-    this.cancelReasonTouched.set(true);
-    const reason = this.cancelReason().trim();
-    if (!reason) return;
-
+  openAppointmentDetails(): void {
     const apt = this.displayApt();
-    if (!apt) return;
+    if (apt) this.detailsApt.set(apt);
+  }
 
-    this.cancelling.set(true);
-    this.cancelError.set(null);
-
-    this.publicApi.cancelAppointment(apt.id, reason).subscribe({
-      next: () => {
-        this.cancelling.set(false);
-        this.cancelDrawerOpen.set(false);
-        this.upcomingApt.set(null);
-        this.justBookedApt.set(null);
-        this.messageService.add({
-          severity: 'success',
-          summary: 'התור בוטל',
-          detail: 'התור שלך בוטל בהצלחה',
-          life: 5000,
-        });
-        if (this.session.hasSessionFor(this.businessSlug())) {
-          this.loadUpcoming();
-        }
-      },
-      error: (err: { error?: { message?: string }; status?: number }) => {
-        this.cancelling.set(false);
-        const serverMsg = err?.error?.message;
-        if (err?.status === 409) {
-          this.cancelError.set(serverMsg ?? 'התור כבר בוטל');
-        } else if (err?.status === 404) {
-          this.cancelError.set('התור לא נמצא. ייתכן שכבר בוטל.');
-        } else {
-          this.cancelError.set('אירעה שגיאה. אנא נסי שוב.');
-        }
-      },
-    });
+  onAppointmentCancelled(): void {
+    this.upcomingApt.set(null);
+    this.justBookedApt.set(null);
+    this.detailsApt.set(null);
+    if (this.session.hasSessionFor(this.businessSlug())) {
+      this.loadUpcoming();
+    }
   }
 
   goToBook(serviceId?: string): void {
@@ -517,5 +419,16 @@ export class PublicLandingComponent implements OnInit {
     } else {
       this.router.navigate(['/b', slug, 'book']);
     }
+  }
+
+  goToUpcoming(): void {
+    const slug = this.businessSlug();
+    if (slug) void this.router.navigate(['/b', slug, 'upcoming']);
+  }
+
+  onEditAppointment(): void {
+    const apt = this.detailsApt() ?? this.displayApt();
+    this.detailsApt.set(null);
+    this.goToBook(apt?.serviceId);
   }
 }

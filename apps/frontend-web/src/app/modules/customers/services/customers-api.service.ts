@@ -36,4 +36,19 @@ export class CustomersApiService {
   getCardStats(id: string): Observable<CustomerCardStatsResponse> {
     return this.api.get<CustomerCardStatsResponse>(`customers/${id}/stats`);
   }
+
+  /** Refused (409) when the customer has appointment history. */
+  delete(id: string): Observable<{ ok: boolean }> {
+    return this.api.delete<{ ok: boolean }>(`customers/${id}`);
+  }
+
+  /** Best-effort: customers with appointment history are skipped, not an all-or-nothing failure. */
+  bulkDelete(ids: string[]): Observable<BulkDeleteCustomersResponse> {
+    return this.api.post<BulkDeleteCustomersResponse>('customers/bulk-delete', { ids });
+  }
+}
+
+export interface BulkDeleteCustomersResponse {
+  deleted: string[];
+  blocked: { id: string; name: string }[];
 }

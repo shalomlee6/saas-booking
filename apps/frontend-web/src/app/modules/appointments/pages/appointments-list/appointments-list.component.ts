@@ -125,8 +125,16 @@ export interface AppointmentCardVm {
   serviceDisplay: string;
   priceDisplay: string;
   statusLabel: string;
+  preferredTimeLabel: string;
   severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
 }
+
+const TIME_OF_DAY_KEYS: Record<string, string> = {
+  morning: 'timeOfDay.morning',
+  afternoon: 'timeOfDay.afternoon',
+  evening: 'timeOfDay.evening',
+  night: 'timeOfDay.night',
+};
 
 /**
  * Returns a Date set to midnight of `d` in the BROWSER's local timezone.
@@ -224,6 +232,12 @@ export class AppointmentsListComponent implements OnInit {
     const key = (status ?? '').toLowerCase();
     const translationKey = STATUS_KEYS[key];
     return translationKey ? this.language.t(translationKey) : status ?? '—';
+  }
+
+  private preferredTimeLabel(apt: Appointment): string {
+    const bucket = apt.customerPreferredTimeOfDay;
+    const translationKey = bucket ? TIME_OF_DAY_KEYS[bucket] : undefined;
+    return translationKey ? this.language.t(translationKey) : this.language.t('timeOfDay.none');
   }
 
   private daySummaryLabels(): DaySummaryLabels {
@@ -443,6 +457,7 @@ export class AppointmentsListComponent implements OnInit {
       serviceDisplay: getServiceDisplay(apt),
       priceDisplay: getPriceDisplay(apt),
       statusLabel: this.statusLabel(apt.status),
+      preferredTimeLabel: this.preferredTimeLabel(apt),
       severity: getStatusSeverity(apt.status ?? ''),
     }))
   );
@@ -551,6 +566,7 @@ export class AppointmentsListComponent implements OnInit {
       serviceDisplay: getServiceDisplay(apt),
       priceDisplay: getPriceDisplay(apt),
       statusLabel: this.statusLabel(apt.status),
+      preferredTimeLabel: this.preferredTimeLabel(apt),
       severity: getStatusSeverity(apt.status ?? ''),
     };
   });

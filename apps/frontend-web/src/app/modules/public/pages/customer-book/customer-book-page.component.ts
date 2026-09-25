@@ -98,8 +98,13 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedSlot = signal<string | null>(null);
   /** Guest-only: customer full name. */
   readonly guestName = signal('');
-  /** Guest-only: customer phone (required). */
+  /** Guest-only: customer phone (required). Digits only, capped at 10 — see onGuestPhoneInput(). */
   readonly guestPhone = signal('');
+
+  /** Strips non-digits and caps at 10 as the user types — matches Israeli local mobile format. */
+  onGuestPhoneInput(value: string): void {
+    this.guestPhone.set(value.replace(/\D/g, '').slice(0, 10));
+  }
 
   // ── Loading / error signals ────────────────────────────────────────────────
   readonly loadingBusiness = signal(true);
@@ -161,7 +166,7 @@ export class CustomerBookPageComponent implements OnInit {
     () =>
       !this.submitting() &&
       (this.isLoggedIn() ||
-        (this.guestName().trim().length > 0 && this.guestPhone().trim().length > 0))
+        (this.guestName().trim().length > 0 && this.guestPhone().length === 10))
   );
 
   // ── Two-way binding shim for p-datePicker [(ngModel)] ──────────────────────
@@ -365,6 +370,7 @@ export class CustomerBookPageComponent implements OnInit {
                 time,
                 status: res.status,
                 serviceName: svc.nameHe,
+                serviceId: svc.id,
               },
             },
           });

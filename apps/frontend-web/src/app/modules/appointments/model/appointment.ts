@@ -11,6 +11,9 @@ export interface AppointmentService {
   colorHex?: string;
 }
 
+/** Matches the `TimeOfDayBucket` values stored on `Customer.preferences.preferredTimeOfDay`. */
+export type TimeOfDayBucket = 'morning' | 'afternoon' | 'evening' | 'night';
+
 /** Flattened list DTO from GET /api/appointments */
 export interface AppointmentListItem {
   appointmentId: string;
@@ -22,6 +25,7 @@ export interface AppointmentListItem {
   serviceName: string;
   customerName: string;
   customerPhone: string | null;
+  customerPreferredTimeOfDay?: TimeOfDayBucket | null;
 }
 
 /** Full or list appointment (list has _id set from appointmentId in effect). start/end as Date for calendar layout. */
@@ -32,6 +36,8 @@ export interface Appointment {
   serviceId?: string | AppointmentService;
   customerName?: string;
   customerPhone?: string | null;
+  /** Read-only — sourced from the customer's profile, not editable from an appointment. */
+  customerPreferredTimeOfDay?: TimeOfDayBucket | null;
   serviceName?: string;
   price?: number;
   durationMinutes?: number;

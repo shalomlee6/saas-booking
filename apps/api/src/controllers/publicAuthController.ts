@@ -3,7 +3,12 @@ import { Business } from '../models/Business';
 import { Customer } from '../models/Customer';
 import { OtpChallenge } from '../models/OtpChallenge';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
-import { setPublicCustomerSessionCookie, signPublicCustomerToken } from '../utils/publicCustomerSession';
+import {
+  clearPublicCustomerCookieOptions,
+  PUBLIC_CUSTOMER_COOKIE_NAME,
+  setPublicCustomerSessionCookie,
+  signPublicCustomerToken,
+} from '../utils/publicCustomerSession';
 import { isSmsConfigured, sendOtpSms, toE164 } from '../services/smsService';
 import { logger } from '../utils/logger';
 
@@ -284,6 +289,16 @@ export async function verifyOtp(req: Request, res: Response) {
     logger.error('public_verify_otp_failed', { error: err instanceof Error ? err.message : String(err) });
     return res.status(500).json({ message: 'Internal server error' });
   }
+}
+
+/**
+ * POST /api/public/auth/logout — clears the httpOnly session cookie server-side.
+ * The Bearer token in localStorage is cleared by the client; this closes the other
+ * half so a lingering cookie can't keep authenticating requests as the old customer.
+ */
+export function logoutPublicCustomer(_req: Request, res: Response): void {
+  res.clearCookie(PUBLIC_CUSTOMER_COOKIE_NAME, clearPublicCustomerCookieOptions());
+  res.json({ ok: true });
 }
 
 /** GET /api/public/auth/me — session from Bearer or HTTP-only cookie */

@@ -26,14 +26,19 @@
         <label for="phone">{{ 'common.phone' | translate }}</label>
         <input
           id="phone"
-          type="text"
+          type="tel"
           dir="ltr"
+          inputmode="numeric"
+          maxlength="10"
           formControlName="phone"
+          (input)="onPhoneInput($any($event.target).value)"
           class="customer-form-input customer-form-input-ltr"
           [class.customer-form-input-invalid]="phone?.invalid && (phone?.touched || phone?.dirty)"
         />
         @if (phone?.invalid && (phone?.touched || phone?.dirty)) {
-          <p class="customer-form-error">{{ 'customers.phoneRequired' | translate }}</p>
+          <p class="customer-form-error">
+            {{ (phone?.errors?.['required'] ? 'customers.phoneRequired' : 'customers.phoneInvalid') | translate }}
+          </p>
         }
       </div>
 
@@ -56,6 +61,31 @@
           class="customer-form-input customer-form-textarea"
           rows="3"
         ></textarea>
+      </div>
+
+      <div class="customer-form-field">
+        <label for="preferredTimeOfDay">{{ 'customerCard.preferredTime' | translate }}</label>
+        <select id="preferredTimeOfDay" formControlName="preferredTimeOfDay" class="customer-form-input">
+          <option value="">—</option>
+          @for (opt of timeOfDayOptions; track opt.value) {
+            <option [value]="opt.value">{{ opt.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="customer-form-field">
+        <label for="allergies">{{ 'customerCard.allergies' | translate }}</label>
+        <textarea
+          id="allergies"
+          formControlName="allergies"
+          class="customer-form-input customer-form-textarea"
+          rows="2"
+        ></textarea>
+      </div>
+
+      <div class="customer-form-field">
+        <label for="tags">{{ 'customerCard.tagsPlaceholder' | translate }}</label>
+        <input id="tags" type="text" formControlName="tags" class="customer-form-input" [placeholder]="'customerCard.tagsHint' | translate" />
       </div>
 
       @if (serverError()) {

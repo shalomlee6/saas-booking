@@ -1,0 +1,73 @@
+<div class="upcoming-page">
+  <header class="upcoming-page-header">
+    <button
+      type="button"
+      class="upcoming-page-back"
+      (click)="goHome()"
+      [attr.aria-label]="'common.back' | translate"
+    >
+      <i
+        [class]="language.language() === 'he' ? 'pi pi-arrow-right' : 'pi pi-arrow-left'"
+        aria-hidden="true"
+      ></i>
+    </button>
+    <h1 class="upcoming-page-title">{{ 'navigation.publicUpcoming' | translate }}</h1>
+  </header>
+
+  @if (loading()) {
+    <div class="upcoming-page-list" aria-busy="true">
+      @for (i of [1, 2, 3]; track i) {
+        <div class="upcoming-page-skeleton">
+          <p-skeleton width="40%" height="1.125rem" styleClass="mb-2" />
+          <p-skeleton width="70%" height="0.875rem" styleClass="mb-1" />
+          <p-skeleton width="55%" height="0.875rem" />
+        </div>
+      }
+    </div>
+  } @else if (error()) {
+    <div class="upcoming-page-state upcoming-page-state-error" role="alert">
+      <i class="pi pi-exclamation-circle upcoming-page-state-ico" aria-hidden="true"></i>
+      <p class="upcoming-page-state-title">{{ 'appointments.upcomingLoadError' | translate }}</p>
+      <p-button
+        [label]="'common.retry' | translate"
+        icon="pi pi-refresh"
+        iconPos="right"
+        styleClass="upcoming-page-retry"
+        (onClick)="loadAppointments()"
+      />
+    </div>
+  } @else if (appointments().length === 0) {
+    <div class="upcoming-page-state">
+      <span class="upcoming-page-empty-illu" aria-hidden="true">✨</span>
+      <p class="upcoming-page-state-title">{{ 'appointments.upcomingEmptyTitle' | translate }}</p>
+      <p class="upcoming-page-state-sub">{{ 'appointments.upcomingEmptySub' | translate }}</p>
+      <p-button
+        [label]="'appointments.upcomingBookCta' | translate"
+        icon="pi pi-calendar-plus"
+        iconPos="right"
+        styleClass="upcoming-page-book"
+        (onClick)="goToBook()"
+      />
+    </div>
+  } @else {
+    <ul class="upcoming-page-list">
+      @for (apt of appointments(); track apt.id) {
+        <li>
+          <app-public-appointment-card
+            [apt]="apt"
+            [clickable]="true"
+            (open)="openDetails(apt)"
+            (edit)="openDetails(apt)"
+          />
+        </li>
+      }
+    </ul>
+  }
+</div>
+
+<app-public-appointment-details
+  [appointment]="selected()"
+  (closed)="selected.set(null)"
+  (cancelled)="loadAppointments()"
+  (edit)="onEdit($event)"
+/>

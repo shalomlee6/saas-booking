@@ -1,8 +1,9 @@
 import request from 'supertest';
 import { buildTestApp } from './helpers/testApp';
 import { dbConnect, dbDisconnect, dbClear } from './helpers/db';
-import { seedOwner, seedService, seedBusinessSettings } from './helpers/seed';
+import { seedOwner, seedService, seedBusinessSettings, seedCustomer } from './helpers/seed';
 import { OtpChallenge } from '../models/OtpChallenge';
+import { Appointment } from '../models/Appointment';
 
 const app = buildTestApp();
 
@@ -102,6 +103,91 @@ describe('PUBLIC BOOKING', () => {
     expect(upcoming.status).toBe(200);
     expect(upcoming.body.appointment).not.toBeNull();
     expect(upcoming.body.appointment.id).toBe(created.body.id);
+    expect(Array.isArray(upcoming.body.appointments)).toBe(true);
+    expect(upcoming.body.appointments.length).toBe(1);
+    expect(upcoming.body.appointments[0].id).toBe(created.body.id);
+    expect(upcoming.body.appointments[0].serviceId).toBe(service._id.toString());
+  });
+
+  it('returns all upcoming appointments sorted soonest-first and isolates by customer', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    const later = new Date();
+    later.setUTCDate(later.getUTCDate() + 2);
+    const sooner = new Date();
+    sooner.setUTCDate(sooner.getUTCDate() + 1);
+    const laterDate = later.toISOString().slice(0, 10);
+    const soonerDate = sooner.toISOString().slice(0, 10);
+
+    const laterBooking = await request(app).post('/api/public/appointments').send({
+      businessId: business._id.toString(),
+      serviceId: service._id.toString(),
+      date: laterDate,
+      time: '14:00',
+      customerName: 'Dana Cohen',
+      customerPhone: '0501234567',
+    });
+    expect(laterBooking.status).toBe(201);
+    const token = laterBooking.body.token as string;
+    const customerId = laterBooking.body.customerId as string;
+
+    const soonerBooking = await request(app)
+      .post('/api/public/appointments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        businessId: business._id.toString(),
+        serviceId: service._id.toString(),
+        date: soonerDate,
+        time: '09:00',
+      });
+    expect(soonerBooking.status).toBe(201);
+
+    const otherCustomer = await seedCustomer(business._id);
+    await Appointment.create({
+      businessId: business._id,
+      customerId: otherCustomer._id,
+      serviceId: service._id,
+      start: new Date(sooner.getTime() + 3 * 60 * 60 * 1000),
+      end: new Date(sooner.getTime() + 4 * 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'owner',
+    });
+
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customerId,
+      serviceId: service._id,
+      start: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      end: new Date(Date.now() - 23 * 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customerId,
+      serviceId: service._id,
+      start: new Date(sooner.getTime() + 6 * 60 * 60 * 1000),
+      end: new Date(sooner.getTime() + 7 * 60 * 60 * 1000),
+      status: 'cancelled',
+      source: 'client-online',
+      cancellationReason: 'test',
+    });
+
+    const upcoming = await request(app)
+      .get('/api/public/appointments/upcoming')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(upcoming.status).toBe(200);
+    const ids = (upcoming.body.appointments as { id: string }[]).map((a) => a.id);
+    expect(ids).toEqual([soonerBooking.body.id, laterBooking.body.id]);
+    expect(upcoming.body.appointment.id).toBe(soonerBooking.body.id);
+
+    const guest = await request(app).get('/api/public/appointments/upcoming');
+    expect(guest.status).toBe(200);
+    expect(guest.body.appointment).toBeNull();
+    expect(guest.body.appointments).toEqual([]);
   });
 
   it('request-otp stores a code and verify-otp issues a customer session', async () => {

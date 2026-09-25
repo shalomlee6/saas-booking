@@ -22,6 +22,19 @@
     </div>
   </div>
 
+  @if (selectedCount() > 0) {
+    <div class="customers-bulk-bar">
+      <span class="customers-bulk-count">{{ 'customers.selectedCount' | translate: { count: selectedCount() } }}</span>
+      <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="clearSelection()">
+        {{ 'common.cancel' | translate }}
+      </button>
+      <button type="button" class="customers-btn customers-btn-danger customers-btn-sm" (click)="requestDeleteSelected()">
+        <i class="pi pi-trash" aria-hidden="true"></i>
+        {{ 'customers.deleteSelected' | translate }}
+      </button>
+    </div>
+  }
+
   <div class="customers-card">
     @if (error()) {
       <p class="customers-error">
@@ -48,6 +61,14 @@
         <table class="customers-table">
           <thead>
             <tr>
+              <th class="customers-table-select-head">
+                <input
+                  type="checkbox"
+                  [checked]="allSelected()"
+                  (change)="toggleSelectAll()"
+                  [attr.aria-label]="'customers.selectAll' | translate"
+                />
+              </th>
               <th>{{ 'common.name' | translate }}</th>
               <th>{{ 'common.phone' | translate }}</th>
               <th>{{ 'common.email' | translate }}</th>
@@ -57,7 +78,15 @@
           </thead>
           <tbody>
             @for (customer of filteredList(); track customer._id) {
-              <tr>
+              <tr [class.customers-table-row--selected]="isSelected(customer._id)">
+                <td class="customers-table-select">
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(customer._id)"
+                    (change)="toggleSelect(customer._id)"
+                    [attr.aria-label]="customer.name"
+                  />
+                </td>
                 <td class="customers-table-name">{{ customer.name }}</td>
                 <td class="customers-table-muted" dir="ltr">{{ customer.phone }}</td>
                 <td class="customers-table-muted">{{ customer.email || '—' }}</td>
@@ -75,3 +104,22 @@
     }
   </div>
 </div>
+
+@if (confirmingDelete()) {
+  <div class="customers-confirm-backdrop" (click)="cancelDeleteSelected()">
+    <div class="customers-confirm-dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <h2 class="customers-confirm-title">{{ 'customers.deleteSelectedConfirmTitle' | translate }}</h2>
+      <p class="customers-confirm-text">
+        {{ 'customers.deleteSelectedConfirmText' | translate: { count: selectedCount() } }}
+      </p>
+      <div class="customers-confirm-actions">
+        <button type="button" class="customers-btn customers-btn-ghost" (click)="cancelDeleteSelected()" [disabled]="deleting()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button type="button" class="customers-btn customers-btn-danger" (click)="confirmDeleteSelected()" [disabled]="deleting()">
+          {{ (deleting() ? 'common.loading' : 'customers.deleteSelected') | translate }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
