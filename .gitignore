@@ -43,3 +43,5 @@ libs/*/.env
 Thumbs.db
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+
+design-audit/auth/

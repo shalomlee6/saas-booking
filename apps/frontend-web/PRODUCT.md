@@ -8,22 +8,29 @@ web
 
 ## Users
 
-Boki is one Angular application that serves two distinct audiences with two distinct
-design languages:
+Boki is one Angular application that serves three distinct audiences with (at least) two
+distinct design languages:
 
 1. **Business owners / staff** (boki admin, `/dashboard`, `/appointments`, `/customers`,
    `/services`, `/settings`, etc.) — independent beauty/personal-care professionals (nail
    salons confirmed in test data: manicure, pedicure, gel nails) running their own
-   business day-to-day. They use the admin **heavily on mobile, between clients** — it is
-   a fast working tool, not a considered dashboard session. Whether the product currently
-   targets solo practitioners only or also small multi-staff teams is **unconfirmed** —
-   the codebase has no staff-picker UI and appointments/services are business-wide, not
-   staff-scoped, which is weak evidence toward "solo," but this has not been confirmed
-   with the product owner.
+   business day-to-day. Targets **both solo practitioners and small teams with multiple
+   staff** — not solo-only, even though the codebase has no staff-picker UI yet
+   (appointments/services are currently business-wide, not staff-scoped; multi-staff
+   support is a near-term product direction, not a later ambition). They use the admin
+   **heavily on mobile, between clients** — it is a fast working tool, not a considered
+   dashboard session.
 2. **The tenant's own customers** (chen-nails-style public site, `/b/:slug/...`) — the
    end clients of an individual salon, booking an appointment. They are not Boki's
    customers directly; they experience the *tenant's* brand, not Boki's. Login is
    optional (guest checkout is supported) and passwordless (phone OTP) when used.
+3. **Internal Boki staff** (super-admin console, `/super-admin/...`) — Boki's own team
+   managing every tenant business and user platform-wide (business list, per-tenant UI
+   editing, user management, analytics, alerts, audit log, platform settings). A
+   different persona from (1): this is an internal operations tool, not a customer-facing
+   product. Priorities here are **data density, efficiency, and clarity** over the
+   working-tool polish of the owner admin — it can share the owner admin's design system
+   (components, tokens) rather than needing its own visual language.
 
 ## Product Purpose
 
@@ -49,8 +56,12 @@ phone number formats and local SMS/OTP norms are native assumptions, not edge ca
 - **The tenant site** is a **brand moment for the salon, not for Boki**: its sole
   functional goal is getting a visitor to book, but it must read as a premium,
   professional salon presence — themed per business, not a generic booking widget.
-- Business owner and tenant-customer are separate identity systems with separate auth
-  (staff email/password vs. customer phone OTP) and separate sessions.
+- **Super-admin** is an internal ops console used by Boki's own staff, not by tenants or
+  their customers — optimize for scanning many businesses/users/records quickly over any
+  per-tenant branding concern.
+- Business owner, tenant-customer, and internal Boki staff are three separate identity
+  systems with separate auth (staff email/password + role check for super-admin vs.
+  customer phone OTP) and separate sessions.
 - Timezone and currency are business-local (confirmed default: `Asia/Jerusalem`, ILS ₪).
 
 ## Capabilities and Constraints

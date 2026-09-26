@@ -51,7 +51,7 @@ impersonating a business.
 | 2.4 | `/auth/reset-password` | `ResetPasswordComponent` | 🚫 No | Token-based (from email link); no guard at all. |
 | 2.5 | `/dashboard` | `DashboardComponent` | ✅ Yes | Also the redirect target for `/`. |
 | 2.6 | `/appointments` | `AppointmentsListComponent` | ✅ Yes | Calendar (day/week) on desktop, 3-day stacked agenda on mobile. |
-| 2.7 | `/appointments/new` | `AppointmentFormComponent` | ✅ Yes | |
+| 2.7 | `/appointments/new` | `AppointmentFormComponent` | ✅ Yes | Also reached by clicking an empty slot on the calendar (pre-fills date/time via query params) — see the dead-code note on `AppointmentCreateOverlayComponent` below; that path does *not* go through it. |
 | 2.8 | `/appointments/:id/edit` | `EditAppointmentComponent` | ✅ Yes | |
 | 2.9 | `/services` | `ServicesListComponent` | ✅ Yes | |
 | 2.10 | `/services/new` | `ServiceFormComponent` | ✅ Yes | Same component as edit, no `:id`. |
@@ -70,11 +70,10 @@ impersonating a business.
 
 | # | Trigger | Component | Needs login | Notes |
 |---|---|---|---|---|
-| 2.21 | Click an empty calendar slot on `/appointments` | `AppointmentCreateOverlayComponent` | ✅ Yes | Quick-create overlay, pre-filled with the clicked date/time. |
-| 2.22 | Click an existing appointment on `/appointments` | Inline dialog (desktop) / drawer (mobile) in `AppointmentsListComponent` | ✅ Yes | Shows customer, service, price, status, **preferred time (read-only)**; Edit / Cancel actions. |
-| 2.23 | Click "Edit" on a day, `/settings/working-hours` tab 1 | Inline drawer (mobile) / dialog (desktop) in `WorkingHoursListComponent` | ✅ Yes | Toggle open/closed + hour ranges for one weekday. |
-| 2.24 | Click a date on the calendar, `/settings/working-hours` tab 2 | Inline drawer/dialog in `WorkingHoursListComponent` | ✅ Yes | Create/edit/delete a one-off exception (closed day or special hours), with an appointment-conflict warning. |
-| 2.25 | Select rows + "Delete selected" on `/customers` | Inline confirmation dialog in `CustomersListComponent` | ✅ Yes | "Are you sure?" — backend refuses per-customer if they have appointment history. |
+| 2.21 | Click an existing appointment on `/appointments` | Inline dialog (desktop) / drawer (mobile) in `AppointmentsListComponent` | ✅ Yes | Shows customer, service, price, status, **preferred time (read-only)**; Edit / Cancel actions. |
+| 2.22 | Click "Edit" on a day, `/settings/working-hours` tab 1 | Inline drawer (mobile) / dialog (desktop) in `WorkingHoursListComponent` | ✅ Yes | Toggle open/closed + hour ranges for one weekday. |
+| 2.23 | Click a date on the calendar, `/settings/working-hours` tab 2 | Inline drawer/dialog in `WorkingHoursListComponent` | ✅ Yes | Create/edit/delete a one-off exception (closed day or special hours), with an appointment-conflict warning. |
+| 2.24 | Select rows + "Delete selected" on `/customers` | Inline confirmation dialog in `CustomersListComponent` | ✅ Yes | "Are you sure?" — backend refuses per-customer if they have appointment history. |
 
 ---
 
@@ -99,6 +98,9 @@ managing every tenant business, not a business owner. Gated by
 | 3.11 | `/super-admin/settings` | `SuperAdminSettingsComponent` | ✅ Yes (super-admin) | |
 
 No modals/drawers found in this module — every super-admin screen is a full page.
+Confirmed live: **the entire super-admin console is English-only**, unlike the owner
+admin and tenant site (no Hebrew strings, no RTL) — worth deciding deliberately whether
+that's intentional (internal tool, staff-only) before any design pass touches it.
 
 ---
 
@@ -114,6 +116,7 @@ Flagging them so a design audit doesn't waste time on them, and as cleanup candi
 | `/admin/businesses/:id/ui` | Redirects to `/super-admin/businesses/:id/ui` | Same. |
 | `/settings/working-hours/:dayKey` | Loads `WorkingHoursEditComponent` | Orphaned — see row 2.19. Nothing links to it. |
 | `modules/admin/admin.routes.ts` (`ADMIN_ROUTES`) | N/A — never imported by `app.routes.ts` or anywhere else | Dead file. Defines `''`, `business-customers`, `businesses/:id/ui` paths that duplicate parts of `super-admin.routes.ts` but are never wired into the router. Candidate for deletion. |
+| `AppointmentCreateOverlayComponent` (`core/ui/overlay/`) | N/A — the component and its trigger method (`openOverlay()` on `AppointmentsListComponent`) both exist, but `openOverlay()` is never called from anywhere | Confirmed via `grep` while screenshotting: clicking an empty calendar slot navigates to `/appointments/new` instead (row 2.7). This overlay component is fully dead code — verified live, not just by reading the router. |
 | `**` (wildcard) | Redirects to `/` | Standard catch-all, not a real page. |
 
 ---
@@ -123,5 +126,5 @@ Flagging them so a design audit doesn't waste time on them, and as cleanup candi
 | Area | Routed pages | Multi-step sub-screens | Modals/drawers | Total distinct screens |
 |---|---|---|---|---|
 | chen-nails (tenant site) | 6 | +3 (login step 2, book steps 2–3) | 2 | **11** |
-| boki admin (owner) | 15 (incl. 1 orphaned) | +1 (working-hours tab 2) | 5 | **21** |
+| boki admin (owner) | 15 (incl. 1 orphaned) | +1 (working-hours tab 2) | 4 | **20** |
 | boki super-admin (staff) | 11 | 0 | 0 | **11** |
