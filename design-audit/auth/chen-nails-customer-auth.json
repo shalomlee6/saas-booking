@@ -1,0 +1,37 @@
+{
+  "cookies": [
+    {
+      "name": "sb_public_customer",
+      "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTJhYjc0YTE0NjExYzdmZDU1MzIwMzkiLCJjdXN0b21lcklkIjoiNjkyYWI3NGExNDYxMWM3ZmQ1NTMyMDM5IiwiYnVzaW5lc3NJZCI6IjY5MjljMjNiZGFhYzQzZDRiMWM2YzY5MCIsInNsdWciOiJjaGVuLTY5MjljMjNiZGFhYzQzZDRiMWM2YzY4ZSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc5MDQyNDUwNCwiZXhwIjoxODIxOTYwNTA0fQ.1xWd5MVdWpFOeqOq4XemO6mRfhuli5tT4fq479nYpUg",
+      "domain": "localhost",
+      "path": "/api/public",
+      "expires": 1821960504.292232,
+      "httpOnly": true,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": [
+    {
+      "origin": "http://localhost:4200",
+      "localStorage": [
+        {
+          "name": "public_client_token",
+          "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2OTJhYjc0YTE0NjExYzdmZDU1MzIwMzkiLCJjdXN0b21lcklkIjoiNjkyYWI3NGExNDYxMWM3ZmQ1NTMyMDM5IiwiYnVzaW5lc3NJZCI6IjY5MjljMjNiZGFhYzQzZDRiMWM2YzY5MCIsInNsdWciOiJjaGVuLTY5MjljMjNiZGFhYzQzZDRiMWM2YzY4ZSIsInJvbGUiOiJjdXN0b21lciIsImlhdCI6MTc5MDQyNDUwNCwiZXhwIjoxODIxOTYwNTA0fQ.1xWd5MVdWpFOeqOq4XemO6mRfhuli5tT4fq479nYpUg"
+        },
+        {
+          "name": "public_client_customer_id",
+          "value": "692ab74a14611c7fd5532039"
+        },
+        {
+          "name": "public_client_customer_name",
+          "value": "Toto"
+        },
+        {
+          "name": "public_client_business_slug",
+          "value": "chen-6929c23bdaac43d4b1c6c68e"
+        }
+      ]
+    }
+  ]
+}
