@@ -45,3 +45,5 @@ Thumbs.db
 .playwright-cli/
 
 design-audit/auth/
+
+design-audit/
