@@ -12,6 +12,21 @@ export interface AdminBusiness {
   createdAt: string;
   updatedAt: string;
   ui?: BusinessUi;
+  settings?: {
+    theme?: {
+      preset?: string;
+      defaultMode?: 'light' | 'dark';
+    };
+  };
+}
+
+export interface UpdateBusinessUiBody extends Partial<BusinessUi> {
+  publicTheme?: { preset?: string; defaultMode?: 'light' | 'dark' };
+}
+
+export interface UpdateBusinessUiResponse {
+  ui: BusinessUi;
+  publicTheme?: { preset?: string; defaultMode?: 'light' | 'dark' };
 }
 
 export interface ImpersonateResponse {
@@ -207,8 +222,8 @@ export class AdminApiService {
     return this.api.post<{ ok: boolean }>('admin/stop-impersonate', {});
   }
 
-  updateBusinessUi(businessId: string, ui: Partial<BusinessUi>): Observable<{ ui: BusinessUi }> {
-    return this.api.patch<{ ui: BusinessUi }>(`admin/businesses/${businessId}/ui`, ui);
+  updateBusinessUi(businessId: string, body: UpdateBusinessUiBody): Observable<UpdateBusinessUiResponse> {
+    return this.api.patch<UpdateBusinessUiResponse>(`admin/businesses/${businessId}/ui`, body);
   }
 
   listUsers(query: ApiQueryParams): Observable<AdminUsersPage> {

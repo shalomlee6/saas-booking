@@ -66,6 +66,9 @@
   min-height: 220px;
   height: 220px;
   overflow: hidden;
+  // Falls back to the theme surface (not transparent) if a photo fails to load,
+  // so a missing image reads as an empty card, not a jarring mismatched gray box.
+  background: $pl-bg-card;
 }
 
 .pl-hero-carousel__img {
@@ -112,13 +115,13 @@
 }
 
 ::ng-deep .pl-hero-intro__cta.p-button .p-button-icon {
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 ::ng-deep .pl-hero-intro__cta.p-button:not(:disabled):hover {
   background: $pl-primary-hover;
   border: none;
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 // ─── Entrance animation (plays once per tenant per browser session) ───────────

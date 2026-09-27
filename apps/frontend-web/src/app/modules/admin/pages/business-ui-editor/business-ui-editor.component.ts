@@ -4,6 +4,7 @@ import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { AdminApiService } from '../../services/admin-api.service';
 import { ThemeService } from '../../../../core/config/theme.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { THEME_PRESET_LIST, DEFAULT_THEME_PRESET_ID } from '../../../../core/theming/theme-presets';
 
 @Component({
   selector: 'app-business-ui-editor',
@@ -26,12 +27,15 @@ export class BusinessUiEditorComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly businessId = signal<string | null>(null);
   readonly businessName = signal<string>('');
+  readonly themePresets = THEME_PRESET_LIST;
 
   constructor() {
     this.form = this.fb.group({
       themeMode: ['light'],
       primaryColor: ['#3787F6'],
       sidebarColor: ['#0F172A'],
+      publicThemePreset: [DEFAULT_THEME_PRESET_ID],
+      publicThemeMode: ['light'],
     });
   }
 
@@ -52,6 +56,8 @@ export class BusinessUiEditorComponent implements OnInit {
             themeMode: b.ui?.themeMode ?? 'light',
             primaryColor: b.ui?.primaryColor ?? '#3787F6',
             sidebarColor: b.ui?.sidebarColor ?? '#0F172A',
+            publicThemePreset: b.settings?.theme?.preset ?? DEFAULT_THEME_PRESET_ID,
+            publicThemeMode: b.settings?.theme?.defaultMode ?? 'light',
           });
         }
         this.loading.set(false);
@@ -69,7 +75,16 @@ export class BusinessUiEditorComponent implements OnInit {
     this.saving.set(true);
     this.error.set(null);
     const value = this.form.getRawValue();
-    this.adminApi.updateBusinessUi(id, value).subscribe({
+    const body = {
+      themeMode: value.themeMode,
+      primaryColor: value.primaryColor,
+      sidebarColor: value.sidebarColor,
+      publicTheme: {
+        preset: value.publicThemePreset,
+        defaultMode: value.publicThemeMode,
+      },
+    };
+    this.adminApi.updateBusinessUi(id, body).subscribe({
       next: (res) => {
         this.saving.set(false);
         const currentBusinessId = this.auth.user()?.businessId;

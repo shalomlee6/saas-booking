@@ -1,22 +1,37 @@
-// Rose gold palette — shared by public landing components
-$pl-bg-page: #fdf6f0;
-$pl-bg-section-alt: #fdf0f0;
-$pl-bg-card: #ffffff;
-$pl-primary: #985060;
-$pl-primary-hover: #7d4252;
-$pl-primary-light: #e8b4b8;
-$pl-primary-pale: #fadadd;
+// Per-tenant palette — aliases onto the CSS custom properties set on `.public-shell`
+// (styles.scss `.public-shell.theme-light`/`.theme-dark`, overridden per tenant by
+// PublicLayoutComponent from `PublicBusinessThemeFamily`). These used to be hardcoded
+// hex values (a fixed "rose gold" look) with no connection to the theme system at all —
+// keeping the `$pl-*` names so every consuming component needed no changes, only the
+// values now flow through CSS variables so a tenant's own color and light/dark mode
+// both actually take effect here.
+$pl-bg-page: var(--bg-app);
+$pl-bg-section-alt: var(--bg-card);
+$pl-bg-card: var(--bg-card);
+$pl-primary: var(--color-primary);
+$pl-primary-hover: var(--color-primary-hover);
+$pl-primary-light: var(--color-primary-muted);
+$pl-primary-pale: var(--color-primary-subtle);
+// Text color to use ON a solid $pl-primary/$pl-primary-hover fill. Defaults to white
+// (the existing look, safe for the default pink), but a tenant whose primary is too
+// light for white text (e.g. a pale mint) overrides `--on-primary` to a dark ink instead.
+$pl-on-primary: var(--on-primary, #fff);
+// Deep, always-dark variant of the brand color — use this (never $pl-primary) whenever
+// the brand color is TEXT/an icon on a light surface. $pl-primary itself is only
+// guaranteed readable as a background; some tenant palettes (e.g. a pale mint) are far
+// too light to read as text against a white or pale card.
+$pl-ink: var(--color-primary-ink);
 $pl-gold: #7d5c00;
-$pl-text-heading: #2c1810;
-$pl-text-body: #5c3a3a;
-$pl-text-muted: #7a5555;
-$pl-border: #f0d5d5;
-$pl-shadow: rgba(183, 110, 121, 0.1);
-$pl-shadow-soft: rgba(183, 110, 121, 0.08);
+$pl-text-heading: var(--text-primary);
+$pl-text-body: var(--text-secondary);
+$pl-text-muted: var(--text-muted);
+$pl-border: var(--border-color);
+$pl-shadow: rgba(17, 24, 39, 0.08);
+$pl-shadow-soft: rgba(17, 24, 39, 0.06);
 
 @mixin pl-btn-primary {
   background: $pl-primary;
-  color: #fff;
+  color: $pl-on-primary;
   border: none;
   border-radius: 50px;
   padding: 12px 28px;
@@ -24,13 +39,13 @@ $pl-shadow-soft: rgba(183, 110, 121, 0.08);
 
   &:not(:disabled):hover {
     background: $pl-primary-hover;
-    color: #fff;
+    color: $pl-on-primary;
   }
 }
 
 @mixin pl-btn-secondary {
   background: $pl-primary-pale;
-  color: $pl-primary;
+  color: $pl-ink;
   border: 1px solid $pl-primary-light;
   border-radius: 50px;
   padding: 12px 28px;

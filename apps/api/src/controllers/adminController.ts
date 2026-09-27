@@ -38,6 +38,8 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
               colors: {
                 primary: settings.theme.colors.primary,
               },
+              preset: settings.theme.preset,
+              defaultMode: settings.theme.defaultMode,
             },
             features: {
               bookingEnabled: settings.features.bookingEnabled,
@@ -256,18 +258,56 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
     if (!result.valid) {
       return res.status(400).json({ message: result.message });
     }
-    if (!result.ui || Object.keys(result.ui).length === 0) {
+
+    const publicTheme = req.body?.publicTheme;
+    let presetUpdate: string | undefined;
+    let defaultModeUpdate: 'light' | 'dark' | undefined;
+    if (publicTheme !== undefined) {
+      if (typeof publicTheme !== 'object' || publicTheme === null) {
+        return res.status(400).json({ message: 'publicTheme must be an object' });
+      }
+      if (publicTheme.preset !== undefined) {
+        if (typeof publicTheme.preset !== 'string' || !publicTheme.preset) {
+          return res.status(400).json({ message: 'publicTheme.preset must be a non-empty string' });
+        }
+        presetUpdate = publicTheme.preset;
+      }
+      if (publicTheme.defaultMode !== undefined) {
+        if (publicTheme.defaultMode !== 'light' && publicTheme.defaultMode !== 'dark') {
+          return res.status(400).json({ message: 'publicTheme.defaultMode must be "light" or "dark"' });
+        }
+        defaultModeUpdate = publicTheme.defaultMode;
+      }
+    }
+
+    const hasUiFields = !!result.ui && Object.keys(result.ui).length > 0;
+    if (!hasUiFields && presetUpdate === undefined && defaultModeUpdate === undefined) {
       return res.status(400).json({ message: 'No valid UI fields to update' });
     }
+
     const business = await Business.findById(businessId);
     if (!business) {
       return res.status(404).json({ message: 'Business not found' });
     }
-    const currentUi = business.ui && typeof business.ui === 'object' ? business.ui : {};
-    const merged = { ...currentUi, ...result.ui };
-    business.ui = merged as any;
-    await business.save();
-    return res.json({ ui: normalizeBusinessUi(business.ui) });
+
+    if (hasUiFields) {
+      const currentUi = business.ui && typeof business.ui === 'object' ? business.ui : {};
+      const merged = { ...currentUi, ...result.ui };
+      business.ui = merged as any;
+      await business.save();
+    }
+
+    const settings = await ensureBusinessSettings(business._id);
+    if (presetUpdate !== undefined) settings.theme.preset = presetUpdate;
+    if (defaultModeUpdate !== undefined) settings.theme.defaultMode = defaultModeUpdate;
+    if (presetUpdate !== undefined || defaultModeUpdate !== undefined) {
+      await settings.save();
+    }
+
+    return res.json({
+      ui: normalizeBusinessUi(business.ui),
+      publicTheme: { preset: settings.theme.preset, defaultMode: settings.theme.defaultMode },
+    });
   } catch (err) {
     logger.error('admin_patch_business_ui_failed', {
       error: err instanceof Error ? err.message : String(err),

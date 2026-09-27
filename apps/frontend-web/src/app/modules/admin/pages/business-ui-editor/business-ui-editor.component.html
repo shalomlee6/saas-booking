@@ -19,6 +19,21 @@
         <label for="sidebarColor">Sidebar color</label>
         <input id="sidebarColor" type="text" formControlName="sidebarColor" class="business-ui-editor-input" placeholder="#0F172A" />
       </div>
+      <div class="business-ui-editor-field">
+        <label for="publicThemePreset">Theme</label>
+        <select id="publicThemePreset" formControlName="publicThemePreset" class="business-ui-editor-input">
+          @for (preset of themePresets; track preset.id) {
+            <option [value]="preset.id">{{ preset.label }}</option>
+          }
+        </select>
+      </div>
+      <div class="business-ui-editor-field">
+        <label for="publicThemeMode">Default mode</label>
+        <select id="publicThemeMode" formControlName="publicThemeMode" class="business-ui-editor-input">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
       @if (error()) {
         <p class="business-ui-editor-error">{{ error() }}</p>
       }

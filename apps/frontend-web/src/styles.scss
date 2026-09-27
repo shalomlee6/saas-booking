@@ -113,6 +113,142 @@ body.theme-dark {
   --p-text-muted-color:    #9ca3af;
 }
 
+// ─── Public tenant site theme ─────────────────────────────────────────────────
+// Scoped to `.public-shell` (the customer-facing booking site's own root), not
+// `body`. Deliberately independent from the admin dashboard's `body.theme-*`
+// above: a customer's light/dark choice on a tenant's public site must never
+// flip a staff member's own admin dashboard theme, even in the same browser
+// profile (see PublicThemeService). Same token names as `body.theme-*` so
+// existing `var(--bg-app)`-style component styles work unchanged; these are
+// the *default* brand tokens for a tenant that hasn't customized its palette.
+// A tenant that has (see `PublicBusinessThemeFamily`) overrides `--color-primary`
+// and its derived shades inline, per light/dark mode, on `.public-shell` itself.
+
+.public-shell.theme-light {
+  --color-primary:        #F35271;
+  --color-primary-hover:  #de3b5c;
+  --color-primary-subtle: #fef1f4;
+  --color-primary-muted:  #fbc7d3;
+  --color-primary-ink:    #96263d;
+  --on-primary:           #ffffff;
+
+  --bg-app:               #f5f5f7;
+  --bg-card:              #ffffff;
+  --bg-sidebar:           #ffffff;
+
+  --color-success:        #16a34a;
+  --color-danger:         #dc2626;
+  --color-warning:        #d97706;
+
+  --text-primary:         #111827;
+  --text-secondary:       #374151;
+  --text-muted:           #6b7280;
+  --text-placeholder:     #9ca3af;
+
+  --border-color:         #e5e7eb;
+  --border-color-strong:  #d1d5db;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-pill: 999px;
+
+  // PrimeNG's OWN native tokens (used by raw p-button/p-drawer/p-dialog chrome
+  // that isn't wrapped in our own $pl-*-based classes) — aliased onto our tenant
+  // tokens so native PrimeNG chrome follows the tenant's preset too, instead of
+  // silently falling through to body.theme-light's fixed admin-dashboard pink.
+  --p-primary-color:          var(--color-primary);
+  --p-primary-contrast-color: var(--on-primary);
+  --p-content-background:     var(--bg-card);
+  --p-content-color:          var(--text-primary);
+  --p-surface-0:               var(--bg-card);
+  --p-surface-50:              var(--bg-app);
+  --p-surface-100:             var(--border-color);
+  --p-surface-200:             var(--border-color-strong);
+  --p-surface-ground:          var(--bg-app);
+  --p-surface-section:         var(--bg-card);
+  --p-surface-card:            var(--bg-card);
+  --p-surface-overlay:         var(--bg-card);
+  --p-surface-border:          var(--border-color);
+  --p-text-color:              var(--text-primary);
+  --p-text-muted-color:        var(--text-muted);
+
+  color-scheme: light;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+.public-shell.theme-dark {
+  --color-primary:        #f06b8a;
+  --color-primary-hover:  #f8849f;
+  --color-primary-subtle: #2a1520;
+  --color-primary-muted:  #4a2030;
+  --color-primary-ink:    #f8849f;
+  // Dark mode's --color-primary is deliberately lighter/brighter (so it pops on
+  // black) — too light for white text (2.8:1). Dark text is the correct default here.
+  --on-primary:           #0d0d0f;
+
+  --bg-app:               #0d0d0f;
+  --bg-card:              #18181b;
+  --bg-sidebar:           #18181b;
+
+  --color-success:        #4ade80;
+  --color-danger:         #f87171;
+  --color-warning:        #fbbf24;
+
+  --text-primary:         #f9fafb;
+  --text-secondary:       #e5e7eb;
+  --text-muted:           #9ca3af;
+  --text-placeholder:     #6b7280;
+
+  --border-color:         #27272a;
+  --border-color-strong:  #3f3f46;
+
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+
+  --radius-sm:  6px;
+  --radius-md:  8px;
+  --radius-lg:  12px;
+  --radius-xl:  16px;
+  --radius-pill: 999px;
+
+  // See .theme-light for why these PrimeNG-native tokens are aliased here too.
+  --p-primary-color:          var(--color-primary);
+  --p-primary-contrast-color: var(--on-primary);
+  --p-content-background:     var(--bg-card);
+  --p-content-color:          var(--text-primary);
+  --p-surface-0:               var(--bg-card);
+  --p-surface-50:              var(--bg-app);
+  --p-surface-100:             var(--border-color);
+  --p-surface-200:             var(--border-color-strong);
+  --p-surface-ground:          var(--bg-app);
+  --p-surface-section:         var(--bg-card);
+  --p-surface-card:            var(--bg-card);
+  --p-surface-overlay:         var(--bg-card);
+  --p-surface-border:          var(--border-color);
+  --p-text-color:              var(--text-primary);
+  --p-text-muted-color:        var(--text-muted);
+
+  color-scheme: dark;
+  background: var(--bg-app);
+  color: var(--text-primary);
+}
+
+// ─── RTL: PrimeNG chevron icons ────────────────────────────────────────────────
+// PrimeNG mirrors these buttons' POSITION for [dir="rtl"] (next moves to the
+// visual left) but never flips the chevron glyph itself, so "next" ends up
+// pointing right and "previous" pointing left — backwards relative to their
+// new position. Flip the glyphs to match.
+[dir='rtl'] .p-datepicker-prev-button .p-icon,
+[dir='rtl'] .p-datepicker-next-button .p-icon {
+  transform: scaleX(-1);
+}
+
 // ─── Base reset ───────────────────────────────────────────────────────────────
 html {
   font-size: 100%;

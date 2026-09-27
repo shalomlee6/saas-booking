@@ -1,6 +1,5 @@
 $public-nav-width: 240px;
 $public-nav-topbar-height: 56px;
-$pl-primary: #985060;
 
 :host {
   display: block;
@@ -15,8 +14,11 @@ $pl-primary: #985060;
   z-index: 50;
   height: $public-nav-topbar-height;
   padding: 0 0.75rem;
-  background: $pl-primary;
-  color: #fff;
+  // --on-primary is the tenant/mode-aware safe text color for content sitting on a
+  // solid --color-primary fill (white for the default pink, dark for a paler tenant
+  // accent like a mint) — never hardcode white here, some tenant palettes need dark text.
+  background: var(--color-primary);
+  color: var(--on-primary, #fff);
   box-sizing: border-box;
 }
 
@@ -36,16 +38,16 @@ $pl-primary: #985060;
   border: none;
   border-radius: var(--radius-md, 8px);
   background: transparent;
-  color: #fff;
+  color: var(--on-primary, #fff);
   cursor: pointer;
 }
 
 .public-nav-menu-btn:hover {
-  background: rgb(255 255 255 / 0.16);
+  background: color-mix(in srgb, var(--on-primary, #fff) 16%, transparent);
 }
 
 .public-nav-menu-btn:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--on-primary, #fff);
   outline-offset: 2px;
 }
 
@@ -130,7 +132,7 @@ $pl-primary: #985060;
 }
 
 .public-nav-link:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-primary-ink, #96263d);
   outline-offset: 2px;
 }
 
@@ -143,7 +145,9 @@ $pl-primary: #985060;
   flex-shrink: 0;
   width: 1.125rem;
   font-size: 1rem;
-  color: var(--color-primary);
+  // Ink, not the raw primary: some tenant palettes (e.g. a light mint) are too
+  // pale for a meaningful icon against the sidebar's light surface.
+  color: var(--color-primary-ink, #96263d);
   text-align: center;
 }
 
