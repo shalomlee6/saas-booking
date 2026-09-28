@@ -4,20 +4,22 @@ import { User } from '../models/User';
 import { Business } from '../models/Business';
 import { generateSlug } from '../utils/slug';
 import { auth } from '../middleware/auth';
-import { getMe } from '../controllers/authController';
+import { getMe, changePassword } from '../controllers/authController';
 import { validateBody } from '../middleware/validateRequest';
 import { asyncHandler } from '../utils/asyncHandler';
 import {
+  authChangePasswordBodySchema,
   authForgotPasswordBodySchema,
   authLoginBodySchema,
   authRegisterBodySchema,
   authResetPasswordBodySchema,
 } from '../validation/schemas/auth';
 import { forgotPassword, resetPassword } from '../controllers/passwordResetController';
+import { sensitiveRouteLimiter } from '../middleware/rateLimits';
 import {
   STAFF_COOKIE_NAME,
   clearStaffAuthCookieOptions,
-  signStaffSessionToken,
+  signStaffToken,
   staffAuthCookieOptions,
 } from '../utils/staffSession';
 
@@ -34,6 +36,7 @@ function isPublicRegistrationAllowed(): boolean {
 // POST /api/auth/register
 authRouter.post(
   '/register',
+  sensitiveRouteLimiter,
   validateBody(authRegisterBodySchema),
   asyncHandler(async (req, res) => {
     if (!isPublicRegistrationAllowed()) {
@@ -67,11 +70,12 @@ authRouter.post(
     user.businessId = business._id;
     await user.save();
 
-    const token = signStaffSessionToken({
+    const token = signStaffToken({
       userId: user._id,
       role: user.role,
       email: user.email,
       businessId: user.businessId,
+      passwordChangedAt: user.passwordChangedAt,
     });
 
     res.cookie(STAFF_COOKIE_NAME, token, staffAuthCookieOptions());
@@ -92,6 +96,7 @@ authRouter.post(
 // POST /api/auth/login
 authRouter.post(
   '/login',
+  sensitiveRouteLimiter,
   validateBody(authLoginBodySchema),
   asyncHandler(async (req, res) => {
     const { email, password } = req.body as { email: string; password: string };
@@ -113,17 +118,13 @@ authRouter.post(
     user.lastLoginAt = new Date();
     await user.save();
 
-    const payload: Record<string, unknown> = {
+    const token = signStaffToken({
       userId: user._id,
       role: user.role,
       email: user.email,
-    };
-    // Super-admin session must not carry tenant scope; use impersonation JWT for that.
-    if (user.role !== 'super_admin' && user.businessId) {
-      payload.businessId = user.businessId;
-    }
-
-    const token = signStaffSessionToken(payload);
+      businessId: user.businessId,
+      passwordChangedAt: user.passwordChangedAt,
+    });
 
     res.cookie(STAFF_COOKIE_NAME, token, staffAuthCookieOptions());
 
@@ -139,11 +140,30 @@ authRouter.post(
   })
 );
 
-authRouter.post('/forgot-password', validateBody(authForgotPasswordBodySchema), asyncHandler(forgotPassword));
-authRouter.post('/reset-password', validateBody(authResetPasswordBodySchema), asyncHandler(resetPassword));
+authRouter.post(
+  '/forgot-password',
+  sensitiveRouteLimiter,
+  validateBody(authForgotPasswordBodySchema),
+  asyncHandler(forgotPassword)
+);
+authRouter.post(
+  '/reset-password',
+  sensitiveRouteLimiter,
+  validateBody(authResetPasswordBodySchema),
+  asyncHandler(resetPassword)
+);
 
 // GET /api/auth/me
 authRouter.get('/me', auth, getMe);
+
+// POST /api/auth/change-password — authenticated, current-password-verified self-service change.
+authRouter.post(
+  '/change-password',
+  sensitiveRouteLimiter,
+  auth,
+  validateBody(authChangePasswordBodySchema),
+  asyncHandler(changePassword)
+);
 
 // logout
 authRouter.post('/logout', (req, res) => {

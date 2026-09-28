@@ -42,6 +42,20 @@ const productionSchema = z
     }
   });
 
+export type RateLimitConfig = {
+  /** Window for the general tiers (public/api/admin), in ms. */
+  windowMs: number;
+  /** Window for sensitive routes (login, register, password reset, OTP), in ms. */
+  sensitiveWindowMs: number;
+  maxSensitive: number;
+  maxOtp: number;
+  /** Second, IP-keyed ceiling on top of the per-phone OTP limit — stops phone rotation abuse. */
+  maxOtpPerIp: number;
+  maxPublic: number;
+  maxApi: number;
+  maxAdmin: number;
+};
+
 export type Env = {
   NODE_ENV: 'development' | 'production' | 'test';
   PORT: number;
@@ -52,6 +66,11 @@ export type Env = {
   superAdminEmails: string[];
   GA_ID?: string;
   STRIPE_KEY?: string;
+  rateLimit: RateLimitConfig;
+  /** Express `trust proxy` setting — must match the real infra topology (e.g. one hop
+   *  behind an AWS ALB) or `req.ip` either collapses to the load balancer's own IP
+   *  (one shared rate-limit bucket for everyone) or becomes spoofable via X-Forwarded-For. */
+  trustProxy: boolean | number | string;
 };
 
 let cached: Env | null = null;
@@ -81,6 +100,57 @@ function parsePort(raw: string | undefined, fallback: number): number {
     return fallback;
   }
   return n;
+}
+
+function parsePositiveInt(raw: string | undefined, fallback: number): number {
+  if (raw === undefined || raw.trim() === '') return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) return fallback;
+  return n;
+}
+
+/**
+ * Rate-limit tiers, generous in development (so normal iteration — reloads,
+ * `/auth/me` polling, live testing — never exhausts a budget meant to catch
+ * abuse), reasonable/strict in production. All overridable via env vars.
+ */
+function resolveRateLimitConfig(isProduction: boolean): RateLimitConfig {
+  return {
+    windowMs: parsePositiveInt(
+      process.env.RATE_LIMIT_WINDOW_MS,
+      isProduction ? 15 * 60 * 1000 : 60 * 1000
+    ),
+    sensitiveWindowMs: parsePositiveInt(
+      process.env.RATE_LIMIT_SENSITIVE_WINDOW_MS,
+      isProduction ? 15 * 60 * 1000 : 60 * 1000
+    ),
+    maxSensitive: parsePositiveInt(process.env.RATE_LIMIT_MAX_SENSITIVE, isProduction ? 10 : 100),
+    maxOtp: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP, isProduction ? 5 : 50),
+    maxOtpPerIp: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP_IP, isProduction ? 20 : 200),
+    maxPublic: parsePositiveInt(process.env.RATE_LIMIT_MAX_PUBLIC, isProduction ? 100 : 2000),
+    maxApi: parsePositiveInt(process.env.RATE_LIMIT_MAX_API, isProduction ? 300 : 5000),
+    maxAdmin: parsePositiveInt(process.env.RATE_LIMIT_MAX_ADMIN, isProduction ? 100 : 2000),
+  };
+}
+
+/**
+ * Resolves Express's `trust proxy` setting. Defaults to trusting exactly one
+ * hop in production (the standard direct-behind-an-ALB/nginx topology) and
+ * trusting nothing in development/test (no proxy in front locally, so
+ * X-Forwarded-For should never be honored — it'd otherwise let a local
+ * request spoof its own IP). Override via TRUST_PROXY: "false", "true", an
+ * integer hop count, or an express-compatible subnet/CIDR list.
+ */
+function resolveTrustProxy(raw: string | undefined, isProduction: boolean): boolean | number | string {
+  if (raw === undefined || raw.trim() === '') {
+    return isProduction ? 1 : false;
+  }
+  const trimmed = raw.trim();
+  if (trimmed === 'true') return true;
+  if (trimmed === 'false') return false;
+  const n = Number(trimmed);
+  if (Number.isInteger(n) && n >= 0) return n;
+  return trimmed;
 }
 
 function parseBaseUrl(raw: string | undefined, fallback: string): string {
@@ -125,6 +195,8 @@ export function validateEnv(): Env {
       superAdminEmails: parseSuperAdminEmails(result.data.SUPER_ADMIN_EMAILS),
       GA_ID: result.data.GA_ID,
       STRIPE_KEY: result.data.STRIPE_KEY,
+      rateLimit: resolveRateLimitConfig(true),
+      trustProxy: resolveTrustProxy(process.env.TRUST_PROXY, true),
     };
     return cached;
   }
@@ -186,6 +258,8 @@ export function validateEnv(): Env {
     superAdminEmails: parseSuperAdminEmails(process.env.SUPER_ADMIN_EMAILS),
     GA_ID,
     STRIPE_KEY,
+    rateLimit: resolveRateLimitConfig(false),
+    trustProxy: resolveTrustProxy(process.env.TRUST_PROXY, false),
   };
   return cached;
 }

@@ -26,3 +26,10 @@ export const authResetPasswordBodySchema = z
     password: z.string().min(8).max(128),
   })
   .strict();
+
+export const authChangePasswordBodySchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(8).max(128),
+  })
+  .strict();

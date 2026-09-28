@@ -40,7 +40,7 @@
           <p-card styleClass="sa-alert-card">
             <div class="sa-alert-card-head">
               <p-tag [value]="severityLabel(a.severity)" [severity]="severityTag(a.severity)" />
-              <span class="sa-alert-meta">{{ a.category }} · {{ a.createdAt | date: 'short' }}</span>
+              <span class="sa-alert-meta">{{ a.category }} · {{ a.createdAt | saDate: 'short' }}</span>
             </div>
             <h2 class="sa-alert-title">{{ a.title }}</h2>
             <p class="sa-alert-msg">{{ a.message }}</p>

@@ -14,6 +14,10 @@ export interface IUser extends Document {
   status: UserStatus;
   lastLoginAt?: Date;
   businessId?: Types.ObjectId; // נוסיף בהמשך קשר ל-Business
+  /** Set whenever the user's own password is changed (not on reset-token issuance).
+   *  Any JWT issued before this timestamp is rejected — see middleware/auth.ts —
+   *  so changing a password invalidates every other outstanding session. */
+  passwordChangedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -33,6 +37,7 @@ const UserSchema = new Schema<IUser>(
     },
     lastLoginAt: { type: Date },
     businessId: { type: Schema.Types.ObjectId, ref: 'Business' },
+    passwordChangedAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -6,18 +6,18 @@ import {
   computed,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   AdminApiService,
   type AdminBusiness,
 } from '../../services/admin-api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { SaDatePipe } from '../../shared/sa-date.pipe';
 
 @Component({
   selector: 'app-business-customers',
   standalone: true,
-  imports: [FormsModule, DatePipe, RouterLink],
+  imports: [FormsModule, SaDatePipe, RouterLink],
   templateUrl: './business-customers.component.html',
   styleUrl: './business-customers.component.scss',
 })

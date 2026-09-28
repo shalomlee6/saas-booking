@@ -25,6 +25,10 @@ export interface BusinessSettingsTheme {
     background?: string;
     text?: string;
   };
+  /** Public tenant site theme preset id (see core/theming/theme-presets.ts). */
+  preset?: string;
+  /** Business-configured default light/dark mode for the public site. */
+  defaultMode?: 'light' | 'dark';
   logoUrl?: string | null;
   fontFamily?: string;
 }
@@ -124,20 +128,30 @@ export class AuthService {
         this.businessSettings.set(res.businessSettings ?? null);
         this.initialized.set(true);
 
-        // Super admin (not impersonating): sb_theme. Impersonating or owners: business UI drives mode.
-        const isSuperAdmin =
-          u.role === 'super_admin' && !this._impersonationToken();
-        const mode = isSuperAdmin
-          ? ((typeof localStorage !== 'undefined' && (localStorage.getItem('sb_theme') as 'light' | 'dark' | null)) === 'dark' ? 'dark' : 'light')
-          : (res.business?.ui?.themeMode === 'dark' ? 'dark' : 'light');
-        const businessTheme = ThemeService.toBusinessThemeOverrides(
-          res.business?.ui,
-          res.businessSettings?.theme ?? undefined
-        );
+        // The super-admin panel is permanently light and unaffected by any
+        // business — see ThemeService/styles.scss. Only an owner's own login,
+        // or an impersonated business, derives its mode from that business's
+        // own ui.themeMode.
+        const isSuperAdmin = u.role === 'super_admin' && !this._impersonationToken();
+        const mode: 'light' | 'dark' = isSuperAdmin
+          ? 'light'
+          : res.business?.ui?.themeMode === 'dark'
+            ? 'dark'
+            : 'light';
+        const businessTheme = isSuperAdmin
+          ? null
+          : ThemeService.toBusinessThemeOverrides(res.business?.ui, res.businessSettings?.theme ?? undefined);
         this.theme.applyAll({ mode, businessTheme });
       }),
       map(() => undefined),
       catchError(() => {
+        // A stale impersonation token (its target business was deleted, or it
+        // expired) fails /me the same way a dead session does. Drop it here
+        // rather than leaving it in localStorage, where it would keep being
+        // sent and keep failing on every subsequent /me call.
+        if (this._impersonationToken()) {
+          this.stopImpersonation();
+        }
         this.user.set(null);
         this.business.set(null);
         this.businessSettings.set(null);
@@ -229,6 +243,19 @@ export class AuthService {
 
   isSuperAdmin(): boolean {
     return this.user()?.role === 'super_admin';
+  }
+
+  /**
+   * Self-service password change for the logged-in user (super-admin, owner, or
+   * staff). The backend re-issues a fresh session cookie for THIS session while
+   * invalidating every other outstanding one, so no client-side session handling
+   * is needed here beyond surfacing success/failure to the caller.
+   */
+  changePassword(currentPassword: string, newPassword: string): Observable<{ message: string }> {
+    return this.api.post<{ message: string }>('auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
   }
 
   /** Active business name (own business or impersonated). */

@@ -8,6 +8,7 @@ import {
   untracked,
   DestroyRef,
 } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
@@ -39,17 +40,23 @@ import { resolvePublicAssetUrl } from '../../../../../shared/utils/public-asset-
 
 const DEFAULT_TAGLINE = 'יופי מקצועי, תוצאות מושלמות';
 
-/** sessionStorage key prefix for the once-per-session hero entrance animation, scoped per tenant slug. */
+/** sessionStorage key prefix for the once-per-session page-load intro animation, scoped per tenant slug. */
 const ENTRANCE_SEEN_KEY_PREFIX = 'boki:landingEntranceSeen:';
 
 /**
- * Decides whether the hero entrance animation should play for this tenant slug,
+ * Decides whether the entrance animation should play for this tenant slug,
  * and records that it has been shown so it does not replay later in the same
  * browser session (e.g. navigating back to the landing page, or re-rendering
  * after booking). Guarded so a page with sessionStorage unavailable (private
  * browsing, SSR) still renders normally — it just may play the animation again.
+ *
+ * `forcePlay` (from the `?intro=1` query param — dev/QA only) always plays
+ * the intro and never touches sessionStorage at all, so repeated reloads
+ * with that param keep replaying it regardless of what a real visit already
+ * recorded.
  */
-function shouldPlayEntranceAnimation(slug: string): boolean {
+function shouldPlayEntranceAnimation(slug: string, forcePlay: boolean): boolean {
+  if (forcePlay) return true;
   if (typeof window === 'undefined' || !slug) return false;
   const key = `${ENTRANCE_SEEN_KEY_PREFIX}${slug}`;
   try {
@@ -66,6 +73,11 @@ function shouldPlayEntranceAnimation(slug: string): boolean {
   }
   return true;
 }
+
+/** Total wall-clock length of the whole intro sequence (its latest-ending phase,
+ *  the floating booking bar: 2025ms delay + 825ms duration), plus a small buffer.
+ *  Used only to know when it's safe to restore the page's normal background. */
+const INTRO_TOTAL_MS = 2900;
 
 @Component({
   selector: 'app-public-landing',
@@ -92,6 +104,8 @@ export class PublicLandingComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly document = inject(DOCUMENT);
+  private introInterruptCleanup: (() => void) | null = null;
 
   constructor() {
     let prevCustomerId: string | null | undefined;
@@ -120,10 +134,24 @@ export class PublicLandingComponent implements OnInit {
   readonly businessSlug = signal('');
 
   /**
-   * Whether the hero entrance animation should play. True at most once per
-   * tenant per browser session — see `shouldPlayEntranceAnimation`.
+   * True at most once per tenant per browser session (see
+   * `shouldPlayEntranceAnimation`) — decides whether this page load is even
+   * a candidate for the intro at all. Doesn't flip off again; `introActive`
+   * (below) is what the template actually binds to.
    */
-  readonly playHeroEntrance = signal(false);
+  readonly playIntro = signal(false);
+
+  /**
+   * True for exactly the duration of the intro sequence: set alongside
+   * `playIntro`, then cleared either by the natural end-of-sequence timer or
+   * by the user interrupting it (tap/scroll) — whichever comes first. Drives
+   * the hero slide-down, bottom-sheet slide-up, card slide-in, text fade, and
+   * floating bar. Clearing it removes `.pl-page--intro` entirely, which both
+   * jumps every element to its final resting state (nothing outside that
+   * class carries any `animation`) and drops any `will-change` scoped under
+   * it, so nothing lingers promoted to its own compositing layer.
+   */
+  readonly introActive = signal(false);
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
@@ -298,7 +326,13 @@ export class PublicLandingComponent implements OnInit {
       )
       .subscribe((slug) => {
         this.businessSlug.set(slug);
-        this.playHeroEntrance.set(shouldPlayEntranceAnimation(slug));
+        const forceIntro = this.route.snapshot.queryParamMap.get('intro') === '1';
+        const playIntro = shouldPlayEntranceAnimation(slug, forceIntro);
+        this.playIntro.set(playIntro);
+        this.introActive.set(playIntro);
+        if (playIntro) {
+          this.beginIntroStage();
+        }
         if (!slug) {
           this.loadingPageData.set(false);
           this.pageLoadError.set('חסר מזהה עסק');
@@ -342,6 +376,71 @@ export class PublicLandingComponent implements OnInit {
         this.loadingPageData.set(false);
       },
     });
+  }
+
+  /**
+   * Swaps every ancestor's background for the intro's dark/light "stage"
+   * color (read off `.public-shell`'s own `--intro-stage-bg`, resolved from
+   * the tenant's light/dark mode by `PublicLayoutComponent`) so the exposed
+   * backdrop behind the sliding hero/bottom-sheet reads as a deliberate
+   * reveal instead of a flash of the normal page background. `.pl-page`
+   * itself — the direct parent of both the hero and the sheet, and the one
+   * actually painted behind the gaps while they're still off-screen — is
+   * handled in CSS instead (`.pl-page--intro { background: ... }` in this
+   * component's stylesheet): it's reached for free by the same class this
+   * method's caller already sets, so it doesn't need a JS override. `body`
+   * and `.public-layout` (the ONE outer wrapper that also carries its own
+   * solid `--bg-app`) sit outside this component's own stylesheet scope and
+   * need to be reached here instead. Restores every one of them once the
+   * sequence is done, or immediately if the user interrupts it. Also wires
+   * up the "tap or scroll skips the intro" behavior — both live here since
+   * they share the same lifecycle.
+   */
+  private beginIntroStage(): void {
+    if (typeof window === 'undefined') return;
+    const shell = this.document.querySelector<HTMLElement>('.public-shell');
+    const stageColor = shell
+      ? getComputedStyle(shell).getPropertyValue('--intro-stage-bg').trim()
+      : '';
+    const staged: HTMLElement[] = [
+      this.document.body,
+      this.document.querySelector<HTMLElement>('.public-layout'),
+    ].filter((el): el is HTMLElement => !!el);
+    if (stageColor) {
+      for (const el of staged) {
+        el.style.setProperty('background', stageColor);
+      }
+    }
+
+    const restore = (): void => {
+      for (const el of staged) {
+        el.style.removeProperty('background');
+      }
+      this.introActive.set(false);
+    };
+
+    const skip = (): void => {
+      restore();
+      this.introInterruptCleanup?.();
+      this.introInterruptCleanup = null;
+    };
+
+    const opts: AddEventListenerOptions = { passive: true, once: true };
+    window.addEventListener('pointerdown', skip, opts);
+    window.addEventListener('wheel', skip, opts);
+    window.addEventListener('touchmove', skip, opts);
+    window.addEventListener('scroll', skip, opts);
+
+    const timer = window.setTimeout(restore, INTRO_TOTAL_MS);
+
+    this.introInterruptCleanup = () => {
+      window.removeEventListener('pointerdown', skip);
+      window.removeEventListener('wheel', skip);
+      window.removeEventListener('touchmove', skip);
+      window.removeEventListener('scroll', skip);
+      window.clearTimeout(timer);
+    };
+    this.destroyRef.onDestroy(() => this.introInterruptCleanup?.());
   }
 
   private scrollToLandingFragment(id: string | null): void {

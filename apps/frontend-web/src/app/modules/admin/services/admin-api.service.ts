@@ -70,6 +70,22 @@ export interface AdminUserDetail extends AdminUserRow {
   businessFeatures?: AdminBusinessFeatures | null;
 }
 
+export interface AdminUserDeleteImpact {
+  email: string;
+  role: string;
+  business: { id: string; name: string; slug: string } | null;
+  counts: {
+    appointments: number;
+    customers: number;
+    services: number;
+    staffUsers: number;
+    reviews: number;
+    availabilityOverrides: number;
+    customerServiceConfigs: number;
+    uploadedFiles: number;
+  };
+}
+
 export type PatchAdminUserBody = {
   status?: 'active' | 'disabled';
   name?: string;
@@ -256,6 +272,10 @@ export class AdminApiService {
 
   deleteUser(id: string): Observable<void> {
     return this.api.delete<void>(`admin/users/${id}`);
+  }
+
+  getUserDeleteImpact(id: string): Observable<AdminUserDeleteImpact> {
+    return this.api.get<AdminUserDeleteImpact>(`admin/users/${id}/delete-impact`);
   }
 
   resetUserPassword(id: string): Observable<{ message: string }> {

@@ -58,7 +58,11 @@
 }
 
 ::ng-deep .pl-hero-carousel .p-carousel-content {
+  background: var(--bg-app);
   position: relative;
+}
+::ng-deep .pl-hero-carousel .p-carousel-indicator-list {
+  background: var(--bg-app);
 }
 
 .pl-hero-carousel__slide {
@@ -124,51 +128,96 @@
   color: $pl-on-primary;
 }
 
-// ─── Entrance animation (plays once per tenant per browser session) ───────────
-// Default state (no `--play-entrance` modifier): every item already sits in its
-// final, fully-visible position — a session that has seen the animation before,
-// or a browser without JS/sessionStorage, still renders the hero correctly.
-// Only `transform`/`opacity` are animated (no CLS, GPU-accelerated, RTL-safe —
-// `translateY` instead of `translateX`). Reduced-motion is handled globally in
-// `styles.scss` (zeroes all animation durations), so no local override is needed.
+// ─── Page-load intro (plays once per tenant per browser session) ──────────────
+// Default state (no `--play-entrance` modifier): the hero already sits in its
+// final, fully-visible position — a session that has seen the intro before, a
+// browser without JS/sessionStorage, or an interrupted intro (the container
+// removes this modifier the instant the user taps/scrolls) all render/settle
+// here with zero extra rules needed. Only `transform`/`opacity`/`filter`
+// animate (no CLS, GPU-accelerated). `translateY` is RTL-safe.
+$pl-intro-ease: cubic-bezier(0.23, 1, 0.32, 1);
+
 .pl-hero-wrap--play-entrance {
+  // The whole hero — image + copy + CTA — moves as one solid panel, arriving
+  // from above. Its own text doesn't fade separately; it's carried by the
+  // panel and only visible once the panel has slid into place.
+  will-change: transform;
+  animation: pl-hero-panel-in 1050ms $pl-intro-ease 375ms both;
+
+  // The image keeps a slower, independent depth-of-field settle that runs
+  // longer than the panel's own slide, so it's still gently scaling down
+  // for a moment after the panel itself has stopped moving.
   .pl-hero-entrance-item--media .pl-hero-carousel__img {
-    animation: pl-hero-media-in 0.4s ease-out both;
+    will-change: transform;
+    animation: pl-hero-media-in 1400ms $pl-intro-ease 375ms both;
   }
 
+  // Top-to-bottom text fade (phase 4 of the page intro) — starts after the
+  // panel has essentially arrived, picking up right where the page's other
+  // text elements (welcome greeting, section titles) continue the same
+  // cascade; see PublicLandingComponent's .pl-intro-text--N stagger.
   .pl-hero-entrance-item--brand {
-    animation: pl-hero-fade-up 0.4s ease-out 0.2s both;
+    will-change: transform, opacity, filter;
+    animation: pl-hero-text-in 675ms $pl-intro-ease 1350ms both;
   }
 
   .pl-hero-entrance-item--copy {
-    animation: pl-hero-fade-up 0.4s ease-out 0.4s both;
+    will-change: transform, opacity, filter;
+    animation: pl-hero-text-in 675ms $pl-intro-ease 1440ms both;
+  }
+
+  .pl-hero-entrance-item--copy + .pl-hero-entrance-item--copy {
+    animation-delay: 1530ms;
   }
 
   ::ng-deep .pl-hero-entrance-item--cta.p-button {
-    animation: pl-hero-fade-up 0.4s ease-out 0.6s both;
+    will-change: transform, opacity, filter;
+    animation: pl-hero-text-in 675ms $pl-intro-ease 1530ms both;
     // Stays clickable through its own fade-in — never gated behind the animation.
     pointer-events: auto;
   }
 }
 
-@keyframes pl-hero-media-in {
+@keyframes pl-hero-panel-in {
   from {
-    opacity: 0;
-    transform: scale(1.04);
+    transform: translateY(-100%);
   }
   to {
-    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pl-hero-media-in {
+  from {
+    transform: scale(1.08);
+  }
+  to {
     transform: scale(1);
   }
 }
 
-@keyframes pl-hero-fade-up {
+@keyframes pl-hero-text-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(6px);
+    filter: blur(4px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pl-hero-wrap--play-entrance,
+  .pl-hero-wrap--play-entrance .pl-hero-entrance-item--media .pl-hero-carousel__img,
+  .pl-hero-wrap--play-entrance .pl-hero-entrance-item--brand,
+  .pl-hero-wrap--play-entrance .pl-hero-entrance-item--copy,
+  .pl-hero-wrap--play-entrance ::ng-deep .pl-hero-entrance-item--cta.p-button {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
   }
 }

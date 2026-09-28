@@ -12,6 +12,7 @@ import {
 import {
   getAdminUsers,
   getAdminUserById,
+  getAdminUserDeleteImpact,
   getAdminCheckSlug,
   patchAdminUserPlan,
   patchAdminUser,
@@ -56,6 +57,7 @@ adminRouter.get('/check-slug', getAdminCheckSlug);
 adminRouter.get('/users', getAdminUsers);
 adminRouter.patch('/users/:id/plan', validateBody(patchAdminUserPlanBodySchema), patchAdminUserPlan);
 adminRouter.get('/users/:id', getAdminUserById);
+adminRouter.get('/users/:id/delete-impact', getAdminUserDeleteImpact);
 adminRouter.patch('/users/:id', validateBody(patchAdminUserBodySchema), patchAdminUser);
 adminRouter.delete('/users/:id', deleteAdminUser);
 adminRouter.post(

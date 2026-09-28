@@ -44,7 +44,7 @@
               <tr>
                 <td>{{ b.name }}</td>
                 <td>{{ b.ownerEmail || '—' }}</td>
-                <td>{{ b.createdAt | date : 'mediumDate' }}</td>
+                <td>{{ b.createdAt | saDate : 'mediumDate' }}</td>
                 <td class="business-customers-actions-cell">
                   <a
                     [routerLink]="['/super-admin/businesses', b._id, 'ui']"
@@ -54,11 +54,12 @@
                   </a>
                   <button
                     type="button"
-                    class="business-customers-btn business-customers-btn-primary"
+                    class="business-customers-btn business-customers-btn-impersonate"
                     [disabled]="impersonating()"
                     (click)="impersonate(b)"
                   >
-                    {{ impersonating() ? '…' : 'Impersonate' }}
+                    <i class="pi pi-sign-in" aria-hidden="true"></i>
+                    {{ impersonating() ? 'Starting…' : 'Impersonate' }}
                   </button>
                 </td>
               </tr>

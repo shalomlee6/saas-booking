@@ -421,7 +421,13 @@
           </button>
         </div>
         <div class="bls-preview-scroll">
-          <div class="bls-preview pl-page" dir="rtl">
+          <div
+            class="bls-preview pl-page public-shell"
+            [class.theme-light]="previewMode() === 'light'"
+            [class.theme-dark]="previewMode() === 'dark'"
+            [ngStyle]="previewThemeVars()"
+            dir="rtl"
+          >
             @if (previewSectionVisibility().hero) {
               <app-public-landing-hero
                 [businessName]="businessName()"

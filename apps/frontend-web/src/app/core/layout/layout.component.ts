@@ -13,13 +13,13 @@ import { NavigationEnd, Router, RouterOutlet, RouterLink, RouterLinkActive } fro
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, filter, map, of, startWith } from 'rxjs';
 import { Store } from '@ngrx/store';
-import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
+import { ThemeService } from '../config/theme.service';
 import { AdminApiService } from '../../modules/admin/services/admin-api.service';
 import { GrowthBrainService } from '../../modules/dashboard/services/growth-brain.service';
 import { AppointmentsApiService } from '../../modules/appointments/services/appointments-api.service';
 import * as AppointmentsActions from '../../modules/appointments/state/appointments.actions';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgStyle } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
 import { LanguageService } from '../i18n/language.service';
@@ -37,6 +37,7 @@ function pageTitleKeyFromUrl(url: string): string {
   if (path.startsWith('/settings/theme')) return 'navigation.theme';
   if (path.startsWith('/settings/landing')) return 'navigation.landingPage';
   if (path.startsWith('/settings/working-hours')) return 'navigation.workingHours';
+  if (path.startsWith('/settings/account')) return 'navigation.account';
   if (path.startsWith('/preview')) return 'navigation.previewSite';
   return '';
 }
@@ -48,15 +49,15 @@ const LINK_OPTS_PREFIX = { exact: false } as const;
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule, TranslatePipe, NgStyle],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private readonly doc = inject(DOCUMENT);
   private readonly title = inject(Title);
-  readonly themeService = inject(ThemeService);
   readonly auth = inject(AuthService);
+  readonly theme = inject(ThemeService);
   readonly language = inject(LanguageService);
   private readonly adminApi = inject(AdminApiService);
   private readonly router = inject(Router);
@@ -192,11 +193,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly linkOptsExact = LINK_OPTS_EXACT;
   readonly linkOptsPrefix = LINK_OPTS_PREFIX;
 
-  toggleTheme(): void {
-    const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';
-    this.themeService.setModeAndReapply(next);
-  }
-
   onLogout(): void {
     this.closeMobileMenu();
     this.auth.logout();
@@ -209,6 +205,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
       auth.stopImpersonation();
       this.store.dispatch(AppointmentsActions.resetTenantState());
       this.growthBrain.invalidateTenantScope();
+      // Instant visual reset (no dark-mode flash) while the follow-up /auth/me
+      // below resolves the super-admin's own permanently-light state.
+      this.theme.reset();
       auth.init().subscribe(() => {
         router.navigate([auth.isSuperAdmin() ? '/super-admin/businesses' : '/dashboard']);
       });

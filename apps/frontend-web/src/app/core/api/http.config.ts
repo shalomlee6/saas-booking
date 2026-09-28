@@ -1,6 +1,7 @@
 import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { catchError, throwError } from 'rxjs';
+import { MessageService } from 'primeng/api';
 import { AuthService } from '../auth/auth.service';
 
 /**
@@ -19,6 +20,37 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     return next(cloned);
   }
   return next(req);
+};
+
+let lastRateLimitToastAt = 0;
+
+/** Surfaces a 429 as a toast instead of letting it fail silently (or as a raw console error). */
+export const rateLimitInterceptor: HttpInterceptorFn = (req, next) => {
+  const messageService = inject(MessageService);
+  return next(req).pipe(
+    catchError((err: unknown) => {
+      if (!(err instanceof HttpErrorResponse) || err.status !== 429) {
+        return throwError(() => err);
+      }
+      // Debounce: a burst of failed requests under the same limit shouldn't stack toasts.
+      const now = Date.now();
+      if (now - lastRateLimitToastAt > 4000) {
+        lastRateLimitToastAt = now;
+        const retryAfterRaw = err.error?.retryAfter ?? err.headers?.get?.('Retry-After');
+        const retryAfterSeconds = Number(retryAfterRaw);
+        const detail = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? `יותר מדי בקשות. נסו שוב בעוד ${retryAfterSeconds} שניות.`
+          : 'יותר מדי בקשות. נסו שוב בעוד כמה רגעים.';
+        messageService.add({
+          severity: 'warn',
+          summary: 'הגעת למגבלת הבקשות',
+          detail,
+          life: 6000,
+        });
+      }
+      return throwError(() => err);
+    })
+  );
 };
 
 /** On 401 from owner API, clear session and send user to login (cookie may be expired). */

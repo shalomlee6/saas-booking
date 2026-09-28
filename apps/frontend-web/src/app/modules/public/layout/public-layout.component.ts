@@ -4,19 +4,10 @@ import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
 import { PublicThemeService } from '../services/public-theme.service';
-import { resolveThemePreset, type ThemeFamily } from '../../../core/theming/theme-presets';
+import { resolveBusinessThemeVars } from '../../../core/theming/resolve-business-theme-vars';
 import { ToastModule } from 'primeng/toast';
 import { PublicCustomerNavComponent } from './public-customer-nav/public-customer-nav.component';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
-
-const TOKEN_MAP: Record<keyof ThemeFamily, string> = {
-  primary: '--color-primary',
-  primaryHover: '--color-primary-hover',
-  primarySubtle: '--color-primary-subtle',
-  primaryMuted: '--color-primary-muted',
-  primaryInk: '--color-primary-ink',
-  onPrimary: '--on-primary',
-};
 
 @Component({
   selector: 'app-public-layout',
@@ -40,15 +31,9 @@ export class PublicLayoutComponent implements OnInit, OnDestroy {
    * Tenant accent tokens for the currently active light/dark mode, resolved
    * from the business's configured theme preset, as a CSS custom-property map.
    */
-  readonly tenantStyles = computed<Record<string, string>>(() => {
-    const preset = resolveThemePreset(this.businessData()?.settings?.theme?.preset);
-    const family = preset[this.theme.mode()];
-    const styles: Record<string, string> = {};
-    for (const key of Object.keys(TOKEN_MAP) as (keyof ThemeFamily)[]) {
-      styles[TOKEN_MAP[key]] = family[key];
-    }
-    return styles;
-  });
+  readonly tenantStyles = computed<Record<string, string>>(() =>
+    resolveBusinessThemeVars(this.businessData()?.settings?.theme?.preset, this.theme.mode())
+  );
 
   constructor() {
     // A business's default mode only takes effect if the customer hasn't

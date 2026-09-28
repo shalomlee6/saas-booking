@@ -20,9 +20,9 @@ import {
   selector: '[plReveal]',
   standalone: true,
   host: {
-    class: 'pl-reveal',
+    '[class.pl-reveal]': '!disabled()',
     '[class.pl-reveal-in]': 'revealed()',
-    '[class.pl-reveal-stagger]': 'stagger()',
+    '[class.pl-reveal-stagger]': 'stagger() && !disabled()',
   },
 })
 export class PlRevealDirective implements AfterViewInit, OnDestroy {
@@ -32,9 +32,16 @@ export class PlRevealDirective implements AfterViewInit, OnDestroy {
   /** When true, CSS staggers descendant cards instead of fading the whole block. */
   readonly stagger = input(false, { alias: 'plRevealStagger', transform: booleanAttribute });
 
+  /** Skips this directive's own reveal entirely — for a section whose entrance
+   *  is being driven by the page-load intro sequence instead (see
+   *  `PublicLandingComponent`), so the two don't fight over the same cards'
+   *  transform/opacity. */
+  readonly disabled = input(false, { alias: 'plRevealDisabled', transform: booleanAttribute });
+
   readonly revealed = signal(false);
 
   ngAfterViewInit(): void {
+    if (this.disabled()) return;
     const el = this.host.nativeElement;
     if (typeof IntersectionObserver === 'undefined') {
       this.revealed.set(true);

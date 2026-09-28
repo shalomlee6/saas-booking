@@ -7,25 +7,25 @@
 .sa-create__back {
   display: inline-block;
   margin-bottom: 1rem;
-  color: #6b7280;
+  color: var(--text-muted);
   text-decoration: none;
   font-size: 0.9375rem;
 }
 
 .sa-create__back:hover {
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .sa-create__title {
   margin: 0 0 0.35rem;
   font-size: 1.5rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .sa-create__sub {
   margin: 0 0 1.5rem;
-  color: #6b7280;
+  color: var(--text-muted);
   font-size: 0.9375rem;
 }
 
@@ -43,8 +43,8 @@
 }
 
 .sa-create__panel {
-  background: #fff;
-  border: 1px solid #e5e7eb;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 1.25rem;
 }
@@ -53,7 +53,7 @@
   margin: 0 0 1rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .sa-create__section-title--full {
@@ -67,7 +67,7 @@
   margin-bottom: 1rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .sa-create__input {
@@ -79,14 +79,14 @@
 }
 
 .sa-create__input--err {
-  border-color: #dc2626 !important;
+  border-color: var(--sa-rose) !important;
 }
 
 .sa-create__hint {
   margin: 0;
   font-size: 0.75rem;
   font-weight: 500;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .sa-create__slug-status {
@@ -95,21 +95,21 @@
 }
 
 .sa-create__slug-ok {
-  color: #15803d;
+  color: var(--sa-green-ink);
 }
 
 .sa-create__slug-bad {
-  color: #dc2626;
+  color: var(--sa-rose-ink);
 }
 
 .sa-create__slug-muted {
-  color: #9ca3af;
+  color: var(--text-placeholder);
 }
 
 .sa-create__err {
   font-size: 0.75rem;
   font-weight: 500;
-  color: #dc2626;
+  color: var(--sa-rose-ink);
 }
 
 .sa-create__linkish {
@@ -118,7 +118,7 @@
   padding: 0;
   border: none;
   background: none;
-  color: #2563eb;
+  color: var(--sa-blue);
   font-size: 0.8125rem;
   cursor: pointer;
   text-decoration: underline;
@@ -133,9 +133,9 @@
 .sa-create__ghost {
   flex-shrink: 0;
   padding: 0.4rem 0.65rem;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-card);
   font-size: 0.8125rem;
   cursor: pointer;
 }
@@ -158,19 +158,27 @@
 
 .sa-create__plan {
   position: relative;
-  text-align: right;
+  text-align: left;
   padding: 1rem;
   border-radius: 12px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
   cursor: pointer;
   font: inherit;
   color: inherit;
+  border-top: 3px solid var(--sa-plan-accent, var(--border-color));
 }
 
+// free / pro / premium each get a distinct, consistent accent — matching
+// the same hues used for plan badges/charts elsewhere in the panel.
+.sa-create__plan:nth-child(1) { --sa-plan-accent: var(--sa-slate); }
+.sa-create__plan:nth-child(2) { --sa-plan-accent: var(--sa-blue); }
+.sa-create__plan:nth-child(3) { --sa-plan-accent: var(--sa-violet); }
+
 .sa-create__plan--active {
-  border: 2px solid #111827;
-  background: #f9fafb;
+  border: 2px solid var(--sa-plan-accent, var(--sa-ink));
+  border-top-width: 3px;
+  background: var(--sa-slate-soft);
 }
 
 .sa-create__plan--popular {
@@ -186,8 +194,8 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: #1d4ed8;
-  background: #eff6ff;
+  color: var(--sa-blue-ink);
+  background: var(--sa-blue-soft);
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
 }
@@ -197,21 +205,21 @@
   font-weight: 700;
   font-size: 1rem;
   margin-bottom: 0.25rem;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .sa-create__plan-price {
   display: block;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 0.75rem;
 }
 
 .sa-create__plan-list {
   margin: 0;
-  padding: 0 1rem 0 0;
+  padding: 0 0 0 1rem;
   font-size: 0.8125rem;
-  color: #374151;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -222,7 +230,7 @@
 ::ng-deep .sa-create__submit.p-button {
   width: 100%;
   justify-content: center;
-  background: #111827;
+  background: var(--sa-ink);
   border: none;
   color: #fff;
   border-radius: 12px;
@@ -231,5 +239,5 @@
 }
 
 ::ng-deep .sa-create__submit.p-button:not(:disabled):hover {
-  background: #1f2937;
+  background: var(--sa-ink-hover);
 }

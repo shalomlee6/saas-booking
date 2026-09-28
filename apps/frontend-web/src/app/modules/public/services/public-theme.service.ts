@@ -19,7 +19,7 @@ function resolveInitial(): { mode: PublicThemeMode; explicit: boolean } {
  *
  * Deliberately independent from the admin dashboard's `ThemeService` (different
  * storage key, different DOM scope — see `.public-shell.theme-*` in styles.scss
- * vs. `body.theme-*`). A customer toggling dark mode on a tenant's booking site
+ * vs. `.layout.theme-*`). A customer toggling dark mode on a tenant's booking site
  * must never flip a staff member's own admin dashboard theme, even in the same
  * browser profile. Mirrors `LanguageService`'s signal + localStorage pattern.
  */

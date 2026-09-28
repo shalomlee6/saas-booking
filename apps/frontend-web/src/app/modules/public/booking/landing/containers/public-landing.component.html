@@ -1,4 +1,4 @@
-<div class="pl-page">
+<div class="pl-page" [class.pl-page--intro]="introActive()">
   @if (pageLoadError(); as err) {
     <div class="pl-page__error" role="alert">{{ err }}</div>
   } @else if (loadingPageData() && !bookingBusiness()) {
@@ -13,16 +13,17 @@
         [description]="landingHeroDescription()"
         [imageLeft]="heroImageLeft()"
         [imageRight]="heroImageRight()"
-        [playEntrance]="playHeroEntrance()"
+        [playEntrance]="introActive()"
         (book)="goToBook()"
       />
     }
 
+    <div class="pl-intro-sheet">
     <div class="pl-section pl-section--base pl-welcome pl-scroll-anchor" plReveal id="public-upcoming">
       <div class="pl-welcome-inner">
         <div class="pl-greeting">
-          <h2 class="pl-greeting__title">{{ greetingTitle() }}</h2>
-          <p class="pl-greeting__sub">{{ greetingSub }}</p>
+          <h2 class="pl-greeting__title pl-intro-text pl-intro-text--3">{{ greetingTitle() }}</h2>
+          <p class="pl-greeting__sub pl-intro-text pl-intro-text--4">{{ greetingSub }}</p>
         </div>
 
         <app-public-landing-next-appointment
@@ -38,7 +39,12 @@
     </div>
 
     @if (sectionVisibility().services) {
-      <div class="pl-section pl-section--accent" plReveal plRevealStagger>
+      <div
+        class="pl-section pl-section--accent"
+        plReveal
+        plRevealStagger
+        [plRevealDisabled]="playIntro()"
+      >
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-services
             [services]="servicesList()"
@@ -49,7 +55,12 @@
     }
 
     @if (sectionVisibility().gallery) {
-      <div class="pl-section pl-section--base" plReveal plRevealStagger>
+      <div
+        class="pl-section pl-section--base"
+        plReveal
+        plRevealStagger
+        [plRevealDisabled]="playIntro()"
+      >
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-gallery
             [items]="landingGalleryItems()"
@@ -88,10 +99,11 @@
         </div>
       </div>
     }
+    </div>
   }
 
   <nav
-    class="pl-sticky-bar"
+    class="pl-sticky-bar pl-intro-bar"
     aria-label="פעולות מהירות"
     [class.pl-sticky-bar--hidden]="!!pageLoadError()"
   >

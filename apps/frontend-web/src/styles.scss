@@ -4,8 +4,21 @@
 // ─── Brand palette ────────────────────────────────────────────────────────────
 // Pink is the brand. Used sparingly as an accent, never as a surface.
 // --color-primary = the one true pink. Everything else is neutral.
+//
+// Theme scope: the light palette below lives on `:root` as the permanent,
+// document-wide default — it's what the super-admin panel (`.sa-layout`),
+// the login/register pages, and anything else outside a themed shell always
+// see, with no class or JS involved, so it can never be affected by a
+// business's theme or impersonation state. The business owner dashboard
+// (`.layout`, see layout.component.html) is the only shell that can go dark —
+// `.layout.theme-dark` below overrides the :root defaults, scoped to that
+// shell's own subtree. (The public tenant site has its own independent
+// `.public-shell.theme-light`/`.theme-dark` further down.)
+// These used to live on `body.theme-light`/`body.theme-dark`, which is why a
+// business's dark mode could leak into the super-admin panel after
+// impersonation — body-level classes are global by construction.
 
-body.theme-light {
+:root {
   --color-primary:        #F35271;
   --color-primary-hover:  #de3b5c;
   --color-primary-subtle: #fef1f4;
@@ -59,7 +72,7 @@ body.theme-light {
   --p-text-muted-color:    #6b7280;
 }
 
-body.theme-dark {
+.layout.theme-dark {
   --color-primary:        #f06b8a;
   --color-primary-hover:  #f8849f;
   --color-primary-subtle: #2a1520;

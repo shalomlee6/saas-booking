@@ -1,10 +1,11 @@
-import { DatePipe } from '@angular/common';
+import { SaDatePipe } from '../../shared/sa-date.pipe';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
+import { DialogModule } from 'primeng/dialog';
 import { InputTextModule } from 'primeng/inputtext';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { SelectModule } from 'primeng/select';
@@ -17,9 +18,11 @@ import {
   AdminApiService,
   type AdminBusinessFeatures,
   type AdminPlanTier,
+  type AdminUserDeleteImpact,
   type AdminUserDetail,
   type PatchAdminUserBody,
 } from '../../services/admin-api.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { planLabel } from '../super-admin-users/super-admin-users-table.util';
 
 const DEFAULT_FEATURES: AdminBusinessFeatures = {
@@ -35,7 +38,7 @@ const DEFAULT_FEATURES: AdminBusinessFeatures = {
   imports: [
     RouterLink,
     FormsModule,
-    DatePipe,
+    SaDatePipe,
     CardModule,
     ButtonModule,
     InputTextModule,
@@ -45,6 +48,7 @@ const DEFAULT_FEATURES: AdminBusinessFeatures = {
     SkeletonModule,
     ToastModule,
     ConfirmDialogModule,
+    DialogModule,
   ],
   providers: [ConfirmationService],
   templateUrl: './super-admin-user-detail.component.html',
@@ -56,11 +60,18 @@ export class SuperAdminUserDetailComponent implements OnInit {
   private readonly adminApi = inject(AdminApiService);
   private readonly messages = inject(MessageService);
   private readonly confirm = inject(ConfirmationService);
+  private readonly auth = inject(AuthService);
 
   readonly loading = signal(true);
   readonly loadError = signal<string | null>(null);
   readonly saving = signal(false);
   readonly serverUser = signal<AdminUserDetail | null>(null);
+
+  readonly deleteDialogOpen = signal(false);
+  readonly loadingImpact = signal(false);
+  readonly deleteImpact = signal<AdminUserDeleteImpact | null>(null);
+  readonly deleteConfirmEmail = signal('');
+  readonly deleting = signal(false);
 
   readonly draftName = signal('');
   readonly draftEmail = signal('');
@@ -95,8 +106,15 @@ export class SuperAdminUserDetailComponent implements OnInit {
   readonly featuresEditable = computed(() => !!this.serverUser()?.businessId);
 
   readonly canDelete = computed(() => {
-    const r = this.serverUser()?.role;
-    return r === 'staff' || r === 'client';
+    const u = this.serverUser();
+    if (!u || u.role === 'super_admin') return false;
+    return u.id !== this.auth.user()?.id;
+  });
+
+  readonly deleteConfirmValid = computed(() => {
+    const impact = this.deleteImpact();
+    if (!impact) return false;
+    return this.deleteConfirmEmail().trim().toLowerCase() === impact.email.toLowerCase();
   });
 
   readonly statusLocked = computed(() => this.serverUser()?.role === 'super_admin');
@@ -305,28 +323,56 @@ export class SuperAdminUserDetailComponent implements OnInit {
     });
   }
 
-  confirmDelete(): void {
-    const u = this.serverUser();
+  openDeleteDialog(): void {
     const id = this.userId();
-    if (!u || !id || !this.canDelete()) return;
-    this.confirm.confirm({
-      message: `Delete ${u.email}? This cannot be undone.`,
-      header: 'Delete user',
-      icon: 'pi pi-exclamation-triangle',
-      acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.adminApi.deleteUser(id).subscribe({
-          next: () => {
-            this.messages.add({ severity: 'success', summary: 'Deleted', detail: 'User removed.' });
-            void this.router.navigate(['/super-admin/users']);
-          },
-          error: (err: { error?: { message?: string } }) => {
-            this.messages.add({
-              severity: 'error',
-              summary: 'Delete failed',
-              detail: err?.error?.message ?? 'Request failed',
-            });
-          },
+    if (!id || !this.canDelete()) return;
+    this.deleteConfirmEmail.set('');
+    this.deleteImpact.set(null);
+    this.deleteDialogOpen.set(true);
+    this.loadingImpact.set(true);
+    this.adminApi.getUserDeleteImpact(id).subscribe({
+      next: (impact) => {
+        this.loadingImpact.set(false);
+        this.deleteImpact.set(impact);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.loadingImpact.set(false);
+        this.deleteDialogOpen.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: 'Failed to load',
+          detail: err?.error?.message ?? 'Could not load deletion details.',
+        });
+      },
+    });
+  }
+
+  closeDeleteDialog(): void {
+    if (this.deleting()) return;
+    this.deleteDialogOpen.set(false);
+  }
+
+  onDeleteDialogVisibleChange(visible: boolean): void {
+    if (!visible) this.closeDeleteDialog();
+  }
+
+  executeDelete(): void {
+    const id = this.userId();
+    if (!id || !this.deleteConfirmValid() || this.deleting()) return;
+    this.deleting.set(true);
+    this.adminApi.deleteUser(id).subscribe({
+      next: () => {
+        this.deleting.set(false);
+        this.deleteDialogOpen.set(false);
+        this.messages.add({ severity: 'success', summary: 'Deleted', detail: 'User removed.' });
+        void this.router.navigate(['/super-admin/users']);
+      },
+      error: (err: { error?: { message?: string } }) => {
+        this.deleting.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: 'Delete failed',
+          detail: err?.error?.message ?? 'Request failed',
         });
       },
     });
