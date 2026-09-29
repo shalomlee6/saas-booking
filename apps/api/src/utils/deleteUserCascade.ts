@@ -51,7 +51,7 @@ export async function computeDeleteImpact(user: IUser): Promise<DeleteImpact> {
   }
   const businessId = user.businessId;
   const business = await Business.findById(businessId).select('name slug ownerId').lean();
-  if (!business || business.ownerId.toString() !== user._id.toString()) {
+  if (!business || business?.ownerId.toString() !== user._id.toString()) {
     return { business: null, counts: EMPTY_COUNTS };
   }
   const [

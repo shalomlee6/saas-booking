@@ -108,7 +108,7 @@ export async function createAdminBusiness(req: AuthRequest, res: Response): Prom
           slug: business.slug,
           plan: business.plan,
           phone: business.phone ?? null,
-          ownerId: business.ownerId.toString(),
+          ownerId: business?.ownerId.toString(),
           createdAt: business.createdAt,
           updatedAt: business.updatedAt,
         } as const),
