@@ -53,6 +53,8 @@
   --sidebar-width: 224px;
   --topbar-height: 56px;
 
+  --appointments-cell-text-color: #111827;
+
   --p-tabs-tabpanel-background: transparent;
   --p-content-background:  #ffffff;
   --p-content-color:       #111827;
@@ -106,6 +108,8 @@
 
   --sidebar-width: 224px;
   --topbar-height: 56px;
+
+  --appointments-cell-text-color: #111827;
 
   --p-tabs-tabpanel-background: transparent;
   --p-content-background:  #18181b;
@@ -210,6 +214,8 @@
   --radius-xl:  16px;
   --radius-pill: 999px;
 
+  --appointments-cell-text-color: #111827;
+
   // PrimeNG's OWN native tokens (used by raw p-button/p-drawer/p-dialog chrome
   // that isn't wrapped in our own $pl-*-based classes) — aliased onto our tenant
   // tokens so native PrimeNG chrome follows the tenant's preset too, instead of
@@ -292,14 +298,39 @@
   color: var(--text-primary);
 }
 
-// ─── RTL: PrimeNG chevron icons ────────────────────────────────────────────────
-// PrimeNG mirrors these buttons' POSITION for [dir="rtl"] (next moves to the
-// visual left) but never flips the chevron glyph itself, so "next" ends up
-// pointing right and "previous" pointing left — backwards relative to their
-// new position. Flip the glyphs to match.
+// ─── RTL: calendar navigation ─────────────────────────────────────────────────
+// In RTL the header is a flex row, so the previous control sits on the right
+// and the next control sits on the left. PrimeNG does not flip the chevron
+// glyphs, so they point inward. Mirror them so previous points right and next
+// points left. The same applies to the appointments range buttons. LTR is unchanged.
 [dir='rtl'] .p-datepicker-prev-button .p-icon,
-[dir='rtl'] .p-datepicker-next-button .p-icon {
+[dir='rtl'] .p-datepicker-next-button .p-icon,
+[dir='rtl'] .apt-nav-btn .p-button-icon {
   transform: scaleX(-1);
+}
+
+// Tables follow the document direction: start is right in Hebrew, left in English.
+table th,
+table td {
+  text-align: start;
+}
+
+.customer-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  background: color-mix(in srgb, var(--color-success) 16%, transparent);
+  color: var(--color-success);
+  white-space: nowrap;
+}
+
+.customer-status-badge-inactive {
+  background: color-mix(in srgb, var(--color-danger) 16%, transparent);
+  color: var(--color-danger);
 }
 
 // ─── Base reset ───────────────────────────────────────────────────────────────

@@ -55,6 +55,7 @@ export async function createCustomerForTenant(
     email?: string;
     notes?: string;
     preferences?: CustomerPreferencesInput;
+    isActive?: boolean;
   }
 ) {
   const name = input.name.trim();
@@ -68,6 +69,7 @@ export async function createCustomerForTenant(
     email: email === '' ? undefined : email,
     notes,
     preferences: input.preferences,
+    ...(typeof input.isActive === 'boolean' ? { isActive: input.isActive } : {}),
   });
 }
 
@@ -84,6 +86,7 @@ export async function updateCustomerForTenant(
     email?: string;
     notes?: string;
     preferences?: CustomerPreferencesInput;
+    isActive?: boolean;
   }
 ) {
   const update: Record<string, unknown> = {};
@@ -94,6 +97,7 @@ export async function updateCustomerForTenant(
     update.email = email === '' ? undefined : email;
   }
   if (body.notes !== undefined) update.notes = body.notes.trim();
+  if (body.isActive !== undefined) update.isActive = body.isActive;
   if (body.preferences !== undefined) {
     Object.assign(update, buildPreferencesSet(body.preferences));
   }
@@ -125,4 +129,16 @@ export async function deleteCustomerForTenant(businessId: string, customerId: st
 
   await CustomerServiceConfig.deleteMany({ businessId, customerId });
   return customer;
+}
+
+export async function setCustomersActiveForTenant(
+  businessId: string,
+  ids: string[],
+  isActive: boolean
+) {
+  const result = await Customer.updateMany(
+    { businessId, _id: { $in: ids } },
+    { $set: { isActive } }
+  );
+  return result.matchedCount;
 }

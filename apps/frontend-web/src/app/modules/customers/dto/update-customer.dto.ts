@@ -6,4 +6,5 @@ export interface UpdateCustomerDto {
   email?: string;
   notes?: string;
   preferences?: CustomerPreferences;
+  isActive?: boolean;
 }

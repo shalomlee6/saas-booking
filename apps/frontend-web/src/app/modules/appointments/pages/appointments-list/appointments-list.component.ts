@@ -252,7 +252,6 @@ export class AppointmentsListComponent implements OnInit {
   readonly searchQuery = signal('');
   readonly isMobile = signal(false);
   readonly selectedAppointment = signal<Appointment | null>(null);
-  readonly cancellingDetail = signal(false);
 
   readonly visibleStartDate = signal<Date>(startOfDay(new Date()));
   readonly visibleDaysCount = signal(7);
@@ -824,31 +823,5 @@ export class AppointmentsListComponent implements OnInit {
 
   onDetailVisibleChange(visible: boolean): void {
     if (!visible) this.closeDetail();
-  }
-
-  onDetailCancel(): void {
-    const apt = this.selectedAppointment();
-    if (!apt || this.cancellingDetail()) return;
-    this.cancellingDetail.set(true);
-    this.appointmentsApi.cancel(apt._id).subscribe({
-      next: () => {
-        this.cancellingDetail.set(false);
-        this.closeDetail();
-        this.loadForCurrentView();
-        this.appointmentsApi.refresh();
-        this.growthBrain.refresh();
-        this.messageService.add({
-          severity: 'success',
-          summary: '',
-          detail: this.language.t('appointments.cancelledToast'),
-        });
-      },
-      error: () => {
-        this.cancellingDetail.set(false);
-        const msg = this.language.t('appointments.cancelFailed');
-        this.store.dispatch(AppointmentsActions.loadFailure({ error: msg }));
-        this.messageService.add({ severity: 'error', summary: this.language.t('common.error'), detail: msg });
-      },
-    });
   }
 }

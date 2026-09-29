@@ -138,9 +138,45 @@
   cursor: not-allowed;
 }
 
+// ─── Filters ────────────────────────────────────────────────────────────────
+.customers-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.customers-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 10rem;
+}
+
+.customers-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.customers-filter-control {
+  height: 40px;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  outline: none;
+}
+
+.customers-filter-control:focus {
+  border-color: var(--color-primary);
+}
+
 // ─── Bulk selection bar ─────────────────────────────────────────────────────
 .customers-bulk-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 1rem;
@@ -160,6 +196,7 @@
 .customers-table-select {
   width: 1%;
   padding-inline-end: 0 !important;
+  text-align: center;
 }
 
 .customers-table-select-head input,
@@ -310,7 +347,7 @@
 }
 
 .customers-table td {
-  text-align: end;
+  text-align: start;
   padding: 0.875rem 1.25rem;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);

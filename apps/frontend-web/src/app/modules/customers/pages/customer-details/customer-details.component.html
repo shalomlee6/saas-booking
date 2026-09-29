@@ -20,11 +20,30 @@
           }
         </div>
       </div>
-      @if (stats(); as s) {
-        <span class="cd-badge" [class.cd-badge-new]="s.isNewCustomer">
-          {{ (s.isNewCustomer ? 'customerCard.newCustomerBadge' : 'customerCard.returningCustomerBadge') | translate }}
+      <div class="cd-header-aside">
+        <span
+          class="customer-status-badge"
+          [class.customer-status-badge-inactive]="!isCustomerActive(c)"
+        >
+          {{ (isCustomerActive(c) ? 'customers.statusActive' : 'customers.statusInactive') | translate }}
         </span>
-      }
+        <button
+          type="button"
+          class="cd-status-toggle"
+          (click)="toggleStatus()"
+          [disabled]="savingStatus()"
+        >
+          {{ (isCustomerActive(c) ? 'customers.markInactive' : 'customers.markActive') | translate }}
+        </button>
+        @if (statusError()) {
+          <p class="cd-status-error">{{ statusError() }}</p>
+        }
+        @if (stats(); as s) {
+          <span class="cd-badge" [class.cd-badge-new]="s.isNewCustomer">
+            {{ (s.isNewCustomer ? 'customerCard.newCustomerBadge' : 'customerCard.returningCustomerBadge') | translate }}
+          </span>
+        }
+      </div>
     </div>
 
     @if (stats()?.isNewCustomer) {

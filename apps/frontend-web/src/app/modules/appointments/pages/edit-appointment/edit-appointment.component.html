@@ -122,6 +122,18 @@
             [placeholder]="'appointments.notesOptionalParens' | translate"
           ></textarea>
         </div>
+
+        <div class="col-12 edit-apt-cancel-row">
+          <p-button
+            type="button"
+            [label]="'appointments.cancelAppointment' | translate"
+            severity="danger"
+            [outlined]="true"
+            [loading]="cancelling()"
+            [disabled]="cancelling() || saving()"
+            (onClick)="requestCancelAppointment()"
+          />
+        </div>
       </div>
 
       <div class="edit-apt-actions">
@@ -144,5 +156,38 @@
         ></button>
       </div>
     </form>
+
+    @if (confirmingCancel()) {
+      <div class="edit-apt-confirm-backdrop" (click)="dismissCancelConfirm()">
+        <div
+          class="edit-apt-confirm"
+          role="alertdialog"
+          aria-modal="true"
+          [attr.aria-label]="'appointments.cancelAppointment' | translate"
+          (click)="$event.stopPropagation()"
+        >
+          <h2 class="edit-apt-confirm-title">{{ 'appointments.cancelAppointment' | translate }}</h2>
+          <p class="edit-apt-confirm-text">{{ 'appointments.cancelConfirmQuestion' | translate }}</p>
+          <div class="edit-apt-confirm-actions">
+            <button
+              type="button"
+              class="edit-apt-confirm-dismiss"
+              (click)="dismissCancelConfirm()"
+              [disabled]="cancelling()"
+            >
+              {{ 'common.cancel' | translate }}
+            </button>
+            <button
+              type="button"
+              class="edit-apt-confirm-danger"
+              (click)="confirmCancelAppointment()"
+              [disabled]="cancelling()"
+            >
+              {{ (cancelling() ? 'appointments.cancelInProgress' : 'appointments.cancelConfirmButton') | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   }
 </div>

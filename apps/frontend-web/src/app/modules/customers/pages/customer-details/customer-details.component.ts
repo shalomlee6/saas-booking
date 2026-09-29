@@ -100,6 +100,8 @@ export class CustomerDetailsComponent implements OnInit {
 
   readonly editingProfile = signal(false);
   readonly savingProfile = signal(false);
+  readonly savingStatus = signal(false);
+  readonly statusError = signal<string | null>(null);
   readonly profileForm = this.fb.group({
     notes: [''],
     preferredTimeOfDay: [''],
@@ -224,6 +226,28 @@ export class CustomerDetailsComponent implements OnInit {
       preferredTimeOfDay: customer.preferences?.preferredTimeOfDay ?? '',
       allergies: customer.preferences?.allergies ?? '',
       tags: (customer.preferences?.tags ?? []).join(', '),
+    });
+  }
+
+  isCustomerActive(customer: Customer): boolean {
+    return customer.isActive !== false;
+  }
+
+  toggleStatus(): void {
+    const customer = this.customer();
+    if (!customer || this.savingStatus()) return;
+    const isActive = !this.isCustomerActive(customer);
+    this.savingStatus.set(true);
+    this.statusError.set(null);
+    this.customersApi.update(this.customerId, { isActive }).subscribe({
+      next: (updated) => {
+        this.customer.set(updated);
+        this.savingStatus.set(false);
+      },
+      error: () => {
+        this.savingStatus.set(false);
+        this.statusError.set(this.language.t('customers.statusUpdateError'));
+      },
     });
   }
 

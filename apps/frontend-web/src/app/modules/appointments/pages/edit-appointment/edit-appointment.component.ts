@@ -61,6 +61,8 @@ export class EditAppointmentComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly confirmingCancel = signal(false);
+  readonly cancelling = signal(false);
   readonly customers = signal<Customer[]>([]);
   readonly services = signal<Service[]>([]);
   readonly statusOptions: { label: string; value: string }[] = [
@@ -165,6 +167,41 @@ export class EditAppointmentComponent implements OnInit {
 
   cancel(): void {
     this.router.navigate(['/appointments']);
+  }
+
+  requestCancelAppointment(): void {
+    if (this.cancelling() || this.saving()) return;
+    this.confirmingCancel.set(true);
+  }
+
+  dismissCancelConfirm(): void {
+    if (this.cancelling()) return;
+    this.confirmingCancel.set(false);
+  }
+
+  confirmCancelAppointment(): void {
+    if (!this.appointmentId || this.cancelling()) return;
+    this.cancelling.set(true);
+    this.appointmentsApi.cancel(this.appointmentId).subscribe({
+      next: () => {
+        this.cancelling.set(false);
+        this.confirmingCancel.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: '',
+          detail: this.language.t('appointments.cancelledToast'),
+        });
+        this.router.navigate(['/appointments']);
+      },
+      error: () => {
+        this.cancelling.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: this.language.t('common.error'),
+          detail: this.language.t('appointments.cancelFailed'),
+        });
+      },
+    });
   }
 
   save(): void {

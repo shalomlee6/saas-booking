@@ -21,6 +21,9 @@ export class CustomersListComponent implements OnInit {
   readonly language = inject(LanguageService);
 
   readonly searchQuery = signal('');
+  readonly statusFilter = signal<'all' | 'active' | 'inactive'>('all');
+  readonly createdFrom = signal('');
+  readonly createdTo = signal('');
   readonly list = this.store.list;
   readonly loading = this.store.loading;
   readonly error = this.store.error;
@@ -28,18 +31,37 @@ export class CustomersListComponent implements OnInit {
   readonly selectedIds = signal<ReadonlySet<string>>(new Set());
   readonly deleting = signal(false);
   readonly confirmingDelete = signal(false);
+  readonly updatingStatus = signal(false);
 
   readonly filteredList = computed(() => {
     const q = this.searchQuery().toLowerCase().trim();
-    const items = this.list();
-    if (!q) return items;
-    return items.filter(
-      (c) =>
+    const status = this.statusFilter();
+    const from = this.createdFrom();
+    const to = this.createdTo();
+    return this.list().filter((c) => {
+      if (status === 'active' && c.isActive === false) return false;
+      if (status === 'inactive' && c.isActive !== false) return false;
+      if (from || to) {
+        const created = new Date(c.createdAt).getTime();
+        if (from && created < this.startOfDay(from)) return false;
+        if (to && created > this.endOfDay(to)) return false;
+      }
+      if (!q) return true;
+      return (
         c.name.toLowerCase().includes(q) ||
         (c.phone && c.phone.toLowerCase().includes(q)) ||
         (c.email && c.email.toLowerCase().includes(q))
-    );
+      );
+    });
   });
+
+  readonly hasActiveFilters = computed(
+    () =>
+      this.statusFilter() !== 'all' ||
+      this.createdFrom() !== '' ||
+      this.createdTo() !== '' ||
+      this.searchQuery().trim() !== ''
+  );
 
   readonly selectedCount = computed(() => this.selectedIds().size);
   readonly allSelected = computed(() => {
@@ -53,6 +75,26 @@ export class CustomersListComponent implements OnInit {
 
   onSearchInput(value: string): void {
     this.searchQuery.set(value);
+  }
+
+  onStatusFilter(value: string): void {
+    if (value === 'active' || value === 'inactive' || value === 'all') {
+      this.statusFilter.set(value);
+    }
+  }
+
+  isCustomerActive(isActive: boolean | undefined): boolean {
+    return isActive !== false;
+  }
+
+  private startOfDay(isoDate: string): number {
+    const [year, month, day] = isoDate.split('-').map(Number);
+    return new Date(year, month - 1, day).getTime();
+  }
+
+  private endOfDay(isoDate: string): number {
+    const [year, month, day] = isoDate.split('-').map(Number);
+    return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
   }
 
   formatCreatedAt(date: string | Date): string {
@@ -97,6 +139,29 @@ export class CustomersListComponent implements OnInit {
 
   cancelDeleteSelected(): void {
     this.confirmingDelete.set(false);
+  }
+
+  setSelectedStatus(isActive: boolean): void {
+    const ids = Array.from(this.selectedIds());
+    if (ids.length === 0 || this.updatingStatus()) return;
+
+    this.updatingStatus.set(true);
+    this.api.bulkSetStatus(ids, isActive).subscribe({
+      next: () => {
+        this.updatingStatus.set(false);
+        this.selectedIds.set(new Set());
+        this.store.load();
+      },
+      error: () => {
+        this.updatingStatus.set(false);
+        this.messages.add({
+          severity: 'error',
+          summary: this.language.t('common.error'),
+          detail: this.language.t('customers.statusUpdateError'),
+          life: 5000,
+        });
+      },
+    });
   }
 
   confirmDeleteSelected(): void {
