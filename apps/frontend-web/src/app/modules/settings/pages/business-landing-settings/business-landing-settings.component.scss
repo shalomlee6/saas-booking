@@ -95,6 +95,54 @@
   max-width: 1100px;
 }
 
+// Mirrors `.pl-hero-intro` from PublicLandingComponent's own stylesheet —
+// duplicated here (not shared) because this static preview has no intro
+// animation and isn't part of that component tree, so its scoped styles
+// can't reach here.
+.pl-hero-intro {
+  text-align: center;
+  padding: 1rem 1rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.pl-hero-intro__name {
+  margin: 0 0 0.35rem;
+  font-size: 22px;
+  font-weight: 600;
+  color: $pl-text-heading;
+}
+
+.pl-hero-intro__tagline {
+  margin: 0 0 0.5rem;
+  font-size: 14px;
+  color: $pl-text-muted;
+}
+
+.pl-hero-intro__desc {
+  margin: 0 0 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: $pl-text-heading;
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+::ng-deep .pl-hero-intro__cta.p-button {
+  @include pl-btn-primary;
+  font-size: 0.9375rem;
+}
+
+::ng-deep .pl-hero-intro__cta.p-button .p-button-icon {
+  color: $pl-on-primary;
+}
+
+::ng-deep .pl-hero-intro__cta.p-button:not(:disabled):hover {
+  background: $pl-primary-hover;
+  border: none;
+  color: $pl-on-primary;
+}
+
 .bls__banner-err {
   padding: 1rem 1.25rem;
   border-radius: 12px;

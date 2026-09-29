@@ -48,7 +48,12 @@ export type RateLimitConfig = {
   /** Window for sensitive routes (login, register, password reset, OTP), in ms. */
   sensitiveWindowMs: number;
   maxSensitive: number;
+  /** Per-phone ceiling on requesting a new OTP (each call sends an SMS). */
   maxOtp: number;
+  /** Per-phone ceiling on verifying an OTP (each call is a guess at the code) —
+   *  kept separate from `maxOtp` so retrying a mistyped code can't eat into,
+   *  or be gated by, the SMS-sending budget and vice versa. */
+  maxOtpVerify: number;
   /** Second, IP-keyed ceiling on top of the per-phone OTP limit — stops phone rotation abuse. */
   maxOtpPerIp: number;
   maxPublic: number;
@@ -126,6 +131,7 @@ function resolveRateLimitConfig(isProduction: boolean): RateLimitConfig {
     ),
     maxSensitive: parsePositiveInt(process.env.RATE_LIMIT_MAX_SENSITIVE, isProduction ? 10 : 100),
     maxOtp: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP, isProduction ? 5 : 50),
+    maxOtpVerify: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP_VERIFY, isProduction ? 5 : 50),
     maxOtpPerIp: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP_IP, isProduction ? 20 : 200),
     maxPublic: parsePositiveInt(process.env.RATE_LIMIT_MAX_PUBLIC, isProduction ? 100 : 2000),
     maxApi: parsePositiveInt(process.env.RATE_LIMIT_MAX_API, isProduction ? 300 : 5000),

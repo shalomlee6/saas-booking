@@ -36,11 +36,22 @@ const CUSTOMER_NAME = 'Dev Test Customer';
 /** Every identity this script ever creates, deletes, or resets must match this. */
 const FIXTURE_EMAIL_SUFFIX = '@example.test';
 
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+
 /** Defense in depth beyond NODE_ENV: refuse anything that isn't an obviously-local
  *  MongoDB (127.0.0.1/localhost). Catches "NODE_ENV=development pointed at a shared
- *  staging or prod cluster" — the exact class of mistake this hardening is for. */
+ *  staging or prod cluster" — the exact class of mistake this hardening is for.
+ *  Parses the URI and checks the actual hostname exactly, rather than an unanchored
+ *  regex — "mongodb+srv://user:127.0.0.1-lookalike@prod-cluster.example.net/db" must
+ *  NOT pass just because "127.0.0.1" appears somewhere in the string. */
 function assertLocalMongo(uri: string): void {
-  const isLocal = /(^mongodb:\/\/)?(127\.0\.0\.1|localhost|\[::1\])/i.test(uri);
+  let hostname = '';
+  try {
+    hostname = new URL(uri).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  } catch {
+    // Unparseable URI — fails closed below (empty hostname is never local).
+  }
+  const isLocal = LOCAL_HOSTNAMES.has(hostname);
   if (!isLocal) {
     console.error(
       `Refusing to run seed:dev — MONGO_URI does not look like a local database:\n  ${uri}\n` +

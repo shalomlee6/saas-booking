@@ -70,6 +70,46 @@ export class LayoutComponent implements OnInit, OnDestroy {
     this.title.setTitle(name ? `${name} · boki` : 'boki');
   });
 
+  /**
+   * Two separate PrimeNG problems, one fix. `app.config.ts` sets PrimeNG's
+   * `darkModeSelector: '.theme-dark'`, and PrimeNG's generated stylesheet
+   * always declares `:root, :host { ... }` for its base tokens — `:root`
+   * means `<html>` specifically, nothing else. That causes two failures for
+   * a shell scoped to `.layout.theme-dark` (a mid-tree div, not html):
+   *
+   * 1. Overlay components (select/datepicker panels, dialogs, drawers,
+   *    toasts) portal straight to `<body>`, outside `.layout` — its CSS
+   *    vars never reach them at all.
+   * 2. Plain inline fields (`p-inputnumber`, `pTextarea`, …) DO sit inside
+   *    `.layout`, but some of PrimeNG's own component tokens (e.g.
+   *    `--p-inputtext-background`) are declared ONLY on `:root`, as
+   *    `var(--p-form-field-background)` — and per how CSS custom properties
+   *    inherit, that `var()` is substituted once, using `<html>`'s own
+   *    cascade, at the point `:root` is declared. The resolved (light)
+   *    value is what then inherits everywhere — `.layout` having its own
+   *    dark `--p-form-field-background` further down the tree cannot
+   *    reopen that substitution. Verified empirically: adding `.theme-dark`
+   *    to `.layout` alone left these inputs white; only adding it to
+   *    `<html>` (matching `:root`) resolves them dark.
+   *
+   * So this targets `document.documentElement`, not `document.body` —
+   * `<html>` is an ancestor of both `.layout` and anything body-portaled,
+   * so one class fixes both cases at once.
+   *
+   * Scoped here (component lifecycle), not in `ThemeService` (app-root
+   * singleton): a singleton's effect has no way to know when `.layout` has
+   * been unmounted — navigating to the super-admin panel or the public site
+   * would leave a stale `html.theme-dark` behind, wrongly darkening THEIR
+   * PrimeNG chrome too. `onCleanup` removes the class both on every re-run
+   * and when this component is destroyed, so leaving `.layout` by any route
+   * always leaves `<html>` clean for whatever mounts next.
+   */
+  private readonly _pnDarkSync = effect((onCleanup) => {
+    const dark = this.theme.mode() === 'dark';
+    this.doc.documentElement.classList.toggle('theme-dark', dark);
+    onCleanup(() => this.doc.documentElement.classList.remove('theme-dark'));
+  });
+
   readonly user = this.auth.user;
   readonly business = this.auth.business;
   readonly isSuperAdmin = computed(() => this.auth.isSuperAdmin());

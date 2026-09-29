@@ -10,6 +10,7 @@ import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi
 import { recordAudit } from '../utils/recordAudit';
 import { provisionTenant } from '../utils/provisionTenant';
 import { signImpersonationToken } from '../utils/staffSession';
+import { VALID_THEME_PRESET_IDS, isValidThemePresetId } from '../utils/themePresets';
 import { logger } from '../utils/logger';
 import type { PlanTier } from '../utils/planPolicy';
 
@@ -270,8 +271,10 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
         return res.status(400).json({ message: 'publicTheme must be an object' });
       }
       if (publicTheme.preset !== undefined) {
-        if (typeof publicTheme.preset !== 'string' || !publicTheme.preset) {
-          return res.status(400).json({ message: 'publicTheme.preset must be a non-empty string' });
+        if (typeof publicTheme.preset !== 'string' || !isValidThemePresetId(publicTheme.preset)) {
+          return res.status(400).json({
+            message: `publicTheme.preset must be one of: ${VALID_THEME_PRESET_IDS.join(', ')}`,
+          });
         }
         presetUpdate = publicTheme.preset;
       }

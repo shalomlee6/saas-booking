@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
-import { NgStyle } from '@angular/common';
+import { DOCUMENT, NgStyle } from '@angular/common';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
@@ -19,6 +19,7 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 export class PublicLayoutComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly publicApi = inject(PublicApiService);
+  private readonly document = inject(DOCUMENT);
   private readonly destroy$ = new Subject<void>();
 
   readonly theme = inject(PublicThemeService);
@@ -41,6 +42,23 @@ export class PublicLayoutComponent implements OnInit, OnDestroy {
     effect(() => {
       const mode = this.businessData()?.settings?.theme?.defaultMode;
       this.theme.applyBusinessDefault(mode);
+    });
+
+    // Same reasoning as LayoutComponent's identical effect (see its detailed
+    // comment there): PrimeNG overlays (the gallery lightbox/add-image
+    // dialogs, carousel, …) portal to `<body>`, and some of PrimeNG's own
+    // plain-field tokens (e.g. the add-image dialog's `pInputText`) are
+    // declared only on `:root` — both need PrimeNG's `darkModeSelector`
+    // class (`.theme-dark`, see app.config.ts) on `<html>` specifically
+    // (`:root` means `<html>`, not `body`) to pick up THIS site's own mode —
+    // never the admin dashboard's. Scoped to this component's lifecycle so
+    // navigating away from the public site always leaves `<html>` clean via
+    // `onCleanup`, instead of a singleton service leaving a stale class
+    // behind for whatever shell mounts next.
+    effect((onCleanup) => {
+      const dark = this.theme.mode() === 'dark';
+      this.document.documentElement.classList.toggle('theme-dark', dark);
+      onCleanup(() => this.document.documentElement.classList.remove('theme-dark'));
     });
   }
 

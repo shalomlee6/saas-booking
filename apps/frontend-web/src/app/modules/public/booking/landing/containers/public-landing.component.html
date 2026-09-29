@@ -1,4 +1,8 @@
-<div class="pl-page" [class.pl-page--intro]="introActive()">
+<div
+  class="pl-page"
+  [class.pl-page--intro]="introActive()"
+  [class.pl-page--stage-settled]="heroLanded()"
+>
   @if (pageLoadError(); as err) {
     <div class="pl-page__error" role="alert">{{ err }}</div>
   } @else if (loadingPageData() && !bookingBusiness()) {
@@ -8,15 +12,27 @@
   } @else {
     @if (sectionVisibility().hero) {
       <app-public-landing-hero
-        [businessName]="businessDisplayName()"
-        [tagline]="landingTagline()"
-        [description]="landingHeroDescription()"
         [imageLeft]="heroImageLeft()"
         [imageRight]="heroImageRight()"
         [playEntrance]="introActive()"
-        (book)="goToBook()"
       />
     }
+
+    <div class="pl-intro-rise">
+    <div class="pl-hero-intro">
+      <p class="pl-hero-intro__name pl-intro-text pl-intro-text--0">{{ businessDisplayName() }}</p>
+      <p class="pl-hero-intro__tagline pl-intro-text pl-intro-text--1">{{ landingTagline() }}</p>
+      @if (landingHeroDescription().trim()) {
+        <p class="pl-hero-intro__desc pl-intro-text pl-intro-text--2">{{ landingHeroDescription() }}</p>
+      }
+      <p-button
+        label="קביעת תור"
+        icon="pi pi-calendar-plus"
+        iconPos="right"
+        styleClass="pl-hero-intro__cta"
+        (onClick)="goToBook()"
+      />
+    </div>
 
     <div class="pl-intro-sheet">
     <div class="pl-section pl-section--base pl-welcome pl-scroll-anchor" plReveal id="public-upcoming">
@@ -99,6 +115,7 @@
         </div>
       </div>
     }
+    </div>
     </div>
   }
 

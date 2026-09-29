@@ -12,6 +12,7 @@ import { DOCUMENT } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
+import { ButtonModule } from 'primeng/button';
 import { forkJoin, distinctUntilChanged, map } from 'rxjs';
 import {
   PublicApiService,
@@ -76,8 +77,17 @@ function shouldPlayEntranceAnimation(slug: string, forcePlay: boolean): boolean 
 
 /** Total wall-clock length of the whole intro sequence (its latest-ending phase,
  *  the floating booking bar: 2025ms delay + 825ms duration), plus a small buffer.
- *  Used only to know when it's safe to restore the page's normal background. */
+ *  Used to know when it's safe to fully release the stage-background overrides. */
 const INTRO_TOTAL_MS = 2900;
+
+/** When the hero slider's own slide-down finishes (375ms delay + 1050ms
+ *  duration) — the stage background starts fading to normal at this point,
+ *  "as the slider lands", rather than waiting for the whole sequence to end. */
+const HERO_LAND_MS = 375 + 1050;
+
+/** How long the stage background takes to fade to the page's normal
+ *  background once the hero has landed. */
+const STAGE_FADE_MS = 400;
 
 @Component({
   selector: 'app-public-landing',
@@ -92,6 +102,7 @@ const INTRO_TOTAL_MS = 2900;
     PublicLandingReviewsComponent,
     PublicLandingBookingCtaComponent,
     PlRevealDirective,
+    ButtonModule,
   ],
   templateUrl: './public-landing.component.html',
   styleUrl: './public-landing.component.scss',
@@ -105,7 +116,6 @@ export class PublicLandingComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
-  private introInterruptCleanup: (() => void) | null = null;
 
   constructor() {
     let prevCustomerId: string | null | undefined;
@@ -142,9 +152,11 @@ export class PublicLandingComponent implements OnInit {
   readonly playIntro = signal(false);
 
   /**
-   * True for exactly the duration of the intro sequence: set alongside
-   * `playIntro`, then cleared either by the natural end-of-sequence timer or
-   * by the user interrupting it (tap/scroll) — whichever comes first. Drives
+   * True for exactly the duration of the intro sequence: set once the
+   * landing content has actually rendered (see `reloadLandingData` — not at
+   * the same time as `playIntro`, which only records the once-per-session
+   * decision), then cleared either by the natural end-of-sequence timer or
+   * by the user interrupting it (tap/key press) — whichever comes first. Drives
    * the hero slide-down, bottom-sheet slide-up, card slide-in, text fade, and
    * floating bar. Clearing it removes `.pl-page--intro` entirely, which both
    * jumps every element to its final resting state (nothing outside that
@@ -152,6 +164,15 @@ export class PublicLandingComponent implements OnInit {
    * it, so nothing lingers promoted to its own compositing layer.
    */
   readonly introActive = signal(false);
+
+  /**
+   * Flips true once the hero slider has landed (see `HERO_LAND_MS`) — drives
+   * `.pl-page--stage-settled`, whose only job is to fade the stage background
+   * back to the page's normal background over `STAGE_FADE_MS`, instead of the
+   * instant jump `introActive` going false on its own would otherwise cause.
+   * Reset to false at the very start of every intro attempt.
+   */
+  readonly heroLanded = signal(false);
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
@@ -327,12 +348,7 @@ export class PublicLandingComponent implements OnInit {
       .subscribe((slug) => {
         this.businessSlug.set(slug);
         const forceIntro = this.route.snapshot.queryParamMap.get('intro') === '1';
-        const playIntro = shouldPlayEntranceAnimation(slug, forceIntro);
-        this.playIntro.set(playIntro);
-        this.introActive.set(playIntro);
-        if (playIntro) {
-          this.beginIntroStage();
-        }
+        this.playIntro.set(shouldPlayEntranceAnimation(slug, forceIntro));
         if (!slug) {
           this.loadingPageData.set(false);
           this.pageLoadError.set('חסר מזהה עסק');
@@ -370,6 +386,16 @@ export class PublicLandingComponent implements OnInit {
         this.servicesList.set(svc);
         this.loadingPageData.set(false);
         this.scrollToLandingFragment(this.route.snapshot.fragment);
+        // Start the intro's clock only once the hero/sheet are actually
+        // about to render — not back when the slug first resolved, while
+        // the page was still showing the loading spinner. requestAnimationFrame
+        // waits for the loading→loaded change to actually paint first.
+        if (this.playIntro()) {
+          requestAnimationFrame(() => {
+            this.introActive.set(true);
+            this.beginIntroStage();
+          });
+        }
       },
       error: (err: { error?: { message?: string } }) => {
         this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
@@ -393,11 +419,15 @@ export class PublicLandingComponent implements OnInit {
    * solid `--bg-app`) sit outside this component's own stylesheet scope and
    * need to be reached here instead. Restores every one of them once the
    * sequence is done, or immediately if the user interrupts it. Also wires
-   * up the "tap or scroll skips the intro" behavior — both live here since
-   * they share the same lifecycle.
+   * up the "tap or key press skips the intro" behavior — both live here
+   * since they share the same lifecycle. Must only be called once the
+   * intro's actual content has rendered (see the caller in
+   * `reloadLandingData`) — starting it earlier would burn the sequence's
+   * timers against a loading spinner with nothing yet on screen to animate.
    */
   private beginIntroStage(): void {
     if (typeof window === 'undefined') return;
+    this.heroLanded.set(false);
     const shell = this.document.querySelector<HTMLElement>('.public-shell');
     const stageColor = shell
       ? getComputedStyle(shell).getPropertyValue('--intro-stage-bg').trim()
@@ -412,35 +442,56 @@ export class PublicLandingComponent implements OnInit {
       }
     }
 
-    const restore = (): void => {
+    // One function for every way the intro can stop — a real interruption
+    // (tap or key press; deliberately NOT 'scroll', since the sheet/hero
+    // sliding into place changes page height and can trigger a scroll event
+    // on its own, which would immediately self-interrupt every playback) or
+    // the sequence simply running its course. Either way the listeners and
+    // timers must actually be torn down here, not just left to fire into a
+    // no-op later — otherwise a fully-played intro still leaks a window-level
+    // listener set for the rest of the session. Cleanup here is always
+    // instant (no transition), whether or not the smooth landing fade below
+    // already ran: once it has, background is already at its final value so
+    // removing the inline overrides is a no-op jump; if it hasn't (an early
+    // interrupt), an instant jump is correct too — only the natural landing
+    // gets the smooth fade.
+    const opts: AddEventListenerOptions = { passive: true, once: true };
+    const end = (): void => {
       for (const el of staged) {
+        el.style.removeProperty('transition');
         el.style.removeProperty('background');
       }
       this.introActive.set(false);
-    };
-
-    const skip = (): void => {
-      restore();
-      this.introInterruptCleanup?.();
-      this.introInterruptCleanup = null;
-    };
-
-    const opts: AddEventListenerOptions = { passive: true, once: true };
-    window.addEventListener('pointerdown', skip, opts);
-    window.addEventListener('wheel', skip, opts);
-    window.addEventListener('touchmove', skip, opts);
-    window.addEventListener('scroll', skip, opts);
-
-    const timer = window.setTimeout(restore, INTRO_TOTAL_MS);
-
-    this.introInterruptCleanup = () => {
-      window.removeEventListener('pointerdown', skip);
-      window.removeEventListener('wheel', skip);
-      window.removeEventListener('touchmove', skip);
-      window.removeEventListener('scroll', skip);
+      window.removeEventListener('pointerdown', end);
+      window.removeEventListener('wheel', end);
+      window.removeEventListener('touchmove', end);
+      window.removeEventListener('keydown', end);
       window.clearTimeout(timer);
+      window.clearTimeout(settleTimer);
     };
-    this.destroyRef.onDestroy(() => this.introInterruptCleanup?.());
+
+    window.addEventListener('pointerdown', end, opts);
+    window.addEventListener('wheel', end, opts);
+    window.addEventListener('touchmove', end, opts);
+    window.addEventListener('keydown', end, opts);
+
+    // As the slider lands, fade the stage color back to the page's real
+    // background over `STAGE_FADE_MS` instead of holding it until the whole
+    // sequence ends — removing the override here (rather than jumping to it
+    // instantly) lets the browser transition from the stage color to
+    // whatever `background` now resolves to (`var(--bg-app)`, via the
+    // stylesheet rules `end()` otherwise falls back to).
+    const settleTimer = window.setTimeout(() => {
+      for (const el of staged) {
+        el.style.setProperty('transition', `background-color ${STAGE_FADE_MS}ms ease`);
+        el.style.removeProperty('background');
+      }
+      this.heroLanded.set(true);
+    }, HERO_LAND_MS);
+
+    const timer = window.setTimeout(end, INTRO_TOTAL_MS);
+
+    this.destroyRef.onDestroy(end);
   }
 
   private scrollToLandingFragment(id: string | null): void {

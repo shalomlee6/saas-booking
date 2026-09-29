@@ -4,11 +4,20 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  // Stacks above `.pl-intro-rise` (see PublicLandingComponent), whose
+  // negative top margin tucks it underneath this slider's rounded bottom
+  // corners — so those corners always rest visually on solid content,
+  // never reveal whatever's behind (the intro's dark/light stage, or a
+  // gap) through the curve. This wrapper itself never animates — only its
+  // `.pl-hero-slider` child does (see below).
+  position: relative;
+  z-index: 2;
 }
 
 .pl-hero-slider {
   width: 100%;
-  border-radius: 0;
+  border-bottom-right-radius: 20%;
+  border-bottom-left-radius: 20%;
   overflow: hidden;
 }
 
@@ -62,7 +71,7 @@
   position: relative;
 }
 ::ng-deep .pl-hero-carousel .p-carousel-indicator-list {
-  background: var(--bg-app);
+  background: var(--bg-card);
 }
 
 .pl-hero-carousel__slide {
@@ -83,102 +92,29 @@
   vertical-align: middle;
 }
 
-.pl-hero-intro {
-  text-align: center;
-  padding: 1rem 1rem 1.25rem;
-  background: $pl-bg-page;
-  box-sizing: border-box;
-}
-
-.pl-hero-intro__name {
-  margin: 0 0 0.35rem;
-  font-size: 22px;
-  font-weight: 600;
-  color: $pl-text-heading;
-}
-
-.pl-hero-intro__tagline {
-  margin: 0 0 0.5rem;
-  font-size: 14px;
-  color: $pl-text-muted;
-}
-
-.pl-hero-intro__desc {
-  margin: 0 0 1rem;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: $pl-text-heading;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-::ng-deep .pl-hero-intro__cta.p-button {
-  @include pl-btn-primary;
-  font-size: 0.9375rem;
-}
-
-::ng-deep .pl-hero-intro__cta.p-button .p-button-icon {
-  color: $pl-on-primary;
-}
-
-::ng-deep .pl-hero-intro__cta.p-button:not(:disabled):hover {
-  background: $pl-primary-hover;
-  border: none;
-  color: $pl-on-primary;
-}
-
 // ─── Page-load intro (plays once per tenant per browser session) ──────────────
-// Default state (no `--play-entrance` modifier): the hero already sits in its
-// final, fully-visible position — a session that has seen the intro before, a
-// browser without JS/sessionStorage, or an interrupted intro (the container
-// removes this modifier the instant the user taps/scrolls) all render/settle
-// here with zero extra rules needed. Only `transform`/`opacity`/`filter`
-// animate (no CLS, GPU-accelerated). `translateY` is RTL-safe.
+// Default state (no `--play-entrance` modifier): the slider already sits in
+// its final, fully-visible position — a session that has seen the intro
+// before, a browser without JS/sessionStorage, or an interrupted intro (the
+// container removes this modifier the instant the user taps/scrolls) all
+// render/settle here with zero extra rules needed. Only `transform` animates
+// (no CLS, GPU-accelerated).
 $pl-intro-ease: cubic-bezier(0.23, 1, 0.32, 1);
 
-.pl-hero-wrap--play-entrance {
-  // The whole hero — image + copy + CTA — moves as one solid panel, arriving
-  // from above. Its own text doesn't fade separately; it's carried by the
-  // panel and only visible once the panel has slid into place.
+.pl-hero-slider--play-entrance {
   will-change: transform;
-  animation: pl-hero-panel-in 1050ms $pl-intro-ease 375ms both;
+  animation: pl-hero-slider-in 1050ms $pl-intro-ease 375ms both;
 
   // The image keeps a slower, independent depth-of-field settle that runs
-  // longer than the panel's own slide, so it's still gently scaling down
-  // for a moment after the panel itself has stopped moving.
-  .pl-hero-entrance-item--media .pl-hero-carousel__img {
+  // longer than the slider's own slide, so it's still gently scaling down
+  // for a moment after the slider itself has stopped moving.
+  .pl-hero-carousel__img {
     will-change: transform;
     animation: pl-hero-media-in 1400ms $pl-intro-ease 375ms both;
   }
-
-  // Top-to-bottom text fade (phase 4 of the page intro) — starts after the
-  // panel has essentially arrived, picking up right where the page's other
-  // text elements (welcome greeting, section titles) continue the same
-  // cascade; see PublicLandingComponent's .pl-intro-text--N stagger.
-  .pl-hero-entrance-item--brand {
-    will-change: transform, opacity, filter;
-    animation: pl-hero-text-in 675ms $pl-intro-ease 1350ms both;
-  }
-
-  .pl-hero-entrance-item--copy {
-    will-change: transform, opacity, filter;
-    animation: pl-hero-text-in 675ms $pl-intro-ease 1440ms both;
-  }
-
-  .pl-hero-entrance-item--copy + .pl-hero-entrance-item--copy {
-    animation-delay: 1530ms;
-  }
-
-  ::ng-deep .pl-hero-entrance-item--cta.p-button {
-    will-change: transform, opacity, filter;
-    animation: pl-hero-text-in 675ms $pl-intro-ease 1530ms both;
-    // Stays clickable through its own fade-in — never gated behind the animation.
-    pointer-events: auto;
-  }
 }
 
-@keyframes pl-hero-panel-in {
+@keyframes pl-hero-slider-in {
   from {
     transform: translateY(-100%);
   }
@@ -196,28 +132,10 @@ $pl-intro-ease: cubic-bezier(0.23, 1, 0.32, 1);
   }
 }
 
-@keyframes pl-hero-text-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-    filter: blur(4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .pl-hero-wrap--play-entrance,
-  .pl-hero-wrap--play-entrance .pl-hero-entrance-item--media .pl-hero-carousel__img,
-  .pl-hero-wrap--play-entrance .pl-hero-entrance-item--brand,
-  .pl-hero-wrap--play-entrance .pl-hero-entrance-item--copy,
-  .pl-hero-wrap--play-entrance ::ng-deep .pl-hero-entrance-item--cta.p-button {
+  .pl-hero-slider--play-entrance,
+  .pl-hero-slider--play-entrance .pl-hero-carousel__img {
     animation: none !important;
-    opacity: 1 !important;
     transform: none !important;
-    filter: none !important;
   }
 }

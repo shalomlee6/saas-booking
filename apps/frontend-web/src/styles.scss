@@ -126,6 +126,46 @@
   --p-text-muted-color:    #9ca3af;
 }
 
+// This app's own PrimeNG overrides further down (`.p-dialog`, `.p-drawer`,
+// `.p-datepicker-panel`, …) are bare, unscoped selectors that read `--bg-card`
+// / `--text-primary` / `--border-color` — correct for elements rendered
+// in-place, but these three PrimeNG components portal straight to `<body>`,
+// outside both `.layout` and `.public-shell`. Those tokens' only dark values
+// live under the COMPOUND selectors `.layout.theme-dark` / `.public-shell.
+// theme-dark` above, which never match `<body>` or `<html>` (neither carries
+// the `.layout`/`.public-shell` class) — so a portaled dialog/drawer/
+// datepicker panel fell back to the light values even with dark mode active
+// (see LayoutComponent's `_pnDarkSync` / PublicLayoutComponent's equivalent
+// effect, which toggle bare `.theme-dark` on `<html>` for exactly this
+// class of problem). This block repeats the same neutral values as bare
+// `.theme-dark` — both shells' dark palettes already use identical neutrals
+// (only their accent color differs, and that's scoped separately per
+// tenant/business) — so it applies correctly to `<html>` regardless of
+// which shell set the class, while the compound selectors above still win
+// inside `.layout`/`.public-shell` themselves (same values either way — no
+// behavior change there).
+.theme-dark {
+  --bg-app:               #0d0d0f;
+  --bg-card:              #18181b;
+  --bg-sidebar:           #18181b;
+
+  --color-success:        #4ade80;
+  --color-danger:         #f87171;
+  --color-warning:        #fbbf24;
+
+  --text-primary:         #f9fafb;
+  --text-secondary:       #e5e7eb;
+  --text-muted:           #9ca3af;
+  --text-placeholder:     #6b7280;
+
+  --border-color:         #27272a;
+  --border-color-strong:  #3f3f46;
+
+  --shadow-xs:  0 1px 2px rgba(0,0,0,0.3);
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.5);
+}
+
 // ─── Public tenant site theme ─────────────────────────────────────────────────
 // Scoped to `.public-shell` (the customer-facing booking site's own root), not
 // `body`. Deliberately independent from the admin dashboard's `body.theme-*`

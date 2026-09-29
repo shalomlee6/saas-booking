@@ -46,11 +46,19 @@ const DEFAULTS = {
  * Purely reactive — holds state as signals that `LayoutComponent`'s template
  * binds onto its own `.layout` root ([class.theme-dark] / [ngStyle]), instead
  * of this service reaching into the DOM itself. This is what keeps the theme
- * scoped to the dashboard shell: nothing here ever touches `document.body` or
- * any other element, so there is no global state for a business's theme (or
- * impersonation) to leak into the super-admin panel, which never binds to
- * these signals at all and is permanently styled by the `:root` defaults in
- * styles.scss.
+ * scoped to the dashboard shell: no business's colors or light/dark mode are
+ * ever written anywhere but `.layout`'s own bindings, so there is no global
+ * state for a business's theme (or impersonation) to leak into the
+ * super-admin panel, which never binds to these signals at all and is
+ * permanently styled by the `:root` defaults in styles.scss.
+ *
+ * PrimeNG's own overlay components (select/datepicker panels, dialogs,
+ * drawers, toasts) portal to `<body>`, outside `.layout` — matching them to
+ * the current mode needs a body-level class, but that's deliberately NOT done
+ * here: a singleton service's effect has no way to know when `.layout` itself
+ * has been unmounted (e.g. navigating to the super-admin panel or the public
+ * site), so it would leave a stale class behind. `LayoutComponent` owns that
+ * instead, via an effect scoped to its own lifecycle — see its constructor.
  *
  * No localStorage involved: the super-admin's own view is always light (a
  * fixed design decision, not a personal preference), and the owner/impersonated

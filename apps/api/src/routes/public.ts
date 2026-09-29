@@ -18,7 +18,7 @@ import {
 } from '../controllers/publicBookingController';
 import { getPublicAuthMe, logoutPublicCustomer, requestOtp, verifyOtp } from '../controllers/publicAuthController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
-import { otpRouteLimiter, otpIpRouteLimiter } from '../middleware/rateLimits';
+import { otpRouteLimiter, otpVerifyRouteLimiter, otpIpRouteLimiter } from '../middleware/rateLimits';
 import { requirePublicCustomer } from '../middleware/requirePublicCustomer';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
 import {
@@ -113,7 +113,7 @@ publicRouter.post(
 publicRouter.post(
   '/:businessSlug/auth/verify-otp',
   otpIpRouteLimiter,
-  otpRouteLimiter,
+  otpVerifyRouteLimiter,
   validateParams(legacyBusinessSlugParamsSchema),
   verifyOtp
 );

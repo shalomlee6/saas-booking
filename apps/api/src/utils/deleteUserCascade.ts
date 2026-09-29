@@ -41,14 +41,17 @@ const EMPTY_COUNTS: DeleteImpactCounts = {
   uploadedFiles: 0,
 };
 
-/** Read-only — what deleting this user would cascade-delete. Populates the confirmation dialog. */
+/** Read-only — what deleting this user would cascade-delete. Populates the confirmation dialog.
+ *  Only the business OWNER's deletion cascades to the whole business — a staff account has
+ *  `businessId` set too (they belong to it), but deleting one must never take the business,
+ *  its data, or its other staff (including the owner) down with it. */
 export async function computeDeleteImpact(user: IUser): Promise<DeleteImpact> {
   if (!user.businessId) {
     return { business: null, counts: EMPTY_COUNTS };
   }
   const businessId = user.businessId;
-  const business = await Business.findById(businessId).select('name slug').lean();
-  if (!business) {
+  const business = await Business.findById(businessId).select('name slug ownerId').lean();
+  if (!business || business.ownerId.toString() !== user._id.toString()) {
     return { business: null, counts: EMPTY_COUNTS };
   }
   const [
@@ -115,19 +118,21 @@ export async function deleteUserCascade(user: IUser): Promise<DeleteResult> {
   const businessId = impact.business ? new Types.ObjectId(impact.business.id) : null;
   const businessSlug = impact.business?.slug ?? null;
 
+  // Sequential, not Promise.all: a MongoDB driver session (used for the
+  // transaction path below) is not safe to share across concurrently
+  // in-flight operations — running these in parallel silently races them
+  // against the same session.
   const run = async (session: mongoose.ClientSession | undefined): Promise<void> => {
     const opts = session ? { session } : {};
     if (businessId) {
-      await Promise.all([
-        Appointment.deleteMany({ businessId }, opts),
-        Customer.deleteMany({ businessId }, opts),
-        Service.deleteMany({ businessId }, opts),
-        BusinessSettings.deleteMany({ businessId }, opts),
-        BusinessReview.deleteMany({ businessId }, opts),
-        AvailabilityOverride.deleteMany({ businessId }, opts),
-        CustomerServiceConfig.deleteMany({ businessId }, opts),
-        User.deleteMany({ businessId, _id: { $ne: user._id } }, opts),
-      ]);
+      await Appointment.deleteMany({ businessId }, opts);
+      await Customer.deleteMany({ businessId }, opts);
+      await Service.deleteMany({ businessId }, opts);
+      await BusinessSettings.deleteMany({ businessId }, opts);
+      await BusinessReview.deleteMany({ businessId }, opts);
+      await AvailabilityOverride.deleteMany({ businessId }, opts);
+      await CustomerServiceConfig.deleteMany({ businessId }, opts);
+      await User.deleteMany({ businessId, _id: { $ne: user._id } }, opts);
       if (businessSlug) {
         await OtpChallenge.deleteMany({ businessSlug }, opts);
       }
