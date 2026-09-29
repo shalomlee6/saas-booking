@@ -1,21 +1,43 @@
 <div class="customer-site-preview">
-  <div class="customer-site-preview-header">
-    <h1 class="customer-site-preview-title">Preview customer site</h1>
-    <p class="customer-site-preview-subtitle">
-      This is how your customers see the login page. To open it in a new tab, use “Customer Site” in the top bar.
-    </p>
+  <div class="customer-site-preview-toolbar">
+    <div class="customer-site-preview-heading">
+      <h1 class="customer-site-preview-title">{{ 'navigation.previewTitle' | translate }}</h1>
+      <p class="customer-site-preview-subtitle">{{ 'navigation.previewSubtitle' | translate }}</p>
+    </div>
+    <div
+      class="customer-site-preview-devices"
+      role="radiogroup"
+      [attr.aria-label]="'navigation.previewDeviceLabel' | translate"
+    >
+      @for (option of devices; track option.id) {
+        <button
+          type="button"
+          class="customer-site-preview-device"
+          role="radio"
+          [class.customer-site-preview-device-active]="device() === option.id"
+          [attr.aria-checked]="device() === option.id"
+          (click)="selectDevice(option.id)"
+        >
+          <i [class]="option.icon" aria-hidden="true"></i>
+          <span>{{ option.labelKey | translate }}</span>
+        </button>
+      }
+    </div>
   </div>
+
   @if (iframeSrc(); as src) {
-    <div class="customer-site-preview-frame-wrap">
-      <iframe
-        [src]="src"
-        class="customer-site-preview-iframe"
-        title="Customer site preview"
-      ></iframe>
+    <div class="customer-site-preview-stage" [attr.data-device]="device()">
+      <div class="customer-site-preview-frame" [style.width]="frameWidth()">
+        <iframe
+          [src]="src"
+          class="customer-site-preview-iframe"
+          [title]="'navigation.previewTitle' | translate"
+        ></iframe>
+      </div>
     </div>
   } @else {
     <div class="customer-site-preview-warning">
-      <p>No business slug is set. Add a slug in settings so the customer site and this preview are available.</p>
+      <p>{{ 'navigation.previewNoSlug' | translate }}</p>
     </div>
   }
 </div>

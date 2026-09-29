@@ -22,37 +22,127 @@
     </div>
   </div>
 
-  <div class="customers-filters">
-    <label class="customers-filter">
-      <span class="customers-filter-label">{{ 'common.status' | translate }}</span>
-      <select
-        class="customers-filter-control"
-        [ngModel]="statusFilter()"
-        (ngModelChange)="onStatusFilter($event)"
+  <div class="customers-toolbar">
+    <div class="customers-toolbar-primary">
+      <div class="customers-filter-group">
+        <span class="customers-filter-label" id="customers-status-label">{{ 'common.status' | translate }}</span>
+        <div class="customers-status-switch" role="radiogroup" aria-labelledby="customers-status-label">
+          <button
+            type="button"
+            class="customers-status-option"
+            role="radio"
+            [class.customers-status-option-active]="statusFilter() === 'all'"
+            [attr.aria-checked]="statusFilter() === 'all'"
+            (click)="onStatusFilter('all')"
+          >
+            {{ 'customers.statusAll' | translate }}
+          </button>
+          <button
+            type="button"
+            class="customers-status-option"
+            role="radio"
+            [class.customers-status-option-active]="statusFilter() === 'active'"
+            [attr.aria-checked]="statusFilter() === 'active'"
+            (click)="onStatusFilter('active')"
+          >
+            {{ 'customers.statusActive' | translate }}
+          </button>
+          <button
+            type="button"
+            class="customers-status-option"
+            role="radio"
+            [class.customers-status-option-active]="statusFilter() === 'inactive'"
+            [attr.aria-checked]="statusFilter() === 'inactive'"
+            (click)="onStatusFilter('inactive')"
+          >
+            {{ 'customers.statusInactive' | translate }}
+          </button>
+        </div>
+      </div>
+
+      <div class="customers-filter-group">
+        <span class="customers-filter-label">{{ 'customers.addedRange' | translate }}</span>
+        <div class="customers-date-range">
+          <p-datepicker
+            inputId="customers-created-from"
+            styleClass="customers-date-field"
+            [ngModel]="createdFrom()"
+            (ngModelChange)="onDateChange('from', $event)"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showClear]="true"
+            appendTo="body"
+            [placeholder]="'customers.createdFrom' | translate"
+            [attr.aria-label]="'customers.createdFrom' | translate"
+          />
+          <span class="customers-date-range-sep" aria-hidden="true">–</span>
+          <p-datepicker
+            inputId="customers-created-to"
+            styleClass="customers-date-field"
+            [ngModel]="createdTo()"
+            (ngModelChange)="onDateChange('to', $event)"
+            dateFormat="dd/mm/yy"
+            [showIcon]="true"
+            [showClear]="true"
+            appendTo="body"
+            [placeholder]="'customers.createdTo' | translate"
+            [attr.aria-label]="'customers.createdTo' | translate"
+          />
+        </div>
+      </div>
+
+      @if (hasActiveFilters()) {
+        <button type="button" class="customers-btn customers-btn-ghost customers-clear" (click)="clearFilters()">
+          <i class="pi pi-filter-slash" aria-hidden="true"></i>
+          {{ 'customers.clearFilters' | translate }}
+        </button>
+      }
+    </div>
+
+    <div class="customers-toolbar-secondary">
+      <label class="customers-mini-filter">
+        <span class="customers-filter-label">{{ 'common.email' | translate }}</span>
+        <select
+          class="customers-filter-control"
+          [ngModel]="emailFilter()"
+          (ngModelChange)="onPresenceFilter('email', $event)"
+        >
+          <option value="any">{{ 'customers.contactAny' | translate }}</option>
+          <option value="yes">{{ 'customers.contactHas' | translate }}</option>
+          <option value="no">{{ 'customers.contactMissing' | translate }}</option>
+        </select>
+      </label>
+      <label class="customers-mini-filter">
+        <span class="customers-filter-label">{{ 'common.phone' | translate }}</span>
+        <select
+          class="customers-filter-control"
+          [ngModel]="phoneFilter()"
+          (ngModelChange)="onPresenceFilter('phone', $event)"
+        >
+          <option value="any">{{ 'customers.contactAny' | translate }}</option>
+          <option value="yes">{{ 'customers.contactHas' | translate }}</option>
+          <option value="no">{{ 'customers.contactMissing' | translate }}</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        class="customers-chip"
+        [class.customers-chip-active]="newCustomersOnly()"
+        [attr.aria-pressed]="newCustomersOnly()"
+        (click)="toggleNewCustomers()"
       >
-        <option value="all">{{ 'customers.statusAll' | translate }}</option>
-        <option value="active">{{ 'customers.statusActive' | translate }}</option>
-        <option value="inactive">{{ 'customers.statusInactive' | translate }}</option>
-      </select>
-    </label>
-    <label class="customers-filter">
-      <span class="customers-filter-label">{{ 'customers.createdFrom' | translate }}</span>
-      <input
-        type="date"
-        class="customers-filter-control"
-        [ngModel]="createdFrom()"
-        (ngModelChange)="createdFrom.set($event || '')"
-      />
-    </label>
-    <label class="customers-filter">
-      <span class="customers-filter-label">{{ 'customers.createdTo' | translate }}</span>
-      <input
-        type="date"
-        class="customers-filter-control"
-        [ngModel]="createdTo()"
-        (ngModelChange)="createdTo.set($event || '')"
-      />
-    </label>
+        {{ 'customers.newCustomers' | translate }}
+      </button>
+      <label class="customers-mini-filter">
+        <span class="customers-filter-label">{{ 'customers.sortLabel' | translate }}</span>
+        <select class="customers-filter-control" [ngModel]="sortBy()" (ngModelChange)="onSort($event)">
+          <option value="createdDesc">{{ 'customers.sortNewest' | translate }}</option>
+          <option value="createdAsc">{{ 'customers.sortOldest' | translate }}</option>
+          <option value="name">{{ 'customers.sortName' | translate }}</option>
+          <option value="status">{{ 'customers.sortStatus' | translate }}</option>
+        </select>
+      </label>
+    </div>
   </div>
 
   @if (selectedCount() > 0) {
@@ -154,7 +244,8 @@
                 </td>
                 <td class="customers-table-muted">{{ formatCreatedAt(customer.createdAt) }}</td>
                 <td class="customers-table-actions">
-                  <a [routerLink]="['/customers', customer._id]" class="customers-btn customers-btn-ghost customers-btn-sm">
+                  <a [routerLink]="['/customers', customer._id]" class="customers-btn customers-btn-ghost customers-btn-sm customers-view-btn">
+                    <i class="pi pi-eye" aria-hidden="true"></i>
                     {{ 'common.view' | translate }}
                   </a>
                 </td>
