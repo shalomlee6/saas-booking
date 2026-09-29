@@ -1,8 +1,10 @@
-import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { DOCUMENT, NgStyle } from '@angular/common';
 import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
-import { ThemeService } from '../../../core/config/theme.service';
+import { PublicThemeService } from '../services/public-theme.service';
+import { resolveBusinessThemeVars } from '../../../core/theming/resolve-business-theme-vars';
 import { ToastModule } from 'primeng/toast';
 import { PublicCustomerNavComponent } from './public-customer-nav/public-customer-nav.component';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
@@ -10,19 +12,55 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 @Component({
   selector: 'app-public-layout',
   standalone: true,
-  imports: [RouterOutlet, ToastModule, PublicCustomerNavComponent, TranslatePipe],
+  imports: [RouterOutlet, ToastModule, PublicCustomerNavComponent, TranslatePipe, NgStyle],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.scss',
 })
 export class PublicLayoutComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
   private readonly publicApi = inject(PublicApiService);
-  private readonly theme = inject(ThemeService);
+  private readonly document = inject(DOCUMENT);
   private readonly destroy$ = new Subject<void>();
 
-  businessData: PublicBusiness | null = null;
+  readonly theme = inject(PublicThemeService);
+
+  readonly businessData = signal<PublicBusiness | null>(null);
   loading = true;
   error: string | null = null;
+
+  /**
+   * Tenant accent tokens for the currently active light/dark mode, resolved
+   * from the business's configured theme preset, as a CSS custom-property map.
+   */
+  readonly tenantStyles = computed<Record<string, string>>(() =>
+    resolveBusinessThemeVars(this.businessData()?.settings?.theme?.preset, this.theme.mode())
+  );
+
+  constructor() {
+    // A business's default mode only takes effect if the customer hasn't
+    // already made their own explicit light/dark choice on this site.
+    effect(() => {
+      const mode = this.businessData()?.settings?.theme?.defaultMode;
+      this.theme.applyBusinessDefault(mode);
+    });
+
+    // Same reasoning as LayoutComponent's identical effect (see its detailed
+    // comment there): PrimeNG overlays (the gallery lightbox/add-image
+    // dialogs, carousel, …) portal to `<body>`, and some of PrimeNG's own
+    // plain-field tokens (e.g. the add-image dialog's `pInputText`) are
+    // declared only on `:root` — both need PrimeNG's `darkModeSelector`
+    // class (`.theme-dark`, see app.config.ts) on `<html>` specifically
+    // (`:root` means `<html>`, not `body`) to pick up THIS site's own mode —
+    // never the admin dashboard's. Scoped to this component's lifecycle so
+    // navigating away from the public site always leaves `<html>` clean via
+    // `onCleanup`, instead of a singleton service leaving a stale class
+    // behind for whatever shell mounts next.
+    effect((onCleanup) => {
+      const dark = this.theme.mode() === 'dark';
+      this.document.documentElement.classList.toggle('theme-dark', dark);
+      onCleanup(() => this.document.documentElement.classList.remove('theme-dark'));
+    });
+  }
 
   ngOnInit(): void {
     this.route.parent?.paramMap
@@ -47,20 +85,9 @@ export class PublicLayoutComponent implements OnInit, OnDestroy {
         })
       )
       .subscribe((data) => {
-        this.businessData = data ?? null;
+        this.businessData.set(data ?? null);
         this.loading = false;
-        if (data) {
-          this.applyBusinessTheme(data);
-        }
       });
-  }
-
-  private applyBusinessTheme(business: PublicBusiness): void {
-    const theme = business.settings?.theme;
-    const primary = theme?.colors?.primary;
-    if (primary && /^#[0-9A-Fa-f]{6}$/.test(primary)) {
-      document.body.style.setProperty('--color-primary', primary);
-    }
   }
 
   ngOnDestroy(): void {

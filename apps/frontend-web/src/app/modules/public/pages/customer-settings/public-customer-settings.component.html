@@ -24,4 +24,28 @@
       </button>
     </div>
   </div>
+  <div class="public-settings-card">
+    <h2 class="public-settings-card-title">{{ 'settings.appearanceCardTitle' | translate }}</h2>
+    <p class="public-settings-card-sub">{{ 'settings.appearanceCardDescription' | translate }}</p>
+    <div class="public-settings-lang" role="group" [attr.aria-label]="'settings.appearanceCardTitle' | translate">
+      <button
+        type="button"
+        class="public-settings-lang-btn"
+        [class.public-settings-lang-btn-active]="theme.mode() === 'light'"
+        [attr.aria-pressed]="theme.mode() === 'light'"
+        (click)="setThemeMode('light')"
+      >
+        {{ 'settings.themeModeLight' | translate }}
+      </button>
+      <button
+        type="button"
+        class="public-settings-lang-btn"
+        [class.public-settings-lang-btn-active]="theme.mode() === 'dark'"
+        [attr.aria-pressed]="theme.mode() === 'dark'"
+        (click)="setThemeMode('dark')"
+      >
+        {{ 'settings.themeModeDark' | translate }}
+      </button>
+    </div>
+  </div>
 </div>

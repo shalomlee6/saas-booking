@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { CurrencyPipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { SelectModule } from 'primeng/select';
@@ -10,6 +10,7 @@ import { InputTextModule } from 'primeng/inputtext';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { AdminApiService, type AdminAnalyticsDto } from '../../services/admin-api.service';
+import { SaCurrencyPipe } from '../../shared/sa-currency.pipe';
 
 @Component({
   selector: 'app-super-admin-analytics',
@@ -23,8 +24,8 @@ import { AdminApiService, type AdminAnalyticsDto } from '../../services/admin-ap
     SkeletonModule,
     ToastModule,
     InputTextModule,
-    CurrencyPipe,
     DecimalPipe,
+    SaCurrencyPipe,
   ],
   templateUrl: './super-admin-analytics.component.html',
   styleUrl: './super-admin-analytics.component.scss',
@@ -64,6 +65,21 @@ export class SuperAdminAnalyticsComponent {
     },
   };
 
+  // Pie charts need a fixed 1:1 aspect ratio — reusing chartOptions'
+  // maintainAspectRatio:false let the canvas stretch to the card's
+  // rectangular width while staying a fixed height, rendering an oval.
+  readonly pieChartOptions = {
+    responsive: true,
+    maintainAspectRatio: true,
+    aspectRatio: 1,
+    plugins: {
+      legend: {
+        display: true,
+        position: 'bottom' as const,
+      },
+    },
+  };
+
   readonly lineChart = computed(() => {
     const d = this.data();
     if (!d) return null;
@@ -75,8 +91,8 @@ export class SuperAdminAnalyticsComponent {
         {
           label: 'Appointments',
           data: pts.map((p) => p.count),
-          borderColor: '#3787F6',
-          backgroundColor: 'rgba(55, 135, 246, 0.14)',
+          borderColor: '#d97706',
+          backgroundColor: 'rgba(217, 119, 6, 0.14)',
           fill: true,
           tension: 0.3,
         },
@@ -95,8 +111,8 @@ export class SuperAdminAnalyticsComponent {
         {
           label: 'Revenue (ILS)',
           data: pts.map((p) => p.amount),
-          borderColor: '#0F172A',
-          backgroundColor: 'rgba(15, 23, 42, 0.08)',
+          borderColor: '#0d9488',
+          backgroundColor: 'rgba(13, 148, 136, 0.12)',
           fill: true,
           tension: 0.3,
         },
@@ -115,7 +131,7 @@ export class SuperAdminAnalyticsComponent {
         {
           label: 'New businesses',
           data: pts.map((p) => p.count),
-          backgroundColor: '#3787F6',
+          backgroundColor: '#2563eb',
         },
       ],
     };
@@ -128,9 +144,9 @@ export class SuperAdminAnalyticsComponent {
     if (pts.length === 0) return null;
     const colorFor = (plan: string): string => {
       const p = (plan || 'unknown').toLowerCase();
-      if (p === 'free') return '#94a3b8';
-      if (p === 'pro' || p === 'normal') return '#3787F6';
-      if (p === 'premium') return '#d97706';
+      if (p === 'free') return '#64748b';
+      if (p === 'pro' || p === 'normal') return '#2563eb';
+      if (p === 'premium') return '#7c3aed';
       return '#cbd5e1';
     };
     return {

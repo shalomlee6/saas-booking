@@ -58,10 +58,24 @@ export async function auth(req: AuthRequest, res: Response, next: NextFunction):
       return;
     }
 
-    const dbUser = await User.findById(userId).select('_id role email businessId status').lean();
+    const dbUser = await User.findById(userId)
+      .select('_id role email businessId status passwordChangedAt')
+      .lean();
     if (!dbUser || dbUser.status === 'disabled') {
       res.status(401).json({ message: 'Invalid token' });
       return;
+    }
+
+    // A password change invalidates every token issued before it — this is the
+    // only session-revocation mechanism these stateless JWTs have. A freshly
+    // issued token always carries the current `pwv`, so only *other* sessions
+    // are affected (see changePassword / maybeRenewStaffSession).
+    if (dbUser.passwordChangedAt) {
+      const tokenPwv = Number(decoded.pwv);
+      if (!Number.isFinite(tokenPwv) || tokenPwv < dbUser.passwordChangedAt.getTime()) {
+        res.status(401).json({ message: 'Your password was changed. Please log in again.' });
+        return;
+      }
     }
 
     req.user = {
@@ -78,7 +92,7 @@ export async function auth(req: AuthRequest, res: Response, next: NextFunction):
       impersonatingBusinessId:
         decoded.impersonatingBusinessId != null ? String(decoded.impersonatingBusinessId) : undefined,
     };
-    maybeRenewStaffSession(res, req.user, decoded);
+    maybeRenewStaffSession(res, req.user, decoded, dbUser.passwordChangedAt);
     next();
     return;
   } catch (err) {

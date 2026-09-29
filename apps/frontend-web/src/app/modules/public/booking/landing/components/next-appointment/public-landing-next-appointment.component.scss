@@ -22,7 +22,7 @@
 }
 
 .pl-next__heading-ico {
-  color: $pl-primary;
+  color: $pl-ink;
   font-size: 0.95rem;
 }
 
@@ -63,7 +63,7 @@
 
 ::ng-deep .pl-next__tag.p-tag-success {
   background: $pl-primary-pale;
-  color: $pl-primary;
+  color: $pl-ink;
   border: none;
   border-radius: 50px;
   font-weight: 500;
@@ -80,7 +80,7 @@
   margin: 0 0 0.35rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: $pl-primary;
+  color: $pl-ink;
 }
 
 .pl-next__strong {
@@ -95,7 +95,7 @@
 }
 
 .pl-next__ico {
-  color: $pl-primary;
+  color: $pl-ink;
   font-size: 0.95rem;
   width: 1.1rem;
   text-align: center;
@@ -159,13 +159,13 @@
 }
 
 ::ng-deep .pl-next__empty-btn.p-button .p-button-icon {
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 ::ng-deep .pl-next__empty-btn.p-button:not(:disabled):hover {
   background: $pl-primary-hover;
   border: none;
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 ::ng-deep .pl-next__cancel.p-button {
@@ -174,11 +174,11 @@
 }
 
 ::ng-deep .pl-next__cancel.p-button .p-button-icon {
-  color: $pl-primary;
+  color: $pl-ink;
 }
 
 ::ng-deep .pl-next__cancel.p-button:not(:disabled):hover {
   background: $pl-primary-light;
   border-color: $pl-primary;
-  color: $pl-primary;
+  color: $pl-ink;
 }

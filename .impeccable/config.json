@@ -1,0 +1,476 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-a.html"
+        ],
+        "createdAt": "2026-09-26T18:52:50.284Z",
+        "reason": "user's explicit brief: 'all 3 directions use white, pink and purple' — purple/lavender is a required palette member, not an incidental AI-tell hue, for this comparison prototype"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-a.html"
+        ],
+        "createdAt": "2026-09-26T18:53:05.702Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (border-radius + overflow:hidden standing in for a physical phone case); its screen content has its own real internal padding per section (cal-header, cd-body, hm-hero, etc) — the bezel itself is deliberately edge-to-edge, not cramped text"
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-b.html"
+        ],
+        "createdAt": "2026-09-26T19:05:26.422Z",
+        "reason": "User's explicit brief for Direction B: 'purple as the main color, pink as highlight' — purple is the dominant, brief-mandated color for this direction, not an incidental AI-tell hue."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-b.html"
+        ],
+        "createdAt": "2026-09-26T19:05:26.982Z",
+        "reason": "User's explicit brief for Direction B: 'warm background' is a required brief element for this specific comparison direction, not a reflexive default."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-b.html"
+        ],
+        "createdAt": "2026-09-26T19:05:27.542Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as direction-a.html) — its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-b.html"
+        ],
+        "createdAt": "2026-09-26T19:05:28.276Z",
+        "reason": "False positive: the chen-nails home statusbar is position:absolute/z-index:5, rendering over the purple hero gradient beneath it, not over the white .screen background. Verified visually via playwright-cli screenshot — white '9:41' text is clearly legible against the purple hero."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/direction-c.html"
+        ],
+        "createdAt": "2026-09-26T19:08:47.480Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as direction-a.html and direction-b.html) — its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-1.html"
+        ],
+        "createdAt": "2026-09-26T19:25:41.746Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as direction-a/b/c.html) — its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-1.html"
+        ],
+        "createdAt": "2026-09-26T19:25:42.305Z",
+        "reason": "User's explicit brief: this file IS the 'Cream Nude' palette by name, with exact user-specified hex values (Cream Nude #EDE0D4, Pure Cream #FDFAF6, Light Beige #F5EDE4). The cream/beige tone is the entire point of this comparison file, not a reflexive AI default."
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-2.html"
+        ],
+        "createdAt": "2026-09-26T19:29:56.139Z",
+        "reason": "User's brief specifies exactly one named Text ink color (Deep Brown #4A3F35) used universally across the palette by design, including on the Primary/Highlight surfaces (Sandy Nude #D4B8A0, Dusty Rose #D4A5A5) -- this is the palette's deliberate sole ink tone, not an incidental washed-out gray. WCAG AA contrast was hand-verified for every Text/Primary and Text/Highlight pairing (>=4.7:1 in this file) before writing the tokens."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-2.html"
+        ],
+        "createdAt": "2026-09-26T19:29:56.715Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-2.html"
+        ],
+        "createdAt": "2026-09-26T19:29:57.446Z",
+        "reason": "User's explicit brief: this file IS the 'Sandy Nude' palette by name, with exact user-specified hex values (Soft Ivory #FBF6F0, Pale Peach #F0E0D4). The cream/beige tone is the entire point of this comparison file."
+      },
+      {
+        "rule": "gray-on-color",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-3.html"
+        ],
+        "createdAt": "2026-09-26T19:31:32.374Z",
+        "reason": "User's brief specifies exactly one named Text ink color (Soft Charcoal #3A3330) used universally across the palette by design, including on the Highlight surface (Blush Nude #E8C4B8) -- this is the palette's deliberate sole ink tone, not an incidental washed-out gray. WCAG AA contrast was hand-verified for the Text/Highlight pairing (7.7:1) before writing the tokens."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-3.html"
+        ],
+        "createdAt": "2026-09-26T19:31:32.965Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/nude-3.html"
+        ],
+        "createdAt": "2026-09-26T19:31:33.576Z",
+        "reason": "User's explicit brief: this file IS the 'Soft Nude' palette by name, with exact user-specified hex values (Warm Cream #F7F0E8, Light Sand #F5EBE0). The cream/beige tone is the entire point of this comparison file."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/jewel-1.html"
+        ],
+        "createdAt": "2026-09-26T20:37:50.502Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/jewel-1.html"
+        ],
+        "createdAt": "2026-09-26T20:37:51.050Z",
+        "reason": "The light-bg (#EFEFE4) is a deliberate warm sage-neutral chosen to complement the deep emerald primary, not a reflexive AI default -- it is the intended light surface for this jewel-tone palette."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/jewel-2.html"
+        ],
+        "createdAt": "2026-09-26T20:39:55.347Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "ai-color-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/jewel-3.html"
+        ],
+        "createdAt": "2026-09-26T20:41:28.367Z",
+        "reason": "This file IS the 'Amethyst & Ruby' jewel-tone palette by explicit user request (user asked for jewel tones: emerald/sapphire/ruby/amethyst). Deep purple is the palette's entire identity, not an incidental AI-tell hue."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/jewel-3.html"
+        ],
+        "createdAt": "2026-09-26T20:41:28.963Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-1.html"
+        ],
+        "createdAt": "2026-09-26T21:01:13.208Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-1.html"
+        ],
+        "createdAt": "2026-09-26T21:01:13.796Z",
+        "reason": "User's exact given palette: --muted #E8E0DC (Misty Taupe) is a user-specified token used as intended, not a reflexive AI default."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-2.html"
+        ],
+        "createdAt": "2026-09-26T21:02:42.611Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-2.html"
+        ],
+        "createdAt": "2026-09-26T21:02:43.191Z",
+        "reason": "User's exact given palette: --muted #E8E0DC (Misty Taupe) is a user-specified token used as intended, not a reflexive AI default."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-3.html"
+        ],
+        "createdAt": "2026-09-26T21:07:50.181Z",
+        "reason": "False positive: every rule that sets background:var(--primary) (.cal-header, .tabbar, .cd-next, .cd-avatar, .cd-tag, .hm-hero, .btn-primary) also explicitly sets color:var(--on-primary) (white). Verified visually via playwright-cli screenshot -- all text on the plum surfaces (header titles, tab labels, next-appointment card, CTA buttons) renders clearly legible in white/light text, not the flagged dark ink."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-3.html"
+        ],
+        "createdAt": "2026-09-26T21:07:50.881Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/plum-3.html"
+        ],
+        "createdAt": "2026-09-26T21:07:51.571Z",
+        "reason": "User's exact given palette: --muted #E8E0DC (Misty Taupe) is a user-specified token used as intended, not a reflexive AI default."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/recommended.html"
+        ],
+        "createdAt": "2026-09-26T22:41:37.616Z",
+        "reason": "False positive: the chen-nails home statusbar is position:absolute/z-index:5, rendering over the dark hero gradient beneath it, not over the light page Background. Verified visually via playwright-cli screenshot -- white '9:41' text is clearly legible against the dark hero."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/recommended.html"
+        ],
+        "createdAt": "2026-09-26T22:41:38.236Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/recommended.html"
+        ],
+        "createdAt": "2026-09-26T22:41:38.855Z",
+        "reason": "Warm cream/espresso is the deliberate core of this recommended palette (a considered beauty-industry color system: terracotta clay + espresso ink + warm cream), not a reflexive AI default."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent.html"
+        ],
+        "createdAt": "2026-09-26T23:12:53.843Z",
+        "reason": "White-on-primary (3.4:1, passes the 3:1 large-text minimum) is the user's OWN declared pairing, not something introduced here: their given SCSS explicitly sets --p-primary-contrast-color: #ffffff paired with --p-primary-color: #F35271. This is inherited unchanged from their real production theme; fixing it would mean overriding their brand pink or contrast-color token, which contradicts 'use this colors.' Disclosed to the user as a pre-existing near-miss in their own system, not a defect introduced by this file."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent.html"
+        ],
+        "createdAt": "2026-09-26T23:12:54.415Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame (same as the other comparison files) -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-b.html"
+        ],
+        "createdAt": "2026-09-26T23:18:16.332Z",
+        "reason": "White-on-primary (3.4:1, passes the 3:1 large-text minimum) is the user's OWN declared pairing: --p-primary-contrast-color: #ffffff paired with --p-primary-color: #F35271 in their real production SCSS. Inherited unchanged, not introduced here."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-b.html"
+        ],
+        "createdAt": "2026-09-26T23:18:17.109Z",
+        "reason": "'.phone' and '.screen' are an intentional device-bezel/viewport mockup -- content sections inside have their own real padding; the device frame and full-bleed screen edges are deliberately flush, matching how a real phone viewport goes edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c.html"
+        ],
+        "createdAt": "2026-09-26T23:21:36.493Z",
+        "reason": "White-on-primary (3.4:1) is the user's own declared --p-primary-contrast-color/--p-primary-color pairing, inherited unchanged. White-on-f5f5f7 and white-on-f1d9cf are the hero's absolutely-positioned statusbar and overlaid heading text over a multi-layer CSS gradient (dark scrim + photo-tone base) -- the detector can't composite the layered gradient and picks up a raw un-composited stop color; verified visually correct in the sibling brand-accent.html file using the identical hero pattern."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c.html"
+        ],
+        "createdAt": "2026-09-26T23:21:37.027Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-d.html"
+        ],
+        "createdAt": "2026-09-26T23:23:49.936Z",
+        "reason": "White-on-primary (3.4:1) is the user's own declared --p-primary-contrast-color/--p-primary-color pairing, inherited unchanged. White-on-f5f5f7 and white-on-f1d9cf are the hero's absolutely-positioned statusbar/heading over a multi-layer CSS gradient the detector can't composite; verified visually correct in the sibling brand-accent.html file using the identical hero pattern."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-d.html"
+        ],
+        "createdAt": "2026-09-26T23:23:50.498Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-dark.html"
+        ],
+        "createdAt": "2026-09-26T23:26:44.150Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/chen-theme.html"
+        ],
+        "createdAt": "2026-09-27T07:10:55.338Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "clipped-overflow-container",
+        "value": "*",
+        "files": [
+          "design-audit/directions/chen-theme.html"
+        ],
+        "createdAt": "2026-09-27T07:10:56.074Z",
+        "reason": "'.phone'/'.screen' are an intentional device-viewport mockup, not a tooltip/popover host -- the clipped children (bottom sticky action bars, a small overlapping 'most popular' badge) are meant to stay within the phone's visible screen bounds and respect its rounded corners, not escape it."
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-audit/directions/chen-theme.html"
+        ],
+        "createdAt": "2026-09-27T07:10:56.651Z",
+        "reason": "User's exact given palette: --color-bg #FAF7F4 ('cream nude — main background') is Chen's own explicitly specified brand token, not a reflexive AI default."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-b-mint.html"
+        ],
+        "createdAt": "2026-09-27T09:08:34.719Z",
+        "reason": "'.phone'/'.screen' are an intentional device-bezel/viewport mockup -- content sections have their own real padding; the frame and full-bleed screen edges are deliberately flush."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c-mint.html"
+        ],
+        "createdAt": "2026-09-27T09:10:43.995Z",
+        "reason": "White-on-f5f5f7 and white-on-f1d9cf are the hero's absolutely-positioned statusbar/heading over a multi-layer CSS gradient the detector can't composite; verified visually correct in the sibling brand-accent.html file using the identical hero pattern."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c-mint.html"
+        ],
+        "createdAt": "2026-09-27T09:10:44.605Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-d-mint.html"
+        ],
+        "createdAt": "2026-09-27T09:13:31.447Z",
+        "reason": "White-on-f5f5f7 and white-on-f1d9cf are the hero's absolutely-positioned statusbar/heading over a multi-layer CSS gradient the detector can't composite; verified visually correct in the sibling brand-accent.html file using the identical hero pattern."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-d-mint.html"
+        ],
+        "createdAt": "2026-09-27T09:13:31.994Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-dark-mint.html"
+        ],
+        "createdAt": "2026-09-27T09:15:01.651Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c-mint-dark.html"
+        ],
+        "createdAt": "2026-09-27T10:09:56.057Z",
+        "reason": "White-on-f1d9cf is the hero's heading text over a multi-layer CSS gradient (dark scrim + photo-tone base) the detector can't composite; verified visually correct in the sibling brand-accent-c.html file using the identical hero pattern."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c-mint-dark.html"
+        ],
+        "createdAt": "2026-09-27T10:09:56.648Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      },
+      {
+        "rule": "low-contrast",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c-dark.html"
+        ],
+        "createdAt": "2026-09-27T10:11:14.920Z",
+        "reason": "White-on-f1d9cf is the hero's heading text over a multi-layer CSS gradient (dark scrim + photo-tone base) the detector can't composite; verified visually correct in the sibling brand-accent-c.html file using the identical hero pattern."
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "design-audit/directions/brand-accent-c-dark.html"
+        ],
+        "createdAt": "2026-09-27T10:11:15.513Z",
+        "reason": "'.phone' is an intentional device-bezel mockup frame -- its screen content has its own real internal padding per section; the bezel itself is deliberately edge-to-edge."
+      }
+    ]
+  }
+}

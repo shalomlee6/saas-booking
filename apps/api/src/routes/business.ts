@@ -17,6 +17,7 @@ import {
   deleteBusinessReview,
 } from '../controllers/businessReviewController';
 import { asyncHandler } from '../utils/asyncHandler';
+import { recordAudit } from '../utils/recordAudit';
 
 export const businessRouter = Router();
 
@@ -62,6 +63,20 @@ businessRouter.patch(
     const merged = { ...currentUi, ...result.ui };
     business.ui = merged as any;
     await business.save();
+
+    // A super-admin editing a real business's theme while impersonating is a
+    // real write to that tenant's data on the owner's behalf — worth a trail.
+    if (req.user!.role === 'super_admin' && req.user!.impersonating === true) {
+      await recordAudit({
+        actorUserId: req.user!.userId,
+        actorEmail: req.user!.email,
+        action: 'business.ui_updated_while_impersonating',
+        entity: 'Business',
+        entityId: businessId,
+        metadata: { fields: Object.keys(result.ui) },
+      });
+    }
+
     return res.json({ ui: normalizeBusinessUi(business.ui) });
   })
 );

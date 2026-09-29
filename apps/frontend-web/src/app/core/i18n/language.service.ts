@@ -85,8 +85,15 @@ export class LanguageService {
   }
 
   t(key: string, params?: Record<string, string | number>): string {
-    const value =
-      getByPath(TRANSLATIONS[this.language()], key) ?? getByPath(TRANSLATIONS.he, key) ?? key;
+    return this.tIn(this.language(), key, params);
+  }
+
+  /** Same lookup as `t()`, but pinned to an explicit language instead of the
+   *  global signal — for the rare component (e.g. the change-password form)
+   *  that's reused inside a shell with its own fixed language, independent
+   *  of the app-wide Hebrew/English toggle. */
+  tIn(lang: AppLanguage, key: string, params?: Record<string, string | number>): string {
+    const value = getByPath(TRANSLATIONS[lang], key) ?? getByPath(TRANSLATIONS.he, key) ?? key;
     if (!params) return value;
     return Object.entries(params).reduce(
       (acc, [k, v]) => acc.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v)),

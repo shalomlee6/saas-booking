@@ -8,12 +8,12 @@
   display: inline-block;
   margin-bottom: 1.25rem;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-muted);
   text-decoration: none;
 }
 
 .sa-user-detail__back:hover {
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .sa-user-detail__skeleton {
@@ -28,16 +28,16 @@
 
 .sa-user-detail__err {
   padding: 2rem;
-  border: 1px solid #fecaca;
+  border: 1px solid var(--sa-rose);
   border-radius: 12px;
-  background: #fef2f2;
-  color: #991b1b;
+  background: var(--sa-rose-soft);
+  color: var(--sa-rose-ink);
 }
 
 .sa-user-detail__link {
   display: inline-block;
   margin-top: 0.75rem;
-  color: #111827;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
@@ -49,20 +49,20 @@
   gap: 1rem;
   margin-bottom: 1.75rem;
   padding-bottom: 1.5rem;
-  border-bottom: 1px solid #e8eaed;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sa-user-detail__title {
   margin: 0 0 0.35rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 .sa-user-detail__email {
   margin: 0 0 0.75rem;
   font-size: 0.9375rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .sa-user-detail__badges {
@@ -78,30 +78,32 @@
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #4b5563;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  color: var(--sa-blue-ink);
+  background: var(--sa-blue-soft);
+  border: 1px solid transparent;
 }
 
 .sa-user-detail__badge--neutral {
   font-weight: 500;
+  color: var(--text-secondary);
+  background: var(--sa-slate-soft);
 }
 
 .sa-user-detail__badge--off {
-  color: #71717a;
-  background: #fafafa;
-  border-color: #e4e4e7;
+  color: var(--text-muted);
+  background: var(--sa-slate-soft);
+  border-color: var(--border-color);
 }
 
 ::ng-deep .sa-user-detail__save.p-button {
   border-radius: 10px;
-  background: #111827;
+  background: var(--sa-ink);
   border: none;
   font-weight: 600;
 }
 
 ::ng-deep .sa-user-detail__save.p-button:not(:disabled):hover {
-  background: #1f2937;
+  background: var(--sa-ink-hover);
 }
 
 .sa-user-detail__grid {
@@ -111,7 +113,7 @@
 }
 
 ::ng-deep .sa-user-detail__card.p-card {
-  border: 1px solid #e8eaed;
+  border: 1px solid var(--border-color);
   border-radius: 12px;
   box-shadow: none;
 }
@@ -125,7 +127,7 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 ::ng-deep .sa-user-detail__card.p-card .p-card-body {
@@ -133,7 +135,7 @@
 }
 
 .sa-user-detail__card--danger-zone ::ng-deep .p-card-title {
-  color: #991b1b;
+  color: var(--sa-rose-ink);
 }
 
 .sa-user-detail__field {
@@ -149,7 +151,7 @@
   margin-bottom: 0.35rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .sa-user-detail__input {
@@ -164,13 +166,13 @@
 .sa-user-detail__hint {
   margin: 0.35rem 0 0;
   font-size: 0.75rem;
-  color: #9ca3af;
+  color: var(--text-placeholder);
 }
 
 .sa-user-detail__flags {
   margin-top: 1.25rem;
   padding-top: 1.25rem;
-  border-top: 1px solid #f0f1f3;
+  border-top: 1px solid var(--border-color);
 }
 
 .sa-user-detail__flags-title {
@@ -178,7 +180,7 @@
   margin-bottom: 0.75rem;
   font-size: 0.8125rem;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .sa-user-detail__toggle-row {
@@ -188,7 +190,7 @@
   gap: 1rem;
   padding: 0.5rem 0;
   font-size: 0.875rem;
-  color: #374151;
+  color: var(--text-secondary);
 }
 
 .sa-user-detail__toggle-row--strong {
@@ -198,16 +200,69 @@
 .sa-user-detail__muted {
   margin: 0 0 1rem;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .sa-user-detail__biz-name {
   margin: 0 0 0.35rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #111827;
+  color: var(--text-primary);
 }
 
 ::ng-deep .sa-user-detail__btn-secondary.p-button {
   border-radius: 8px;
+}
+
+// ─── Delete user dialog ─────────────────────────────────────────────────────
+.sa-delete-warning {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.sa-delete-summary {
+  margin-bottom: 1.25rem;
+  padding: 0.875rem 1rem;
+  background: var(--sa-rose-soft);
+  border: 1px solid var(--sa-rose);
+  border-radius: 10px;
+}
+
+.sa-delete-summary-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--sa-rose-ink);
+}
+
+.sa-delete-summary-list {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  font-size: 0.8125rem;
+  color: var(--sa-rose-ink);
+  line-height: 1.6;
+}
+
+.sa-delete-field {
+  margin-bottom: 1.25rem;
+}
+
+.sa-delete-field label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.sa-delete-input {
+  width: 100%;
+}
+
+.sa-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
 }

@@ -8,6 +8,7 @@ import { CardModule } from 'primeng/card';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { AdminApiService, type PlatformSettingsDto } from '../../services/admin-api.service';
+import { ChangePasswordFormComponent } from '../../../../shared/ui/change-password-form/change-password-form.component';
 
 @Component({
   selector: 'app-super-admin-settings',
@@ -20,6 +21,7 @@ import { AdminApiService, type PlatformSettingsDto } from '../../services/admin-
     ToggleSwitchModule,
     CardModule,
     ToastModule,
+    ChangePasswordFormComponent,
   ],
   templateUrl: './super-admin-settings.component.html',
   styleUrl: './super-admin-settings.component.scss',

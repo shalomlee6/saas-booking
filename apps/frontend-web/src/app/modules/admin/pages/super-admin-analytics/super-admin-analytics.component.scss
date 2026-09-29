@@ -7,12 +7,12 @@
   margin: 0 0 0.25rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .sa-page-sub {
   margin: 0;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.9375rem;
 }
 
@@ -37,7 +37,7 @@
   flex-direction: column;
   gap: 0.2rem;
   font-size: 0.75rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .sa-date-label {
@@ -53,9 +53,37 @@
 
 ::ng-deep .sa-kpi-card .p-card-body {
   padding: 1rem;
+}
+
+// See super-admin-dashboard's identical fix: the real children live in
+// .p-card-content, not .p-card-body itself.
+::ng-deep .sa-kpi-card .p-card-content {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+}
+
+::ng-deep .sa-kpi-card {
+  border-top: 3px solid var(--sa-kpi-accent, var(--border-color));
+  border-radius: 12px;
+}
+
+.sa-kpi-card--blue { --sa-kpi-accent: var(--sa-blue); .sa-kpi-icon { background: var(--sa-blue-soft); color: var(--sa-blue-ink); } }
+.sa-kpi-card--green { --sa-kpi-accent: var(--sa-green); .sa-kpi-icon { background: var(--sa-green-soft); color: var(--sa-green-ink); } }
+.sa-kpi-card--amber { --sa-kpi-accent: var(--sa-amber); .sa-kpi-icon { background: var(--sa-amber-soft); color: var(--sa-amber-ink); } }
+.sa-kpi-card--violet { --sa-kpi-accent: var(--sa-violet); .sa-kpi-icon { background: var(--sa-violet-soft); color: var(--sa-violet-ink); } }
+.sa-kpi-card--teal { --sa-kpi-accent: var(--sa-teal); .sa-kpi-icon { background: var(--sa-teal-soft); color: var(--sa-teal-ink); } }
+.sa-kpi-card--rose { --sa-kpi-accent: var(--sa-rose); .sa-kpi-icon { background: var(--sa-rose-soft); color: var(--sa-rose-ink); } }
+
+.sa-kpi-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  margin-bottom: 0.1rem;
 }
 
 .sa-kpi-label {
@@ -63,18 +91,18 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .sa-kpi-value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .sa-kpi-meta {
   font-size: 0.75rem;
-  color: #94a3b8;
+  color: var(--text-placeholder);
 }
 
 .sa-charts {
@@ -111,8 +139,13 @@
   position: relative;
 }
 
+// A fixed height on a full-width card stretched the pie into an oval since
+// Chart.js fills whatever box it's given. Bound it to a centered square
+// instead so pieChartOptions' aspectRatio:1 has a container to match.
 .sa-chart-wrap--pie {
-  height: 300px;
+  height: auto;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
 ::ng-deep .sa-chart-card .p-card-body {
@@ -125,36 +158,36 @@
 }
 
 .sa-empty {
-  border: 1px dashed #e2e8f0;
+  border: 1px dashed var(--border-color);
   border-radius: 12px;
   padding: 2rem 1.5rem;
   text-align: center;
-  background: #f8fafc;
+  background: var(--sa-slate-soft);
   margin-bottom: 1rem;
 }
 
 .sa-empty--error {
   border-style: solid;
-  border-color: #fecaca;
-  background: #fef2f2;
+  border-color: var(--sa-rose);
+  background: var(--sa-rose-soft);
 }
 
 .sa-empty-title {
   margin: 0 0 0.5rem;
   font-weight: 600;
   font-size: 1.1rem;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .sa-empty-text {
   margin: 0 0 1rem;
-  color: #64748b;
+  color: var(--text-muted);
 }
 
 .sa-chart-empty {
   margin: 0;
   padding: 2rem 1rem;
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-placeholder);
   font-size: 0.9375rem;
 }

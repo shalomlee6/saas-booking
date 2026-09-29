@@ -1,4 +1,8 @@
-<div class="pl-page">
+<div
+  class="pl-page"
+  [class.pl-page--intro]="introActive()"
+  [class.pl-page--stage-settled]="heroLanded()"
+>
   @if (pageLoadError(); as err) {
     <div class="pl-page__error" role="alert">{{ err }}</div>
   } @else if (loadingPageData() && !bookingBusiness()) {
@@ -8,21 +12,34 @@
   } @else {
     @if (sectionVisibility().hero) {
       <app-public-landing-hero
-        [businessName]="businessDisplayName()"
-        [tagline]="landingTagline()"
-        [description]="landingHeroDescription()"
         [imageLeft]="heroImageLeft()"
         [imageRight]="heroImageRight()"
-        [playEntrance]="playHeroEntrance()"
-        (book)="goToBook()"
+        [playEntrance]="introActive()"
       />
     }
 
+    <div class="pl-intro-rise">
+    <div class="pl-hero-intro">
+      <p class="pl-hero-intro__name pl-intro-text pl-intro-text--0">{{ businessDisplayName() }}</p>
+      <p class="pl-hero-intro__tagline pl-intro-text pl-intro-text--1">{{ landingTagline() }}</p>
+      @if (landingHeroDescription().trim()) {
+        <p class="pl-hero-intro__desc pl-intro-text pl-intro-text--2">{{ landingHeroDescription() }}</p>
+      }
+      <p-button
+        label="קביעת תור"
+        icon="pi pi-calendar-plus"
+        iconPos="right"
+        styleClass="pl-hero-intro__cta"
+        (onClick)="goToBook()"
+      />
+    </div>
+
+    <div class="pl-intro-sheet">
     <div class="pl-section pl-section--base pl-welcome pl-scroll-anchor" plReveal id="public-upcoming">
       <div class="pl-welcome-inner">
         <div class="pl-greeting">
-          <h2 class="pl-greeting__title">{{ greetingTitle() }}</h2>
-          <p class="pl-greeting__sub">{{ greetingSub }}</p>
+          <h2 class="pl-greeting__title pl-intro-text pl-intro-text--3">{{ greetingTitle() }}</h2>
+          <p class="pl-greeting__sub pl-intro-text pl-intro-text--4">{{ greetingSub }}</p>
         </div>
 
         <app-public-landing-next-appointment
@@ -38,7 +55,12 @@
     </div>
 
     @if (sectionVisibility().services) {
-      <div class="pl-section pl-section--accent" plReveal plRevealStagger>
+      <div
+        class="pl-section pl-section--accent"
+        plReveal
+        plRevealStagger
+        [plRevealDisabled]="playIntro()"
+      >
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-services
             [services]="servicesList()"
@@ -49,7 +71,12 @@
     }
 
     @if (sectionVisibility().gallery) {
-      <div class="pl-section pl-section--base" plReveal plRevealStagger>
+      <div
+        class="pl-section pl-section--base"
+        plReveal
+        plRevealStagger
+        [plRevealDisabled]="playIntro()"
+      >
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-gallery
             [items]="landingGalleryItems()"
@@ -88,10 +115,12 @@
         </div>
       </div>
     }
+    </div>
+    </div>
   }
 
   <nav
-    class="pl-sticky-bar"
+    class="pl-sticky-bar pl-intro-bar"
     aria-label="פעולות מהירות"
     [class.pl-sticky-bar--hidden]="!!pageLoadError()"
   >

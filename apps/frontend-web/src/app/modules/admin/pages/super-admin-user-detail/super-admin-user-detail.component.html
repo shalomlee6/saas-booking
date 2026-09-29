@@ -166,7 +166,7 @@
       </p-card>
 
       <p-card header="Security" styleClass="sa-user-detail__card">
-        <p class="sa-user-detail__muted">Last login: {{ u.lastLoginAt ? (u.lastLoginAt | date: 'medium') : 'Never' }}</p>
+        <p class="sa-user-detail__muted">Last login: {{ u.lastLoginAt ? (u.lastLoginAt | saDate: 'medium') : 'Never' }}</p>
         <p-button
           label="Reset password"
           [outlined]="true"
@@ -186,15 +186,76 @@
 
       @if (canDelete()) {
         <p-card header="Danger zone" styleClass="sa-user-detail__card sa-user-detail__card--danger-zone">
-          <p class="sa-user-detail__muted">Permanently remove this user.</p>
+          <p class="sa-user-detail__muted">
+            Permanently delete this account and everything tied to it. This cannot be undone.
+          </p>
           <p-button
             label="Delete user"
             severity="danger"
             [outlined]="true"
-            (onClick)="confirmDelete()"
+            (onClick)="openDeleteDialog()"
           />
         </p-card>
       }
     </div>
   }
 </div>
+
+<p-dialog
+  header="Delete user"
+  [visible]="deleteDialogOpen()"
+  (visibleChange)="onDeleteDialogVisibleChange($event)"
+  [modal]="true"
+  [closable]="!deleting()"
+  [closeOnEscape]="!deleting()"
+  [style]="{ width: '28rem' }"
+  styleClass="sa-delete-dialog"
+>
+  @if (loadingImpact()) {
+    <p class="sa-user-detail__muted">Loading…</p>
+  } @else if (deleteImpact(); as impact) {
+    <p class="sa-delete-warning">
+      This permanently deletes <strong>{{ impact.email }}</strong> and all of their history. This cannot be undone.
+    </p>
+    @if (impact.business) {
+      <div class="sa-delete-summary">
+        <p class="sa-delete-summary-title">
+          Also deletes the business "{{ impact.business.name }}" and:
+        </p>
+        <ul class="sa-delete-summary-list">
+          <li>{{ impact.counts.appointments }} appointments</li>
+          <li>{{ impact.counts.customers }} customers</li>
+          <li>{{ impact.counts.services }} services</li>
+          <li>{{ impact.counts.staffUsers }} other staff accounts</li>
+          <li>{{ impact.counts.reviews }} reviews</li>
+          <li>{{ impact.counts.availabilityOverrides }} availability overrides</li>
+          <li>{{ impact.counts.customerServiceConfigs }} customer service overrides</li>
+          <li>{{ impact.counts.uploadedFiles }} uploaded files (gallery, logo, landing media)</li>
+        </ul>
+      </div>
+    }
+    <div class="sa-delete-field">
+      <label for="delete-confirm-email">Type <strong>{{ impact.email }}</strong> to confirm</label>
+      <input
+        id="delete-confirm-email"
+        pInputText
+        type="text"
+        class="sa-delete-input"
+        [ngModel]="deleteConfirmEmail()"
+        (ngModelChange)="deleteConfirmEmail.set($event)"
+        [disabled]="deleting()"
+        autocomplete="off"
+      />
+    </div>
+    <div class="sa-delete-actions">
+      <p-button label="Cancel" [outlined]="true" [disabled]="deleting()" (onClick)="closeDeleteDialog()" />
+      <p-button
+        label="Delete permanently"
+        severity="danger"
+        [loading]="deleting()"
+        [disabled]="!deleteConfirmValid()"
+        (onClick)="executeDelete()"
+      />
+    </div>
+  }
+</p-dialog>

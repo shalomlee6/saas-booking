@@ -1,5 +1,4 @@
 import { Component, inject, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
 import { CardModule } from 'primeng/card';
 import { TagModule } from 'primeng/tag';
@@ -11,11 +10,12 @@ import {
   type AdminAlertItem,
   type AdminAlertSeverity,
 } from '../../services/admin-api.service';
+import { SaDatePipe } from '../../shared/sa-date.pipe';
 
 @Component({
   selector: 'app-super-admin-alerts',
   standalone: true,
-  imports: [ButtonModule, CardModule, TagModule, SkeletonModule, ToastModule, DatePipe],
+  imports: [ButtonModule, CardModule, TagModule, SkeletonModule, ToastModule, SaDatePipe],
   templateUrl: './super-admin-alerts.component.html',
   styleUrl: './super-admin-alerts.component.scss',
 })

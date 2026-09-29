@@ -363,6 +363,9 @@ const MOCK_BUSINESSES: Record<string, unknown>[] = [
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ui: { themeMode: 'light' },
+    // No public-site theme override — this tenant gets the neutral pink default
+    // declared in `.public-shell.theme-light`/`.theme-dark` (styles.scss).
+    publicTheme: null,
   },
   {
     _id: 'mock-business-2',
@@ -373,6 +376,20 @@ const MOCK_BUSINESSES: Record<string, unknown>[] = [
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ui: { themeMode: 'light' },
+    publicTheme: null,
+  },
+  {
+    _id: 'mock-business-chen',
+    name: 'צ׳ן ביוטי',
+    slug: 'chen-nails',
+    plan: 'pro',
+    ownerEmail: 'chen@example.com',
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    ui: { themeMode: 'light' },
+    // Tenants only reference a preset by name — the actual token families live
+    // in the shared registry (core/theming/theme-presets.ts), same as the real backend.
+    publicTheme: { preset: 'prime-mint', defaultMode: 'light' },
   },
 ];
 
@@ -1209,6 +1226,10 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const known = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug) as Record<string, unknown> | undefined;
     const businessId = known ? String(known['_id']) : 'mock-business-1';
     const name = known ? String(known['name']) : (slug === 'demo-salon' ? 'Demo Salon' : slug);
+    // Each tenant references its OWN theme preset (or none, for the default) — this
+    // used to return one hardcoded blue for every business regardless of slug.
+    const publicTheme =
+      (known?.['publicTheme'] as { preset?: string; defaultMode?: 'light' | 'dark' } | null) ?? null;
     return from([
       new HttpResponse({
         status: 200,
@@ -1217,7 +1238,11 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
           name,
           slug,
           settings: {
-            theme: { colors: { primary: '#3787f6' }, logoUrl: null },
+            theme: {
+              preset: publicTheme?.preset,
+              defaultMode: publicTheme?.defaultMode,
+              logoUrl: null,
+            },
             plan: 'free',
           },
         },

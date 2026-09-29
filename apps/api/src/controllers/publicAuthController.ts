@@ -37,34 +37,6 @@ function normalizeOtpCode(code: unknown): string {
   return String(code ?? '').trim();
 }
 
-// Rate limiting (simple in-memory)
-const rateLimitStore = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const MAX_REQUESTS_PER_WINDOW = 5;
-
-function checkRateLimit(identifier: string): boolean {
-  const now = Date.now();
-  const record = rateLimitStore.get(identifier);
-
-  if (!record || now > record.resetAt) {
-    rateLimitStore.set(identifier, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
-    return true;
-  }
-
-  if (record.count >= MAX_REQUESTS_PER_WINDOW) {
-    return false;
-  }
-
-  record.count++;
-  return true;
-}
-
-function getClientIdentifier(req: Request): string {
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const phone = normalizePhone(req.body?.phone);
-  return `${ip}:${phone}`;
-}
-
 // POST /api/public/:businessSlug/auth/request-otp
 export async function requestOtp(req: Request, res: Response) {
   try {
@@ -85,11 +57,6 @@ export async function requestOtp(req: Request, res: Response) {
 
     if (!normalizedPhone) {
       return res.status(400).json({ message: 'phone is required' });
-    }
-
-    const identifier = getClientIdentifier(req);
-    if (!checkRateLimit(identifier)) {
-      return res.status(429).json({ message: 'Too many requests. Please try again later.' });
     }
 
     const business = await Business.findOne({ slug: businessSlug });
@@ -183,11 +150,6 @@ export async function verifyOtp(req: Request, res: Response) {
 
     if (!normalizedPhone || !normalizedCode) {
       return res.status(400).json({ message: 'phone and code are required' });
-    }
-
-    const identifier = getClientIdentifier(req);
-    if (!checkRateLimit(identifier)) {
-      return res.status(429).json({ message: 'Too many requests. Please try again later.' });
     }
 
     const business = await Business.findOne({ slug: businessSlug });

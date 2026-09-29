@@ -1,7 +1,5 @@
 import { Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { Types } from 'mongoose';
-import { validateEnv } from '../config/env';
 import { AuthRequest } from '../middleware/auth';
 import { Business } from '../models/Business';
 import { User } from '../models/User';
@@ -11,6 +9,8 @@ import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi';
 import { recordAudit } from '../utils/recordAudit';
 import { provisionTenant } from '../utils/provisionTenant';
+import { signImpersonationToken } from '../utils/staffSession';
+import { VALID_THEME_PRESET_IDS, isValidThemePresetId } from '../utils/themePresets';
 import { logger } from '../utils/logger';
 import type { PlanTier } from '../utils/planPolicy';
 
@@ -38,6 +38,8 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
               colors: {
                 primary: settings.theme.colors.primary,
               },
+              preset: settings.theme.preset,
+              defaultMode: settings.theme.defaultMode,
             },
             features: {
               bookingEnabled: settings.features.bookingEnabled,
@@ -106,7 +108,7 @@ export async function createAdminBusiness(req: AuthRequest, res: Response): Prom
           slug: business.slug,
           plan: business.plan,
           phone: business.phone ?? null,
-          ownerId: business.ownerId.toString(),
+          ownerId: business?.ownerId.toString(),
           createdAt: business.createdAt,
           updatedAt: business.updatedAt,
         } as const),
@@ -182,6 +184,14 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
+    // Load the acting admin's own current record — the impersonation token's
+    // pwv must be THEIR passwordChangedAt (the real actor), never the
+    // impersonated business owner's. See signImpersonationToken.
+    const admin = await User.findById(req.user.userId).select('email passwordChangedAt').lean();
+    if (!admin) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
     logger.info('audit_impersonation_start', {
       adminUserId: req.user.userId,
       businessId,
@@ -197,18 +207,14 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       metadata: { businessId },
     });
 
-    // Create impersonation token
-    const env = validateEnv();
-    const token = jwt.sign(
+    const token = signImpersonationToken(
       {
         userId: req.user.userId,
         role: 'super_admin',
-        email: req.user.email,
-        impersonatingBusinessId: businessId,
-        impersonating: true,
+        email: admin.email,
+        passwordChangedAt: admin.passwordChangedAt,
       },
-      env.JWT_SECRET,
-      { expiresIn: '30m' } // 30 minutes
+      String(businessId)
     );
 
     res.json({
@@ -256,18 +262,58 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
     if (!result.valid) {
       return res.status(400).json({ message: result.message });
     }
-    if (!result.ui || Object.keys(result.ui).length === 0) {
+
+    const publicTheme = req.body?.publicTheme;
+    let presetUpdate: string | undefined;
+    let defaultModeUpdate: 'light' | 'dark' | undefined;
+    if (publicTheme !== undefined) {
+      if (typeof publicTheme !== 'object' || publicTheme === null) {
+        return res.status(400).json({ message: 'publicTheme must be an object' });
+      }
+      if (publicTheme.preset !== undefined) {
+        if (typeof publicTheme.preset !== 'string' || !isValidThemePresetId(publicTheme.preset)) {
+          return res.status(400).json({
+            message: `publicTheme.preset must be one of: ${VALID_THEME_PRESET_IDS.join(', ')}`,
+          });
+        }
+        presetUpdate = publicTheme.preset;
+      }
+      if (publicTheme.defaultMode !== undefined) {
+        if (publicTheme.defaultMode !== 'light' && publicTheme.defaultMode !== 'dark') {
+          return res.status(400).json({ message: 'publicTheme.defaultMode must be "light" or "dark"' });
+        }
+        defaultModeUpdate = publicTheme.defaultMode;
+      }
+    }
+
+    const hasUiFields = !!result.ui && Object.keys(result.ui).length > 0;
+    if (!hasUiFields && presetUpdate === undefined && defaultModeUpdate === undefined) {
       return res.status(400).json({ message: 'No valid UI fields to update' });
     }
+
     const business = await Business.findById(businessId);
     if (!business) {
       return res.status(404).json({ message: 'Business not found' });
     }
-    const currentUi = business.ui && typeof business.ui === 'object' ? business.ui : {};
-    const merged = { ...currentUi, ...result.ui };
-    business.ui = merged as any;
-    await business.save();
-    return res.json({ ui: normalizeBusinessUi(business.ui) });
+
+    if (hasUiFields) {
+      const currentUi = business.ui && typeof business.ui === 'object' ? business.ui : {};
+      const merged = { ...currentUi, ...result.ui };
+      business.ui = merged as any;
+      await business.save();
+    }
+
+    const settings = await ensureBusinessSettings(business._id);
+    if (presetUpdate !== undefined) settings.theme.preset = presetUpdate;
+    if (defaultModeUpdate !== undefined) settings.theme.defaultMode = defaultModeUpdate;
+    if (presetUpdate !== undefined || defaultModeUpdate !== undefined) {
+      await settings.save();
+    }
+
+    return res.json({
+      ui: normalizeBusinessUi(business.ui),
+      publicTheme: { preset: settings.theme.preset, defaultMode: settings.theme.defaultMode },
+    });
   } catch (err) {
     logger.error('admin_patch_business_ui_failed', {
       error: err instanceof Error ? err.message : String(err),

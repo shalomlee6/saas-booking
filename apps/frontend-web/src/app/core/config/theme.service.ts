@@ -1,7 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { DOCUMENT } from '@angular/common';
-
-const STORAGE_KEY = 'sb_theme';
+import { Injectable, computed, signal } from '@angular/core';
 
 /** From Business.ui (dashboard) */
 export interface BusinessUi {
@@ -44,94 +41,64 @@ const DEFAULTS = {
   backgroundColor: '#F6F8FB',
 };
 
+/**
+ * Business owner dashboard theme (light/dark + a business's own accent color).
+ * Purely reactive — holds state as signals that `LayoutComponent`'s template
+ * binds onto its own `.layout` root ([class.theme-dark] / [ngStyle]), instead
+ * of this service reaching into the DOM itself. This is what keeps the theme
+ * scoped to the dashboard shell: no business's colors or light/dark mode are
+ * ever written anywhere but `.layout`'s own bindings, so there is no global
+ * state for a business's theme (or impersonation) to leak into the
+ * super-admin panel, which never binds to these signals at all and is
+ * permanently styled by the `:root` defaults in styles.scss.
+ *
+ * PrimeNG's own overlay components (select/datepicker panels, dialogs,
+ * drawers, toasts) portal to `<body>`, outside `.layout` — matching them to
+ * the current mode needs a body-level class, but that's deliberately NOT done
+ * here: a singleton service's effect has no way to know when `.layout` itself
+ * has been unmounted (e.g. navigating to the super-admin panel or the public
+ * site), so it would leave a stale class behind. `LayoutComponent` owns that
+ * instead, via an effect scoped to its own lifecycle — see its constructor.
+ *
+ * No localStorage involved: the super-admin's own view is always light (a
+ * fixed design decision, not a personal preference), and the owner/impersonated
+ * view's mode always comes fresh from the business's own `ui.themeMode` on the
+ * server — so there's nothing to persist and nothing that can go stale.
+ */
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
-  private readonly doc = inject(DOCUMENT);
+  readonly mode = signal<'light' | 'dark'>('light');
+  private readonly businessTheme = signal<BusinessThemeOverrides | null>(null);
 
-  readonly currentMode = signal<'light' | 'dark'>('light');
-  /** Stored so toggle can re-apply with same overrides */
-  private lastBusinessTheme: BusinessThemeOverrides | null = null;
-
-  /**
-   * Applies only base light/dark mode (body class). Does not set primary/sidebar.
-   * Base tones come from .theme-light / .theme-dark in styles.scss.
-   */
-  applyMode(mode: 'light' | 'dark'): void {
-    const root = this.doc.body;
-    root.classList.remove('theme-light', 'theme-dark');
-    root.classList.add(mode === 'dark' ? 'theme-dark' : 'theme-light');
-    this.currentMode.set(mode);
-    try {
-      localStorage.setItem(STORAGE_KEY, mode);
-    } catch {}
-  }
-
-  /**
-   * Applies only business overrides (--color-primary, --bg-sidebar, --bg-app).
-   * Does not change light/dark mode.
-   */
-  applyBusinessTheme(theme: BusinessThemeOverrides | null | undefined): void {
-    this.lastBusinessTheme = theme && Object.keys(theme).length > 0 ? { ...theme } : null;
-    const root = this.doc.body;
-
-    const primary = theme?.primaryColor && validHex(theme.primaryColor)
-      ? theme.primaryColor
-      : DEFAULTS.primaryColor;
-    const sidebar = theme?.sidebarColor && validHex(theme.sidebarColor)
-      ? theme.sidebarColor
-      : DEFAULTS.sidebarColor;
-    const bg = theme?.backgroundColor && validHex(theme.backgroundColor)
-      ? theme.backgroundColor
-      : DEFAULTS.backgroundColor;
-
-    root.style.setProperty('--color-primary', primary);
-    root.style.setProperty('--bg-sidebar', sidebar);
-    root.style.setProperty('--bg-app', bg);
-  }
-
-  /**
-   * Single entry point: clear previous overrides, then set base mode and business overrides.
-   * Call after /auth/me or when toggling mode.
-   */
-  applyAll(opts: {
-    mode: 'light' | 'dark';
-    businessTheme?: BusinessThemeOverrides | null;
-  }): void {
-    const root = this.doc.body;
-    root.style.removeProperty('--color-primary');
-    root.style.removeProperty('--bg-sidebar');
-    root.style.removeProperty('--bg-app');
-    root.classList.remove('theme-light', 'theme-dark');
-
-    root.classList.add(opts.mode === 'dark' ? 'theme-dark' : 'theme-light');
-    this.currentMode.set(opts.mode);
-    try {
-      localStorage.setItem(STORAGE_KEY, opts.mode);
-    } catch {}
-
-    this.lastBusinessTheme =
-      opts.businessTheme && Object.keys(opts.businessTheme).length > 0
-        ? { ...opts.businessTheme }
-        : null;
-    if (this.lastBusinessTheme) {
-      const t = this.lastBusinessTheme;
-      root.style.setProperty(
-        '--color-primary',
-        t.primaryColor && validHex(t.primaryColor) ? t.primaryColor : DEFAULTS.primaryColor
-      );
-      root.style.setProperty(
-        '--bg-sidebar',
-        t.sidebarColor && validHex(t.sidebarColor) ? t.sidebarColor : DEFAULTS.sidebarColor
-      );
-      root.style.setProperty(
-        '--bg-app',
-        t.backgroundColor && validHex(t.backgroundColor) ? t.backgroundColor : DEFAULTS.backgroundColor
-      );
-      root.style.setProperty(
-        'color-scheme',
-        opts.mode
-      );
+  /** CSS custom-property overrides for the dashboard shell root's [ngStyle] binding. */
+  readonly cssVars = computed<Record<string, string>>(() => {
+    const t = this.businessTheme();
+    if (!t) return {};
+    const vars: Record<string, string> = {
+      '--color-primary': t.primaryColor && validHex(t.primaryColor) ? t.primaryColor : DEFAULTS.primaryColor,
+    };
+    // Business-configured neutral surfaces are only designed for a light
+    // background — reapplying them under dark mode stomps the dark palette's
+    // own surfaces with light hex values (e.g. a white sidebar on an otherwise
+    // dark screen), breaking contrast across the whole layout. Only the accent
+    // color carries over into dark mode; sidebar/app background fall through
+    // to the dark theme's own class-based defaults (.layout.theme-dark).
+    if (this.mode() === 'light') {
+      vars['--bg-sidebar'] = t.sidebarColor && validHex(t.sidebarColor) ? t.sidebarColor : DEFAULTS.sidebarColor;
+      vars['--bg-app'] = t.backgroundColor && validHex(t.backgroundColor) ? t.backgroundColor : DEFAULTS.backgroundColor;
     }
+    return vars;
+  });
+
+  /**
+   * Single entry point: sets mode and business overrides together.
+   * Call after /auth/me, or when the owner saves a new theme in settings.
+   */
+  applyAll(opts: { mode: 'light' | 'dark'; businessTheme?: BusinessThemeOverrides | null }): void {
+    this.mode.set(opts.mode);
+    this.businessTheme.set(
+      opts.businessTheme && Object.keys(opts.businessTheme).length > 0 ? { ...opts.businessTheme } : null
+    );
   }
 
   /** Prefer businessSettings.theme (DB), fallback to business.ui */
@@ -163,19 +130,17 @@ export class ThemeService {
     return null;
   }
 
-  getLastBusinessTheme(): BusinessThemeOverrides | null {
-    return this.lastBusinessTheme ? { ...this.lastBusinessTheme } : null;
-  }
-
-  /** For layout toggle: re-apply with new mode and same business overrides. */
-  setModeAndReapply(mode: 'light' | 'dark'): void {
-    this.applyAll({ mode, businessTheme: this.lastBusinessTheme ?? undefined });
-  }
-
-  /** Backward compatibility: apply business.ui from dashboard/settings (single source: still goes through applyAll). */
+  /** Applied after a business owner saves their theme in settings. */
   applyBusinessUi(ui?: BusinessUi | null): void {
-    const mode = ui?.themeMode === 'dark' ? 'dark' : this.currentMode();
+    const mode = ui?.themeMode === 'dark' ? 'dark' : this.mode();
     const businessTheme = ThemeService.toBusinessThemeOverrides(ui ?? null, null);
     this.applyAll({ mode, businessTheme: businessTheme ?? undefined });
+  }
+
+  /** Back to the permanent default (light, no business overrides) — e.g. right
+   *  before exiting impersonation, so there's no visible flash of stale state
+   *  while the follow-up /auth/me request is in flight. */
+  reset(): void {
+    this.applyAll({ mode: 'light', businessTheme: null });
   }
 }

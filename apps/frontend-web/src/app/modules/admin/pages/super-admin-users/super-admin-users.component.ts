@@ -83,10 +83,10 @@ export class SuperAdminUsersComponent implements OnInit {
 
   readonly rangeLabel = computed(() => {
     const total = this.totalRecords();
-    if (total === 0) return 'מציג 0 מתוך 0 משתמשים';
+    if (total === 0) return 'Showing 0 of 0 users';
     const start = this.first() + 1;
     const end = Math.min(this.first() + this.rows().length, total);
-    return `מציג ${start}-${end} מתוך ${total} משתמשים`;
+    return `Showing ${start}-${end} of ${total} users`;
   });
 
   readonly totalPages = computed(() =>
@@ -102,6 +102,9 @@ export class SuperAdminUsersComponent implements OnInit {
     return this.rows().map((row) => ({
       row,
       name: row.name,
+      // A blank display name reads as a broken row ("—"), not a person —
+      // fall back to whatever *does* identify the account.
+      displayName: row.name?.trim() || row.businessName?.trim() || row.email,
       email: row.email,
       lastLoginAt: row.lastLoginAt,
       initial: tableAvatarInitial(row.name, row.email),

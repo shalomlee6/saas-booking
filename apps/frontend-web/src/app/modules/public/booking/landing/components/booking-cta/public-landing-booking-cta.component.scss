@@ -24,7 +24,7 @@
 ::ng-deep .pl-cta__btn.p-button {
   background: $pl-primary;
   border: none;
-  color: #fff;
+  color: $pl-on-primary;
   font-weight: 500;
   padding: 16px 40px;
   border-radius: 50px;
@@ -32,13 +32,13 @@
 }
 
 ::ng-deep .pl-cta__btn.p-button .p-button-icon {
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 ::ng-deep .pl-cta__btn.p-button:not(:disabled):hover {
   background: $pl-primary-hover;
   border: none;
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 .pl-cta__links {
@@ -52,7 +52,7 @@
 .pl-cta__link {
   font-size: 0.9375rem;
   font-weight: 500;
-  color: $pl-primary;
+  color: $pl-ink;
   text-decoration: none;
 }
 

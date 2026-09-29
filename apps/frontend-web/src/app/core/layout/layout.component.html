@@ -15,6 +15,9 @@
   [class.layout--impersonating]="isImpersonating()"
   [class.layout--sidebar-collapsed]="!isMobile() && isSidebarCollapsed()"
   [class.layout--mobile-drawer-open]="isMobile() && isMobileMenuOpen()"
+  [class.theme-light]="theme.mode() === 'light'"
+  [class.theme-dark]="theme.mode() === 'dark'"
+  [ngStyle]="theme.cssVars()"
 >
   <div class="layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
 
@@ -140,6 +143,18 @@
               <span class="layout-sidebar-link-text">{{ 'navigation.previewSite' | translate }}</span>
             </a>
           }
+
+          <a
+            routerLink="/settings/account"
+            routerLinkActive="layout-sidebar-link-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="layout-sidebar-link"
+            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.account' | translate) : null"
+            (click)="closeMobileMenu()"
+          >
+            <i class="layout-sidebar-link-icon pi pi-user" aria-hidden="true"></i>
+            <span class="layout-sidebar-link-text">{{ 'navigation.account' | translate }}</span>
+          </a>
         }
       </nav>
 
@@ -217,29 +232,6 @@
           </span>
         }
 
-        @if (isImpersonating()) {
-          <span class="layout-topbar-impersonation-badge" role="status" aria-live="polite">
-            {{ language.language() === 'he' ? 'מחוברת בתור עסק אחר' : 'Impersonating' }}
-          </span>
-        }
-
-        @if (business() && (isSuperAdmin() || isImpersonating())) {
-          <button
-            type="button"
-            class="layout-theme-toggle"
-            [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
-            [attr.aria-pressed]="themeService.currentMode() === 'dark'"
-            (click)="toggleTheme()"
-          >
-            <i
-              [class]="themeService.currentMode() === 'light' ? 'pi pi-moon' : 'pi pi-sun'"
-              aria-hidden="true"
-            ></i>
-            <span class="layout-topbar-btn-label">
-              {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
-            </span>
-          </button>
-        }
       }
 
       <a routerLink="/appointments" class="layout-topbar-bell" [attr.aria-label]="'appointments.title' | translate">

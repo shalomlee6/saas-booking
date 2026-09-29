@@ -9,6 +9,7 @@ import { PlatformSettings } from '../models/PlatformSettings';
 import { AuditLog } from '../models/AuditLog';
 import { Service } from '../models/Service';
 import { recordAudit } from '../utils/recordAudit';
+import { computeDeleteImpact, deleteUserCascade } from '../utils/deleteUserCascade';
 import { normalizePlan, type PlanTier } from '../utils/planPolicy';
 import { syncBusinessPlanDocuments } from '../utils/provisionTenant';
 import { normalizeBusinessSlugInput } from '../utils/slug';
@@ -62,8 +63,9 @@ function parseAdminAnalyticsWindow(req: AuthRequest): AdminAnalyticsWindow | nul
   return { rangeStart, rangeEnd: now, rangeDays: days };
 }
 
-/** Estimated MRR per plan when billing integration is not present (USD). */
-const PLAN_MRR_USD: Record<string, number> = {
+/** Estimated MRR per plan when billing integration is not present (ILS —
+ *  matches the currency appointment revenue is recorded and displayed in). */
+const PLAN_MRR_ILS: Record<string, number> = {
   free: 0,
   normal: 49,
   pro: 49,
@@ -440,6 +442,29 @@ export async function patchAdminUser(req: AuthRequest, res: Response): Promise<v
 }
 
 // DELETE /api/admin/users/:id
+// GET /api/admin/users/:id/delete-impact — read-only preview for the confirmation dialog.
+export async function getAdminUserDeleteImpact(req: AuthRequest, res: Response): Promise<void> {
+  try {
+    const { id } = req.params;
+    if (!Types.ObjectId.isValid(id)) {
+      res.status(400).json({ message: 'Invalid user id' });
+      return;
+    }
+    const user = await User.findById(id);
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+    const impact = await computeDeleteImpact(user);
+    res.json({ email: user.email, role: user.role, ...impact });
+  } catch (err) {
+    logger.error('get_admin_user_delete_impact_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 export async function deleteAdminUser(req: AuthRequest, res: Response): Promise<void> {
   try {
     const { id } = req.params;
@@ -453,24 +478,29 @@ export async function deleteAdminUser(req: AuthRequest, res: Response): Promise<
       return;
     }
     if (user.role === 'super_admin') {
-      res.status(403).json({ message: 'Cannot delete a super admin' });
+      res.status(403).json({ message: 'Cannot delete a super admin account' });
       return;
     }
-    if (user.role === 'owner') {
-      res.status(400).json({
-        message:
-          'Cannot delete a business owner from the users list. Disable the account or remove the tenant from the database.',
-      });
+    if (req.user?.userId && req.user.userId === id) {
+      res.status(400).json({ message: 'Cannot delete the account you are currently logged in as' });
       return;
     }
-    await User.deleteOne({ _id: id });
+
+    const result = await deleteUserCascade(user);
+
     await recordAudit({
       actorUserId: req.user?.userId,
       actorEmail: req.user?.email,
       action: 'user.delete',
       entity: 'User',
       entityId: id,
-      metadata: { email: user.email, role: user.role },
+      metadata: {
+        email: user.email,
+        role: user.role,
+        deletedBusiness: result.deletedBusiness,
+        counts: result.counts,
+        usedTransaction: result.usedTransaction,
+      },
     });
     res.status(204).send();
   } catch (err) {
@@ -646,7 +676,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
     let payingBusinesses = 0;
     for (const row of planRowsForMrr) {
       const key = row.plan || 'free';
-      const add = PLAN_MRR_USD[key] ?? 0;
+      const add = PLAN_MRR_ILS[key] ?? 0;
       if (add > 0) payingBusinesses += 1;
       mrr += add;
     }

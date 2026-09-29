@@ -22,7 +22,7 @@
         pInputText
         class="sa-users__search"
         type="search"
-        placeholder="חיפוש לפי שם או אימייל..."
+        placeholder="Search by name or email..."
         [ngModel]="searchInput()"
         (ngModelChange)="searchInput.set($event)"
         (keyup.enter)="applySearch()"
@@ -132,7 +132,7 @@
                     >{{ vm.initial }}</span
                   >
                   <div class="sa-users__who-text">
-                    <span class="sa-users__name">{{ vm.row.name || '—' }}</span>
+                    <span class="sa-users__name">{{ vm.displayName }}</span>
                   </div>
                 </div>
               </td>
@@ -193,7 +193,7 @@
           </button>
         </div>
         <label class="sa-users__per-page">
-          <span>שורות לעמוד:</span>
+          <span>Rows per page:</span>
           <p-select
             [options]="[
               { label: '10', value: 10 },

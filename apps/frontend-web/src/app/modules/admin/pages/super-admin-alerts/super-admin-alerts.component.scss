@@ -24,7 +24,7 @@
 
 .sa-alert-meta {
   font-size: 0.8125rem;
-  color: var(--sa-muted, #64748b);
+  color: var(--text-muted);
 }
 
 .sa-alert-title {
@@ -35,7 +35,7 @@
 
 .sa-alert-msg {
   margin: 0 0 1rem;
-  color: var(--sa-body, #334155);
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 
@@ -46,17 +46,17 @@
 }
 
 .sa-empty {
-  border: 1px dashed var(--sa-border, #e2e8f0);
+  border: 1px dashed var(--border-color);
   border-radius: 12px;
   padding: 2rem 1.5rem;
   text-align: center;
-  background: var(--sa-surface-2, #f8fafc);
+  background: var(--sa-slate-soft);
 }
 
 .sa-empty--error {
   border-style: solid;
-  border-color: var(--sa-danger-border, #fecaca);
-  background: var(--sa-danger-bg, #fef2f2);
+  border-color: var(--sa-rose);
+  background: var(--sa-rose-soft);
 }
 
 .sa-empty-title {
@@ -67,5 +67,5 @@
 
 .sa-empty-text {
   margin: 0 0 1rem;
-  color: var(--sa-muted, #64748b);
+  color: var(--text-muted);
 }

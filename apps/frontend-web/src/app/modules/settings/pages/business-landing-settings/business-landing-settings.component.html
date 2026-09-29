@@ -421,16 +421,34 @@
           </button>
         </div>
         <div class="bls-preview-scroll">
-          <div class="bls-preview pl-page" dir="rtl">
+          <div
+            class="bls-preview pl-page public-shell"
+            [class.theme-light]="previewMode() === 'light'"
+            [class.theme-dark]="previewMode() === 'dark'"
+            [ngStyle]="previewThemeVars()"
+            dir="rtl"
+          >
             @if (previewSectionVisibility().hero) {
               <app-public-landing-hero
-                [businessName]="businessName()"
-                [tagline]="landingTagline() || 'יופי מקצועי, תוצאות מושלמות'"
-                [description]="heroDescription()"
                 [imageLeft]="previewHeroLeft()"
                 [imageRight]="previewHeroRight()"
-                (book)="previewBook()"
               />
+              <div class="pl-hero-intro">
+                <p class="pl-hero-intro__name">{{ businessName() }}</p>
+                <p class="pl-hero-intro__tagline">
+                  {{ landingTagline() || 'יופי מקצועי, תוצאות מושלמות' }}
+                </p>
+                @if (heroDescription().trim()) {
+                  <p class="pl-hero-intro__desc">{{ heroDescription() }}</p>
+                }
+                <p-button
+                  label="קביעת תור"
+                  icon="pi pi-calendar-plus"
+                  iconPos="right"
+                  styleClass="pl-hero-intro__cta"
+                  (onClick)="previewBook()"
+                />
+              </div>
             }
 
             @if (previewSectionVisibility().services) {

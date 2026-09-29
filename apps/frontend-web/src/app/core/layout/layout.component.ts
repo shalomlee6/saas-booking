@@ -13,13 +13,13 @@ import { NavigationEnd, Router, RouterOutlet, RouterLink, RouterLinkActive } fro
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, filter, map, of, startWith } from 'rxjs';
 import { Store } from '@ngrx/store';
-import { ThemeService } from '../config/theme.service';
 import { AuthService } from '../auth/auth.service';
+import { ThemeService } from '../config/theme.service';
 import { AdminApiService } from '../../modules/admin/services/admin-api.service';
 import { GrowthBrainService } from '../../modules/dashboard/services/growth-brain.service';
 import { AppointmentsApiService } from '../../modules/appointments/services/appointments-api.service';
 import * as AppointmentsActions from '../../modules/appointments/state/appointments.actions';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, NgStyle } from '@angular/common';
 import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
 import { LanguageService } from '../i18n/language.service';
@@ -37,6 +37,7 @@ function pageTitleKeyFromUrl(url: string): string {
   if (path.startsWith('/settings/theme')) return 'navigation.theme';
   if (path.startsWith('/settings/landing')) return 'navigation.landingPage';
   if (path.startsWith('/settings/working-hours')) return 'navigation.workingHours';
+  if (path.startsWith('/settings/account')) return 'navigation.account';
   if (path.startsWith('/preview')) return 'navigation.previewSite';
   return '';
 }
@@ -48,15 +49,15 @@ const LINK_OPTS_PREFIX = { exact: false } as const;
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule, TranslatePipe, NgStyle],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
 export class LayoutComponent implements OnInit, OnDestroy {
   private readonly doc = inject(DOCUMENT);
   private readonly title = inject(Title);
-  readonly themeService = inject(ThemeService);
   readonly auth = inject(AuthService);
+  readonly theme = inject(ThemeService);
   readonly language = inject(LanguageService);
   private readonly adminApi = inject(AdminApiService);
   private readonly router = inject(Router);
@@ -67,6 +68,46 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly _titleSync = effect(() => {
     const name = this.auth.business()?.name?.trim();
     this.title.setTitle(name ? `${name} · boki` : 'boki');
+  });
+
+  /**
+   * Two separate PrimeNG problems, one fix. `app.config.ts` sets PrimeNG's
+   * `darkModeSelector: '.theme-dark'`, and PrimeNG's generated stylesheet
+   * always declares `:root, :host { ... }` for its base tokens — `:root`
+   * means `<html>` specifically, nothing else. That causes two failures for
+   * a shell scoped to `.layout.theme-dark` (a mid-tree div, not html):
+   *
+   * 1. Overlay components (select/datepicker panels, dialogs, drawers,
+   *    toasts) portal straight to `<body>`, outside `.layout` — its CSS
+   *    vars never reach them at all.
+   * 2. Plain inline fields (`p-inputnumber`, `pTextarea`, …) DO sit inside
+   *    `.layout`, but some of PrimeNG's own component tokens (e.g.
+   *    `--p-inputtext-background`) are declared ONLY on `:root`, as
+   *    `var(--p-form-field-background)` — and per how CSS custom properties
+   *    inherit, that `var()` is substituted once, using `<html>`'s own
+   *    cascade, at the point `:root` is declared. The resolved (light)
+   *    value is what then inherits everywhere — `.layout` having its own
+   *    dark `--p-form-field-background` further down the tree cannot
+   *    reopen that substitution. Verified empirically: adding `.theme-dark`
+   *    to `.layout` alone left these inputs white; only adding it to
+   *    `<html>` (matching `:root`) resolves them dark.
+   *
+   * So this targets `document.documentElement`, not `document.body` —
+   * `<html>` is an ancestor of both `.layout` and anything body-portaled,
+   * so one class fixes both cases at once.
+   *
+   * Scoped here (component lifecycle), not in `ThemeService` (app-root
+   * singleton): a singleton's effect has no way to know when `.layout` has
+   * been unmounted — navigating to the super-admin panel or the public site
+   * would leave a stale `html.theme-dark` behind, wrongly darkening THEIR
+   * PrimeNG chrome too. `onCleanup` removes the class both on every re-run
+   * and when this component is destroyed, so leaving `.layout` by any route
+   * always leaves `<html>` clean for whatever mounts next.
+   */
+  private readonly _pnDarkSync = effect((onCleanup) => {
+    const dark = this.theme.mode() === 'dark';
+    this.doc.documentElement.classList.toggle('theme-dark', dark);
+    onCleanup(() => this.doc.documentElement.classList.remove('theme-dark'));
   });
 
   readonly user = this.auth.user;
@@ -192,11 +233,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly linkOptsExact = LINK_OPTS_EXACT;
   readonly linkOptsPrefix = LINK_OPTS_PREFIX;
 
-  toggleTheme(): void {
-    const next = this.themeService.currentMode() === 'light' ? 'dark' : 'light';
-    this.themeService.setModeAndReapply(next);
-  }
-
   onLogout(): void {
     this.closeMobileMenu();
     this.auth.logout();
@@ -209,6 +245,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
       auth.stopImpersonation();
       this.store.dispatch(AppointmentsActions.resetTenantState());
       this.growthBrain.invalidateTenantScope();
+      // Instant visual reset (no dark-mode flash) while the follow-up /auth/me
+      // below resolves the super-admin's own permanently-light state.
+      this.theme.reset();
       auth.init().subscribe(() => {
         router.navigate([auth.isSuperAdmin() ? '/super-admin/businesses' : '/dashboard']);
       });

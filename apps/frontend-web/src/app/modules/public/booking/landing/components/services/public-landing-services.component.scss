@@ -91,13 +91,13 @@
 }
 
 ::ng-deep .pl-svc__btn.p-button .p-button-icon {
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 ::ng-deep .pl-svc__btn.p-button:not(:disabled):hover {
   background: $pl-primary-hover;
   border: none;
-  color: #fff;
+  color: $pl-on-primary;
 }
 
 @media (min-width: 480px) {

@@ -54,65 +54,68 @@
     </div>
   } @else if (data(); as d) {
     <div class="sa-kpi-grid">
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--teal">
+        <span class="sa-kpi-icon"><i class="pi pi-wallet"></i></span>
         <span class="sa-kpi-label">Total revenue</span>
-        <span class="sa-kpi-value">{{
-          (d.totals.totalRevenue ?? 0) | currency: 'ILS' : 'symbol' : '1.0-0'
-        }}</span>
+        <span class="sa-kpi-value">{{ d.totals.totalRevenue ?? 0 | saCurrency }}</span>
         <span class="sa-kpi-meta">All-time from appointments</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--teal">
+        <span class="sa-kpi-icon"><i class="pi pi-chart-line"></i></span>
         <span class="sa-kpi-label">MRR</span>
-        <span class="sa-kpi-value">{{
-          (d.totals.mrr ?? 0) | currency: 'USD' : 'symbol' : '1.0-0'
-        }}</span>
+        <span class="sa-kpi-value">{{ d.totals.mrr ?? 0 | saCurrency }}</span>
         <span class="sa-kpi-meta">Estimated from plan tiers</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--teal">
+        <span class="sa-kpi-icon"><i class="pi pi-user"></i></span>
         <span class="sa-kpi-label">ARPU</span>
-        <span class="sa-kpi-value">{{
-          (d.totals.arpu ?? 0) | currency: 'ILS' : 'symbol' : '1.0-0'
-        }}</span>
+        <span class="sa-kpi-value">{{ d.totals.arpu ?? 0 | saCurrency }}</span>
         <span class="sa-kpi-meta">Revenue ÷ users (all-time)</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--blue">
+        <span class="sa-kpi-icon"><i class="pi pi-credit-card"></i></span>
         <span class="sa-kpi-label">Paying businesses</span>
         <span class="sa-kpi-value">{{ d.totals.payingBusinesses ?? 0 | number }}</span>
         <span class="sa-kpi-meta">Pro or premium plan</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--teal">
+        <span class="sa-kpi-icon"><i class="pi pi-wallet"></i></span>
         <span class="sa-kpi-label">Revenue (30d)</span>
-        <span class="sa-kpi-value">{{
-          (d.totals.revenueLast30Days ?? 0) | currency: 'ILS' : 'symbol' : '1.0-0'
-        }}</span>
+        <span class="sa-kpi-value">{{ d.totals.revenueLast30Days ?? 0 | saCurrency }}</span>
         <span class="sa-kpi-meta">Last 30 days</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--blue">
+        <span class="sa-kpi-icon"><i class="pi pi-building"></i></span>
         <span class="sa-kpi-label">Businesses</span>
         <span class="sa-kpi-value">{{ d.totals.businesses | number }}</span>
         <span class="sa-kpi-meta">Active (30d): {{ d.totals.activeBusinesses | number }}</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--violet">
+        <span class="sa-kpi-icon"><i class="pi pi-users"></i></span>
         <span class="sa-kpi-label">Users</span>
         <span class="sa-kpi-value">{{ d.totals.users | number }}</span>
         <span class="sa-kpi-meta">New in range: {{ d.totals.newUserSignups | number }}</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--amber">
+        <span class="sa-kpi-icon"><i class="pi pi-calendar"></i></span>
         <span class="sa-kpi-label">Appointments</span>
         <span class="sa-kpi-value">{{ d.totals.appointments | number }}</span>
         <span class="sa-kpi-meta">In range: {{ d.totals.appointmentsInRange | number }}</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--teal">
+        <span class="sa-kpi-icon"><i class="pi pi-wallet"></i></span>
         <span class="sa-kpi-label">Revenue (range)</span>
-        <span class="sa-kpi-value">{{ d.totals.revenueInRange | currency: 'ILS' : 'symbol' : '1.0-0' }}</span>
+        <span class="sa-kpi-value">{{ d.totals.revenueInRange | saCurrency }}</span>
         <span class="sa-kpi-meta">Booked services in period</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--green">
+        <span class="sa-kpi-icon"><i class="pi pi-sparkles"></i></span>
         <span class="sa-kpi-label">New businesses</span>
         <span class="sa-kpi-value">{{ d.totals.newBusinessesInRange | number }}</span>
         <span class="sa-kpi-meta">In selected range</span>
       </p-card>
-      <p-card styleClass="sa-kpi-card">
+      <p-card styleClass="sa-kpi-card sa-kpi-card--rose">
+        <span class="sa-kpi-icon"><i class="pi pi-exclamation-triangle"></i></span>
         <span class="sa-kpi-label">Churn risk</span>
         <span class="sa-kpi-value">{{ d.totals.churnRiskBusinesses | number }}</span>
         <span class="sa-kpi-meta">No appts in 30d (approx.)</span>
@@ -125,9 +128,9 @@
           <div
             class="sa-chart-wrap"
             role="img"
-            aria-label="גרף קווי המציג תורים לאורך זמן בתקופה הנבחרת"
+            aria-label="Line chart showing appointments over time for the selected period"
           >
-            <span class="sr-only">גרף קווי המציג את מספר התורים לאורך הזמן בתקופה הנבחרת</span>
+            <span class="sr-only">Line chart showing the number of appointments over time for the selected period</span>
             <p-chart type="line" [data]="lc" [options]="chartOptions" />
           </div>
         } @else {
@@ -139,9 +142,9 @@
           <div
             class="sa-chart-wrap"
             role="img"
-            aria-label="גרף קווי המציג הכנסות לאורך זמן בתקופה הנבחרת"
+            aria-label="Line chart showing revenue over time for the selected period"
           >
-            <span class="sr-only">גרף קווי המציג את ההכנסות החודשיות לאורך הזמן בתקופה הנבחרת</span>
+            <span class="sr-only">Line chart showing monthly revenue over time for the selected period</span>
             <p-chart type="line" [data]="rc" [options]="chartOptions" />
           </div>
         } @else {
@@ -153,9 +156,9 @@
           <div
             class="sa-chart-wrap"
             role="img"
-            aria-label="גרף עמודות המציג עסקים חדשים לפי שבוע"
+            aria-label="Bar chart showing new businesses per week"
           >
-            <span class="sr-only">גרף עמודות המציג את מספר העסקים החדשים שנרשמו לפי שבוע בתקופה הנבחרת</span>
+            <span class="sr-only">Bar chart showing the number of new businesses registered per week for the selected period</span>
             <p-chart type="bar" [data]="bc" [options]="chartOptions" />
           </div>
         } @else {
@@ -167,10 +170,10 @@
           <div
             class="sa-chart-wrap sa-chart-wrap--pie"
             role="img"
-            aria-label="גרף עוגה המציג את התפלגות התוכניות בין העסקים"
+            aria-label="Pie chart showing plan distribution across businesses"
           >
-            <span class="sr-only">גרף עוגה המציג את התפלגות תוכניות המנוי (Free / Pro / Premium) בין העסקים הרשומים</span>
-            <p-chart type="pie" [data]="pc" [options]="chartOptions" />
+            <span class="sr-only">Pie chart showing the distribution of subscription plans (Free / Pro / Premium) across registered businesses</span>
+            <p-chart type="pie" [data]="pc" [options]="pieChartOptions" />
           </div>
         } @else {
           <p class="sa-chart-empty">No plan data yet.</p>

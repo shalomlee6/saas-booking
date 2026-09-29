@@ -10,7 +10,14 @@ export interface PublicBusiness {
   name: string;
   slug: string;
   settings?: {
-    theme?: { colors?: { primary?: string }; logoUrl?: string };
+    theme?: {
+      /** Theme preset id (see `core/theming/theme-presets.ts`); resolved client-side. */
+      preset?: string;
+      /** Business-configured default light/dark mode; the customer's own explicit
+       *  choice (stored client-side) always takes priority over this. */
+      defaultMode?: 'light' | 'dark';
+      logoUrl?: string;
+    };
     plan?: string;
   };
 }

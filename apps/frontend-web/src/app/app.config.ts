@@ -16,7 +16,7 @@ import { provideEffects } from '@ngrx/effects';
 import { provideStoreDevtools } from '@ngrx/store-devtools';
 import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
-import { authInterceptor, unauthorizedInterceptor } from './core/api/http.config';
+import { authInterceptor, unauthorizedInterceptor, rateLimitInterceptor } from './core/api/http.config';
 import { mockApiInterceptor } from './core/api/mock-api.interceptor';
 import { publicCustomerAuthInterceptor } from './modules/public/interceptors/public-customer-auth.interceptor';
 import { sessionRefreshInterceptor } from './core/api/session-refresh.interceptor';
@@ -94,12 +94,14 @@ export const appConfig: ApplicationConfig = {
               authInterceptor,
               sessionRefreshInterceptor,
               unauthorizedInterceptor,
+              rateLimitInterceptor,
             ]
           : [
               publicCustomerAuthInterceptor,
               authInterceptor,
               sessionRefreshInterceptor,
               unauthorizedInterceptor,
+              rateLimitInterceptor,
             ]
       )
     ),

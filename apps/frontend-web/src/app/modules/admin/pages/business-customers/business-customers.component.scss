@@ -58,10 +58,10 @@
 .business-customers-error {
   margin: 0 0 1rem;
   padding: 0.5rem 0.75rem;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: var(--sa-rose-soft);
+  border: 1px solid var(--sa-rose);
   border-radius: 6px;
-  color: #dc2626;
+  color: var(--sa-rose-ink);
   font-size: 0.875rem;
 }
 
@@ -69,10 +69,10 @@
   margin-left: 0.5rem;
   padding: 0.25rem 0.5rem;
   font-size: 0.8125rem;
-  background: #fff;
-  border: 1px solid #fecaca;
+  background: var(--bg-card);
+  border: 1px solid var(--sa-rose);
   border-radius: 4px;
-  color: #dc2626;
+  color: var(--sa-rose-ink);
   cursor: pointer;
 }
 
@@ -130,17 +130,25 @@
   white-space: nowrap;
 }
 
-.business-customers-btn-primary {
-  background: var(--color-primary);
+// A per-row contextual action, not a page-level CTA — a solid brand-pink
+// fill here read as too heavy/loud repeated down every row of the table.
+.business-customers-btn-impersonate {
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  background: var(--sa-blue-soft);
+  color: var(--sa-blue-ink);
+  border-color: transparent;
+
+  i { font-size: 0.75rem; }
+}
+
+.business-customers-btn-impersonate:hover:not(:disabled) {
+  background: var(--sa-blue);
   color: #fff;
-  border-color: var(--color-primary);
 }
 
-.business-customers-btn-primary:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.business-customers-btn-primary:disabled {
+.business-customers-btn-impersonate:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
