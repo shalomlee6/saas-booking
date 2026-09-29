@@ -1,15 +1,23 @@
 <p-toast />
-<div class="public-layout" [class.public-layout--loading]="loading">
-  @if (loading && !businessData) {
-    <div class="public-layout-loading">Loading…</div>
+<div class="public-layout" [class.public-layout-loading]="loading">
+  @if (loading && !businessData()) {
+    <div class="public-layout-status">{{ 'common.loading' | translate }}</div>
   }
-  @if (error && !businessData) {
-    <div class="public-layout-error">{{ error }}</div>
+  @if (error && !businessData()) {
+    <div class="public-layout-status public-layout-error">{{ error }}</div>
   }
-  @if (businessData) {
-    <main class="public-layout-main" id="main-content" tabindex="-1">
-      <h1 class="sr-only">{{ businessData.name }}</h1>
-      <router-outlet />
-    </main>
+  @if (businessData(); as business) {
+    <div
+      class="public-shell"
+      [class.theme-light]="theme.mode() === 'light'"
+      [class.theme-dark]="theme.mode() === 'dark'"
+      [ngStyle]="tenantStyles()"
+    >
+      <app-public-customer-nav />
+      <main class="public-layout-main" id="main-content" tabindex="-1">
+        <h1 class="sr-only">{{ business.name }}</h1>
+        <router-outlet />
+      </main>
+    </div>
   }
 </div>

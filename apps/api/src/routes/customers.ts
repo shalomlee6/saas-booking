@@ -8,11 +8,16 @@ import {
   customerCreateBodySchema,
   customerIdParamsSchema,
   customerUpdateBodySchema,
+  customersBulkDeleteBodySchema,
   customersListQuerySchema,
 } from '../validation/schemas/customers';
 import {
+  bulkDeleteCustomers,
   createCustomer,
+  deleteCustomer,
   getCustomer,
+  getCustomerAppointmentHistory,
+  getCustomerCardStats,
   listCustomers,
   updateCustomer,
 } from '../controllers/customersController';
@@ -35,6 +40,12 @@ customersRouter.post(
   asyncHandler((req: AuthRequest, res) => createCustomer(req, res))
 );
 
+customersRouter.post(
+  '/bulk-delete',
+  validateBody(customersBulkDeleteBodySchema),
+  asyncHandler((req: AuthRequest, res) => bulkDeleteCustomers(req, res))
+);
+
 customersRouter.get(
   '/:id',
   validateParams(customerIdParamsSchema),
@@ -46,4 +57,22 @@ customersRouter.put(
   validateParams(customerIdParamsSchema),
   validateBody(customerUpdateBodySchema),
   asyncHandler((req: AuthRequest, res) => updateCustomer(req, res))
+);
+
+customersRouter.delete(
+  '/:id',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => deleteCustomer(req, res))
+);
+
+customersRouter.get(
+  '/:id/appointments',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => getCustomerAppointmentHistory(req, res))
+);
+
+customersRouter.get(
+  '/:id/stats',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => getCustomerCardStats(req, res))
 );

@@ -63,8 +63,32 @@ function isServicesPut(req: HttpRequest<unknown>): boolean {
   return (req.method === 'PUT' || req.method === 'PATCH') && /\/api\/services\/[^/]+$/.test(req.url);
 }
 
+/** GET /api/customers (list only, no extra path segment). */
 function isCustomersGet(req: HttpRequest<unknown>): boolean {
-  return req.method === 'GET' && req.url.includes('/api/customers');
+  return req.method === 'GET' && /\/api\/customers\/?(\?.*)?$/.test(req.url);
+}
+
+function isCustomerSingleGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customers\/[^/?]+\/?(\?.*)?$/.test(req.url);
+}
+
+function isCustomerAppointmentsGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customers\/[^/]+\/appointments\/?(\?.*)?$/.test(req.url);
+}
+
+function isCustomerStatsGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customers\/[^/]+\/stats\/?(\?.*)?$/.test(req.url);
+}
+
+/** Extracts the `:id` segment right after `/api/customers/`. */
+function customerIdFromUrl(req: HttpRequest<unknown>): string | null {
+  const match = req.url.match(/\/api\/customers\/([^/?]+)/);
+  return match ? match[1] : null;
+}
+
+/** GET /api/customer-service-configs (list only — no mock CRUD for this new resource yet). */
+function isCustomerServiceConfigsGet(req: HttpRequest<unknown>): boolean {
+  return req.method === 'GET' && /\/api\/customer-service-configs\/?(\?.*)?$/.test(req.url);
 }
 
 function isAuthMeGet(req: HttpRequest<unknown>): boolean {
@@ -339,6 +363,9 @@ const MOCK_BUSINESSES: Record<string, unknown>[] = [
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ui: { themeMode: 'light' },
+    // No public-site theme override — this tenant gets the neutral pink default
+    // declared in `.public-shell.theme-light`/`.theme-dark` (styles.scss).
+    publicTheme: null,
   },
   {
     _id: 'mock-business-2',
@@ -349,6 +376,20 @@ const MOCK_BUSINESSES: Record<string, unknown>[] = [
     createdAt: '2025-01-01T00:00:00.000Z',
     updatedAt: '2025-01-01T00:00:00.000Z',
     ui: { themeMode: 'light' },
+    publicTheme: null,
+  },
+  {
+    _id: 'mock-business-chen',
+    name: 'צ׳ן ביוטי',
+    slug: 'chen-nails',
+    plan: 'pro',
+    ownerEmail: 'chen@example.com',
+    createdAt: '2025-01-01T00:00:00.000Z',
+    updatedAt: '2025-01-01T00:00:00.000Z',
+    ui: { themeMode: 'light' },
+    // Tenants only reference a preset by name — the actual token families live
+    // in the shared registry (core/theming/theme-presets.ts), same as the real backend.
+    publicTheme: { preset: 'prime-mint', defaultMode: 'light' },
   },
 ];
 
@@ -735,7 +776,58 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     );
   }
 
+  // ——— Customer service overrides (read-only in mock mode — no real CRUD/storage here) ———
+  if (isCustomerServiceConfigsGet(req)) {
+    return from([new HttpResponse({ status: 200, body: [] })]);
+  }
+
   // ——— Customers (read-only) ———
+  if (isCustomerAppointmentsGet(req)) {
+    // No customer/appointment linkage in the mock fixtures — an empty history is an honest
+    // answer (the real API would return the same for a customer with no bookings yet).
+    return from([new HttpResponse({ status: 200, body: [] })]);
+  }
+
+  if (isCustomerStatsGet(req)) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          stats: {
+            totalAppointments: 0,
+            completedVisits: 0,
+            cancellations: 0,
+            noShows: 0,
+            isNewCustomer: true,
+            lastAppointment: null,
+            nextAppointment: null,
+            visitFrequencyDays: null,
+            mostBookedServices: [],
+            totalRevenue: 0,
+            averageSpend: 0,
+            preferredTimeOfDay: null,
+            recentCancellations: 0,
+          },
+          insights: [{ code: 'NEW_CUSTOMER', severity: 'info', data: {} }],
+        },
+      }),
+    ]);
+  }
+
+  if (isCustomerSingleGet(req)) {
+    const id = customerIdFromUrl(req);
+    return from(loadInitialCustomers()).pipe(
+      map((list) => {
+        const withIds = withMockBusinessIds(list);
+        const found = withIds.find((c) => String(c['_id']) === id);
+        if (!found) {
+          return new HttpResponse({ status: 404, body: { message: 'Customer not found' } });
+        }
+        return new HttpResponse({ status: 200, body: found });
+      })
+    );
+  }
+
   if (isCustomersGet(req)) {
     const imp = getImpersonationFromRequest(req);
     return from(loadInitialCustomers()).pipe(
@@ -1134,6 +1226,10 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const known = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug) as Record<string, unknown> | undefined;
     const businessId = known ? String(known['_id']) : 'mock-business-1';
     const name = known ? String(known['name']) : (slug === 'demo-salon' ? 'Demo Salon' : slug);
+    // Each tenant references its OWN theme preset (or none, for the default) — this
+    // used to return one hardcoded blue for every business regardless of slug.
+    const publicTheme =
+      (known?.['publicTheme'] as { preset?: string; defaultMode?: 'light' | 'dark' } | null) ?? null;
     return from([
       new HttpResponse({
         status: 200,
@@ -1142,7 +1238,11 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
           name,
           slug,
           settings: {
-            theme: { colors: { primary: '#3787f6' }, logoUrl: null },
+            theme: {
+              preset: publicTheme?.preset,
+              defaultMode: publicTheme?.defaultMode,
+              logoUrl: null,
+            },
             plan: 'free',
           },
         },

@@ -9,6 +9,7 @@ import { toIsoUtcString } from '../dto/datetime';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { NotFoundError } from '../errors/httpErrors';
+import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 
 /** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
@@ -52,8 +53,13 @@ export async function computeOwnerAvailableSlots(
     throw new NotFoundError('Service not found');
   }
 
+  // Precedence: this customer+service override > this customer's general default > service catalog default.
+  const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
   let durationMinutes =
-    customer.defaultTreatmentDurationMinutes ?? service.durationMinutes ?? 60;
+    override?.durationOverrideMinutes ??
+    customer.defaultTreatmentDurationMinutes ??
+    service.durationMinutes ??
+    60;
 
   const settings = await ensureBusinessSettings(new Types.ObjectId(String(businessId)));
   const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
@@ -135,4 +141,44 @@ export async function computeOwnerAvailableSlots(
   }
 
   return availableSlots;
+}
+
+const CUSTOMER_HISTORY_LIMIT = 500;
+
+export interface CustomerAppointmentHistoryItem {
+  appointmentId: string;
+  start: string;
+  end: string;
+  status: string;
+  price?: number;
+  durationMinutes?: number;
+  serviceName: string;
+  notes?: string | null;
+}
+
+/**
+ * Full appointment history for one customer (past + upcoming, any date range) — unlike the
+ * owner dashboard's `/api/appointments` list, this is not windowed to "next 30 days", since
+ * the Client Card needs the customer's whole history. Sorted most-recent-first.
+ */
+export async function listAppointmentsForCustomer(
+  businessId: string,
+  customerId: string
+): Promise<CustomerAppointmentHistoryItem[]> {
+  const appointments = await Appointment.find({ businessId, customerId })
+    .populate('serviceId', 'name')
+    .sort({ start: -1 })
+    .limit(CUSTOMER_HISTORY_LIMIT)
+    .lean();
+
+  return appointments.map((apt: any) => ({
+    appointmentId: apt._id.toString(),
+    start: toIsoUtcString(apt.start),
+    end: toIsoUtcString(apt.end),
+    status: apt.status,
+    price: apt.price,
+    durationMinutes: apt.durationMinutes,
+    serviceName: apt.serviceId?.name ?? '',
+    notes: apt.notes ?? null,
+  }));
 }

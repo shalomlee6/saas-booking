@@ -3,10 +3,11 @@ import { Actions, createEffect, ofType } from '@ngrx/effects';
 import { catchError, exhaustMap, map, of, switchMap } from 'rxjs';
 import { friendlyOwnerAppointmentError } from '../../../shared/utils/http-field-errors.util';
 import { AppointmentsApiService } from '../services/appointments-api.service';
+import { LanguageService } from '../../../core/i18n/language.service';
 import * as AppointmentsActions from './appointments.actions';
 
 export const loadAppointments$ = createEffect(
-  (actions$ = inject(Actions), api = inject(AppointmentsApiService)) =>
+  (actions$ = inject(Actions), api = inject(AppointmentsApiService), language = inject(LanguageService)) =>
     actions$.pipe(
       ofType(AppointmentsActions.load),
       // switchMap cancels any in-flight request when a new load action arrives,
@@ -17,7 +18,7 @@ export const loadAppointments$ = createEffect(
           catchError((err) =>
             of(
               AppointmentsActions.loadFailure({
-                error: friendlyOwnerAppointmentError(err),
+                error: friendlyOwnerAppointmentError(err, language.ownerAppointmentErrorLabels),
               })
             )
           )
@@ -28,7 +29,7 @@ export const loadAppointments$ = createEffect(
 );
 
 export const createAppointment$ = createEffect(
-  (actions$ = inject(Actions), api = inject(AppointmentsApiService)) =>
+  (actions$ = inject(Actions), api = inject(AppointmentsApiService), language = inject(LanguageService)) =>
     actions$.pipe(
       ofType(AppointmentsActions.create),
       // Ignore further create actions until the current request finishes (no parallel POSTs).
@@ -38,7 +39,7 @@ export const createAppointment$ = createEffect(
           catchError((err) =>
             of(
               AppointmentsActions.createFailure({
-                error: friendlyOwnerAppointmentError(err),
+                error: friendlyOwnerAppointmentError(err, language.ownerAppointmentErrorLabels),
               })
             )
           )

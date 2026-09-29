@@ -1,13 +1,11 @@
 .public-layout {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
   background: var(--bg-app, #f6f8fb);
 }
 
-.public-layout-loading,
+.public-layout-status,
 .public-layout-error {
-  flex: 1;
+  min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -20,9 +18,15 @@
   color: #dc2626;
 }
 
+.public-shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: auto 1fr;
+  min-height: 100vh;
+}
+
 .public-layout-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  min-width: 0;
   max-width: 100%;
+  min-height: 0;
 }

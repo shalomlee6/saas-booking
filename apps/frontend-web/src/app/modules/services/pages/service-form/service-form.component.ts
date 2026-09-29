@@ -8,11 +8,13 @@ import {
 } from '@angular/forms';
 import { ServicesStore } from '../../services/services.store';
 import { ServicesApiService } from '../../services/services-api.service';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-service-form',
   standalone: true,
-  imports: [ReactiveFormsModule, RouterLink],
+  imports: [ReactiveFormsModule, RouterLink, TranslatePipe],
   templateUrl: './service-form.component.html',
   styleUrl: './service-form.component.scss',
 })
@@ -22,6 +24,7 @@ export class ServiceFormComponent implements OnInit {
   private readonly api = inject(ServicesApiService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  readonly language = inject(LanguageService);
 
   readonly loading = signal(false);
   readonly serverError = signal<string | null>(null);
@@ -62,8 +65,8 @@ export class ServiceFormComponent implements OnInit {
           });
           this.loading.set(false);
         },
-        error: (err) => {
-          this.serverError.set(err?.error?.message || 'Failed to load service');
+        error: () => {
+          this.serverError.set(this.language.t('services.loadServiceError'));
           this.loading.set(false);
         },
       });
@@ -93,11 +96,9 @@ export class ServiceFormComponent implements OnInit {
         })
         .subscribe({
           next: () => this.router.navigate(['/services']),
-          error: (err) => {
+          error: () => {
             this.loading.set(false);
-            this.serverError.set(
-              err?.error?.message || 'Failed to update service. Please try again.'
-            );
+            this.serverError.set(this.language.t('services.updateErrorRetry'));
           },
         });
     } else {
@@ -111,11 +112,9 @@ export class ServiceFormComponent implements OnInit {
         })
         .subscribe({
           next: () => this.router.navigate(['/services']),
-          error: (err) => {
+          error: () => {
             this.loading.set(false);
-            this.serverError.set(
-              err?.error?.message || 'Failed to create service. Please try again.'
-            );
+            this.serverError.set(this.language.t('services.createErrorRetry'));
           },
         });
     }

@@ -4,11 +4,21 @@
   display: flex;
   flex-direction: column;
   width: 100%;
+  // Stacks above `.pl-intro-rise` (see PublicLandingComponent), whose
+  // negative top margin tucks it underneath this slider's rounded bottom
+  // corners — so those corners always rest visually on solid content,
+  // never reveal whatever's behind (the intro's dark/light stage, or a
+  // gap) through the curve. This wrapper itself never animates — only its
+  // `.pl-hero-slider` child does (see below).
+  position: relative;
+  z-index: 2;
 }
 
 .pl-hero-slider {
   width: 100%;
-  border-radius: 0;
+  border-bottom-right-radius: 20%;
+  border-bottom-left-radius: 20%;
+  overflow: hidden;
 }
 
 ::ng-deep .pl-hero-carousel {
@@ -57,7 +67,11 @@
 }
 
 ::ng-deep .pl-hero-carousel .p-carousel-content {
+  background: var(--bg-app);
   position: relative;
+}
+::ng-deep .pl-hero-carousel .p-carousel-indicator-list {
+  background: var(--bg-card);
 }
 
 .pl-hero-carousel__slide {
@@ -65,6 +79,9 @@
   min-height: 220px;
   height: 220px;
   overflow: hidden;
+  // Falls back to the theme surface (not transparent) if a photo fails to load,
+  // so a missing image reads as an empty card, not a jarring mismatched gray box.
+  background: $pl-bg-card;
 }
 
 .pl-hero-carousel__img {
@@ -75,47 +92,50 @@
   vertical-align: middle;
 }
 
-.pl-hero-intro {
-  text-align: center;
-  padding: 1rem 1rem 1.25rem;
-  background: $pl-bg-page;
-  box-sizing: border-box;
+// ─── Page-load intro (plays once per tenant per browser session) ──────────────
+// Default state (no `--play-entrance` modifier): the slider already sits in
+// its final, fully-visible position — a session that has seen the intro
+// before, a browser without JS/sessionStorage, or an interrupted intro (the
+// container removes this modifier the instant the user taps/scrolls) all
+// render/settle here with zero extra rules needed. Only `transform` animates
+// (no CLS, GPU-accelerated).
+$pl-intro-ease: cubic-bezier(0.23, 1, 0.32, 1);
+
+.pl-hero-slider--play-entrance {
+  will-change: transform;
+  animation: pl-hero-slider-in 1050ms $pl-intro-ease 375ms both;
+
+  // The image keeps a slower, independent depth-of-field settle that runs
+  // longer than the slider's own slide, so it's still gently scaling down
+  // for a moment after the slider itself has stopped moving.
+  .pl-hero-carousel__img {
+    will-change: transform;
+    animation: pl-hero-media-in 1400ms $pl-intro-ease 375ms both;
+  }
 }
 
-.pl-hero-intro__name {
-  margin: 0 0 0.35rem;
-  font-size: 22px;
-  font-weight: 600;
-  color: $pl-text-heading;
+@keyframes pl-hero-slider-in {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 
-.pl-hero-intro__tagline {
-  margin: 0 0 0.5rem;
-  font-size: 14px;
-  color: $pl-text-muted;
+@keyframes pl-hero-media-in {
+  from {
+    transform: scale(1.08);
+  }
+  to {
+    transform: scale(1);
+  }
 }
 
-.pl-hero-intro__desc {
-  margin: 0 0 1rem;
-  font-size: 0.9375rem;
-  line-height: 1.5;
-  color: $pl-text-heading;
-  max-width: 36rem;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-::ng-deep .pl-hero-intro__cta.p-button {
-  @include pl-btn-primary;
-  font-size: 0.9375rem;
-}
-
-::ng-deep .pl-hero-intro__cta.p-button .p-button-icon {
-  color: #fff;
-}
-
-::ng-deep .pl-hero-intro__cta.p-button:not(:disabled):hover {
-  background: $pl-primary-hover;
-  border: none;
-  color: #fff;
+@media (prefers-reduced-motion: reduce) {
+  .pl-hero-slider--play-entrance,
+  .pl-hero-slider--play-entrance .pl-hero-carousel__img {
+    animation: none !important;
+    transform: none !important;
+  }
 }

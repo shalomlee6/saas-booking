@@ -11,12 +11,12 @@
   margin: 0 0 0.25rem;
   font-size: 1.5rem;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--text-primary);
 }
 
 .sa-page-sub {
   margin: 0;
-  color: #64748b;
+  color: var(--text-muted);
   font-size: 0.9375rem;
 }
 
@@ -33,14 +33,21 @@
 
 .sa-code {
   font-size: 0.75rem;
-  background: #f1f5f9;
-  padding: 0.125rem 0.35rem;
+  font-weight: 600;
+  background: var(--sa-slate-soft);
+  color: var(--sa-slate-ink);
+  padding: 0.125rem 0.4rem;
   border-radius: 4px;
 }
 
+.sa-code--rose { background: var(--sa-rose-soft); color: var(--sa-rose-ink); }
+.sa-code--green { background: var(--sa-green-soft); color: var(--sa-green-ink); }
+.sa-code--blue { background: var(--sa-blue-soft); color: var(--sa-blue-ink); }
+.sa-code--slate { background: var(--sa-slate-soft); color: var(--sa-slate-ink); }
+
 .sa-meta {
   font-size: 0.75rem;
-  color: #475569;
+  color: var(--text-secondary);
   max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -49,6 +56,6 @@
 
 .sa-empty {
   text-align: center;
-  color: #94a3b8;
+  color: var(--text-placeholder);
   padding: 2rem !important;
 }

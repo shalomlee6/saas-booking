@@ -29,4 +29,11 @@ export const SETTINGS_ROUTES: Routes = [
         (m) => m.WorkingHoursEditComponent
       ),
   },
+  {
+    path: 'account',
+    loadComponent: () =>
+      import('./pages/business-account-settings/business-account-settings.component').then(
+        (m) => m.BusinessAccountSettingsComponent
+      ),
+  },
 ];

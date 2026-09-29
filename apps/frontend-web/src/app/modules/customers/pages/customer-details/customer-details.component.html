@@ -1,3 +1,357 @@
 <div class="customer-details-page">
-  <p class="customer-details-placeholder">Customer details coming soon.</p>
+  @if (loadingCustomer()) {
+    <p class="cd-loading">{{ 'common.loading' | translate }}</p>
+  } @else if (customerError()) {
+    <p class="cd-error">{{ customerError() }}</p>
+  } @else if (customer(); as c) {
+    <a routerLink="/customers" class="cd-back">
+      <i [class]="language.isRtl ? 'pi pi-arrow-right' : 'pi pi-arrow-left'" aria-hidden="true"></i>
+      {{ 'navigation.customers' | translate }}
+    </a>
+
+    <div class="cd-header">
+      <div class="cd-header-text">
+        <h1 class="cd-name">{{ c.name }}</h1>
+        <div class="cd-contact">
+          <span dir="ltr">{{ c.phone }}</span>
+          @if (c.email) {
+            <span>· </span>
+            <span dir="ltr">{{ c.email }}</span>
+          }
+        </div>
+      </div>
+      @if (stats(); as s) {
+        <span class="cd-badge" [class.cd-badge-new]="s.isNewCustomer">
+          {{ (s.isNewCustomer ? 'customerCard.newCustomerBadge' : 'customerCard.returningCustomerBadge') | translate }}
+        </span>
+      }
+    </div>
+
+    @if (stats()?.isNewCustomer) {
+      <div class="cd-new-customer-note">
+        <i class="pi pi-sparkles" aria-hidden="true"></i>
+        <div>
+          <p class="cd-new-customer-title">{{ 'customerCard.newCustomerTitle' | translate }}</p>
+          <p class="cd-new-customer-text">{{ 'customerCard.newCustomerText' | translate }}</p>
+        </div>
+      </div>
+    }
+
+    @if (bannerInsights().length > 0) {
+      <div class="cd-insights">
+        @for (insight of bannerInsights(); track insight.code) {
+          <div class="cd-insight" [class.cd-insight-warning]="insight.severity === 'warning'">
+            <i
+              class="pi"
+              [class.pi-info-circle]="insight.severity !== 'warning'"
+              [class.pi-exclamation-triangle]="insight.severity === 'warning'"
+              aria-hidden="true"
+            ></i>
+            {{ insightText(insight) }}
+          </div>
+        }
+      </div>
+    }
+
+    @if (loadingStats()) {
+      <p class="cd-loading">{{ 'common.loading' | translate }}</p>
+    } @else if (stats(); as s) {
+      @if (!s.isNewCustomer) {
+        <div class="cd-stats-grid">
+          <div class="cd-stat cd-stat--headline">
+            <span class="cd-stat-label">{{ 'customerCard.totalRevenue' | translate }}</span>
+            <span class="cd-stat-value cd-stat-value--headline">{{ s.totalRevenue | currency: 'ILS' }}</span>
+          </div>
+          <div class="cd-stat cd-stat--headline">
+            <span class="cd-stat-label">{{ 'customerCard.averageSpend' | translate }}</span>
+            <span class="cd-stat-value cd-stat-value--headline">{{ s.averageSpend | currency: 'ILS' }}</span>
+          </div>
+
+          <div class="cd-stat cd-stat--group">
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.completedVisits' | translate }}</span>
+              <span class="cd-stat-value">{{ s.completedVisits }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.cancellations' | translate }}</span>
+              <span class="cd-stat-value">{{ s.cancellations }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.noShows' | translate }}</span>
+              <span class="cd-stat-value">{{ s.noShows }}</span>
+            </div>
+          </div>
+
+          <div class="cd-stat cd-stat--group">
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.lastAppointment' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ s.lastAppointment ? formatDate(s.lastAppointment.start) : '—' }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.nextAppointment' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ s.nextAppointment ? formatDate(s.nextAppointment.start) : '—' }}</span>
+            </div>
+          </div>
+
+          <div class="cd-stat cd-stat--group">
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.visitFrequency' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ s.visitFrequencyDays !== null ? ('customerCard.everyNDays' | translate: { n: s.visitFrequencyDays }) : '—' }}</span>
+            </div>
+            <div class="cd-stat-mini">
+              <span class="cd-stat-label">{{ 'customerCard.preferredTime' | translate }}</span>
+              <span class="cd-stat-value cd-stat-value--sm">{{ timeOfDayLabel(s.preferredTimeOfDay) }}</span>
+            </div>
+          </div>
+        </div>
+
+        @if (s.mostBookedServices.length > 0) {
+          <div class="customers-card cd-section">
+            <h2 class="cd-section-title">{{ 'customerCard.topServicesTitle' | translate }}</h2>
+            <ul class="cd-service-breakdown">
+              @for (svc of s.mostBookedServices; track svc.serviceId) {
+                <li>{{ svc.serviceName || ('customerCard.unknownService' | translate) }} — {{ svc.count }} {{ 'customerCard.visitsSuffix' | translate }}</li>
+              }
+            </ul>
+          </div>
+        }
+      }
+    }
+
+    <div class="customers-card cd-section">
+      <div class="cd-section-header">
+        <h2 class="cd-section-title">{{ 'customerCard.profileTitle' | translate }}</h2>
+        @if (!editingProfile()) {
+          <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="startEditProfile()">
+            <i class="pi pi-pencil" aria-hidden="true"></i>
+            {{ 'common.edit' | translate }}
+          </button>
+        }
+      </div>
+
+      @if (!editingProfile()) {
+        <div class="cd-profile-view">
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">{{ 'common.notes' | translate }}</span>
+            <span class="cd-profile-value">{{ c.notes || '—' }}</span>
+          </div>
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">{{ 'customerCard.preferredTime' | translate }}</span>
+            <span class="cd-profile-value">{{ timeOfDayLabel(c.preferences?.preferredTimeOfDay) }}</span>
+          </div>
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">{{ 'customerCard.allergies' | translate }}</span>
+            <span class="cd-profile-value">{{ c.preferences?.allergies || '—' }}</span>
+          </div>
+          <div class="cd-profile-row">
+            <span class="cd-profile-label">{{ 'customerCard.tags' | translate }}</span>
+            <span class="cd-tags">
+              @for (tag of c.preferences?.tags ?? []; track tag) {
+                <span class="cd-tag">{{ tag }}</span>
+              }
+              @if (!c.preferences?.tags?.length) {
+                <span class="cd-profile-value">—</span>
+              }
+            </span>
+          </div>
+        </div>
+      } @else {
+        <form class="cd-profile-form" [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+          <div class="customer-form-field">
+            <label for="cd-notes">{{ 'common.notes' | translate }}</label>
+            <textarea id="cd-notes" formControlName="notes" class="customer-form-input customer-form-textarea" rows="3"></textarea>
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-tod">{{ 'customerCard.preferredTime' | translate }}</label>
+            <select id="cd-tod" formControlName="preferredTimeOfDay" class="customer-form-input">
+              <option value="">—</option>
+              @for (opt of timeOfDayOptions; track opt.value) {
+                <option [value]="opt.value">{{ opt.label }}</option>
+              }
+            </select>
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-allergies">{{ 'customerCard.allergies' | translate }}</label>
+            <textarea id="cd-allergies" formControlName="allergies" class="customer-form-input customer-form-textarea" rows="2"></textarea>
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-tags">{{ 'customerCard.tagsPlaceholder' | translate }}</label>
+            <input id="cd-tags" type="text" formControlName="tags" class="customer-form-input" [placeholder]="'customerCard.tagsHint' | translate" />
+          </div>
+          <div class="customer-form-actions">
+            <button type="submit" class="customers-btn customers-btn-primary" [disabled]="savingProfile()">
+              {{ (savingProfile() ? 'common.saving' : 'common.save') | translate }}
+            </button>
+            <button type="button" class="customers-btn customers-btn-ghost" (click)="cancelEditProfile()">{{ 'common.cancel' | translate }}</button>
+          </div>
+        </form>
+      }
+    </div>
+
+    <div class="customers-card cd-section">
+      <div class="cd-section-header">
+        <h2 class="cd-section-title">{{ 'customerCard.overridesTitle' | translate }}</h2>
+        @if (!showOverrideForm()) {
+          <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="startAddOverride()">
+            <i class="pi pi-plus" aria-hidden="true"></i>
+            {{ 'customerCard.addOverride' | translate }}
+          </button>
+        }
+      </div>
+
+      @if (showOverrideForm()) {
+        <form class="cd-profile-form" [formGroup]="overrideForm" (ngSubmit)="submitOverrideForm()">
+          <div class="customer-form-field">
+            <label for="cd-svc">{{ 'common.service' | translate }}</label>
+            <select
+              id="cd-svc"
+              formControlName="serviceId"
+              class="customer-form-input"
+              [class.customer-form-input-invalid]="overrideForm.get('serviceId')?.invalid && overrideForm.get('serviceId')?.touched"
+            >
+              <option value="" disabled>{{ 'customers.selectService' | translate }}</option>
+              @for (svc of services(); track svc._id) {
+                <option [value]="svc._id">{{ svc.name }} ({{ svc.durationMinutes }} {{ 'services.minutesSuffix' | translate }})</option>
+              }
+            </select>
+            @if (editingConfigId()) {
+              <p class="cd-hint">{{ 'customerCard.overrideServiceLockedHint' | translate }}</p>
+            }
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-dur">{{ 'customerCard.durationOverrideLabel' | translate }}</label>
+            <input
+              id="cd-dur"
+              type="number"
+              min="1"
+              formControlName="durationOverrideMinutes"
+              class="customer-form-input"
+              [placeholder]="'customerCard.overridePlaceholder' | translate"
+            />
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-price">{{ 'customerCard.priceOverrideLabel' | translate }}</label>
+            <input
+              id="cd-price"
+              type="number"
+              min="0"
+              formControlName="priceOverride"
+              class="customer-form-input"
+              [placeholder]="'customerCard.overridePlaceholder' | translate"
+            />
+          </div>
+          <div class="customer-form-field">
+            <label for="cd-cfg-notes">{{ 'common.notes' | translate }}</label>
+            <textarea id="cd-cfg-notes" formControlName="notes" class="customer-form-input customer-form-textarea" rows="2"></textarea>
+          </div>
+          @if (overrideFormError()) {
+            <p class="customer-form-error">{{ overrideFormError() }}</p>
+          }
+          <div class="customer-form-actions">
+            <button type="submit" class="customers-btn customers-btn-primary" [disabled]="savingOverride()">
+              {{ (savingOverride() ? 'common.saving' : editingConfigId() ? 'common.save' : 'common.add') | translate }}
+            </button>
+            <button type="button" class="customers-btn customers-btn-ghost" (click)="cancelOverrideForm()">{{ 'common.cancel' | translate }}</button>
+          </div>
+        </form>
+      }
+
+      @if (loadingConfigs()) {
+        <p class="cd-loading">{{ 'common.loading' | translate }}</p>
+      } @else if (serviceConfigs().length === 0) {
+        <p class="cd-empty">{{ 'customerCard.overridesEmpty' | translate }}</p>
+      } @else {
+        <div class="customers-table-wrap">
+          <table class="customers-table">
+            <thead>
+              <tr>
+                <th>{{ 'common.service' | translate }}</th>
+                <th>{{ 'common.duration' | translate }}</th>
+                <th>{{ 'common.price' | translate }}</th>
+                <th>{{ 'common.notes' | translate }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (cfg of serviceConfigs(); track cfg._id) {
+                <tr>
+                  <td>{{ serviceNameMap().get(cfg.serviceId)?.name || cfg.serviceId }}</td>
+                  <td>{{ cfg.durationOverrideMinutes ? cfg.durationOverrideMinutes + ' ' + ('common.minutesShort' | translate) : '—' }}</td>
+                  <td>{{ cfg.priceOverride != null ? (cfg.priceOverride | currency: 'ILS') : '—' }}</td>
+                  <td>{{ cfg.notes || '—' }}</td>
+                  <td class="cd-row-actions">
+                    <button type="button" class="cd-link-btn" (click)="startEditOverride(cfg)">{{ 'common.edit' | translate }}</button>
+                    <button type="button" class="cd-link-btn cd-link-btn-danger" (click)="deleteOverride(cfg)">{{ 'common.delete' | translate }}</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </div>
+
+    <div class="customers-card cd-section">
+      <div class="cd-history-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          class="cd-history-tab"
+          [class.cd-history-tab--active]="historyTab() === 'upcoming'"
+          [attr.aria-selected]="historyTab() === 'upcoming'"
+          (click)="historyTab.set('upcoming')"
+        >
+          {{ 'customerCard.upcomingAppointments' | translate }}
+          @if (upcomingAppointments().length > 0) {
+            <span class="cd-history-tab-count">{{ upcomingAppointments().length }}</span>
+          }
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="cd-history-tab"
+          [class.cd-history-tab--active]="historyTab() === 'past'"
+          [attr.aria-selected]="historyTab() === 'past'"
+          (click)="historyTab.set('past')"
+        >
+          {{ 'customerCard.pastAppointments' | translate }}
+          @if (pastAppointments().length > 0) {
+            <span class="cd-history-tab-count">{{ pastAppointments().length }}</span>
+          }
+        </button>
+      </div>
+
+      @if (loadingHistory()) {
+        <p class="cd-loading">{{ 'common.loading' | translate }}</p>
+      } @else {
+        @let rows = historyTab() === 'upcoming' ? upcomingAppointments() : pastAppointments();
+        @if (rows.length === 0) {
+          <p class="cd-empty">{{ (historyTab() === 'upcoming' ? 'customerCard.noUpcoming' : 'customerCard.noPast') | translate }}</p>
+        } @else {
+          <div class="customers-table-wrap">
+            <table class="customers-table">
+              <thead>
+                <tr>
+                  <th>{{ 'common.date' | translate }}</th>
+                  <th>{{ 'common.service' | translate }}</th>
+                  <th>{{ 'common.status' | translate }}</th>
+                  <th>{{ 'common.price' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (a of rows; track a.appointmentId) {
+                  <tr>
+                    <td>{{ formatDateTime(a.start) }}</td>
+                    <td>{{ a.serviceName || '—' }}</td>
+                    <td>{{ statusLabel(a.status) }}</td>
+                    <td>{{ a.price != null ? (a.price | currency: 'ILS') : '—' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      }
+    </div>
+  }
 </div>

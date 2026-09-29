@@ -9,6 +9,11 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  // Content is English; the document root is `dir="rtl"` for the Hebrew
+  // business/customer UI, so this page must opt back out explicitly or
+  // labels, punctuation ("Forgot password?") and alignment all mirror.
+  direction: ltr;
+  text-align: left;
 }
 
 .login-card {

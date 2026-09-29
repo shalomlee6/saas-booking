@@ -1,24 +1,28 @@
 <!--
-  layout.component.html — RTL shell redesign
-  - dir="rtl" set once here, at the shell root — the single source of truth for the
-    whole owner console (sidebar, topbar, and everything routed into <main>).
+  layout.component.html — RTL/LTR shell
+  - `dir` is NOT set here — it's applied once, at the document root (<html>), by
+    LanguageService whenever the language changes. This is the single source of truth
+    for direction across the entire app; nothing below overrides it.
   - Sidebar: pink "b" mark + "boki" wordmark, collapse chevron, nav badge, user footer.
   - Topbar: page title + date, always-visible (disabled) search, customer-site link,
-    notification bell, "תור חדש" button. Menu-toggle is mobile-only (drawer trigger).
+    notification bell, settings shortcut, "New appointment" button. Menu-toggle is
+    mobile-only (drawer trigger).
 -->
 <p-toast />
 
 <div
   class="layout"
-  dir="rtl"
   [class.layout--impersonating]="isImpersonating()"
   [class.layout--sidebar-collapsed]="!isMobile() && isSidebarCollapsed()"
   [class.layout--mobile-drawer-open]="isMobile() && isMobileMenuOpen()"
+  [class.theme-light]="theme.mode() === 'light'"
+  [class.theme-dark]="theme.mode() === 'dark'"
+  [ngStyle]="theme.cssVars()"
 >
   <div class="layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
 
   <!-- ─── Sidebar ───────────────────────────────────────────────────────── -->
-  <aside class="layout-sidebar" aria-label="ניווט ראשי">
+  <aside class="layout-sidebar" [attr.aria-label]="'navigation.menu' | translate">
     <div class="layout-sidebar-header">
       <div class="layout-sidebar-logo-mark" aria-hidden="true">b</div>
       <span class="layout-sidebar-logo-text">boki</span>
@@ -34,19 +38,19 @@
     </div>
 
     <div class="layout-sidebar-body">
-      <nav id="layout-sidebar-nav" class="layout-sidebar-nav" aria-label="תפריט">
-        <span class="layout-sidebar-section-label" aria-hidden="true">תפריט</span>
+      <nav id="layout-sidebar-nav" class="layout-sidebar-nav" [attr.aria-label]="'navigation.menu' | translate">
+        <span class="layout-sidebar-section-label" aria-hidden="true">{{ 'navigation.menu' | translate }}</span>
 
         <a
           routerLink="/dashboard"
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="{ exact: true }"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Dashboard' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? ('navigation.dashboard' | translate) : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-home" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Dashboard</span>
+          <span class="layout-sidebar-link-text">{{ 'navigation.dashboard' | translate }}</span>
         </a>
 
         <a
@@ -54,11 +58,11 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="{ exact: false }"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Appointments' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? ('navigation.appointments' | translate) : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-calendar" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Appointments</span>
+          <span class="layout-sidebar-link-text">{{ 'navigation.appointments' | translate }}</span>
           @if (pendingAppointmentsCount() > 0) {
             <span class="layout-sidebar-link-badge">{{ pendingAppointmentsCount() }}</span>
           }
@@ -69,11 +73,11 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Services' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? ('navigation.services' | translate) : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-briefcase" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Services</span>
+          <span class="layout-sidebar-link-text">{{ 'navigation.services' | translate }}</span>
         </a>
 
         <a
@@ -81,26 +85,26 @@
           routerLinkActive="layout-sidebar-link-active"
           [routerLinkActiveOptions]="linkOptsPrefix"
           class="layout-sidebar-link"
-          [attr.aria-label]="isSidebarCollapsed() ? 'Customers' : null"
+          [attr.aria-label]="isSidebarCollapsed() ? ('navigation.customers' | translate) : null"
           (click)="closeMobileMenu()"
         >
           <i class="layout-sidebar-link-icon pi pi-users" aria-hidden="true"></i>
-          <span class="layout-sidebar-link-text">Customers</span>
+          <span class="layout-sidebar-link-text">{{ 'navigation.customers' | translate }}</span>
         </a>
 
         @if (business()) {
-          <span class="layout-sidebar-section-label" aria-hidden="true">הגדרות</span>
+          <span class="layout-sidebar-section-label" aria-hidden="true">{{ 'navigation.settingsSection' | translate }}</span>
 
           <a
             routerLink="/settings/theme"
             routerLinkActive="layout-sidebar-link-active"
             [routerLinkActiveOptions]="{ exact: true }"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Theme' : null"
+            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.theme' | translate) : null"
             (click)="closeMobileMenu()"
           >
             <i class="layout-sidebar-link-icon pi pi-palette" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">Theme</span>
+            <span class="layout-sidebar-link-text">{{ 'navigation.theme' | translate }}</span>
           </a>
 
           <a
@@ -108,22 +112,22 @@
             routerLinkActive="layout-sidebar-link-active"
             [routerLinkActiveOptions]="{ exact: true }"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Landing page' : null"
+            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.landingPage' | translate) : null"
             (click)="closeMobileMenu()"
           >
             <i class="layout-sidebar-link-icon pi pi-megaphone" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">דף נחיתה</span>
+            <span class="layout-sidebar-link-text">{{ 'navigation.landingPage' | translate }}</span>
           </a>
 
           <a
             routerLink="/settings/working-hours"
             routerLinkActive="layout-sidebar-link-active"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? 'Working hours' : null"
+            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.workingHours' | translate) : null"
             (click)="closeMobileMenu()"
           >
             <i class="layout-sidebar-link-icon pi pi-clock" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">Working hours</span>
+            <span class="layout-sidebar-link-text">{{ 'navigation.workingHours' | translate }}</span>
           </a>
 
           @if (business()?.slug) {
@@ -132,13 +136,25 @@
               routerLinkActive="layout-sidebar-link-active"
               [routerLinkActiveOptions]="{ exact: true }"
               class="layout-sidebar-link"
-              [attr.aria-label]="isSidebarCollapsed() ? 'Preview site' : null"
+              [attr.aria-label]="isSidebarCollapsed() ? ('navigation.previewSite' | translate) : null"
               (click)="closeMobileMenu()"
             >
               <i class="layout-sidebar-link-icon pi pi-eye" aria-hidden="true"></i>
-              <span class="layout-sidebar-link-text">Preview site</span>
+              <span class="layout-sidebar-link-text">{{ 'navigation.previewSite' | translate }}</span>
             </a>
           }
+
+          <a
+            routerLink="/settings/account"
+            routerLinkActive="layout-sidebar-link-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="layout-sidebar-link"
+            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.account' | translate) : null"
+            (click)="closeMobileMenu()"
+          >
+            <i class="layout-sidebar-link-icon pi pi-user" aria-hidden="true"></i>
+            <span class="layout-sidebar-link-text">{{ 'navigation.account' | translate }}</span>
+          </a>
         }
       </nav>
 
@@ -155,7 +171,7 @@
       <button
         type="button"
         class="layout-sidebar-logout-btn"
-        aria-label="Logout"
+        [attr.aria-label]="'navigation.logout' | translate"
         (click)="onLogout()"
       >
         <i class="pi pi-sign-out" aria-hidden="true"></i>
@@ -188,12 +204,12 @@
     <div class="layout-topbar-actions">
       @if (!isMobile()) {
         <label class="layout-topbar-search-wrap">
-          <span class="sr-only">חיפוש לקוחה או תור</span>
+          <span class="sr-only">{{ 'appointments.searchPlaceholder' | translate }}</span>
           <i class="pi pi-search layout-topbar-search-icon" aria-hidden="true"></i>
           <input
             type="search"
             class="layout-topbar-search"
-            placeholder="חיפוש לקוחה או תור"
+            [placeholder]="'appointments.searchPlaceholder' | translate"
             disabled
             aria-disabled="true"
           />
@@ -205,51 +221,34 @@
             target="_blank"
             rel="noopener noreferrer"
             class="layout-topbar-customer-site"
-            aria-label="Open customer site in new tab"
+            [attr.aria-label]="'navigation.customerSite' | translate"
           >
-            Customer site
+            {{ 'navigation.customerSite' | translate }}
             <i class="pi pi-arrow-up-right" aria-hidden="true" style="font-size:0.7rem"></i>
           </a>
         } @else if (business() && !business()?.slug) {
-          <span class="layout-topbar-customer-site-warning" role="note">No slug set</span>
+          <span class="layout-topbar-customer-site-warning" role="note">
+            {{ language.language() === 'he' ? 'לא הוגדרה כתובת אתר' : 'No site address set' }}
+          </span>
         }
 
-        @if (isImpersonating()) {
-          <span class="layout-topbar-impersonation-badge" role="status" aria-live="polite">Impersonating</span>
-        }
-
-        @if (business() && (isSuperAdmin() || isImpersonating())) {
-          <button
-            type="button"
-            class="layout-theme-toggle"
-            [attr.aria-label]="themeService.currentMode() === 'light' ? 'Switch to dark mode' : 'Switch to light mode'"
-            [attr.aria-pressed]="themeService.currentMode() === 'dark'"
-            (click)="toggleTheme()"
-          >
-            <i
-              [class]="themeService.currentMode() === 'light' ? 'pi pi-moon' : 'pi pi-sun'"
-              aria-hidden="true"
-            ></i>
-            <span class="layout-topbar-btn-label">
-              {{ themeService.currentMode() === 'light' ? 'Dark' : 'Light' }}
-            </span>
-          </button>
-        }
       }
 
-      <a routerLink="/appointments" class="layout-topbar-bell" aria-label="תורים ממתינים לאישור">
+      <a routerLink="/appointments" class="layout-topbar-bell" [attr.aria-label]="'appointments.title' | translate">
         <i class="pi pi-bell" aria-hidden="true"></i>
         @if (pendingAppointmentsCount() > 0) {
           <span class="layout-topbar-bell-dot" aria-hidden="true"></span>
         }
       </a>
 
-      <a routerLink="/appointments/new" class="layout-topbar-new-btn">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        תור חדש
+      <a routerLink="/settings/theme" class="layout-topbar-settings" [attr.aria-label]="'navigation.settings' | translate">
+        <i class="pi pi-cog" aria-hidden="true"></i>
       </a>
 
-
+      <a routerLink="/appointments/new" class="layout-topbar-new-btn">
+        <i class="pi pi-plus" aria-hidden="true"></i>
+        {{ 'navigation.newAppointment' | translate }}
+      </a>
     </div>
   </header>
 
@@ -259,14 +258,14 @@
       @if (isImpersonating()) {
         <div class="layout-impersonation-banner" role="alert" aria-live="assertive">
           <span class="layout-impersonation-banner-text">
-            Impersonating: {{ business()?.name ?? 'Business' }}
+            {{ language.language() === 'he' ? 'מחוברת בתור' : 'Impersonating' }}: {{ business()?.name ?? '—' }}
             @if (business()?.ownerEmail) { ({{ business()?.ownerEmail }}) }
           </span>
           <button
             type="button"
             class="layout-impersonation-banner-btn"
             (click)="exitImpersonation()"
-          >Exit</button>
+          >{{ language.language() === 'he' ? 'יציאה' : 'Exit' }}</button>
         </div>
       }
       <router-outlet></router-outlet>

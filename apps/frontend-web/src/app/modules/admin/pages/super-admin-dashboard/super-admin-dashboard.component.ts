@@ -3,13 +3,14 @@ import { RouterLink } from '@angular/router';
 import { ChartModule } from 'primeng/chart';
 import { CardModule } from 'primeng/card';
 import { SkeletonModule } from 'primeng/skeleton';
-import { DecimalPipe, CurrencyPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { AdminApiService, type AdminOverviewDto } from '../../services/admin-api.service';
+import { SaCurrencyPipe } from '../../shared/sa-currency.pipe';
 
 @Component({
   selector: 'app-super-admin-dashboard',
   standalone: true,
-  imports: [RouterLink, ChartModule, CardModule, SkeletonModule, DecimalPipe, CurrencyPipe],
+  imports: [RouterLink, ChartModule, CardModule, SkeletonModule, DecimalPipe, SaCurrencyPipe],
   templateUrl: './super-admin-dashboard.component.html',
   styleUrl: './super-admin-dashboard.component.scss',
 })
@@ -47,8 +48,8 @@ export class SuperAdminDashboardComponent implements OnInit {
         {
           label: 'Appointments',
           data: pts.map((p) => p.count),
-          borderColor: '#3787F6',
-          backgroundColor: 'rgba(55, 135, 246, 0.12)',
+          borderColor: '#d97706',
+          backgroundColor: 'rgba(217, 119, 6, 0.12)',
           fill: true,
           tension: 0.35,
         },

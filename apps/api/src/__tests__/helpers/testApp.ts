@@ -3,6 +3,7 @@ import cookieParser from 'cookie-parser';
 import { authRouter } from '../../routes/auth';
 import { businessRouter } from '../../routes/business';
 import { customersRouter } from '../../routes/customers';
+import { customerServiceConfigsRouter } from '../../routes/customerServiceConfigs';
 import { servicesRouter } from '../../routes/services';
 import { appointmentsRouter } from '../../routes/appointments';
 import { publicRouter } from '../../routes/public';
@@ -23,6 +24,7 @@ export function buildTestApp(): express.Application {
   app.use('/api/auth', authRouter);
   app.use('/api/business', businessRouter);
   app.use('/api/customers', customersRouter);
+  app.use('/api/customer-service-configs', customerServiceConfigsRouter);
   app.use('/api/services', servicesRouter);
   app.use('/api/appointments', appointmentsRouter);
   app.use('/api/public', publicRouter);

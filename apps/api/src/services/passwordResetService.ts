@@ -84,6 +84,10 @@ export async function consumePasswordResetToken(
   if (!user || user.status === 'disabled') return { ok: false, reason: 'invalid' };
 
   user.passwordHash = await bcrypt.hash(newPassword, 10);
+  // Same invalidation guarantee as the self-service change-password flow —
+  // a reset must also kill every other outstanding session (middleware/auth.ts
+  // checks this against every token's pwv claim).
+  user.passwordChangedAt = new Date();
   await user.save();
 
   row.usedAt = new Date();

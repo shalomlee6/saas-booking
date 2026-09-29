@@ -1,4 +1,8 @@
-<div class="pl-page" dir="rtl">
+<div
+  class="pl-page"
+  [class.pl-page--intro]="introActive()"
+  [class.pl-page--stage-settled]="heroLanded()"
+>
   @if (pageLoadError(); as err) {
     <div class="pl-page__error" role="alert">{{ err }}</div>
   } @else if (loadingPageData() && !bookingBusiness()) {
@@ -8,39 +12,55 @@
   } @else {
     @if (sectionVisibility().hero) {
       <app-public-landing-hero
-        [businessName]="businessDisplayName()"
-        [tagline]="landingTagline()"
-        [description]="landingHeroDescription()"
         [imageLeft]="heroImageLeft()"
         [imageRight]="heroImageRight()"
-        (book)="goToBook()"
+        [playEntrance]="introActive()"
       />
     }
 
-    <div class="pl-section pl-section--base pl-welcome">
+    <div class="pl-intro-rise">
+    <div class="pl-hero-intro">
+      <p class="pl-hero-intro__name pl-intro-text pl-intro-text--0">{{ businessDisplayName() }}</p>
+      <p class="pl-hero-intro__tagline pl-intro-text pl-intro-text--1">{{ landingTagline() }}</p>
+      @if (landingHeroDescription().trim()) {
+        <p class="pl-hero-intro__desc pl-intro-text pl-intro-text--2">{{ landingHeroDescription() }}</p>
+      }
+      <p-button
+        label="קביעת תור"
+        icon="pi pi-calendar-plus"
+        iconPos="right"
+        styleClass="pl-hero-intro__cta"
+        (onClick)="goToBook()"
+      />
+    </div>
+
+    <div class="pl-intro-sheet">
+    <div class="pl-section pl-section--base pl-welcome pl-scroll-anchor" plReveal id="public-upcoming">
       <div class="pl-welcome-inner">
         <div class="pl-greeting">
-          <h2 class="pl-greeting__title">{{ greetingTitle() }}</h2>
-          <p class="pl-greeting__sub">{{ greetingSub }}</p>
+          <h2 class="pl-greeting__title pl-intro-text pl-intro-text--3">{{ greetingTitle() }}</h2>
+          <p class="pl-greeting__sub pl-intro-text pl-intro-text--4">{{ greetingSub }}</p>
         </div>
 
         <app-public-landing-next-appointment
           [loading]="loadingUpcoming()"
           [apt]="displayApt()"
           [error]="upcomingError()"
-          [statusLabel]="statusLabel()"
-          [statusSeverity]="statusSeverity()"
-          [formattedDate]="formattedDate()"
           [staffLine]="''"
-          [canCancel]="canCancelApt()"
           (book)="goToBook()"
-          (cancel)="openCancelDrawer()"
+          (open)="goToUpcoming()"
+          (edit)="openAppointmentDetails()"
         />
       </div>
     </div>
 
     @if (sectionVisibility().services) {
-      <div class="pl-section pl-section--accent">
+      <div
+        class="pl-section pl-section--accent"
+        plReveal
+        plRevealStagger
+        [plRevealDisabled]="playIntro()"
+      >
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-services
             [services]="servicesList()"
@@ -51,7 +71,12 @@
     }
 
     @if (sectionVisibility().gallery) {
-      <div class="pl-section pl-section--base">
+      <div
+        class="pl-section pl-section--base"
+        plReveal
+        plRevealStagger
+        [plRevealDisabled]="playIntro()"
+      >
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-gallery
             [items]="landingGalleryItems()"
@@ -62,7 +87,7 @@
     }
 
     @if (sectionVisibility().products && showProductsSection()) {
-      <div class="pl-section pl-section--accent">
+      <div class="pl-section pl-section--accent" plReveal plRevealStagger>
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-products [products]="landingProducts()" />
         </div>
@@ -70,7 +95,7 @@
     }
 
     @if (sectionVisibility().reviews && showReviewsSection()) {
-      <div class="pl-section pl-section--base">
+      <div class="pl-section pl-section--base" plReveal plRevealStagger>
         <div class="pl-inner pl-inner--wide">
           <app-public-landing-reviews [reviews]="landingReviews()" />
         </div>
@@ -78,7 +103,7 @@
     }
 
     @if (sectionVisibility().cta) {
-      <div class="pl-section pl-section--base">
+      <div class="pl-section pl-section--base pl-scroll-anchor pl-scroll-anchor--trailing" plReveal id="public-location">
         <div class="pl-inner">
           <app-public-landing-booking-cta
             [phone]="landingPhone()"
@@ -90,10 +115,12 @@
         </div>
       </div>
     }
+    </div>
+    </div>
   }
 
   <nav
-    class="pl-sticky-bar"
+    class="pl-sticky-bar pl-intro-bar"
     aria-label="פעולות מהירות"
     [class.pl-sticky-bar--hidden]="!!pageLoadError()"
   >
@@ -126,87 +153,9 @@
   </nav>
 </div>
 
-<p-drawer
-  [visible]="cancelDrawerOpen()"
-  (visibleChange)="cancelDrawerOpen.set($event)"
-  position="bottom"
-  styleClass="cancel-drawer"
-  [modal]="true"
-  [dismissible]="!cancelling()"
-  [closeOnEscape]="!cancelling()"
->
-  <ng-template pTemplate="header">
-    <div class="cancel-drawer-header" dir="rtl">
-      <i class="pi pi-calendar-times cancel-drawer-icon" aria-hidden="true"></i>
-      <span class="cancel-drawer-title">ביטול תור</span>
-    </div>
-  </ng-template>
-
-  <div class="cancel-drawer-body" dir="rtl">
-    @if (displayApt(); as apt) {
-      <div class="cancel-apt-summary">
-        <div class="cancel-apt-summary-row">
-          <i class="pi pi-wrench" aria-hidden="true"></i>
-          <span>{{ apt.serviceName }}</span>
-        </div>
-        <div class="cancel-apt-summary-row">
-          <i class="pi pi-calendar" aria-hidden="true"></i>
-          <span>{{ formattedDate() }}</span>
-        </div>
-        <div class="cancel-apt-summary-row">
-          <i class="pi pi-clock" aria-hidden="true"></i>
-          <span class="apt-time-ltr">{{ apt.time }}</span>
-        </div>
-      </div>
-    }
-
-    <p class="cancel-confirm-text">האם את בטוחה שברצונך לבטל את התור?</p>
-
-    <div class="cancel-reason-field">
-      <label class="cancel-reason-label" for="cancelReasonInput">
-        סיבת ביטול התור
-        <span class="cancel-reason-required" aria-hidden="true">*</span>
-      </label>
-      <textarea
-        id="cancelReasonInput"
-        class="cancel-reason-textarea"
-        [class.cancel-reason-textarea--invalid]="cancelReasonInvalid()"
-        pTextarea
-        rows="3"
-        placeholder="למשל: לא יכולה להגיע ביום זה"
-        [ngModel]="cancelReason()"
-        (ngModelChange)="cancelReason.set($event)"
-        (blur)="cancelReasonTouched.set(true)"
-        [disabled]="cancelling()"
-        aria-required="true"
-        [attr.aria-invalid]="cancelReasonInvalid()"
-        [attr.aria-describedby]="cancelReasonInvalid() ? 'cancelReasonError' : null"
-      ></textarea>
-      @if (cancelReasonInvalid()) {
-        <span id="cancelReasonError" class="cancel-reason-error" role="alert">
-          יש להזין סיבת ביטול
-        </span>
-      }
-    </div>
-
-    @if (cancelError()) {
-      <div class="cancel-server-error" role="alert">
-        <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
-        {{ cancelError() }}
-      </div>
-    }
-
-    <div class="cancel-drawer-actions">
-      <p-button
-        [label]="cancelling() ? 'מבטלת תור...' : 'לחצי כאן לביטול התור'"
-        icon="pi pi-times-circle"
-        iconPos="right"
-        styleClass="cancel-confirm-btn"
-        severity="danger"
-        [disabled]="cancelBtnDisabled()"
-        [loading]="cancelling()"
-        (onClick)="confirmCancel()"
-      />
-    </div>
-  </div>
-</p-drawer>
+<app-public-appointment-details
+  [appointment]="detailsApt()"
+  (closed)="detailsApt.set(null)"
+  (cancelled)="onAppointmentCancelled()"
+  (edit)="onEditAppointment()"
+/>

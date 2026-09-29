@@ -15,7 +15,8 @@
     <p class="sa-dash-error" role="alert">{{ errMsg }}</p>
   } @else if (overview(); as o) {
     <div class="sa-dash-kpi-grid">
-      <p-card styleClass="sa-dash-kpi">
+      <p-card styleClass="sa-dash-kpi sa-dash-kpi--blue">
+        <span class="sa-dash-kpi-icon"><i class="pi pi-building"></i></span>
         <span class="sa-dash-kpi-label">Total businesses</span>
         <span class="sa-dash-kpi-value">{{ o.totalBusinesses | number }}</span>
         <span class="sa-dash-kpi-meta">
@@ -30,12 +31,14 @@
           }
         </span>
       </p-card>
-      <p-card styleClass="sa-dash-kpi">
+      <p-card styleClass="sa-dash-kpi sa-dash-kpi--green">
+        <span class="sa-dash-kpi-icon"><i class="pi pi-bolt"></i></span>
         <span class="sa-dash-kpi-label">Active businesses (30d)</span>
         <span class="sa-dash-kpi-value">{{ o.activeBusinesses | number }}</span>
         <span class="sa-dash-kpi-meta">With at least one booking</span>
       </p-card>
-      <p-card styleClass="sa-dash-kpi">
+      <p-card styleClass="sa-dash-kpi sa-dash-kpi--amber">
+        <span class="sa-dash-kpi-icon"><i class="pi pi-calendar"></i></span>
         <span class="sa-dash-kpi-label">Appointments this month</span>
         <span class="sa-dash-kpi-value">{{ o.appointmentsThisMonth | number }}</span>
         <span class="sa-dash-kpi-meta">
@@ -48,19 +51,22 @@
           }
         </span>
       </p-card>
-      <p-card styleClass="sa-dash-kpi">
+      <p-card styleClass="sa-dash-kpi sa-dash-kpi--violet">
+        <span class="sa-dash-kpi-icon"><i class="pi pi-sparkles"></i></span>
         <span class="sa-dash-kpi-label">New businesses this month</span>
         <span class="sa-dash-kpi-value">{{ o.newBusinessesThisMonth | number }}</span>
         <span class="sa-dash-kpi-meta">Created in current calendar month</span>
       </p-card>
-      <p-card styleClass="sa-dash-kpi">
+      <p-card styleClass="sa-dash-kpi sa-dash-kpi--slate">
+        <span class="sa-dash-kpi-icon"><i class="pi pi-star"></i></span>
         <span class="sa-dash-kpi-label">Top business (this month)</span>
         <span class="sa-dash-kpi-value sa-dash-kpi-value--sm">{{ o.topPerformingBusiness.name ?? '—' }}</span>
         <span class="sa-dash-kpi-meta">{{ o.topPerformingBusiness.bookingCount | number }} bookings</span>
       </p-card>
-      <p-card styleClass="sa-dash-kpi">
+      <p-card styleClass="sa-dash-kpi sa-dash-kpi--teal">
+        <span class="sa-dash-kpi-icon"><i class="pi pi-wallet"></i></span>
         <span class="sa-dash-kpi-label">Total revenue (appointments)</span>
-        <span class="sa-dash-kpi-value">{{ o.totalRevenue | currency: 'ILS' : 'symbol' : '1.0-0' }}</span>
+        <span class="sa-dash-kpi-value">{{ o.totalRevenue | saCurrency }}</span>
         <span class="sa-dash-kpi-meta">Sum of recorded prices · Avg {{ o.avgBookingsPerBusiness | number: '1.0-2' }} bookings / business</span>
       </p-card>
     </div>

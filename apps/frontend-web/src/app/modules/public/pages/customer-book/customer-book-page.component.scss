@@ -1,19 +1,25 @@
 // ─── Spa/Beauty design tokens — scoped to this flow ──────────────────────────
+// Derived from the tenant's active theme tokens (--color-primary family +
+// neutrals), not hardcoded, so this flow follows the tenant's preset and
+// light/dark mode instead of always showing a fixed pink/lavender look.
 .book-flow {
   // Palette
-  --book-bg:             #FAF7F4;
-  --book-card:           #FFFFFF;
-  --book-pink:           #F8D7E3;
-  --book-lavender:       #EDE4F5;
-  --book-nude:           #F8F1EA;
-  --book-text:           #3A2E2E;
-  --book-text-soft:      #8A7070;
-  --book-border:         #EDE8E4;
-  --book-shadow:         0 2px 14px rgba(100, 70, 60, 0.07);
-  --book-shadow-md:      0 4px 24px rgba(100, 70, 60, 0.10);
-  --book-gradient:       linear-gradient(135deg, #F8D7E3 0%, #EDE4F5 100%);
-  --book-pink-deep:      #B06080;
-  --book-lavender-deep:  #7B5EA7;
+  --book-bg:             var(--bg-app);
+  --book-card:           var(--bg-card);
+  --book-pink:           var(--color-primary-subtle);
+  --book-lavender:       var(--color-primary-subtle);
+  --book-nude:           var(--bg-app);
+  --book-text:           var(--text-primary);
+  --book-text-soft:      var(--text-secondary);
+  --book-border:         var(--border-color);
+  --book-shadow:         var(--shadow-sm);
+  --book-shadow-md:      var(--shadow-md);
+  --book-gradient:       linear-gradient(135deg, var(--color-primary-subtle) 0%, var(--color-primary-muted) 100%);
+  // Always-dark, always-readable variant of the brand color — use this (never
+  // --color-primary) for TEXT/icons on a light surface; --color-primary itself
+  // is only guaranteed readable as a background (see `--on-primary`).
+  --book-pink-deep:      var(--color-primary-ink);
+  --book-lavender-deep:  var(--color-primary);
 
   min-height: 100dvh;
   background: var(--book-bg);
@@ -129,10 +135,10 @@
   .is-active & {
     background: var(--book-gradient);
     border-color: transparent;
-    box-shadow: 0 2px 10px rgba(180, 80, 120, 0.22);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 22%, transparent);
 
     span {
-      color: #7b3060;
+      color: var(--color-primary-ink);
     }
   }
 }
@@ -248,7 +254,7 @@
     border-color: var(--book-lavender-deep);
     border-width: 2px;
     background: var(--book-lavender);
-    box-shadow: 0 4px 20px rgba(123, 94, 167, 0.16);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-primary) 16%, transparent);
   }
 
   &:focus-visible {
@@ -271,13 +277,13 @@
   justify-content: center;
   font-size: 1.125rem;
   font-weight: 700;
-  color: #7b3060;
+  color: var(--color-primary-ink);
   flex-shrink: 0;
   letter-spacing: -0.02em;
   transition: background 0.22s ease;
 
   .book-service-card--selected & {
-    background: linear-gradient(135deg, #e8bcd0 0%, #d4b8f0 100%);
+    background: linear-gradient(135deg, var(--color-primary-muted) 0%, var(--color-primary-hover) 100%);
   }
 }
 
@@ -314,7 +320,7 @@
 
 .book-service-check {
   font-size: 1.375rem;
-  color: var(--book-lavender-deep);
+  color: var(--color-primary-ink);
   flex-shrink: 0;
   animation: pop-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -373,27 +379,25 @@
       padding: 0.75rem 0.5rem 0.75rem;
     }
 
-    // Day cell hover
-    .p-datepicker-day-cell-inner {
-      border-radius: 50%;
+    // Day cell hover — the actual day element is `.p-datepicker-day` (a <span>);
+    // there is no separate `.p-datepicker-day-cell-inner` wrapper in this PrimeNG version.
+    .p-datepicker-day {
       transition: background 0.18s;
     }
 
-    .p-datepicker-day-cell-inner:not(.p-disabled):hover {
+    .p-datepicker-day:not(.p-disabled):hover {
       background: var(--book-nude);
     }
 
     // Selected date
-    .p-datepicker-day-selected .p-datepicker-day-cell-inner,
-    .p-datepicker-day-cell-inner.p-datepicker-day-selected,
-    .p-datepicker-day-cell.p-datepicker-day-selected .p-datepicker-day-cell-inner {
+    .p-datepicker-day-selected {
       background: var(--book-gradient) !important;
-      color: #7b3060 !important;
+      color: var(--color-primary-ink) !important;
       font-weight: 700;
     }
 
-    // Today
-    .p-datepicker-today:not(.p-datepicker-day-selected) .p-datepicker-day-cell-inner {
+    // Today — `.p-datepicker-today` is on the parent <td>, not the day span itself.
+    .p-datepicker-today .p-datepicker-day:not(.p-datepicker-day-selected) {
       border: 1.5px solid var(--book-pink);
       font-weight: 600;
     }
@@ -453,7 +457,7 @@
   min-height: 52px;
   font-family: inherit;
   direction: ltr;
-  box-shadow: 0 1px 4px rgba(100, 70, 60, 0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   transition:
     border-color 0.18s ease,
     background 0.18s ease,
@@ -463,16 +467,16 @@
 
   &:hover {
     border-color: color-mix(in srgb, var(--book-lavender-deep) 50%, transparent);
-    box-shadow: 0 2px 10px rgba(123, 94, 167, 0.14);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-primary) 14%, transparent);
   }
 
   &--selected {
     border-color: var(--book-lavender-deep);
     border-width: 2px;
     background: var(--book-lavender);
-    color: var(--book-lavender-deep);
+    color: var(--color-primary-ink);
     font-weight: 700;
-    box-shadow: 0 2px 12px rgba(123, 94, 167, 0.22);
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--color-primary) 22%, transparent);
   }
 
   &:focus-visible {
@@ -523,8 +527,8 @@
 }
 
 .book-notice-state-error {
-  border-color: color-mix(in srgb, #c45c6a 35%, var(--book-border));
-  background: color-mix(in srgb, #fdeef0 55%, var(--book-card));
+  border-color: color-mix(in srgb, var(--color-danger) 35%, var(--book-border));
+  background: color-mix(in srgb, var(--color-danger) 8%, var(--book-card));
 }
 
 .book-notice-state-empty {
@@ -540,7 +544,7 @@
   padding: 0.5rem 1.125rem;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--book-lavender-deep);
+  color: var(--color-primary-ink);
   cursor: pointer;
   font-family: inherit;
   border-radius: 9999px;
@@ -685,7 +689,7 @@
 
   &:focus {
     border-color: var(--book-lavender-deep);
-    box-shadow: 0 0 0 3px rgba(123, 94, 167, 0.12);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 12%, transparent);
   }
 
   &::placeholder {
@@ -719,11 +723,11 @@
 
   ::ng-deep .hold-btn-inner {
     background: var(--book-gradient) !important;
-    color: #7b3060 !important;
+    color: var(--color-primary-ink) !important;
   }
 
   ::ng-deep .hold-btn-label {
-    color: #7b3060 !important;
+    color: var(--color-primary-ink) !important;
     font-family: inherit;
     font-weight: 600;
   }
@@ -735,8 +739,8 @@
   }
 
   ::ng-deep .hold-btn--success .hold-btn-inner {
-    background: linear-gradient(135deg, #a8e6cf, #6dcfaf) !important;
-    color: #1a5c46 !important;
+    background: color-mix(in srgb, var(--color-success) 30%, var(--bg-card)) !important;
+    color: var(--color-success) !important;
   }
 }
 

@@ -1,7 +1,8 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { catchError, map, of, shareReplay, startWith } from 'rxjs';
+import { catchError, combineLatest, map, of, shareReplay, startWith } from 'rxjs';
 import { ChartModule } from 'primeng/chart';
 import { MessageService } from 'primeng/api';
 import { AppointmentsApiService } from '../../../appointments/services/appointments-api.service';
@@ -9,30 +10,32 @@ import type { Appointment } from '../../../appointments/model/appointment';
 import { getLocalParts, toDateKey } from '../../../appointments/utils/calendar.utils';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { WORKING_HOURS_DAY_KEYS } from '../../../../core/working-hours/working-hours.util';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import {
   GrowthBrainService,
   type InsightsPeriod,
 } from '../../services/growth-brain.service';
 
-const WEEKDAY_LABELS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
 const VIP_THRESHOLD = 500;
 const CANCELLED_STATUSES = new Set(['cancelled', 'canceled']);
 
-const PERIOD_LABELS: Record<InsightsPeriod, string> = {
-  week: 'השבוע',
-  month: 'החודש',
-  year: 'השנה',
+const PERIOD_LABEL_KEYS: Record<InsightsPeriod, string> = {
+  week: 'dashboard.periodLabelWeek',
+  month: 'dashboard.periodLabelMonth',
+  year: 'dashboard.periodLabelYear',
 };
 
 type StatusTone = 'success' | 'warn' | 'neutral' | 'danger';
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'ממתין לאישור',
-  confirmed: 'מאושר',
-  completed: 'הושלם',
-  done: 'הושלם',
-  cancelled: 'בוטל',
-  canceled: 'בוטל',
+/** 'done' is a legacy status value some records still carry — treated the same as 'completed'. */
+const STATUS_KEYS: Record<string, string> = {
+  pending: 'status.pending',
+  confirmed: 'status.confirmed',
+  completed: 'status.completed',
+  done: 'status.completed',
+  cancelled: 'status.cancelled',
+  canceled: 'status.cancelled',
 };
 
 const STATUS_TONES: Record<string, StatusTone> = {
@@ -44,9 +47,10 @@ const STATUS_TONES: Record<string, StatusTone> = {
   canceled: 'danger',
 };
 
-function statusLabel(status: string | undefined): string {
+function statusLabel(status: string | undefined, language: LanguageService): string {
   const key = (status ?? '').toLowerCase();
-  return STATUS_LABELS[key] ?? status ?? '—';
+  const translationKey = STATUS_KEYS[key];
+  return translationKey ? language.t(translationKey) : status ?? '—';
 }
 
 function statusTone(status: string | undefined): StatusTone {
@@ -86,7 +90,7 @@ interface AgendaState {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [ChartModule, AsyncPipe, CurrencyPipe, DatePipe, RouterLink],
+  imports: [ChartModule, AsyncPipe, CurrencyPipe, DatePipe, RouterLink, TranslatePipe],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss',
 })
@@ -95,6 +99,8 @@ export class DashboardComponent {
   private readonly messages = inject(MessageService);
   readonly appointmentsApi = inject(AppointmentsApiService);
   readonly growthBrain = inject(GrowthBrainService);
+  readonly language = inject(LanguageService);
+  private readonly language$ = toObservable(this.language.language);
 
   private readonly now = new Date();
   private readonly timezone = this.auth.businessTimezone;
@@ -102,7 +108,7 @@ export class DashboardComponent {
   readonly appointments$ = this.appointmentsApi.appointments$;
   readonly insights$ = this.growthBrain.insights$;
   readonly selectedPeriod = this.growthBrain.selectedPeriod;
-  readonly periodLabel = computed(() => PERIOD_LABELS[this.selectedPeriod()] ?? '');
+  readonly periodLabel = computed(() => this.language.t(PERIOD_LABEL_KEYS[this.selectedPeriod()] ?? ''));
   readonly vipThreshold = VIP_THRESHOLD;
 
   readonly chartOptions = {
@@ -126,18 +132,19 @@ export class DashboardComponent {
     shareReplay(1)
   );
 
-  readonly todaySummaryText$ = this.todayAppointments$.pipe(
-    map((list) => {
-      if (list.length === 0) return 'אין תורים היום.';
+  readonly todaySummaryText$ = combineLatest([this.todayAppointments$, this.language$]).pipe(
+    map(([list]) => {
+      if (list.length === 0) return this.language.t('dashboard.noAppointmentsToday');
       const pending = list.filter((a) => (a.status ?? '').toLowerCase() === 'pending').length;
-      const base = `${list.length} תורים היום`;
-      return pending > 0 ? `${base}, ${pending} מחכים לאישור שלך.` : `${base}.`;
+      return pending > 0
+        ? this.language.t('dashboard.todaySummaryPending', { count: list.length, pending })
+        : this.language.t('dashboard.todaySummaryPlain', { count: list.length });
     }),
-    catchError(() => of('אין תורים היום.'))
+    catchError(() => of(this.language.t('dashboard.noAppointmentsToday')))
   );
 
-  readonly todayAgendaState$ = this.todayAppointments$.pipe(
-    map((list): AgendaState => {
+  readonly todayAgendaState$ = combineLatest([this.todayAppointments$, this.language$]).pipe(
+    map(([list]): AgendaState => {
       const nextId =
         list.find(
           (a) =>
@@ -150,7 +157,7 @@ export class DashboardComponent {
         isPast: a.end.getTime() <= this.now.getTime(),
         isNext: a._id === nextId,
         tone: statusTone(a.status),
-        label: statusLabel(a.status),
+        label: statusLabel(a.status, this.language),
         whatsapp: whatsappHref(a.customerPhone),
       }));
 
@@ -187,21 +194,22 @@ export class DashboardComponent {
    * which is what makes the rendered bars read right-to-left (Sun on the right) like the
    * rest of the RTL page.
    */
-  readonly revenueByWeekdayChart$ = this.insights$.pipe(
-    map((i) => {
+  readonly revenueByWeekdayChart$ = combineLatest([this.insights$, this.language$]).pipe(
+    map(([i]) => {
       const totals = new Array(7).fill(0);
       (i.revenueByWeekday ?? []).forEach((r) => {
         const idx = r.weekday >= 1 && r.weekday <= 7 ? r.weekday - 1 : 0;
         totals[idx] = r.total;
       });
+      const weekdayLabels = this.language.t('dashboard.weekdaysShort').split(',');
       const data = {
-        labels: [...WEEKDAY_LABELS].reverse(),
+        labels: [...weekdayLabels].reverse(),
         datasets: [
           {
-            label: 'הכנסות',
+            label: this.language.t('dashboard.revenueChartLabel'),
             data: [...totals].reverse(),
             backgroundColor: '#ffd6df',
-            hoverBackgroundColor: '#e8446a',
+            hoverBackgroundColor: '#F35271',
             borderRadius: 4,
             maxBarThickness: 32,
           },
@@ -255,13 +263,14 @@ export class DashboardComponent {
     return key ? wh[key]?.enabled === false : false;
   });
 
-  readonly greeting = (() => {
-    const hour = getLocalParts(this.now, this.timezone()).hour;
-    if (hour < 5) return 'לילה טוב';
-    if (hour < 12) return 'בוקר טוב';
-    if (hour < 18) return 'צהריים טובים';
-    return 'ערב טוב';
-  })();
+  private readonly greetingHour = getLocalParts(this.now, this.timezone()).hour;
+  readonly greeting = computed(() => {
+    const hour = this.greetingHour;
+    if (hour < 5) return this.language.t('dashboard.greetingNight');
+    if (hour < 12) return this.language.t('dashboard.greetingMorning');
+    if (hour < 18) return this.language.t('dashboard.greetingAfternoon');
+    return this.language.t('dashboard.greetingEvening');
+  });
 
   readonly confirmingId = signal<string | null>(null);
 
@@ -284,11 +293,11 @@ export class DashboardComponent {
       next: () => {
         this.confirmingId.set(null);
         this.appointmentsApi.refresh();
-        this.messages.add({ severity: 'success', summary: 'התור אושר', life: 2500 });
+        this.messages.add({ severity: 'success', summary: this.language.t('dashboard.appointmentConfirmed'), life: 2500 });
       },
       error: () => {
         this.confirmingId.set(null);
-        this.messages.add({ severity: 'error', summary: 'לא ניתן היה לאשר את התור', life: 3500 });
+        this.messages.add({ severity: 'error', summary: this.language.t('dashboard.appointmentConfirmError'), life: 3500 });
       },
     });
   }

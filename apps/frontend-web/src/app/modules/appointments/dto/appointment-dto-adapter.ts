@@ -44,6 +44,8 @@ export function mapAppointmentDtoToModel(dto: AppointmentListItem | UnknownRecor
     serviceName: getStringField(raw, ['serviceName']) ?? undefined,
     customerName: getStringField(raw, ['customerName']) ?? undefined,
     customerPhone: (raw['customerPhone'] as string | null | undefined) ?? undefined,
+    customerPreferredTimeOfDay:
+      (raw['customerPreferredTimeOfDay'] as Appointment['customerPreferredTimeOfDay']) ?? null,
     notes: getStringField(raw, ['notes']) ?? undefined,
   };
 }

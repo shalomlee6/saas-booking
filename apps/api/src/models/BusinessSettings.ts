@@ -57,6 +57,11 @@ export interface IBusinessSettings extends Document {
       background: string;
       text: string;
     };
+    /** Public tenant site theme preset id (see frontend `theme-presets.ts` registry). */
+    preset?: string;
+    /** Default light/dark mode for the public site; a customer's own explicit
+     *  choice (stored client-side) always takes priority over this. */
+    defaultMode?: 'light' | 'dark';
     logoUrl: string | null;
     fontFamily: string;
   };
@@ -141,6 +146,8 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
         background: { type: String, default: '#FFFFFF' },
         text: { type: String, default: '#111827' },
       },
+      preset: { type: String, default: 'prime-pink' },
+      defaultMode: { type: String, enum: ['light', 'dark'], default: 'light' },
       logoUrl: { type: String, default: null },
       fontFamily: { type: String, default: 'system-ui' },
     },

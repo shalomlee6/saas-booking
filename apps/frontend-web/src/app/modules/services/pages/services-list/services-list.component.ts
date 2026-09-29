@@ -3,11 +3,12 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { DecimalPipe } from '@angular/common';
 import { ServicesStore } from '../../services/services.store';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-services-list',
   standalone: true,
-  imports: [RouterLink, FormsModule, DecimalPipe],
+  imports: [RouterLink, FormsModule, DecimalPipe, TranslatePipe],
   templateUrl: './services-list.component.html',
   styleUrl: './services-list.component.scss',
 })

@@ -45,9 +45,9 @@
     </ng-template>
     <ng-template #body let-row>
       <tr>
-        <td>{{ row.timestamp | date: 'medium' }}</td>
+        <td>{{ row.timestamp | saDate: 'medium' }}</td>
         <td>{{ row.actor }}</td>
-        <td><code class="sa-code">{{ row.action }}</code></td>
+        <td><code class="sa-code" [class]="'sa-code--' + actionAccent(row.action)">{{ row.action }}</code></td>
         <td>{{ row.entity }}</td>
         <td><code class="sa-code">{{ row.entityId }}</code></td>
         <td class="sa-meta">{{ row.metadata | json }}</td>

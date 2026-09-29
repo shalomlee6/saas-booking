@@ -1,4 +1,5 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { NgStyle } from '@angular/common';
 import {
   FormArray,
   FormBuilder,
@@ -10,6 +11,7 @@ import {
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../../../core/api/api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { resolveBusinessThemeVars, type ThemeMode } from '../../../../core/theming/resolve-business-theme-vars';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -124,6 +126,7 @@ const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
     TextareaModule,
     ToggleSwitchModule,
     SelectModule,
+    NgStyle,
     PublicLandingHeroComponent,
     PublicLandingServicesComponent,
     PublicLandingGalleryComponent,
@@ -270,6 +273,15 @@ export class BusinessLandingSettingsComponent implements OnInit {
     const slug = this.businessSlug();
     return slug ? `/b/${encodeURIComponent(slug)}` : '';
   });
+
+  /** What a new visitor sees by default — same resolver as the real public site,
+   *  so this preview can never drift from what's actually configured. */
+  readonly previewMode = computed<ThemeMode>(() =>
+    this.auth.businessSettings()?.theme?.defaultMode === 'dark' ? 'dark' : 'light'
+  );
+  readonly previewThemeVars = computed<Record<string, string>>(() =>
+    resolveBusinessThemeVars(this.auth.businessSettings()?.theme?.preset, this.previewMode())
+  );
 
   get products(): FormArray<FormGroup> {
     return this.form.get('products') as FormArray<FormGroup>;
@@ -465,7 +477,10 @@ export class BusinessLandingSettingsComponent implements OnInit {
 
   async onGalleryFiles(ev: Event): Promise<void> {
     const input = ev.target as HTMLInputElement;
-    const files = input.files;
+    const fileList = input.files;
+    if (!fileList?.length) return;
+
+    const files = Array.from(fileList);
     input.value = '';
     if (!files?.length) return;
     this.uploading.set(true);

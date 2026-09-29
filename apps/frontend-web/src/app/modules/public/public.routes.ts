@@ -29,6 +29,20 @@ export const PUBLIC_ROUTES: Routes = [
             (m) => m.CUSTOMER_BOOK_ROUTES
           ),
       },
+      {
+        path: 'upcoming',
+        loadComponent: () =>
+          import('./pages/upcoming-appointments/public-upcoming-appointments.component').then(
+            (m) => m.PublicUpcomingAppointmentsComponent
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./pages/customer-settings/public-customer-settings.component').then(
+            (m) => m.PublicCustomerSettingsComponent
+          ),
+      },
     ],
   },
 ];

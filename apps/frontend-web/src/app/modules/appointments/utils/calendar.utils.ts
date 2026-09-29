@@ -348,6 +348,7 @@ import {
   minutesToSlotIndex,
   getDaySummary,
   type WorkingHoursDaySlots,
+  type DaySummaryLabels,
 } from '../../../core/working-hours/working-hours.util';
 
 const GRID_FIRST_SLOT_INDEX = (CALENDAR_HOUR_START * 60) / 30;
@@ -418,10 +419,11 @@ export function isSlotInWorkingHours(
 /** Human-readable summary for a day (e.g. calendar tooltip). */
 export function getWorkingHoursSummary(
   dayOfWeek: number,
-  workingHours: Record<string, unknown> | null | undefined
+  workingHours: Record<string, unknown> | null | undefined,
+  labels?: DaySummaryLabels
 ): string {
   const day = getNormalizedDay(dayOfWeek, workingHours);
-  return getDaySummary(day);
+  return getDaySummary(day, labels);
 }
 
 // ——— Deterministic block colors (customerId / appointmentId) ———

@@ -1,4 +1,3 @@
-@use 'sass:color';
 
 .edit-apt-page {
   max-width: 880px;
@@ -59,7 +58,7 @@
 }
 
 .edit-apt-req {
-  color: #e8446a;
+  color: var(--color-primary);
 }
 
 .edit-apt-error {
@@ -96,12 +95,12 @@
 
 :host ::ng-deep {
   .edit-apt-btn-primary.p-button {
-    background: #e8446a;
-    border-color: #e8446a;
+    background: var(--color-primary);
+    border-color: var(--color-primary);
 
     &:hover:not(:disabled) {
-      background: color.adjust(#e8446a, $lightness: -6%);
-      border-color: color.adjust(#e8446a, $lightness: -6%);
+      background: var(--color-primary-hover, var(--color-primary));
+      border-color: var(--color-primary-hover, var(--color-primary));
     }
   }
 

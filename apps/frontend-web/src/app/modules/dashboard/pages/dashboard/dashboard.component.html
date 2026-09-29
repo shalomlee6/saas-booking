@@ -2,17 +2,17 @@
 
   <div class="dashboard-hero">
     <div class="dashboard-hero-text">
-      <h1 class="dashboard-greeting">{{ greeting }} ✨</h1>
+      <h1 class="dashboard-greeting">{{ greeting() }} ✨</h1>
       <p class="dashboard-subtitle">{{ todaySummaryText$ | async }}</p>
     </div>
-    <div class="dashboard-period-filter" role="tablist" aria-label="טווח נתונים">
+    <div class="dashboard-period-filter" role="tablist" [attr.aria-label]="'dashboard.dataRangeLabel' | translate">
       <button
         type="button"
         class="dashboard-pill"
         [class.dashboard-pill-active]="selectedPeriod() === 'week'"
         (click)="setPeriod('week')"
       >
-        שבוע
+        {{ 'dashboard.periodWeek' | translate }}
       </button>
       <button
         type="button"
@@ -20,7 +20,7 @@
         [class.dashboard-pill-active]="selectedPeriod() === 'month'"
         (click)="setPeriod('month')"
       >
-        חודש
+        {{ 'dashboard.periodMonth' | translate }}
       </button>
       <button
         type="button"
@@ -28,7 +28,7 @@
         [class.dashboard-pill-active]="selectedPeriod() === 'year'"
         (click)="setPeriod('year')"
       >
-        שנה
+        {{ 'dashboard.periodYear' | translate }}
       </button>
     </div>
   </div>
@@ -37,14 +37,14 @@
     @if (insightsState$ | async; as insightsState) {
       @if (insightsState.error) {
         <div class="dashboard-empty">
-          לא ניתן לטעון נתוני דשבורד.
-          <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+          {{ 'dashboard.errorLoadDashboard' | translate }}
+          <button type="button" class="dashboard-link" (click)="retryInsights()">{{ 'common.retry' | translate }}</button>
         </div>
       } @else if (insightsState.insights; as insights) {
         <div class="dashboard-kpi">
           <div class="dashboard-kpi-head">
             <span class="dashboard-kpi-icon"><i class="pi pi-wallet" aria-hidden="true"></i></span>
-            <span class="dashboard-kpi-label">הכנסות {{ periodLabel() }}</span>
+            <span class="dashboard-kpi-label">{{ 'dashboard.revenuePeriod' | translate: { period: periodLabel() } }}</span>
           </div>
           <span class="dashboard-kpi-value" dir="ltr">{{ insights.totalRevenue | currency: 'ILS' }}</span>
           @if (revenueSparkline$ | async; as bars) {
@@ -59,7 +59,7 @@
         <div class="dashboard-kpi">
           <div class="dashboard-kpi-head">
             <span class="dashboard-kpi-icon"><i class="pi pi-calendar" aria-hidden="true"></i></span>
-            <span class="dashboard-kpi-label">תורים {{ periodLabel() }}</span>
+            <span class="dashboard-kpi-label">{{ 'dashboard.appointmentsPeriod' | translate: { period: periodLabel() } }}</span>
           </div>
           <span class="dashboard-kpi-value">{{ insights.appointmentsCount }}</span>
           <span class="dashboard-kpi-sub">&nbsp;</span>
@@ -68,12 +68,12 @@
         <div class="dashboard-kpi">
           <div class="dashboard-kpi-head">
             <span class="dashboard-kpi-icon"><i class="pi pi-star" aria-hidden="true"></i></span>
-            <span class="dashboard-kpi-label">ממוצע לתור</span>
+            <span class="dashboard-kpi-label">{{ 'dashboard.avgPerAppointment' | translate }}</span>
           </div>
           <span class="dashboard-kpi-value" dir="ltr">{{ avgPerAppointment$ | async | currency: 'ILS' }}</span>
           <span class="dashboard-kpi-sub">
             @if (topServiceName$ | async; as svc) {
-              {{ svc }} הוא השירות המבוקש
+              {{ 'dashboard.topServiceSuffix' | translate: { service: svc } }}
             } @else {
               &nbsp;
             }
@@ -83,10 +83,10 @@
         <div class="dashboard-kpi">
           <div class="dashboard-kpi-head">
             <span class="dashboard-kpi-icon"><i class="pi pi-users" aria-hidden="true"></i></span>
-            <span class="dashboard-kpi-label">לקוחות לא פעילות</span>
+            <span class="dashboard-kpi-label">{{ 'dashboard.inactiveCustomers' | translate }}</span>
           </div>
           <span class="dashboard-kpi-value">{{ insights.inactiveCustomersCount }}</span>
-          <a routerLink="/customers" class="dashboard-kpi-cta">לצפייה בלקוחות ←</a>
+          <a routerLink="/customers" class="dashboard-kpi-cta">{{ 'dashboard.viewCustomersArrow' | translate }}</a>
         </div>
       } @else {
         @for (i of [1, 2, 3, 4]; track i) {
@@ -103,23 +103,23 @@
 
     <div class="dashboard-card dashboard-agenda-card">
       <div class="dashboard-card-header">
-        <span class="dashboard-card-title">התורים של היום</span>
+        <span class="dashboard-card-title">{{ 'dashboard.todaysAppointments' | translate }}</span>
         @if (todayAgendaState$ | async; as state) {
           <span class="dashboard-count-badge">{{ state.rows.length }}</span>
         }
-        <a routerLink="/appointments" class="dashboard-link dashboard-card-header-link">לכל התורים</a>
+        <a routerLink="/appointments" class="dashboard-link dashboard-card-header-link">{{ 'dashboard.viewAllAppointments' | translate }}</a>
       </div>
 
       @if (todayAgendaState$ | async; as state) {
         @if (state.error) {
           <p class="dashboard-empty">
-            לא ניתן לטעון תורים.
-            <button type="button" class="dashboard-link" (click)="retryAppointments()">נסי שוב</button>
+            {{ 'dashboard.errorLoadAppointments' | translate }}
+            <button type="button" class="dashboard-link" (click)="retryAppointments()">{{ 'common.retry' | translate }}</button>
           </p>
         } @else if (state.loading) {
-          <p class="dashboard-empty">טוען…</p>
+          <p class="dashboard-empty">{{ 'common.loading' | translate }}</p>
         } @else if (state.rows.length === 0) {
-          <p class="dashboard-empty">אין תורים היום.</p>
+          <p class="dashboard-empty">{{ 'dashboard.noAppointmentsToday' | translate }}</p>
         } @else {
           <div class="dashboard-agenda-list">
             @for (row of state.rows; track row.apt._id) {
@@ -135,7 +135,7 @@
                   <span class="dashboard-agenda-meta">
                     {{ row.apt.serviceName || '—' }}
                     @if (row.apt.durationMinutes) {
-                      <span> · {{ row.apt.durationMinutes }} min</span>
+                      <span> · {{ row.apt.durationMinutes }} {{ 'common.minutesShort' | translate }}</span>
                     }
                     @if (row.apt.price) {
                       <span> · <span dir="ltr">{{ row.apt.price | currency: 'ILS' }}</span></span>
@@ -144,10 +144,10 @@
                 </span>
 
                 @if (row.isNext) {
-                  <span class="dashboard-next-badge">הבא בתור</span>
+                  <span class="dashboard-next-badge">{{ 'dashboard.nextInLine' | translate }}</span>
                   @if (row.whatsapp) {
                     <a [href]="row.whatsapp" target="_blank" rel="noopener noreferrer" class="dashboard-whatsapp-btn">
-                      <i class="pi pi-comments" aria-hidden="true"></i>הודעה
+                      <i class="pi pi-comments" aria-hidden="true"></i>{{ 'dashboard.sendMessage' | translate }}
                     </a>
                   }
                 } @else {
@@ -159,7 +159,7 @@
                       [disabled]="confirmingId() === row.apt._id"
                       (click)="confirmAppointment(row.apt._id)"
                     >
-                      <i class="pi pi-check" aria-hidden="true"></i>אשרי
+                      <i class="pi pi-check" aria-hidden="true"></i>{{ 'dashboard.confirmAction' | translate }}
                     </button>
                   }
                 }
@@ -172,8 +172,8 @@
       @if (workingHoursClosedToday()) {
         <div class="dashboard-agenda-footer">
           <i class="pi pi-info-circle" aria-hidden="true"></i>
-          <span>היום עדיין ללא שעות עבודה — הלקוחות לא יכולות להזמין.</span>
-          <a routerLink="/settings/working-hours" class="dashboard-link">הגדירי שעות</a>
+          <span>{{ 'dashboard.closedTodayNotice' | translate }}</span>
+          <a routerLink="/settings/working-hours" class="dashboard-link">{{ 'dashboard.setHours' | translate }}</a>
         </div>
       }
     </div>
@@ -181,15 +181,15 @@
     <div class="dashboard-side-col">
       <div class="dashboard-card dashboard-chart-card">
         <div class="dashboard-card-header">
-          <span class="dashboard-card-title">הכנסות לפי יום</span>
+          <span class="dashboard-card-title">{{ 'dashboard.revenueByWeekday' | translate }}</span>
         </div>
         @if (revenueByWeekdayChart$ | async; as chart) {
           @if (chart.loading) {
-            <p class="dashboard-empty">טוען…</p>
+            <p class="dashboard-empty">{{ 'common.loading' | translate }}</p>
           } @else if (chart.error) {
             <p class="dashboard-empty">
-              לא ניתן לטעון נתוני גרף.
-              <button type="button" class="dashboard-link" (click)="retryInsights()">נסי שוב</button>
+              {{ 'dashboard.errorLoadChart' | translate }}
+              <button type="button" class="dashboard-link" (click)="retryInsights()">{{ 'common.retry' | translate }}</button>
             </p>
           } @else {
             <div class="dashboard-chart-wrap">
@@ -214,15 +214,15 @@
 
       <div class="dashboard-card dashboard-customers-card">
         <div class="dashboard-card-header">
-          <span class="dashboard-card-title">לקוחות מובילות</span>
-          <a routerLink="/customers" class="dashboard-link dashboard-card-header-link">לכל הלקוחות</a>
+          <span class="dashboard-card-title">{{ 'dashboard.topCustomers' | translate }}</span>
+          <a routerLink="/customers" class="dashboard-link dashboard-card-header-link">{{ 'dashboard.viewAllCustomers' | translate }}</a>
         </div>
         @if (insightsState$ | async; as insightsState) {
           @if (insightsState.error) {
-            <p class="dashboard-empty">לא ניתן לטעון לקוחות מובילות.</p>
+            <p class="dashboard-empty">{{ 'dashboard.errorLoadTopCustomers' | translate }}</p>
           } @else if (topCustomersView$ | async; as customers) {
             @if (customers.length === 0) {
-              <p class="dashboard-empty">אין נתונים עדיין.</p>
+              <p class="dashboard-empty">{{ 'dashboard.noDataYet' | translate }}</p>
             } @else {
               <div class="dashboard-customers-list">
                 @for (c of customers; track c.name) {
@@ -238,7 +238,7 @@
               </div>
             }
           } @else {
-            <p class="dashboard-empty">טוען…</p>
+            <p class="dashboard-empty">{{ 'common.loading' | translate }}</p>
           }
         }
       </div>

@@ -54,6 +54,15 @@ export function setPublicCustomerSessionCookie(res: Response, token: string): vo
   res.cookie(PUBLIC_CUSTOMER_COOKIE_NAME, token, publicCustomerCookieOptions());
 }
 
+export function clearPublicCustomerCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/api/public',
+  };
+}
+
 /** JWT used by public customer OTP login and guest booking. */
 export function signPublicCustomerToken(args: {
   customerId: string;

@@ -119,7 +119,7 @@
 }
 
 ::ng-deep .pl-gal__add.p-button.p-button-outlined {
-  color: $pl-primary;
+  color: $pl-ink;
   border-color: $pl-primary-light;
   background: $pl-primary-pale;
 }
@@ -137,5 +137,5 @@
 }
 
 ::ng-deep .pl-gal__save.p-button .p-button-icon {
-  color: #fff;
+  color: $pl-on-primary;
 }

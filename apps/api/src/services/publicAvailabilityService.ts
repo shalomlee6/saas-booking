@@ -8,15 +8,22 @@ import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { buildSlotsFromMergedRanges } from './publicBookingTime';
 import { ForbiddenError, NotFoundError } from '../errors/httpErrors';
+import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 
 /**
  * Shared availability logic: openingHours + overrides + existing appointments.
  * Overlap rule: slotStart < apptEnd AND slotEnd > apptStart (exclusive end).
+ *
+ * `customerId` is optional (unknown for anonymous browsing) — when present, a
+ * per-customer/per-service duration override (CustomerServiceConfig) takes precedence
+ * over the service's own catalog duration, so slots reflect this specific customer's
+ * actual expected visit length.
  */
 export async function getAvailabilityForBusiness(
   businessId: Types.ObjectId,
   serviceId: string,
-  dateStr: string
+  dateStr: string,
+  customerId?: string
 ): Promise<{ date: string; slots: string[] }> {
   const settings = await ensureBusinessSettings(businessId);
   if (!settings.features?.bookingEnabled) {
@@ -47,7 +54,8 @@ export async function getAvailabilityForBusiness(
     .select('start end status')
     .lean();
 
-  const durationMinutes = service.durationMinutes ?? 30;
+  const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
+  const durationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
   const slotStep = openingHours.slotStepMinutes ?? 30;
 
   const overrideDoc = await AvailabilityOverride.findOne({ businessId, date: dateStr })

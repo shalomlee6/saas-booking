@@ -254,8 +254,10 @@
                 class="book-field-input"
                 placeholder="מספר טלפון"
                 [ngModel]="guestPhone()"
-                (ngModelChange)="guestPhone.set($event)"
+                (ngModelChange)="onGuestPhoneInput($event)"
                 autocomplete="tel"
+                inputmode="numeric"
+                maxlength="10"
               />
             </div>
           </div>

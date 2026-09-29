@@ -9,6 +9,7 @@ import { validateEnv } from './config/env';
 import { businessRouter } from './routes/business';
 import { authRouter } from './routes/auth';
 import { customersRouter } from './routes/customers';
+import { customerServiceConfigsRouter } from './routes/customerServiceConfigs';
 import { servicesRouter } from './routes/services';
 import { appointmentsRouter } from './routes/appointments';
 import { publicRouter } from './routes/public';
@@ -17,7 +18,6 @@ import { adminRouter } from './routes/admin';
 import { errorHandler } from './middleware/errorHandler';
 import { mountUploadStatic } from './middleware/serveUploads';
 import {
-  authRouteLimiter,
   publicRouteLimiter,
   apiRouteLimiter,
   adminRouteLimiter,
@@ -35,9 +35,11 @@ const allowedOrigins = (process.env.CLIENT_ORIGIN || 'http://localhost:4200')
 
 mountUploadStatic(app);
 
-if (env.NODE_ENV === 'production') {
-  app.set('trust proxy', 1);
-}
+// Must match the real infra topology (e.g. one hop behind an AWS ALB) — see
+// TRUST_PROXY in env.ts. Getting this wrong either collapses every client to
+// the load balancer's own IP (one shared rate-limit bucket for everyone) or
+// makes the client IP spoofable via X-Forwarded-For.
+app.set('trust proxy', env.trustProxy);
 
 app.use(
   helmet({
@@ -73,9 +75,12 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(requestLogger);
-app.use('/api/auth', authRouteLimiter, authRouter);
+// Frequently-polled routes (/me, /logout) live on this same router, so the strict
+// sensitive-tier limit applies per-route instead (see auth.ts) rather than here.
+app.use('/api/auth', apiRouteLimiter, authRouter);
 app.use('/api/business', apiRouteLimiter, businessRouter);
 app.use('/api/customers', apiRouteLimiter, customersRouter);
+app.use('/api/customer-service-configs', apiRouteLimiter, customerServiceConfigsRouter);
 app.use('/api/services', apiRouteLimiter, servicesRouter);
 app.use('/api/appointments', apiRouteLimiter, appointmentsRouter);
 app.use('/api/public', publicRouteLimiter, publicRouter);

@@ -1,5 +1,5 @@
 <div class="pl-hero-wrap">
-  <div class="pl-hero-slider">
+  <div class="pl-hero-slider" [class.pl-hero-slider--play-entrance]="playEntrance()">
     <p-carousel
       [value]="carouselSlides()"
       [numVisible]="1"
@@ -23,20 +23,5 @@
         </div>
       </ng-template>
     </p-carousel>
-  </div>
-
-  <div class="pl-hero-intro" dir="rtl">
-    <p class="pl-hero-intro__name">{{ businessName() }}</p>
-    <p class="pl-hero-intro__tagline">{{ tagline() }}</p>
-    @if (description().trim()) {
-      <p class="pl-hero-intro__desc">{{ description() }}</p>
-    }
-    <p-button
-      label="קביעת תור"
-      icon="pi pi-calendar-plus"
-      iconPos="right"
-      styleClass="pl-hero-intro__cta"
-      (onClick)="book.emit()"
-    />
   </div>
 </div>

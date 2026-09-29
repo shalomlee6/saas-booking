@@ -1,32 +1,57 @@
 <div class="business-theme-settings-page">
-  <h1 class="business-theme-settings-title">Theme settings</h1>
-  <p class="business-theme-settings-subtitle">Customize your business appearance.</p>
+  <h1 class="business-theme-settings-title">{{ 'settings.themeTitle' | translate }}</h1>
+  <p class="business-theme-settings-subtitle">{{ 'settings.themeSubtitle' | translate }}</p>
+
+  <div class="business-theme-settings-card">
+    <h2 class="business-theme-settings-card-title">{{ 'settings.languageCardTitle' | translate }}</h2>
+    <p class="business-theme-settings-card-subtitle">{{ 'settings.languageCardDescription' | translate }}</p>
+    <div class="language-toggle" role="group" [attr.aria-label]="'settings.languageCardTitle' | translate">
+      <button
+        type="button"
+        class="language-toggle-btn"
+        [class.language-toggle-btn--active]="language.language() === 'he'"
+        [attr.aria-pressed]="language.language() === 'he'"
+        (click)="setLanguage('he')"
+      >
+        עברית
+      </button>
+      <button
+        type="button"
+        class="language-toggle-btn"
+        [class.language-toggle-btn--active]="language.language() === 'en'"
+        [attr.aria-pressed]="language.language() === 'en'"
+        (click)="setLanguage('en')"
+      >
+        English
+      </button>
+    </div>
+  </div>
 
   <div class="business-theme-settings-card">
     <form [formGroup]="form" (ngSubmit)="save()" class="business-theme-settings-form">
       <div class="business-theme-settings-field">
-        <label for="themeMode">Theme</label>
+        <label for="themeMode">{{ 'settings.themeModeLabel' | translate }}</label>
         <select id="themeMode" formControlName="themeMode" class="business-theme-settings-input">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
+          <option value="light">{{ 'settings.themeModeLight' | translate }}</option>
+          <option value="dark">{{ 'settings.themeModeDark' | translate }}</option>
         </select>
       </div>
       <div class="business-theme-settings-field">
-        <label for="primaryColor">Primary color</label>
-        <input id="primaryColor" type="text" formControlName="primaryColor" class="business-theme-settings-input" placeholder="#3787F6" />
+        <label for="primaryColor">{{ 'settings.primaryColorLabel' | translate }}</label>
+        <input id="primaryColor" type="text" dir="ltr" formControlName="primaryColor" class="business-theme-settings-input" placeholder="#F35271" />
       </div>
       <div class="business-theme-settings-field">
-        <label for="sidebarColor">Sidebar color</label>
-        <input id="sidebarColor" type="text" formControlName="sidebarColor" class="business-theme-settings-input" placeholder="#0F172A" />
+        <label for="sidebarColor">{{ 'settings.sidebarColorLabel' | translate }}</label>
+        <input id="sidebarColor" type="text" dir="ltr" formControlName="sidebarColor" class="business-theme-settings-input" placeholder="#0F172A" />
       </div>
       @if (error()) {
         <p class="business-theme-settings-error">{{ error() }}</p>
       }
       <div class="business-theme-settings-actions">
         <button type="submit" class="business-theme-settings-btn business-theme-settings-btn-primary" [disabled]="saving()">
-          {{ saving() ? 'Saving…' : 'Save' }}
+          {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
         </button>
-        <a routerLink="/dashboard" class="business-theme-settings-btn business-theme-settings-btn-ghost">Cancel</a>
+        <a routerLink="/dashboard" class="business-theme-settings-btn business-theme-settings-btn-ghost">{{ 'common.cancel' | translate }}</a>
       </div>
     </form>
   </div>

@@ -12,6 +12,21 @@ export interface AdminBusiness {
   createdAt: string;
   updatedAt: string;
   ui?: BusinessUi;
+  settings?: {
+    theme?: {
+      preset?: string;
+      defaultMode?: 'light' | 'dark';
+    };
+  };
+}
+
+export interface UpdateBusinessUiBody extends Partial<BusinessUi> {
+  publicTheme?: { preset?: string; defaultMode?: 'light' | 'dark' };
+}
+
+export interface UpdateBusinessUiResponse {
+  ui: BusinessUi;
+  publicTheme?: { preset?: string; defaultMode?: 'light' | 'dark' };
 }
 
 export interface ImpersonateResponse {
@@ -53,6 +68,22 @@ export interface AdminBusinessFeatures {
 export interface AdminUserDetail extends AdminUserRow {
   updatedAt?: string;
   businessFeatures?: AdminBusinessFeatures | null;
+}
+
+export interface AdminUserDeleteImpact {
+  email: string;
+  role: string;
+  business: { id: string; name: string; slug: string } | null;
+  counts: {
+    appointments: number;
+    customers: number;
+    services: number;
+    staffUsers: number;
+    reviews: number;
+    availabilityOverrides: number;
+    customerServiceConfigs: number;
+    uploadedFiles: number;
+  };
 }
 
 export type PatchAdminUserBody = {
@@ -207,8 +238,8 @@ export class AdminApiService {
     return this.api.post<{ ok: boolean }>('admin/stop-impersonate', {});
   }
 
-  updateBusinessUi(businessId: string, ui: Partial<BusinessUi>): Observable<{ ui: BusinessUi }> {
-    return this.api.patch<{ ui: BusinessUi }>(`admin/businesses/${businessId}/ui`, ui);
+  updateBusinessUi(businessId: string, body: UpdateBusinessUiBody): Observable<UpdateBusinessUiResponse> {
+    return this.api.patch<UpdateBusinessUiResponse>(`admin/businesses/${businessId}/ui`, body);
   }
 
   listUsers(query: ApiQueryParams): Observable<AdminUsersPage> {
@@ -241,6 +272,10 @@ export class AdminApiService {
 
   deleteUser(id: string): Observable<void> {
     return this.api.delete<void>(`admin/users/${id}`);
+  }
+
+  getUserDeleteImpact(id: string): Observable<AdminUserDeleteImpact> {
+    return this.api.get<AdminUserDeleteImpact>(`admin/users/${id}/delete-impact`);
   }
 
   resetUserPassword(id: string): Observable<{ message: string }> {

@@ -1,14 +1,14 @@
 <p-toast />
-<div class="sa-create" dir="rtl">
-  <a routerLink="/super-admin/users" class="sa-create__back">← חזרה למשתמשים</a>
-  <h1 class="sa-create__title">יצירת בעל עסק חדש</h1>
-  <p class="sa-create__sub">המערכת תיצור אוטומטית את כל הנתונים הדרושים</p>
+<div class="sa-create">
+  <a routerLink="/super-admin/users" class="sa-create__back">← Back to users</a>
+  <h1 class="sa-create__title">Create a new business owner</h1>
+  <p class="sa-create__sub">The system will automatically provision everything needed.</p>
 
   <div class="sa-create__grid">
     <section class="sa-create__panel">
-      <h2 class="sa-create__section-title">פרטי העסק</h2>
+      <h2 class="sa-create__section-title">Business details</h2>
       <label class="sa-create__field">
-        <span>שם העסק *</span>
+        <span>Business name *</span>
         <input
           pInputText
           class="sa-create__input"
@@ -22,31 +22,30 @@
         }
       </label>
       <label class="sa-create__field">
-        <span>מזהה URL (slug) *</span>
+        <span>URL slug *</span>
         <input
           pInputText
           class="sa-create__input"
-          dir="ltr"
           [value]="slugInput()"
           (input)="onSlugInput($any($event.target).value)"
           [class.sa-create__input--err]="submitAttempted() && fieldError().slug"
         />
-        <p class="sa-create__hint" dir="ltr">
-          הלינק שלך: {{ bookingPreviewBase() }}/b/{{ previewSlug() || '…' }}
+        <p class="sa-create__hint">
+          Their link: {{ bookingPreviewBase() }}/b/{{ previewSlug() || '…' }}
         </p>
         <div class="sa-create__slug-status">
           @switch (slugCheck()) {
             @case ('checking') {
-              <span class="sa-create__slug-muted">בודק…</span>
+              <span class="sa-create__slug-muted">Checking…</span>
             }
             @case ('ok') {
-              <span class="sa-create__slug-ok">✓ זמין</span>
+              <span class="sa-create__slug-ok">✓ Available</span>
             }
             @case ('bad') {
-              <span class="sa-create__slug-bad">✗ תפוס</span>
+              <span class="sa-create__slug-bad">✗ Taken</span>
             }
             @case ('invalid') {
-              <span class="sa-create__slug-bad">✗ קצר מדי</span>
+              <span class="sa-create__slug-bad">✗ Too short</span>
             }
             @default {
               <span class="sa-create__slug-muted"></span>
@@ -57,11 +56,11 @@
           <span class="sa-create__err">{{ fieldError().slug }}</span>
         }
         <button type="button" class="sa-create__linkish" (click)="regenerateSlugFromName()">
-          יצירה מחדש מהשם
+          Regenerate from name
         </button>
       </label>
       <label class="sa-create__field">
-        <span>אזור זמן</span>
+        <span>Timezone</span>
         <p-select
           [options]="timezoneOptions"
           [ngModel]="timezone()"
@@ -74,9 +73,9 @@
     </section>
 
     <section class="sa-create__panel">
-      <h2 class="sa-create__section-title">פרטי בעל העסק</h2>
+      <h2 class="sa-create__section-title">Owner details</h2>
       <label class="sa-create__field">
-        <span>שם מלא *</span>
+        <span>Full name *</span>
         <input
           pInputText
           class="sa-create__input"
@@ -90,11 +89,10 @@
         }
       </label>
       <label class="sa-create__field">
-        <span>אימייל *</span>
+        <span>Email *</span>
         <input
           pInputText
           class="sa-create__input"
-          dir="ltr"
           [value]="ownerEmail()"
           (input)="ownerEmail.set($any($event.target).value)"
           [class.sa-create__input--err]="submitAttempted() && fieldError().ownerEmail"
@@ -106,23 +104,21 @@
         }
       </label>
       <label class="sa-create__field">
-        <span>טלפון</span>
+        <span>Phone</span>
         <input
           pInputText
           class="sa-create__input"
-          dir="ltr"
           [value]="ownerPhone()"
           (input)="ownerPhone.set($any($event.target).value)"
           autocomplete="tel"
         />
       </label>
       <label class="sa-create__field">
-        <span>סיסמה זמנית *</span>
+        <span>Temporary password *</span>
         <div class="sa-create__pw-row">
           <input
             pInputText
             class="sa-create__input sa-create__input--grow"
-            dir="ltr"
             [type]="passwordVisible() ? 'text' : 'password'"
             [value]="ownerPassword()"
             (input)="ownerPassword.set($any($event.target).value)"
@@ -130,11 +126,11 @@
             autocomplete="new-password"
           />
           <button type="button" class="sa-create__ghost" (click)="togglePasswordVisible()">
-            {{ passwordVisible() ? 'הסתר' : 'הצג' }}
+            {{ passwordVisible() ? 'Hide' : 'Show' }}
           </button>
         </div>
         <button type="button" class="sa-create__linkish" (click)="regeneratePassword()">
-          צור סיסמה אוטומטית 🔄
+          Generate password 🔄
         </button>
         @if (submitAttempted() && fieldError().password) {
           <span class="sa-create__err">{{ fieldError().password }}</span>
@@ -143,8 +139,8 @@
     </section>
   </div>
 
-  <section class="sa-create__plans" aria-label="בחירת תוכנית">
-    <h2 class="sa-create__section-title sa-create__section-title--full">תוכנית</h2>
+  <section class="sa-create__plans" aria-label="Choose a plan">
+    <h2 class="sa-create__section-title sa-create__section-title--full">Plan</h2>
     <div class="sa-create__plan-grid">
       <button
         type="button"
@@ -153,12 +149,12 @@
         (click)="selectPlan('free')"
       >
         <span class="sa-create__plan-name">Free</span>
-        <span class="sa-create__plan-price">₪0/חודש</span>
+        <span class="sa-create__plan-price">{{ 0 | saCurrency }}/mo</span>
         <ul class="sa-create__plan-list">
-          <li>✓ 1 אנשי צוות</li>
-          <li>✓ 2 שירותים</li>
-          <li>✗ אנליטיקה</li>
-          <li>✗ דומיין מותאם</li>
+          <li>✓ 1 staff member</li>
+          <li>✓ 2 services</li>
+          <li>✗ Analytics</li>
+          <li>✗ Custom domain</li>
         </ul>
       </button>
       <button
@@ -167,14 +163,14 @@
         [class.sa-create__plan--active]="selectedPlan() === 'pro'"
         (click)="selectPlan('pro')"
       >
-        <span class="sa-create__plan-badge">הכי פופולרי</span>
+        <span class="sa-create__plan-badge">Most popular</span>
         <span class="sa-create__plan-name">Pro ⭐</span>
-        <span class="sa-create__plan-price">₪99/חודש</span>
+        <span class="sa-create__plan-price">{{ 99 | saCurrency }}/mo</span>
         <ul class="sa-create__plan-list">
-          <li>✓ 5 אנשי צוות</li>
-          <li>✓ 10 שירותים</li>
-          <li>✓ אנליטיקה</li>
-          <li>✗ דומיין מותאם</li>
+          <li>✓ 5 staff members</li>
+          <li>✓ 10 services</li>
+          <li>✓ Analytics</li>
+          <li>✗ Custom domain</li>
         </ul>
       </button>
       <button
@@ -184,19 +180,19 @@
         (click)="selectPlan('premium')"
       >
         <span class="sa-create__plan-name">Premium 👑</span>
-        <span class="sa-create__plan-price">₪199/חודש</span>
+        <span class="sa-create__plan-price">{{ 199 | saCurrency }}/mo</span>
         <ul class="sa-create__plan-list">
-          <li>✓ ללא הגבלת צוות</li>
-          <li>✓ ללא הגבלת שירותים</li>
-          <li>✓ כל הפיצ׳רים</li>
-          <li>✓ דומיין מותאם</li>
+          <li>✓ Unlimited staff</li>
+          <li>✓ Unlimited services</li>
+          <li>✓ All features</li>
+          <li>✓ Custom domain</li>
         </ul>
       </button>
     </div>
   </section>
 
   <p-button
-    label="צור עסק ומנהל"
+    label="Create business and owner"
     styleClass="sa-create__submit"
     [loading]="submitting()"
     (onClick)="onSubmit()"

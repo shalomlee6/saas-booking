@@ -10,7 +10,14 @@ export interface PublicBusiness {
   name: string;
   slug: string;
   settings?: {
-    theme?: { colors?: { primary?: string }; logoUrl?: string };
+    theme?: {
+      /** Theme preset id (see `core/theming/theme-presets.ts`); resolved client-side. */
+      preset?: string;
+      /** Business-configured default light/dark mode; the customer's own explicit
+       *  choice (stored client-side) always takes priority over this. */
+      defaultMode?: 'light' | 'dark';
+      logoUrl?: string;
+    };
     plan?: string;
   };
 }
@@ -164,10 +171,12 @@ export interface UpcomingAppointment {
   time: string;   // HH:mm
   status: string;
   serviceName: string;
+  serviceId?: string;
 }
 
 export interface UpcomingAppointmentResponse {
   appointment: UpcomingAppointment | null;
+  appointments?: UpcomingAppointment[];
 }
 
 export interface RequestOtpBody {
@@ -229,6 +238,18 @@ export class PublicApiService {
       `public/${encodeURIComponent(businessSlug)}/auth/verify-otp`,
       body
     );
+  }
+
+  /**
+   * POST /api/public/auth/logout
+   * Clears the server-side httpOnly session cookie. Best-effort: callers clear the
+   * client-side session (localStorage token + signals) regardless of this call's outcome.
+   */
+  logoutPublicCustomer(): Observable<{ ok: boolean }> {
+    if (environment.mockPublicApi) {
+      return of({ ok: true });
+    }
+    return this.api.post<{ ok: boolean }>('public/auth/logout', {});
   }
 
   /**
@@ -415,15 +436,15 @@ export class PublicApiService {
 
   /**
    * GET /api/public/appointments/upcoming
-   * Returns the authenticated customer's nearest future non-cancelled appointment,
-   * or { appointment: null } for guests or when none exists.
+   * Returns the authenticated customer's upcoming non-cancelled appointments,
+   * sorted soonest-first. `appointment` is the nearest item for the home preview.
    */
   getUpcomingAppointment(): Observable<UpcomingAppointmentResponse> {
     if (environment.mockPublicApi) {
       // Return no appointment in mock mode.  Returning a hardcoded appointment
       // for every session regardless of identity would mask identity-isolation
       // bugs during development and testing.
-      return of({ appointment: null }).pipe(delay(400));
+      return of({ appointment: null, appointments: [] }).pipe(delay(400));
     }
     return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming');
   }

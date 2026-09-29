@@ -86,13 +86,25 @@ export function normalizeDayToSlots(
   return { enabled, slots };
 }
 
+export interface DaySummaryLabels {
+  closed: string;
+  open: string;
+  blocksSuffix: (count: number) => string;
+}
+
+const DEFAULT_DAY_SUMMARY_LABELS: DaySummaryLabels = {
+  closed: 'Closed',
+  open: 'Open',
+  blocksSuffix: (count) => ` (${count} blocks)`,
+};
+
 /** Human-readable summary: "Closed" or "Open: 08:00–18:00 (20 blocks)". */
-export function getDaySummary(day: WorkingHoursDaySlots): string {
+export function getDaySummary(day: WorkingHoursDaySlots, labels: DaySummaryLabels = DEFAULT_DAY_SUMMARY_LABELS): string {
   const { enabled, slots } = day;
-  if (!enabled) return 'Closed';
+  if (!enabled) return labels.closed;
   let count = 0;
   for (const s of slots) if (s) count++;
-  if (count === 0) return 'Closed';
+  if (count === 0) return labels.closed;
   const runs: { start: number; end: number }[] = [];
   let runStart = -1;
   for (let i = 0; i < SLOTS_PER_DAY; i++) {
@@ -112,8 +124,8 @@ export function getDaySummary(day: WorkingHoursDaySlots): string {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
   };
   const rangeStrs = runs.map((r) => `${fmt(r.start)}–${fmt(r.end)}`);
-  const extra = count > 0 ? ` (${count} blocks)` : '';
-  return `Open: ${rangeStrs.join(', ')}${extra}`;
+  const extra = count > 0 ? labels.blocksSuffix(count) : '';
+  return `${labels.open}: ${rangeStrs.join(', ')}${extra}`;
 }
 
 /** Display label for slot index, e.g. "08:00". */

@@ -43,7 +43,10 @@ export class CustomerLoginComponent implements OnInit {
   constructor() {
     this.formStep1 = this.fb.group({
       name: ['', [Validators.required, Validators.minLength(2)]],
-      phone: ['', [Validators.required, Validators.pattern(/^[\d\s+\-()]+$/)]],
+      // Local Israeli mobile format only (e.g. 0501234567) — matches the digit cap on
+      // the input itself. Kept in sync with backend `toE164()`, which expects exactly
+      // this shape (leading 0 + 9 digits) for SMS delivery.
+      phone: ['', [Validators.required, Validators.pattern(/^0\d{9}$/)]],
     });
     this.formStep2 = this.fb.group({
       code: ['', [Validators.required, Validators.minLength(4), Validators.maxLength(8)]],
@@ -73,6 +76,16 @@ export class CustomerLoginComponent implements OnInit {
   /** Normalize phone to digits only for API. */
   private normalizePhone(value: string): string {
     return value.replace(/\D/g, '');
+  }
+
+  /** Strips non-digits and caps at 10 as the user types — matches Israeli local mobile format. */
+  onPhoneInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digitsOnly = input.value.replace(/\D/g, '').slice(0, 10);
+    if (digitsOnly !== input.value) {
+      input.value = digitsOnly;
+    }
+    this.formStep1.get('phone')?.setValue(digitsOnly);
   }
 
   /** Split name into first/last (first word = firstName, rest = lastName). */

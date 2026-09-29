@@ -13,6 +13,7 @@ import {
   type AdminPlanTier,
 } from '../../services/admin-api.service';
 import { catchError, debounceTime, distinctUntilChanged, of, switchMap } from 'rxjs';
+import { SaCurrencyPipe } from '../../shared/sa-currency.pipe';
 
 function normalizeCreateUserSlug(raw: string): string {
   return raw
@@ -56,6 +57,7 @@ function randomPassword(): string {
     InputTextModule,
     SelectModule,
     ToastModule,
+    SaCurrencyPipe,
   ],
   providers: [MessageService],
   templateUrl: './super-admin-create-user.component.html',
@@ -172,15 +174,15 @@ export class SuperAdminCreateUserComponent {
       slug?: string;
       password?: string;
     } = {};
-    if (!biz) err.businessName = 'נדרש שם עסק';
-    if (!owner) err.ownerName = 'נדרש שם מלא';
+    if (!biz) err.businessName = 'Business name is required';
+    if (!owner) err.ownerName = 'Full name is required';
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      err.ownerEmail = 'אימייל לא תקין';
+      err.ownerEmail = 'Invalid email address';
     }
-    if (slugNorm.length < 2) err.slug = 'נדרש slug באורך 2 תווים לפחות';
-    if (this.slugCheck() === 'bad') err.slug = 'ה־slug תפוס';
-    if (this.slugCheck() === 'checking') err.slug = 'ממתין לאימות slug…';
-    if (pw.length < 8) err.password = 'סיסמה קצרה מדי (מינ׳ 8 תווים)';
+    if (slugNorm.length < 2) err.slug = 'Slug must be at least 2 characters';
+    if (this.slugCheck() === 'bad') err.slug = 'That slug is already taken';
+    if (this.slugCheck() === 'checking') err.slug = 'Waiting for slug check…';
+    if (pw.length < 8) err.password = 'Password is too short (min. 8 characters)';
     if (Object.keys(err).length > 0) {
       this.fieldError.set(err);
       return;
@@ -203,15 +205,15 @@ export class SuperAdminCreateUserComponent {
           this.submitting.set(false);
           this.messages.add({
             severity: 'success',
-            summary: 'נוצר בהצלחה',
-            detail: 'העסק נוצר בהצלחה! פרטי הכניסה נשלחו למייל',
+            summary: 'Created successfully',
+            detail: 'Business created! Login details were sent by email.',
           });
           void this.router.navigate(['/super-admin/users']);
         },
         error: (e: { error?: { message?: string } }) => {
           this.submitting.set(false);
-          const msg = e?.error?.message ?? 'שגיאה ביצירה';
-          this.messages.add({ severity: 'error', summary: 'שגיאה', detail: msg });
+          const msg = e?.error?.message ?? 'Failed to create business';
+          this.messages.add({ severity: 'error', summary: 'Error', detail: msg });
         },
       });
   }

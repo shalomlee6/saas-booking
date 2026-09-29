@@ -10,6 +10,46 @@
   --sa-accent: #38bdf8;
   --sa-accent-dim: rgba(56, 189, 248, 0.15);
 
+  // Shared, colorful-but-calm palette for the super-admin panel: one hue per
+  // KPI/data category, reused for card accents, status badges and chart
+  // series so the same category always reads as the same color everywhere.
+  --sa-blue: #2563eb;
+  --sa-blue-soft: #eef4ff;
+  --sa-blue-ink: #1d4ed8;
+  --sa-violet: #7c3aed;
+  --sa-violet-soft: #f4f0fe;
+  --sa-violet-ink: #6d28d9;
+  --sa-teal: #0d9488;
+  --sa-teal-soft: #ecfdf9;
+  --sa-teal-ink: #0f766e;
+  --sa-amber: #d97706;
+  --sa-amber-soft: #fef6e7;
+  --sa-amber-ink: #b45309;
+  --sa-rose: #e11d48;
+  --sa-rose-soft: #fef1f4;
+  --sa-rose-ink: #be123c;
+  --sa-green: #16a34a;
+  --sa-green-soft: #eefdf3;
+  --sa-green-ink: #15803d;
+  --sa-slate: #64748b;
+  --sa-slate-soft: #f1f5f9;
+  --sa-slate-ink: #475569;
+
+  // Recurring neutral "primary action" button (Create User, Save, …) —
+  // deliberately not the tenant brand pink, since this chrome belongs to
+  // the platform, not any one business.
+  --sa-ink: #111827;
+  --sa-ink-hover: #1f2937;
+
+  // Fixed-order palette for multi-series charts (line/bar/pie) — distinct
+  // enough at a glance without being loud.
+  --sa-chart-1: var(--sa-blue);
+  --sa-chart-2: var(--sa-violet);
+  --sa-chart-3: var(--sa-teal);
+  --sa-chart-4: var(--sa-amber);
+  --sa-chart-5: var(--sa-rose);
+  --sa-chart-6: var(--sa-green);
+
   direction: ltr;
   text-align: left;
   display: grid;

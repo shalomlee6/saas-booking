@@ -16,8 +16,9 @@ import {
   getUpcomingCustomerAppointment,
   cancelCustomerAppointment,
 } from '../controllers/publicBookingController';
-import { getPublicAuthMe, requestOtp, verifyOtp } from '../controllers/publicAuthController';
+import { getPublicAuthMe, logoutPublicCustomer, requestOtp, verifyOtp } from '../controllers/publicAuthController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
+import { otpRouteLimiter, otpVerifyRouteLimiter, otpIpRouteLimiter } from '../middleware/rateLimits';
 import { requirePublicCustomer } from '../middleware/requirePublicCustomer';
 import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
 import {
@@ -35,11 +36,13 @@ import {
 export const publicRouter = Router();
 
 publicRouter.get('/auth/me', requirePublicCustomer, asyncHandler(getPublicAuthMe));
+publicRouter.post('/auth/logout', logoutPublicCustomer);
 
 // --- Public booking API (used by customer UI at /b/:slug/book)
 publicRouter.get(
   '/availability',
   validateQuery(publicAvailabilityQuerySchema),
+  optionalPublicCustomer,
   asyncHandler(getPublicAvailability)
 );
 publicRouter.get(
@@ -61,6 +64,7 @@ publicRouter.get(
   '/businesses/:slug/availability',
   validateParams(slugParamsSchema),
   validateQuery(slugAvailabilityQuerySchema),
+  optionalPublicCustomer,
   asyncHandler(getAvailability)
 );
 publicRouter.post(
@@ -101,11 +105,15 @@ publicRouter.post(
 // OTP auth
 publicRouter.post(
   '/:businessSlug/auth/request-otp',
+  otpIpRouteLimiter,
+  otpRouteLimiter,
   validateParams(legacyBusinessSlugParamsSchema),
   requestOtp
 );
 publicRouter.post(
   '/:businessSlug/auth/verify-otp',
+  otpIpRouteLimiter,
+  otpVerifyRouteLimiter,
   validateParams(legacyBusinessSlugParamsSchema),
   verifyOtp
 );
