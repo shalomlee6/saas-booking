@@ -205,7 +205,7 @@
 .customers-date-range {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: 2.5rem;
 }
 
 .customers-date-range-sep {
@@ -213,7 +213,7 @@
   font-weight: 600;
 }
 
-.p-datepicker-dropdown {
+:host ::ng-deep .customers-date-field .p-datepicker-dropdown {
   padding: 0px 20px;
 }
 

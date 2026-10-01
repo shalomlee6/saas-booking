@@ -208,8 +208,8 @@ export class DashboardComponent {
           {
             label: this.language.t('dashboard.revenueChartLabel'),
             data: [...totals].reverse(),
-            backgroundColor: '#ffd6df',
-            hoverBackgroundColor: '#F35271',
+            backgroundColor: '#C7D2FE',
+            hoverBackgroundColor: '#4F46E5',
             borderRadius: 4,
             maxBarThickness: 32,
           },

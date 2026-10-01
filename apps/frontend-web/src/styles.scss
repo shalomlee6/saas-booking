@@ -2,8 +2,11 @@
 @import "primeicons/primeicons.css";
 
 // ─── Brand palette ────────────────────────────────────────────────────────────
-// Pink is the brand. Used sparingly as an accent, never as a surface.
-// --color-primary = the one true pink. Everything else is neutral.
+// Indigo is the brand. Used sparingly as an accent, never as a surface.
+// --color-primary = the one true indigo. Everything else is neutral — cool
+// slate grays rather than pure neutral gray, to read as one cohesive,
+// professional "indigo-teal" identity rather than a color bolted onto a
+// generic gray shell.
 //
 // Theme scope: the light palette below lives on `:root` as the permanent,
 // document-wide default — it's what the super-admin panel (`.sa-layout`),
@@ -19,13 +22,13 @@
 // impersonation — body-level classes are global by construction.
 
 :root {
-  --color-primary:        #F35271;
-  --color-primary-hover:  #de3b5c;
-  --color-primary-subtle: #fef1f4;
-  --color-primary-muted:  #fbc7d3;
-  --color-primary-ink:    #96263d;
+  --color-primary:        #4F46E5;
+  --color-primary-hover:  #4338CA;
+  --color-primary-subtle: #EEF2FF;
+  --color-primary-muted:  #C7D2FE;
+  --color-primary-ink:    #3730A3;
 
-  --bg-app:               #f5f5f7;
+  --bg-app:               #F5F7FB;
   --bg-card:              #ffffff;
   --bg-sidebar:           #ffffff;
 
@@ -33,13 +36,13 @@
   --color-danger:         #dc2626;
   --color-warning:        #d97706;
 
-  --text-primary:         #111827;
-  --text-secondary:       #374151;
-  --text-muted:           #6b7280;
-  --text-placeholder:     #9ca3af;
+  --text-primary:         #1B2233;
+  --text-secondary:       #4B5468;
+  --text-muted:           #8891A5;
+  --text-placeholder:     #ABB4C4;
 
-  --border-color:         #e5e7eb;
-  --border-color-strong:  #d1d5db;
+  --border-color:         #E3E8F2;
+  --border-color-strong:  #C7CFDD;
 
   --shadow-xs:  0 1px 2px rgba(0,0,0,0.05);
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
@@ -53,49 +56,55 @@
   --sidebar-width: 224px;
   --topbar-height: 56px;
 
-  --appointments-cell-text-color: #111827;
+  --appointments-cell-text-color: #1B2233;
 
   --p-tabs-tabpanel-background: transparent;
   --p-content-background:  #ffffff;
-  --p-content-color:       #111827;
-  --p-content-border-color:#e5e7eb;
+  --p-content-color:       #1B2233;
+  --p-content-border-color:#E3E8F2;
   --p-surface-0:           #ffffff;
-  --p-surface-50:          #f9fafb;
-  --p-surface-100:         #f3f4f6;
-  --p-surface-200:         #e5e7eb;
-  --p-surface-ground:      #f5f5f7;
+  --p-surface-50:          #F8FAFC;
+  --p-surface-100:         #F1F5F9;
+  --p-surface-200:         #E3E8F2;
+  --p-surface-ground:      #F5F7FB;
   --p-surface-section:     #ffffff;
   --p-surface-card:        #ffffff;
   --p-surface-overlay:     #ffffff;
-  --p-surface-border:      #e5e7eb;
-  --p-primary-color:       #F35271;
+  --p-surface-border:      #E3E8F2;
+  --p-primary-color:       #4F46E5;
   --p-primary-contrast-color: #ffffff;
-  --p-text-color:          #111827;
-  --p-text-muted-color:    #6b7280;
+  --p-text-color:          #1B2233;
+  --p-text-muted-color:    #8891A5;
 }
 
 .layout.theme-dark {
-  --color-primary:        #f06b8a;
-  --color-primary-hover:  #f8849f;
-  --color-primary-subtle: #2a1520;
-  --color-primary-muted:  #4a2030;
-  --color-primary-ink:    #f8849f;
+  // Kept close to the light-mode primary (rather than a much lighter pastel
+  // indigo) on purpose: several buttons across this shell pair
+  // `var(--color-primary)` with hardcoded white text, and indigo at this
+  // depth already reads vividly against the dark background without needing
+  // the lightening a hotter hue (the old pink) would — so white stays
+  // readable without touching every button.
+  --color-primary:        #4F46E5;
+  --color-primary-hover:  #6366F1;
+  --color-primary-subtle: #1E1B4B;
+  --color-primary-muted:  #3730A3;
+  --color-primary-ink:    #C7D2FE;
 
-  --bg-app:               #0d0d0f;
-  --bg-card:              #18181b;
-  --bg-sidebar:           #18181b;
+  --bg-app:               #0E1116;
+  --bg-card:              #171B23;
+  --bg-sidebar:           #171B23;
 
   --color-success:        #4ade80;
   --color-danger:         #f87171;
   --color-warning:        #fbbf24;
 
-  --text-primary:         #f9fafb;
-  --text-secondary:       #e5e7eb;
-  --text-muted:           #9ca3af;
-  --text-placeholder:     #6b7280;
+  --text-primary:         #F1F5F9;
+  --text-secondary:       #CBD5E1;
+  --text-muted:           #94A3B8;
+  --text-placeholder:     #64748B;
 
-  --border-color:         #27272a;
-  --border-color-strong:  #3f3f46;
+  --border-color:         #262B36;
+  --border-color-strong:  #39404F;
 
   --shadow-xs:  0 1px 2px rgba(0,0,0,0.3);
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
@@ -109,25 +118,25 @@
   --sidebar-width: 224px;
   --topbar-height: 56px;
 
-  --appointments-cell-text-color: #111827;
+  --appointments-cell-text-color: #1B2233;;
 
   --p-tabs-tabpanel-background: transparent;
-  --p-content-background:  #18181b;
-  --p-content-color:       #f9fafb;
-  --p-content-border-color:#27272a;
-  --p-surface-0:           #18181b;
-  --p-surface-50:          #1c1c1f;
-  --p-surface-100:         #212124;
-  --p-surface-200:         #2a2a2e;
-  --p-surface-ground:      #0d0d0f;
-  --p-surface-section:     #18181b;
-  --p-surface-card:        #18181b;
-  --p-surface-overlay:     #18181b;
-  --p-surface-border:      #27272a;
-  --p-primary-color:       #f06b8a;
+  --p-content-background:  #171B23;
+  --p-content-color:       #F1F5F9;
+  --p-content-border-color:#262B36;
+  --p-surface-0:           #171B23;
+  --p-surface-50:          #1B1F28;
+  --p-surface-100:         #20242F;
+  --p-surface-200:         #2A2F3C;
+  --p-surface-ground:      #0E1116;
+  --p-surface-section:     #171B23;
+  --p-surface-card:        #171B23;
+  --p-surface-overlay:     #171B23;
+  --p-surface-border:      #262B36;
+  --p-primary-color:       #4F46E5;
   --p-primary-contrast-color: #ffffff;
-  --p-text-color:          #f9fafb;
-  --p-text-muted-color:    #9ca3af;
+  --p-text-color:          #F1F5F9;
+  --p-text-muted-color:    #94A3B8;
 }
 
 // This app's own PrimeNG overrides further down (`.p-dialog`, `.p-drawer`,
@@ -149,21 +158,21 @@
 // inside `.layout`/`.public-shell` themselves (same values either way — no
 // behavior change there).
 .theme-dark {
-  --bg-app:               #0d0d0f;
-  --bg-card:              #18181b;
-  --bg-sidebar:           #18181b;
+  --bg-app:               #0E1116;
+  --bg-card:              #171B23;
+  --bg-sidebar:           #171B23;
 
   --color-success:        #4ade80;
   --color-danger:         #f87171;
   --color-warning:        #fbbf24;
 
-  --text-primary:         #f9fafb;
-  --text-secondary:       #e5e7eb;
-  --text-muted:           #9ca3af;
-  --text-placeholder:     #6b7280;
+  --text-primary:         #F1F5F9;
+  --text-secondary:       #CBD5E1;
+  --text-muted:           #94A3B8;
+  --text-placeholder:     #64748B;
 
-  --border-color:         #27272a;
-  --border-color-strong:  #3f3f46;
+  --border-color:         #262B36;
+  --border-color-strong:  #39404F;
 
   --shadow-xs:  0 1px 2px rgba(0,0,0,0.3);
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
@@ -214,7 +223,7 @@
   --radius-xl:  16px;
   --radius-pill: 999px;
 
-  --appointments-cell-text-color: #111827;
+  --appointments-cell-text-color: #1B2233;
 
   // PrimeNG's OWN native tokens (used by raw p-button/p-drawer/p-dialog chrome
   // that isn't wrapped in our own $pl-*-based classes) — aliased onto our tenant

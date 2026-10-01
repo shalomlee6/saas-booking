@@ -42,23 +42,24 @@ registerLocaleData(localeHe);
  * hover/active, tag backgrounds, focus rings, etc.) is independent of the app's
  * `--color-primary` custom property. Without this, components that don't explicitly
  * reference `--color-primary` fall back to Aura's default primitive palette (emerald),
- * which is why some controls showed up green instead of Boki pink. This maps PrimeNG's
- * entire primary scale to the brand color (#F35271) so every PrimeNG component matches.
+ * which is why some controls showed up green instead of Boki's brand color. This maps
+ * PrimeNG's entire primary scale to the brand indigo (#4F46E5, Tailwind's indigo-600 —
+ * matching `--color-primary` in styles.scss) so every PrimeNG component matches.
  */
 const BokiPreset = definePreset(Aura, {
   semantic: {
     primary: {
-      50: '#fef1f4',
-      100: '#fde3e9',
-      200: '#fbc7d3',
-      300: '#f79fb4',
-      400: '#f37b98',
-      500: '#F35271',
-      600: '#de3b5c',
-      700: '#b92e4a',
-      800: '#96263d',
-      900: '#7a2233',
-      950: '#43101b',
+      50: '#eef2ff',
+      100: '#e0e7ff',
+      200: '#c7d2fe',
+      300: '#a5b4fc',
+      400: '#818cf8',
+      500: '#6366f1',
+      600: '#4f46e5',
+      700: '#4338ca',
+      800: '#3730a3',
+      900: '#312e81',
+      950: '#1e1b4b',
     },
   },
 });
