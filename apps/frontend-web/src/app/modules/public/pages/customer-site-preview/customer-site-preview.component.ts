@@ -20,7 +20,7 @@ export class CustomerSitePreviewComponent {
 
   readonly business = this.auth.business;
   readonly slug = computed(() => this.auth.business()?.slug ?? null);
-  readonly device = signal<PreviewDevice>('desktop');
+  readonly device = signal<PreviewDevice>('mobile');
 
   readonly devices: { id: PreviewDevice; icon: string; labelKey: string; width: string }[] = [
     { id: 'mobile', icon: 'pi pi-mobile', labelKey: 'navigation.previewMobile', width: '375px' },
