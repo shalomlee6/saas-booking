@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { JsonPipe } from '@angular/common';
+import { DatePipe, JsonPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { TableModule, TableLazyLoadEvent } from 'primeng/table';
 import { InputTextModule } from 'primeng/inputtext';
@@ -7,12 +7,11 @@ import { ButtonModule } from 'primeng/button';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 import { AdminApiService, type AdminAuditRow } from '../../services/admin-api.service';
-import { SaDatePipe } from '../../shared/sa-date.pipe';
 
 @Component({
   selector: 'app-super-admin-audit',
   standalone: true,
-  imports: [FormsModule, TableModule, InputTextModule, ButtonModule, ToastModule, SaDatePipe, JsonPipe],
+  imports: [FormsModule, TableModule, InputTextModule, ButtonModule, ToastModule, DatePipe, JsonPipe],
   templateUrl: './super-admin-audit.component.html',
   styleUrl: './super-admin-audit.component.scss',
 })
