@@ -11,6 +11,13 @@ import { ServicesApiService } from '../../services/services-api.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 
+/** Number inputs yield null or NaN when left empty. `??` does not replace NaN. */
+function finitePrice(value: unknown): number | undefined {
+  if (value == null || value === '') return undefined;
+  const price = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(price) ? price : undefined;
+}
+
 @Component({
   selector: 'app-service-form',
   standalone: true,
@@ -84,13 +91,14 @@ export class ServiceFormComponent implements OnInit {
 
     const id = this.route.snapshot.paramMap.get('id');
     const value = this.form.getRawValue();
+    const price = finitePrice(value.price);
 
     if (id) {
       this.store
         .update(id, {
           name: value.name?.trim(),
           durationMinutes: value.durationMinutes,
-          price: value.price ?? undefined,
+          price,
           description: value.description?.trim() || undefined,
           isActive: value.isActive,
         })
@@ -106,7 +114,7 @@ export class ServiceFormComponent implements OnInit {
         .create({
           name: value.name?.trim(),
           durationMinutes: value.durationMinutes,
-          price: value.price ?? undefined,
+          price: price ?? 0,
           description: value.description?.trim() || undefined,
           isActive: value.isActive,
         })

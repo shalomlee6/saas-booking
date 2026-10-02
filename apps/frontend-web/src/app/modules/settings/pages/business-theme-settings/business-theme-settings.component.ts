@@ -29,7 +29,7 @@ export class BusinessThemeSettingsComponent {
     const business = this.auth.business();
     this.form = this.fb.group({
       themeMode: [business?.ui?.themeMode ?? 'light'],
-      primaryColor: [business?.ui?.primaryColor ?? '#F35271'],
+      primaryColor: [business?.ui?.primaryColor ?? '#4F46E5'],
       sidebarColor: [business?.ui?.sidebarColor ?? '#0F172A'],
     });
   }

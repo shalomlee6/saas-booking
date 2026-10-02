@@ -138,9 +138,138 @@
   cursor: not-allowed;
 }
 
+// ─── Filters ────────────────────────────────────────────────────────────────
+.customers-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  padding: 0.875rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl, 16px);
+}
+
+.customers-toolbar-primary,
+.customers-toolbar-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.875rem 1.25rem;
+}
+
+.customers-toolbar-secondary {
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.customers-filter-group,
+.customers-mini-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.customers-filter-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.customers-status-switch {
+  display: inline-flex;
+  padding: 0.2rem;
+  gap: 0.15rem;
+  background: var(--bg-app);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.customers-status-option {
+  height: 34px;
+  padding: 0 0.85rem;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customers-status-option-active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.customers-date-range {
+  display: flex;
+  align-items: center;
+  gap: 2.5rem;
+}
+
+.customers-date-range-sep {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+:host ::ng-deep .customers-date-field .p-datepicker-dropdown {
+  padding: 0px 20px;
+}
+
+.customers-filter-control {
+  height: 40px;
+  min-width: 7.5rem;
+  padding: 0 0.75rem;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  outline: none;
+}
+
+.customers-filter-control:focus {
+  border-color: var(--color-primary);
+}
+
+.customers-chip {
+  height: 40px;
+  align-self: flex-end;
+  padding: 0 0.9rem;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.customers-chip-active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-subtle, transparent);
+  color: var(--color-primary);
+}
+
+.customers-clear {
+  margin-inline-start: auto;
+  align-self: flex-end;
+}
+
+:host ::ng-deep .customers-date-field {
+  width: 10.5rem;
+}
+
+:host ::ng-deep .customers-date-field .p-datepicker-input {
+  height: 40px;
+  font-size: 0.875rem;
+}
+
 // ─── Bulk selection bar ─────────────────────────────────────────────────────
 .customers-bulk-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.75rem;
   padding: 0.625rem 1rem;
@@ -160,6 +289,7 @@
 .customers-table-select {
   width: 1%;
   padding-inline-end: 0 !important;
+  text-align: center;
 }
 
 .customers-table-select-head input,
@@ -310,7 +440,7 @@
 }
 
 .customers-table td {
-  text-align: end;
+  text-align: start;
   padding: 0.875rem 1.25rem;
   color: var(--text-primary);
   border-bottom: 1px solid var(--border-color);
@@ -328,6 +458,12 @@
 .customers-table-actions {
   white-space: nowrap;
   text-align: end;
+}
+
+.customers-view-btn {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 40%, var(--border-color));
+  background: var(--color-primary-subtle, transparent);
 }
 
 .customers-table tbody tr {
@@ -356,6 +492,14 @@
 
   .customers-search {
     width: 100%;
+  }
+
+  .customers-clear {
+    margin-inline-start: 0;
+  }
+
+  .customers-date-range {
+    flex-wrap: wrap;
   }
 
   .customers-btn {

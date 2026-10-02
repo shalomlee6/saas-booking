@@ -7,6 +7,7 @@ import {
   deleteCustomerForTenant,
   getCustomerForTenant,
   listCustomersForTenant,
+  setCustomersActiveForTenant,
   updateCustomerForTenant,
   type CustomerPreferencesInput,
 } from '../services/customerService';
@@ -66,6 +67,7 @@ export async function updateCustomer(req: AuthRequest, res: Response): Promise<v
     email?: string;
     notes?: string;
     preferences?: CustomerPreferencesInput;
+    isActive?: boolean;
   };
   const customer = await updateCustomerForTenant(businessId, id, body);
   if (!customer) {
@@ -112,6 +114,14 @@ export async function bulkDeleteCustomers(req: AuthRequest, res: Response): Prom
   }
 
   res.json({ deleted, blocked });
+}
+
+/** POST /api/customers/bulk-status — sets Active/Inactive for the selected customers. */
+export async function bulkSetCustomerStatus(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = req.effectiveBusinessId!;
+  const { ids, isActive } = req.body as { ids: string[]; isActive: boolean };
+  const updated = await setCustomersActiveForTenant(businessId, ids, isActive);
+  res.json({ updated });
 }
 
 /** GET /api/customers/:id/appointments — full past+upcoming history for the Client Card. */

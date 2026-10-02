@@ -9,10 +9,12 @@ import {
   customerIdParamsSchema,
   customerUpdateBodySchema,
   customersBulkDeleteBodySchema,
+  customersBulkStatusBodySchema,
   customersListQuerySchema,
 } from '../validation/schemas/customers';
 import {
   bulkDeleteCustomers,
+  bulkSetCustomerStatus,
   createCustomer,
   deleteCustomer,
   getCustomer,
@@ -44,6 +46,12 @@ customersRouter.post(
   '/bulk-delete',
   validateBody(customersBulkDeleteBodySchema),
   asyncHandler((req: AuthRequest, res) => bulkDeleteCustomers(req, res))
+);
+
+customersRouter.post(
+  '/bulk-status',
+  validateBody(customersBulkStatusBodySchema),
+  asyncHandler((req: AuthRequest, res) => bulkSetCustomerStatus(req, res))
 );
 
 customersRouter.get(

@@ -18,6 +18,8 @@ export interface ICustomer extends Document {
   phone: string;
   email?: string;
   notes?: string;
+  /** Missing on older documents — treated as active. */
+  isActive?: boolean;
   preferences?: ICustomerPreferences;
   defaultTreatmentDurationMinutes?: number;
   createdAt: Date;
@@ -48,6 +50,7 @@ const CustomerSchema = new Schema<ICustomer>(
     phone: { type: String, required: true },
     email: String,
     notes: String,
+    isActive: { type: Boolean, default: true },
     preferences: CustomerPreferencesSchema,
     defaultTreatmentDurationMinutes: Number,
   },

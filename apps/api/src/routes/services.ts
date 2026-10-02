@@ -31,7 +31,7 @@ servicesRouter.get('/', asyncHandler(async (req: AuthRequest, res) => {
 // POST /api/services
 servicesRouter.post('/', validateBody(serviceCreateBodySchema), asyncHandler(async (req: AuthRequest, res) => {
   const businessId = req.effectiveBusinessId!;
-  const { name, price, description, durationMinutes, colorHex, textColorHex } = req.body;
+  const { name, price, description, durationMinutes, colorHex, textColorHex, isActive } = req.body;
 
   if (!name || durationMinutes == null || price == null) {
     return res
@@ -67,10 +67,26 @@ servicesRouter.post('/', validateBody(serviceCreateBodySchema), asyncHandler(asy
     price: priceNum,
     colorHex,
     textColorHex,
+    ...(typeof isActive === 'boolean' ? { isActive } : {}),
   });
 
   res.status(201).json(service);
 }));
+
+// GET /api/services/:id — the edit form loads the existing service through this route.
+servicesRouter.get(
+  '/:id',
+  validateParams(serviceIdParamsSchema),
+  asyncHandler(async (req: AuthRequest, res) => {
+    const businessId = req.effectiveBusinessId!;
+    const { id } = req.params;
+    const service = await Service.findOne({ _id: id, businessId });
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+    res.json(service);
+  })
+);
 
 // PUT /api/services/:id
 servicesRouter.put(

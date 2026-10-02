@@ -104,21 +104,16 @@
             />
           </label>
           <div class="bls__row-btns">
-            <input
-              #coverInp
-              type="file"
-              accept="image/*"
-              class="bls__file"
-              (change)="onHeroFile($event, 'cover')"
-            />
-            <button
-              type="button"
-              class="bls__btn-secondary"
-              [disabled]="uploading()"
-              (click)="coverInp.click()"
-            >
-              העלאת תמונת כיסוי
-            </button>
+            <label class="bls__upload" [class.bls__upload-disabled]="uploading()">
+              <input
+                type="file"
+                accept="image/*"
+                class="bls__file"
+                [disabled]="uploading()"
+                (change)="onHeroFile($event, 'cover')"
+              />
+              <span class="bls__btn-secondary">העלאת תמונת כיסוי</span>
+            </label>
           </div>
 
           <label class="bls__field">
@@ -131,21 +126,16 @@
             />
           </label>
           <div class="bls__row-btns">
-            <input
-              #secInp
-              type="file"
-              accept="image/*"
-              class="bls__file"
-              (change)="onHeroFile($event, 'secondary')"
-            />
-            <button
-              type="button"
-              class="bls__btn-secondary"
-              [disabled]="uploading()"
-              (click)="secInp.click()"
-            >
-              העלאת תמונה שנייה
-            </button>
+            <label class="bls__upload" [class.bls__upload-disabled]="uploading()">
+              <input
+                type="file"
+                accept="image/*"
+                class="bls__file"
+                [disabled]="uploading()"
+                (change)="onHeroFile($event, 'secondary')"
+              />
+              <span class="bls__btn-secondary">העלאת תמונה שנייה</span>
+            </label>
           </div>
         </section>
 
@@ -153,22 +143,17 @@
           <h2 id="bls-gal" class="bls__section-title">גלריה</h2>
           <p class="bls__hint">גררי לסידור מחדש. עד 5MB לקובץ — דחיסה אוטומטית לפני העלאה.</p>
           <div class="bls__row-btns">
-            <input
-              #galInp
-              type="file"
-              accept="image/*"
-              multiple
-              class="bls__file"
-              (change)="onGalleryFiles($event)"
-            />
-            <button
-              type="button"
-              class="bls__btn-secondary"
-              [disabled]="uploading()"
-              (click)="galInp.click()"
-            >
-              העלאת תמונות
-            </button>
+            <label class="bls__upload" [class.bls__upload-disabled]="uploading()">
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                class="bls__file"
+                [disabled]="uploading()"
+                (change)="onGalleryFiles($event)"
+              />
+              <span class="bls__btn-secondary">העלאת תמונות</span>
+            </label>
           </div>
 
           <ul class="bls-gal-list">

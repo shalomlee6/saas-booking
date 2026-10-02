@@ -20,6 +20,7 @@ export const customerCreateBodySchema = z
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
     preferences: customerPreferencesBodySchema.optional(),
+    isActive: z.boolean().optional(),
   })
   .strict();
 
@@ -30,6 +31,7 @@ export const customerUpdateBodySchema = z
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
     preferences: customerPreferencesBodySchema.optional(),
+    isActive: z.boolean().optional(),
   })
   .strict()
   .refine((d) => Object.keys(d).length > 0, {
@@ -45,6 +47,13 @@ export const customerIdParamsSchema = z
 export const customersBulkDeleteBodySchema = z
   .object({
     ids: z.array(mongoObjectIdString).min(1).max(200),
+  })
+  .strict();
+
+export const customersBulkStatusBodySchema = z
+  .object({
+    ids: z.array(mongoObjectIdString).min(1).max(200),
+    isActive: z.boolean(),
   })
   .strict();
 

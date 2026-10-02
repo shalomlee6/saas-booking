@@ -10,19 +10,6 @@ export interface BusinessUi {
   dashboardLayout?: 'classic' | 'compact';
 }
 
-/** From BusinessSettings.theme (DB collection) */
-export interface BusinessSettingsTheme {
-  colors?: {
-    primary?: string;
-    secondary?: string;
-    accent?: string;
-    background?: string;
-    text?: string;
-  };
-  logoUrl?: string | null;
-  fontFamily?: string;
-}
-
 /** Unified shape for theme overrides (primary, sidebar, background) */
 export interface BusinessThemeOverrides {
   primaryColor?: string;
@@ -35,10 +22,32 @@ function validHex(s: string | undefined): boolean {
   return typeof s === 'string' && HEX.test(s);
 }
 
+/**
+ * Mixes a hex color toward white (`amount` > 0) or black (`amount` < 0) by a
+ * fraction in [-1, 1] — a simple RGB lerp, not perceptual, but good enough for
+ * deriving a UI tint/shade from an arbitrary business accent color. Used so a
+ * business's custom `--color-primary` gets a matching `-hover`/`-subtle`/
+ * `-muted`/`-ink` family instead of those four staying pinned to the CSS
+ * defaults' own hue — which otherwise reads as two unrelated colors clashing
+ * (e.g. a pink button next to indigo-tinted icons) whenever a business's
+ * accent differs from the platform default.
+ */
+function mix(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  const target = amount >= 0 ? 255 : 0;
+  const f = Math.abs(amount);
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  const mixed = [r, g, b].map((c) => clamp(c + (target - c) * f));
+  return '#' + mixed.map((c) => c.toString(16).padStart(2, '0')).join('');
+}
+
 const DEFAULTS = {
-  primaryColor: '#F35271',
+  primaryColor: '#4F46E5',
   sidebarColor: '#0F172A',
-  backgroundColor: '#F6F8FB',
+  backgroundColor: '#F5F7FB',
 };
 
 /**
@@ -74,8 +83,17 @@ export class ThemeService {
   readonly cssVars = computed<Record<string, string>>(() => {
     const t = this.businessTheme();
     if (!t) return {};
+    const primary = t.primaryColor && validHex(t.primaryColor) ? t.primaryColor : DEFAULTS.primaryColor;
+    const dark = this.mode() === 'dark';
+    // Derive the rest of the primary family from whichever color actually won
+    // above (the business's own, or the platform default) so every token
+    // stays the same hue — see `mix()`'s doc comment for why this matters.
     const vars: Record<string, string> = {
-      '--color-primary': t.primaryColor && validHex(t.primaryColor) ? t.primaryColor : DEFAULTS.primaryColor,
+      '--color-primary': primary,
+      '--color-primary-hover': mix(primary, dark ? 0.25 : -0.12),
+      '--color-primary-subtle': mix(primary, dark ? -0.75 : 0.92),
+      '--color-primary-muted': mix(primary, dark ? -0.4 : 0.68),
+      '--color-primary-ink': mix(primary, dark ? 0.7 : -0.35),
     };
     // Business-configured neutral surfaces are only designed for a light
     // background — reapplying them under dark mode stomps the dark palette's
@@ -101,25 +119,17 @@ export class ThemeService {
     );
   }
 
-  /** Prefer businessSettings.theme (DB), fallback to business.ui */
-  static toBusinessThemeOverrides(
-    businessUi?: BusinessUi | null,
-    businessSettingsTheme?: BusinessSettingsTheme | null
-  ): BusinessThemeOverrides | null {
-    const fromSettings =
-      businessSettingsTheme?.colors?.primary && validHex(businessSettingsTheme.colors.primary)
-        ? {
-            primaryColor: businessSettingsTheme.colors.primary,
-            sidebarColor: businessSettingsTheme.colors.background && validHex(businessSettingsTheme.colors.background)
-              ? businessSettingsTheme.colors.background
-              : DEFAULTS.sidebarColor,
-            backgroundColor:
-              businessSettingsTheme.colors.background && validHex(businessSettingsTheme.colors.background)
-                ? businessSettingsTheme.colors.background
-                : DEFAULTS.backgroundColor,
-          }
-        : null;
-    if (fromSettings) return fromSettings;
+  /**
+   * Sourced only from `business.ui.*` — the dashboard's OWN admin-facing
+   * theme fields (editable in Settings > Theme). This deliberately does not
+   * consider `businessSettings.theme` (the customer-facing public booking
+   * site's own brand colors, edited in Settings > Landing/Design): those are
+   * a different surface for a different audience, and folding a tenant's
+   * public brand into their own internal admin tool meant the platform's own
+   * indigo-teal dashboard identity was invisible for any business that had
+   * customized their public site — which is most of them.
+   */
+  static toBusinessThemeOverrides(businessUi?: BusinessUi | null): BusinessThemeOverrides | null {
     if (businessUi?.primaryColor && validHex(businessUi.primaryColor)) {
       return {
         primaryColor: businessUi.primaryColor,
@@ -133,7 +143,7 @@ export class ThemeService {
   /** Applied after a business owner saves their theme in settings. */
   applyBusinessUi(ui?: BusinessUi | null): void {
     const mode = ui?.themeMode === 'dark' ? 'dark' : this.mode();
-    const businessTheme = ThemeService.toBusinessThemeOverrides(ui ?? null, null);
+    const businessTheme = ThemeService.toBusinessThemeOverrides(ui ?? null);
     this.applyAll({ mode, businessTheme: businessTheme ?? undefined });
   }
 

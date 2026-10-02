@@ -16,6 +16,8 @@ export interface Customer {
   phone: string;
   email?: string;
   notes?: string;
+  /** Omitted on older records — treat anything other than `false` as active. */
+  isActive?: boolean;
   preferences?: CustomerPreferences;
   createdAt: string;
   updatedAt: string;

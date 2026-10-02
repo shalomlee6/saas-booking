@@ -198,6 +198,42 @@ textarea.customer-form-input {
   min-width: 0;
 }
 
+.cd-header-aside {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.cd-status-toggle {
+  height: 32px;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+}
+
+.cd-status-toggle:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.cd-status-toggle:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.cd-status-error {
+  margin: 0;
+  flex-basis: 100%;
+  font-size: 0.8125rem;
+  color: var(--color-danger);
+}
+
 .cd-name {
   margin: 0;
   font-size: 1.625rem;

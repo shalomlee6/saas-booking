@@ -203,17 +203,6 @@
 
     <div class="layout-topbar-actions">
       @if (!isMobile()) {
-        <label class="layout-topbar-search-wrap">
-          <span class="sr-only">{{ 'appointments.searchPlaceholder' | translate }}</span>
-          <i class="pi pi-search layout-topbar-search-icon" aria-hidden="true"></i>
-          <input
-            type="search"
-            class="layout-topbar-search"
-            [placeholder]="'appointments.searchPlaceholder' | translate"
-            disabled
-            aria-disabled="true"
-          />
-        </label>
 
         @if (business()?.slug) {
           <a

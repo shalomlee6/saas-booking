@@ -138,9 +138,7 @@ export class AuthService {
           : res.business?.ui?.themeMode === 'dark'
             ? 'dark'
             : 'light';
-        const businessTheme = isSuperAdmin
-          ? null
-          : ThemeService.toBusinessThemeOverrides(res.business?.ui, res.businessSettings?.theme ?? undefined);
+        const businessTheme = isSuperAdmin ? null : ThemeService.toBusinessThemeOverrides(res.business?.ui);
         this.theme.applyAll({ mode, businessTheme });
       }),
       map(() => undefined),

@@ -397,8 +397,7 @@
         </div>
         <ng-template pTemplate="footer">
           <div class="appointments-detail-footer">
-            <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" />
-            <p-button [label]="'appointments.cancelAppointment' | translate" severity="danger" [outlined]="true" [loading]="cancellingDetail()" [disabled]="cancellingDetail()" (onClick)="onDetailCancel()" />
+            <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" (onClick)="onEditAppointment()" />
           </div>
         </ng-template>
       </p-dialog>
@@ -439,8 +438,7 @@
             <span class="appointments-detail-value">{{ vm.preferredTimeLabel }}</span>
           </div>
           <div class="appointments-detail-actions">
-            <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" [disabled]="cancellingDetail()" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />
-            <p-button [label]="'appointments.cancelAppointment' | translate" severity="danger" [outlined]="true" [loading]="cancellingDetail()" [disabled]="cancellingDetail()" (onClick)="onDetailCancel()" styleClass="appointments-detail-btn" />
+            <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />
           </div>
         </div>
       </p-drawer>

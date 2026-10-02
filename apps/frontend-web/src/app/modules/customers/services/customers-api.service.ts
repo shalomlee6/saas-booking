@@ -46,6 +46,10 @@ export class CustomersApiService {
   bulkDelete(ids: string[]): Observable<BulkDeleteCustomersResponse> {
     return this.api.post<BulkDeleteCustomersResponse>('customers/bulk-delete', { ids });
   }
+
+  bulkSetStatus(ids: string[], isActive: boolean): Observable<{ updated: number }> {
+    return this.api.post<{ updated: number }>('customers/bulk-status', { ids, isActive });
+  }
 }
 
 export interface BulkDeleteCustomersResponse {
