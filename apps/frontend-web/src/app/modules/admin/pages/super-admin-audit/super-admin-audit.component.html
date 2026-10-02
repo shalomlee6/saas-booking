@@ -45,12 +45,12 @@
     </ng-template>
     <ng-template #body let-row>
       <tr>
-        <td>{{ row.timestamp | saDate: 'medium' }}</td>
-        <td>{{ row.actor }}</td>
-        <td><code class="sa-code" [class]="'sa-code--' + actionAccent(row.action)">{{ row.action }}</code></td>
-        <td>{{ row.entity }}</td>
-        <td><code class="sa-code">{{ row.entityId }}</code></td>
-        <td class="sa-meta">{{ row.metadata | json }}</td>
+        <td class="audit-log-table-row-cell">{{ row.timestamp | date: 'dd.MM.yyyy HH:mm' }}</td>
+        <td class="audit-log-table-row-cell">{{ row.actor }}</td>
+        <td class="audit-log-table-row-cell"><code class="sa-code" [class]="'sa-code--' + actionAccent(row.action)">{{ row.action }}</code></td>
+        <td class="audit-log-table-row-cell">{{ row.entity }}</td>
+        <td class="audit-log-table-row-cell"><code class="sa-code">{{ row.entityId }}</code></td>
+        <td class="audit-log-table-row-cell sa-meta">{{ row.metadata | json }}</td>
       </tr>
     </ng-template>
     <ng-template #emptymessage>

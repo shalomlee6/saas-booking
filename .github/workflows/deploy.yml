@@ -1,0 +1,172 @@
+# Deploy saas-booking by building ON the DigitalOcean droplet.
+# GitHub Actions only SSHes in and then health-checks from the runner.
+#
+# Required secrets: DO_HOST, DO_USERNAME, DO_SSH_KEY, DO_SSH_PORT
+#
+# Repo on droplet: /var/www/saas-booking
+# PM2 process:     boki-api
+
+name: Deploy
+
+on:
+  push:
+    branches:
+      - prod
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy on droplet
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. SSH — fetch, reset, npm ci, turbo build, pm2 reload
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_SSH_PORT }}
+          script_stop: true
+          # Droplet build (1GB RAM + swap) can take several minutes; do not use a short timeout.
+          command_timeout: 40m
+          script: |
+            set -euo pipefail
+            REPO=/var/www/saas-booking
+            echo "==> Deploy start $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "==> Working directory: $REPO"
+            cd "$REPO"
+
+            echo "==> Snapshot protected paths (must survive git reset --hard)"
+            : > /tmp/saas-booking-protected-before
+            for p in \
+              .env \
+              apps/api/.env \
+              apps/api/uploads \
+              uploads \
+              logs \
+              apps/api/logs
+            do
+              if [ -e "$REPO/$p" ]; then
+                echo "$p" >> /tmp/saas-booking-protected-before
+                echo "    present before: $p"
+              else
+                echo "    absent before:  $p"
+              fi
+            done
+
+            echo "==> git fetch origin prod"
+            git fetch origin prod
+
+            echo "==> git reset --hard origin/prod"
+            git reset --hard origin/prod
+            echo "==> HEAD is now $(git rev-parse --short HEAD) $(git log -1 --pretty=%s)"
+
+            echo "==> npm ci (workspace root)"
+            npm ci
+            echo "==> npm ci finished"
+
+            echo "==> npx turbo run build"
+            npx turbo run build
+            echo "==> turbo build finished"
+
+            echo "==> pm2 reload boki-api --update-env"
+            pm2 reload boki-api --update-env
+
+            echo "==> pm2 save"
+            pm2 save
+
+            echo "==> Confirm protected paths still exist"
+            WIPED=0
+            if [ -s /tmp/saas-booking-protected-before ]; then
+              while IFS= read -r p; do
+                if [ -e "$REPO/$p" ]; then
+                  echo "    still present: $p"
+                else
+                  echo "    WIPED: $p was present before reset and is gone now"
+                  WIPED=1
+                fi
+              done < /tmp/saas-booking-protected-before
+            else
+              echo "    (none of the watched paths existed before deploy)"
+            fi
+            if [ "$WIPED" -ne 0 ]; then
+              echo "ERROR: a protected path was removed during deploy"
+              exit 1
+            fi
+
+            echo "==> PM2 status"
+            pm2 status
+            echo "==> Deploy SSH script finished $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+      - name: 2. Confirm .env, uploads, logs on droplet
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          port: ${{ secrets.DO_SSH_PORT }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            REPO=/var/www/saas-booking
+            echo "==> Post-deploy protected-path check in $REPO"
+
+            echo_path() {
+              local label="$1"
+              local path="$2"
+              if [ -e "$path" ]; then
+                echo "    OK       $label → $path"
+              else
+                echo "    MISSING  $label → $path  (ok if this path was never created)"
+              fi
+            }
+
+            if [ -e "$REPO/.env" ] || [ -e "$REPO/apps/api/.env" ]; then
+              echo "    OK       .env (repo root and/or apps/api)"
+              [ -e "$REPO/.env" ] && echo "             $REPO/.env"
+              [ -e "$REPO/apps/api/.env" ] && echo "             $REPO/apps/api/.env"
+            else
+              echo "    MISSING  .env at $REPO/.env and $REPO/apps/api/.env"
+              echo "ERROR: .env is missing after deploy"
+              exit 1
+            fi
+
+            echo_path "uploads (apps/api)" "$REPO/apps/api/uploads"
+            echo_path "uploads (repo root)" "$REPO/uploads"
+            echo_path "logs (repo root)" "$REPO/logs"
+            echo_path "logs (apps/api)" "$REPO/apps/api/logs"
+            echo "==> Protected-path check finished"
+
+      - name: 3. Health check https://boki.co.il/api/health (200 within 30s)
+        run: |
+          set -euo pipefail
+          URL="https://boki.co.il/api/health"
+          echo "==> Polling $URL for HTTP 200 (30s budget, retry every 3s)"
+          DEADLINE=$((SECONDS + 30))
+          ATTEMPT=0
+          HTTP_CODE="000"
+          while [ "$SECONDS" -lt "$DEADLINE" ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "==> Attempt $ATTEMPT at $(date -u +%H:%M:%S)Z"
+            HTTP_CODE="$(curl -sS -o /tmp/saas-booking-health.json -w '%{http_code}' \
+              --max-time 8 \
+              --retry 0 \
+              "$URL" || echo "000")"
+            echo "    HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "==> Health check passed"
+              cat /tmp/saas-booking-health.json || true
+              echo
+              exit 0
+            fi
+            if [ -f /tmp/saas-booking-health.json ]; then
+              echo "    body: $(head -c 200 /tmp/saas-booking-health.json)"
+            fi
+            sleep 3
+          done
+          echo "ERROR: $URL did not return 200 within 30 seconds (last HTTP $HTTP_CODE)"
+          exit 1
