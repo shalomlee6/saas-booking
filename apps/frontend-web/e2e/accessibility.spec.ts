@@ -226,6 +226,65 @@ test.describe('Accessibility — /customers states', () => {
   });
 });
 
+// ─── /appointments/new states ─────────────────────────────────────────────────
+
+test.describe('Accessibility — /appointments/new states', () => {
+  test.setTimeout(180_000);
+
+  async function openForm(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
+    await page.context().clearCookies();
+    await loginAsOwner(page);
+    await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
+    await page.setViewportSize({ width, height: width >= 1024 ? 800 : 1024 });
+    await page.goto('/appointments/new', { waitUntil: 'domcontentloaded' });
+    await page.locator('#customer-ac').waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(400);
+  }
+
+  for (const [lang, width] of [
+    ['he', 1280],
+    ['he', 768],
+    ['he', 390],
+    ['en', 1280],
+  ] as const) {
+    test(`/appointments/new (${lang}, ${width}px) has no axe violations`, async ({ page }) => {
+      await openForm(page, lang, width);
+      const results = await runAxe(page, `/appointments/new ${lang} ${width}`);
+      expect(results.violations).toHaveLength(0);
+    });
+  }
+
+  test('/appointments/new dark mode has no axe violations', async ({ page }) => {
+    await openForm(page, 'he', 1280);
+    await page.evaluate(() => {
+      document.documentElement.classList.add('theme-dark');
+      document.querySelector('.layout')?.classList.add('theme-dark');
+    });
+    await page.waitForTimeout(400);
+    const results = await runAxe(page, '/appointments/new dark');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/appointments/new with validation errors has no axe violations', async ({ page }) => {
+    await openForm(page, 'he', 1280);
+    await page.locator('#customer-ac').focus();
+    for (let i = 0; i < 14; i++) await page.keyboard.press('Tab');
+    await expect(page.locator('.apt-field-error').first()).toBeVisible();
+    const results = await runAxe(page, '/appointments/new errors');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/appointments/new with the customer suggestions open has no axe violations', async ({ page }) => {
+    await openForm(page, 'he', 1280);
+    await page.locator('.p-autocomplete-dropdown').click();
+    await page.locator('.p-autocomplete-option').first().waitFor();
+    // PrimeNG's suggestions popup is a combobox listbox: focus stays on the input
+    // (aria-activedescendant), so its scroll container is deliberately not focusable.
+    const results = await new AxeBuilder({ page }).disableRules(['scrollable-region-focusable']).analyze();
+    expect(results.violations).toHaveLength(0);
+  });
+});
+
 // ─── Keyboard navigation — public booking ─────────────────────────────────────
 
 test.describe('Keyboard navigation — public booking', () => {

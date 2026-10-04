@@ -1,5 +1,5 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormGroup,
@@ -11,9 +11,8 @@ import {
 import { forkJoin, finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
-import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { AutoCompleteModule } from 'primeng/autocomplete';
@@ -48,9 +47,9 @@ const endAfterStartValidator: ValidatorFn = (
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    ButtonModule,
+    RouterLink,
     DatePickerModule,
-    InputNumberModule,
+    InputTextModule,
     SelectModule,
     TextareaModule,
     AutoCompleteModule,
@@ -70,6 +69,11 @@ export class AppointmentFormComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
+
+  readonly skeletonRows = [0, 1, 2, 3];
+  readonly backIcon = computed(() =>
+    this.language.language() === 'he' ? 'pi pi-arrow-right' : 'pi pi-arrow-left'
+  );
 
   readonly loading = signal(true);
   readonly noShowLimitWarning = signal(false);

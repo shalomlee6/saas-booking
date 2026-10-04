@@ -440,15 +440,16 @@ body.public-nav-lock { overflow: hidden; }
   color: var(--text-primary);
 }
 
-.p-datepicker-panel {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-}
-
-.p-select-overlay {
+// Overlay panels. PrimeNG injects its own stylesheet after this one and paints these from a
+// chain of tokens (--p-overlay-*, --p-surface-*) that can fail to resolve — which left the
+// customer suggestions with no background at all, text printed straight over the form. The
+// "html" prefix out-ranks PrimeNG's single-class rules so the surface always comes from the
+// app tokens. Hover/selected use neutral and primary *tints* (not --color-primary-subtle/-ink,
+// whose dark values only exist inside .layout) so they read correctly in both modes.
+html .p-datepicker-panel,
+html .p-select-overlay,
+html .p-autocomplete-overlay,
+html .p-multiselect-overlay {
   background: var(--bg-card);
   color: var(--text-primary);
   border: 1px solid var(--border-color);
@@ -456,15 +457,25 @@ body.public-nav-lock { overflow: hidden; }
   box-shadow: var(--shadow-md);
 }
 
-.p-select-option {
+html .p-datepicker-panel {
+  border-radius: var(--radius-lg);
+}
+
+html .p-select-option,
+html .p-autocomplete-option {
   color: var(--text-primary);
-  &:not(.p-disabled):hover, &.p-focus {
-    background: var(--color-primary-subtle);
-    color: var(--color-primary);
+
+  &:not(.p-disabled):hover,
+  &.p-focus {
+    background: color-mix(in srgb, var(--text-primary) 7%, transparent);
+    color: var(--text-primary);
   }
-  &.p-selected {
-    background: var(--color-primary-subtle);
-    color: var(--color-primary);
+
+  &.p-selected,
+  &.p-select-option-selected,
+  &.p-autocomplete-option-selected {
+    background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+    color: var(--text-primary);
     font-weight: 600;
   }
 }

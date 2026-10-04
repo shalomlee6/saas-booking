@@ -1,163 +1,259 @@
-<div class="appointment-form-page">
-  <h1 class="appointment-form-title">{{ 'appointments.newAppointment' | translate }}</h1>
+<div class="apt-form-page">
+  <header class="apt-form-header">
+    <a routerLink="/appointments" class="apt-form-back">
+      <i [class]="backIcon()" aria-hidden="true"></i>
+      {{ 'appointments.backToCalendar' | translate }}
+    </a>
+    <h1 class="apt-form-title">{{ 'appointments.newAppointment' | translate }}</h1>
+    <p class="apt-form-subtitle">{{ 'appointments.newAppointmentHint' | translate }}</p>
+  </header>
 
   @if (loading()) {
-    <p class="appointment-form-loading">{{ 'common.loading' | translate }}</p>
-  } @else {
-    <div class="appointment-form-card p-fluid">
-      <form class="formgrid grid" [formGroup]="form" (ngSubmit)="onSubmit()">
-        <div class="field col-12 md:col-6">
-          <label for="customer-ac" class="appointment-form-label">{{ 'appointments.customerLabel' | translate }} <span class="req">*</span></label>
-          <p-autocomplete
-            inputId="customer-ac"
-            formControlName="customer"
-            [suggestions]="filteredCustomers()"
-            (completeMethod)="filterCustomers($event)"
-            [dropdown]="true"
-            optionLabel="fullName"
-            [forceSelection]="true"
-            [placeholder]="'appointments.searchByNameOrPhone' | translate"
-            styleClass="w-full"
-            (onDropdownClick)="onCustomerDropdownClick()"
-          >
-            <ng-template let-c pTemplate="item">
-              <span>{{ displayCustomer(c) }}</span>
-            </ng-template>
-          </p-autocomplete>
-          @if (form.get('customer')?.invalid && form.get('customer')?.touched) {
-            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
-          }
-          @if (noShowLimitWarning()) {
-            <p class="appointment-form-warning" role="status">{{ 'appointments.noShowLimitWarning' | translate }}</p>
-          }
-        </div>
-
-        <div class="field col-12 md:col-6">
-          <label for="serviceId" class="appointment-form-label">{{ 'common.service' | translate }} <span class="req">*</span></label>
-          <p-select
-            inputId="serviceId"
-            formControlName="serviceId"
-            [options]="services()"
-            optionLabel="name"
-            optionValue="_id"
-            [placeholder]="'appointments.selectService' | translate"
-            styleClass="w-full"
-            [showClear]="true"
-            (onChange)="onServiceChange()"
-          >
-            <ng-template let-svc pTemplate="item">
-              <span>{{ svc.name }} · {{ svc.durationMinutes }} {{ 'common.minutesShort' | translate }} · {{ svc.price ?? 0 }} ₪</span>
-            </ng-template>
-          </p-select>
-          @if (form.get('serviceId')?.invalid && form.get('serviceId')?.touched) {
-            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
-          }
-        </div>
-
-        <div class="field col-12 md:col-6">
-          <label for="aptDate" class="appointment-form-label">{{ 'appointments.dateLabel' | translate }} <span class="req">*</span></label>
-          <p-datepicker
-            inputId="aptDate"
-            formControlName="date"
-            [showIcon]="true"
-            dateFormat="dd/mm/yy"
-            [minDate]="minDate"
-            styleClass="w-full"
-          />
-          @if (form.get('date')?.invalid && form.get('date')?.touched) {
-            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
-          }
-        </div>
-
-        <div class="field col-12 md:col-6">
-          <label for="startTime" class="appointment-form-label">{{ 'appointments.startTimeLabel' | translate }} <span class="req">*</span></label>
-          <p-datepicker
-            inputId="startTime"
-            formControlName="startTime"
-            [timeOnly]="true"
-            hourFormat="24"
-            [stepMinute]="30"
-            styleClass="w-full"
-            (onSelect)="onStartTimeChange()"
-          />
-          @if (form.get('startTime')?.invalid && form.get('startTime')?.touched) {
-            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
-          }
-        </div>
-
-        <div class="field col-12 md:col-6">
-          <label for="endTime" class="appointment-form-label">{{ 'appointments.endTimeLabel' | translate }} <span class="req">*</span></label>
-          <p-datepicker
-            inputId="endTime"
-            formControlName="endTime"
-            [timeOnly]="true"
-            hourFormat="24"
-            [stepMinute]="30"
-            styleClass="w-full"
-          />
-          @if (form.get('endTime')?.invalid && form.get('endTime')?.touched) {
-            <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
-          }
-          @if (form.hasError('endBeforeStart') && (form.get('startTime')?.touched || form.get('endTime')?.touched)) {
-            <small class="appointment-form-error">{{ 'appointments.endAfterStartError' | translate }}</small>
-          }
-        </div>
-
-        <div class="field col-12 md:col-6">
-          <label for="price" class="appointment-form-label">{{ 'appointments.priceLabel' | translate }}</label>
-          <p-inputNumber
-            inputId="price"
-            formControlName="price"
-            mode="decimal"
-            [minFractionDigits]="0"
-            [maxFractionDigits]="2"
-            suffix=" ₪"
-            styleClass="w-full"
-          />
-        </div>
-
-        <div class="field col-12">
-          <label for="status" class="appointment-form-label">{{ 'appointments.statusLabel' | translate }}</label>
-          <p-select
-            inputId="status"
-            formControlName="status"
-            [options]="statusOptions"
-            optionLabel="label"
-            optionValue="value"
-            styleClass="w-full"
-          />
-        </div>
-
-        <div class="field col-12">
-          <label for="notes" class="appointment-form-label">{{ 'common.notes' | translate }}</label>
-          <textarea
-            pTextarea
-            id="notes"
-            formControlName="notes"
-            rows="3"
-            class="w-full"
-            [placeholder]="'appointments.notesOptional' | translate"
-          ></textarea>
-        </div>
-
-        <div class="col-12 flex flex-column md:flex-row gap-2 appointment-form-actions">
-          <p-button
-            type="submit"
-            [label]="'appointments.createButton' | translate"
-            [loading]="saving()"
-            [disabled]="form.invalid || saving()"
-            styleClass="flex-1 appointment-form-btn-create"
-          />
-          <p-button
-            type="button"
-            [label]="'common.cancel' | translate"
-            [outlined]="true"
-            severity="secondary"
-            styleClass="flex-1 md:flex-initial appointment-form-btn-cancel"
-            (onClick)="cancel()"
-          />
-        </div>
-      </form>
+    <div class="apt-form-card apt-form-card--loading" role="status">
+      <span class="apt-form-sr-only">{{ 'common.loading' | translate }}</span>
+      @for (row of skeletonRows; track row) {
+        <div class="apt-form-skeleton" aria-hidden="true"></div>
+      }
     </div>
+  } @else {
+    <form class="apt-form-card p-fluid" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+      <section class="apt-form-section" aria-labelledby="apt-sec-client">
+        <h2 id="apt-sec-client" class="apt-form-section-title">
+          <i class="pi pi-user" aria-hidden="true"></i>
+          {{ 'appointments.sectionClient' | translate }}
+        </h2>
+        <div class="apt-form-grid">
+          <div class="apt-field apt-field--full">
+            <label for="customer-ac" class="apt-label">
+              {{ 'appointments.customerLabel' | translate }}
+              <span class="apt-req" aria-hidden="true">*</span>
+            </label>
+            <p-autocomplete
+              inputId="customer-ac"
+              formControlName="customer"
+              [suggestions]="filteredCustomers()"
+              (completeMethod)="filterCustomers($event)"
+              [dropdown]="true"
+              [dropdownAriaLabel]="'appointments.showAllCustomers' | translate"
+              optionLabel="fullName"
+              [forceSelection]="true"
+              [placeholder]="'appointments.searchByNameOrPhone' | translate"
+              styleClass="apt-control"
+              (onDropdownClick)="onCustomerDropdownClick()"
+            >
+              <ng-template let-c pTemplate="item">
+                <span class="apt-option-customer">{{ displayCustomer(c) }}</span>
+              </ng-template>
+            </p-autocomplete>
+            @if (form.get('customer')?.invalid && form.get('customer')?.touched) {
+              <small class="apt-field-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ 'appointments.fieldRequired' | translate }}
+              </small>
+            }
+            @if (noShowLimitWarning()) {
+              <p class="apt-alert apt-alert--warning" role="status">
+                <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+                {{ 'appointments.noShowLimitWarning' | translate }}
+              </p>
+            }
+          </div>
+
+          <div class="apt-field apt-field--full">
+            <label for="serviceId" class="apt-label">
+              {{ 'common.service' | translate }}
+              <span class="apt-req" aria-hidden="true">*</span>
+            </label>
+            <p-select
+              inputId="serviceId"
+              formControlName="serviceId"
+              [options]="services()"
+              optionLabel="name"
+              optionValue="_id"
+              [placeholder]="'appointments.selectService' | translate"
+              styleClass="apt-control"
+              [showClear]="true"
+              appendTo="body"
+              (onChange)="onServiceChange()"
+            >
+              <ng-template let-svc pTemplate="item">
+                <span class="apt-option-service">
+                  <span class="apt-option-service-name">{{ svc.name }}</span>
+                  <span class="apt-option-service-meta">
+                    {{ svc.durationMinutes }} {{ 'common.minutesShort' | translate }} · {{ svc.price ?? 0 }} ₪
+                  </span>
+                </span>
+              </ng-template>
+            </p-select>
+            @if (form.get('serviceId')?.invalid && form.get('serviceId')?.touched) {
+              <small class="apt-field-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ 'appointments.fieldRequired' | translate }}
+              </small>
+            }
+          </div>
+        </div>
+      </section>
+
+      <section class="apt-form-section" aria-labelledby="apt-sec-when">
+        <h2 id="apt-sec-when" class="apt-form-section-title">
+          <i class="pi pi-calendar" aria-hidden="true"></i>
+          {{ 'appointments.sectionWhen' | translate }}
+        </h2>
+        <div class="apt-form-grid">
+          <div class="apt-field apt-field--date">
+            <label for="aptDate" class="apt-label">
+              {{ 'appointments.dateLabel' | translate }}
+              <span class="apt-req" aria-hidden="true">*</span>
+            </label>
+            <p-datepicker
+              inputId="aptDate"
+              formControlName="date"
+              [showIcon]="true"
+              iconDisplay="input"
+              dateFormat="dd/mm/yy"
+              placeholder="dd/mm/yyyy"
+              [minDate]="minDate"
+              appendTo="body"
+              styleClass="apt-control"
+            />
+            @if (form.get('date')?.invalid && form.get('date')?.touched) {
+              <small class="apt-field-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ 'appointments.fieldRequired' | translate }}
+              </small>
+            }
+          </div>
+
+          <div class="apt-field apt-field--time">
+            <label for="startTime" class="apt-label">
+              {{ 'appointments.startTimeLabel' | translate }}
+              <span class="apt-req" aria-hidden="true">*</span>
+            </label>
+            <p-datepicker
+              inputId="startTime"
+              formControlName="startTime"
+              [timeOnly]="true"
+              [showIcon]="true"
+              iconDisplay="input"
+              icon="pi pi-clock"
+              placeholder="HH:mm"
+              hourFormat="24"
+              [stepMinute]="30"
+              appendTo="body"
+              styleClass="apt-control"
+              (onSelect)="onStartTimeChange()"
+            />
+            @if (form.get('startTime')?.invalid && form.get('startTime')?.touched) {
+              <small class="apt-field-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ 'appointments.fieldRequired' | translate }}
+              </small>
+            }
+          </div>
+
+          <div class="apt-field apt-field--time">
+            <label for="endTime" class="apt-label">
+              {{ 'appointments.endTimeLabel' | translate }}
+              <span class="apt-req" aria-hidden="true">*</span>
+            </label>
+            <p-datepicker
+              inputId="endTime"
+              formControlName="endTime"
+              [timeOnly]="true"
+              [showIcon]="true"
+              iconDisplay="input"
+              icon="pi pi-clock"
+              placeholder="HH:mm"
+              hourFormat="24"
+              [stepMinute]="30"
+              appendTo="body"
+              styleClass="apt-control"
+            />
+            @if (form.get('endTime')?.invalid && form.get('endTime')?.touched) {
+              <small class="apt-field-error" role="alert">
+                <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+                {{ 'appointments.fieldRequired' | translate }}
+              </small>
+            }
+          </div>
+
+          @if (form.hasError('endBeforeStart') && (form.get('startTime')?.touched || form.get('endTime')?.touched)) {
+            <small class="apt-field-error apt-field--full" role="alert">
+              <i class="pi pi-exclamation-circle" aria-hidden="true"></i>
+              {{ 'appointments.endAfterStartError' | translate }}
+            </small>
+          }
+        </div>
+      </section>
+
+      <section class="apt-form-section" aria-labelledby="apt-sec-details">
+        <h2 id="apt-sec-details" class="apt-form-section-title">
+          <i class="pi pi-sliders-h" aria-hidden="true"></i>
+          {{ 'appointments.sectionDetails' | translate }}
+        </h2>
+        <div class="apt-form-grid">
+          <div class="apt-field apt-field--half">
+            <label for="price" class="apt-label">{{ 'appointments.priceLabel' | translate }}</label>
+            <div class="apt-affix">
+              <input
+                pInputText
+                id="price"
+                type="number"
+                inputmode="decimal"
+                step="any"
+                formControlName="price"
+                class="apt-price"
+              />
+              <span class="apt-affix-symbol" aria-hidden="true">₪</span>
+            </div>
+          </div>
+
+          <div class="apt-field apt-field--half">
+            <label for="status" class="apt-label">{{ 'appointments.statusLabel' | translate }}</label>
+            <p-select
+              inputId="status"
+              formControlName="status"
+              [options]="statusOptions"
+              optionLabel="label"
+              optionValue="value"
+              appendTo="body"
+              styleClass="apt-control"
+            />
+          </div>
+
+          <div class="apt-field apt-field--full">
+            <label for="notes" class="apt-label">{{ 'common.notes' | translate }}</label>
+            <textarea
+              pTextarea
+              id="notes"
+              formControlName="notes"
+              rows="3"
+              class="apt-textarea"
+              [placeholder]="'appointments.notesOptional' | translate"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+
+      <div class="apt-form-actions">
+        <button type="button" class="apt-btn apt-btn--secondary" (click)="cancel()">
+          {{ 'common.cancel' | translate }}
+        </button>
+        <button
+          type="submit"
+          class="apt-btn apt-btn--primary"
+          data-testid="apt-create"
+          [disabled]="form.invalid || saving()"
+        >
+          @if (saving()) {
+            <i class="pi pi-spinner pi-spin" aria-hidden="true"></i>
+          } @else {
+            <i class="pi pi-check" aria-hidden="true"></i>
+          }
+          {{ 'appointments.createButton' | translate }}
+        </button>
+      </div>
+    </form>
   }
 </div>

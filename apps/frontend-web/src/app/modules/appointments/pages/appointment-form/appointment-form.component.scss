@@ -1,84 +1,484 @@
-.appointment-form-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 1rem 1.25rem 2rem;
+:host {
+  display: block;
 }
 
-.appointment-form-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 700;
+.apt-form-page {
+  --apt-control: 2.5rem;
+  --apt-danger-ink: color-mix(in srgb, var(--color-danger) 78%, var(--text-primary));
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  box-sizing: border-box;
+  max-inline-size: 46rem;
+  margin-inline: auto;
+}
+
+.apt-form-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.apt-form-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+}
+
+.apt-form-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-block-end: 0.5rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.apt-form-back:hover {
   color: var(--text-primary);
 }
 
-.appointment-form-loading {
+.apt-form-back:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.apt-form-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.apt-form-subtitle {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.875rem;
+  line-height: 1.5;
 }
 
-.appointment-form-card {
-  background: var(--bg-card);
+/* ─── Card and sections ──────────────────────────────────────────────────── */
+
+.apt-form-card {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-sizing: border-box;
+  padding: 1.5rem;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  padding: 2rem;
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-xs);
+  container: apt-form / inline-size;
 }
 
-.appointment-form-label {
-  display: block;
-  margin-bottom: 0.375rem;
+.apt-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.apt-form-section + .apt-form-section {
+  padding-block-start: 1.5rem;
+  border-block-start: 1px solid var(--border-color);
+}
+
+.apt-form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.apt-form-section-title .pi {
+  display: grid;
+  place-items: center;
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-ink);
+  font-size: 0.8125rem;
+}
+
+/*
+ * Six tracks so date + two times fit one row, halves pair up, and everything stacks on a
+ * narrow card. The breakpoints are the card's own width (container query), so tablet and the
+ * sidebar-reduced desktop column behave the same as a phone would at that width.
+ */
+.apt-form-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: start;
+  gap: 1rem;
+}
+
+.apt-field {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+}
+
+.apt-field--full,
+.apt-field--date,
+.apt-field--half {
+  grid-column: span 6;
+}
+
+.apt-field--time {
+  grid-column: span 3;
+}
+
+@container apt-form (min-width: 30rem) {
+  .apt-field--half {
+    grid-column: span 3;
+  }
+}
+
+@container apt-form (min-width: 36rem) {
+  .apt-field--date,
+  .apt-field--time {
+    grid-column: span 2;
+  }
+}
+
+.apt-label {
+  margin-block-end: 0.375rem;
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.apt-req {
+  margin-inline-start: 0.125rem;
+  color: var(--apt-danger-ink);
+}
+
+.apt-field-error {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-block-start: 0.375rem;
+  color: var(--apt-danger-ink);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.apt-field-error.apt-field--full {
+  margin-block-start: 0;
+}
+
+.apt-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.5rem 0 0;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+
+.apt-alert--warning {
+  border: 1px solid color-mix(in srgb, var(--color-warning) 40%, var(--bg-card));
+  background: color-mix(in srgb, var(--color-warning) 12%, var(--bg-card));
+  color: color-mix(in srgb, var(--color-warning) 45%, var(--text-primary));
+}
+
+.apt-alert .pi {
+  margin-block-start: 0.1875rem;
+}
+
+/* ─── Loading ────────────────────────────────────────────────────────────── */
+
+.apt-form-card--loading {
+  gap: 1.25rem;
+}
+
+.apt-form-skeleton {
+  block-size: var(--apt-control);
+  border-radius: var(--radius-md);
+  background: linear-gradient(
+    90deg,
+    var(--border-color) 25%,
+    color-mix(in srgb, var(--border-color) 45%, var(--bg-card)) 50%,
+    var(--border-color) 75%
+  );
+  background-size: 200% 100%;
+  animation: apt-form-shimmer 1.4s linear infinite;
+}
+
+@keyframes apt-form-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apt-form-skeleton {
+    animation: none;
+  }
+}
+
+/* ─── Actions ────────────────────────────────────────────────────────────── */
+
+.apt-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-block-start: 1.25rem;
+  border-block-start: 1px solid var(--border-color);
+}
+
+.apt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  block-size: var(--apt-control);
+  padding-inline: 1.25rem;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--radius-md);
+  font: inherit;
   font-size: 0.875rem;
-  font-weight: 500;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.apt-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.apt-btn--secondary {
+  background: var(--bg-card);
   color: var(--text-primary);
 }
 
-.appointment-form-label .req {
-  color: #dc2626;
+.apt-btn--secondary:hover {
+  background: color-mix(in srgb, var(--text-primary) 5%, var(--bg-card));
 }
 
-.appointment-form-warning {
-  margin: 0.35rem 0 0;
-  font-size: 0.8125rem;
-  color: #9a3412;
-}
-
-.appointment-form-error {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.8125rem;
-  color: #dc2626;
-}
-
-.appointment-form-actions {
-  margin-top: 0.5rem;
-}
-
-::ng-deep .appointment-form-btn-create.p-button {
-  background: var(--color-primary);
+.apt-btn--primary {
   border-color: var(--color-primary);
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--p-primary-contrast-color, #fff);
 }
 
-::ng-deep .appointment-form-btn-create.p-button:not(:disabled):hover {
-  background: var(--color-primary-hover, var(--color-primary));
-  border-color: var(--color-primary-hover, var(--color-primary));
+.apt-btn--primary:hover:not(:disabled) {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
 }
 
-@media (max-width: 768px) {
-  .appointment-form-page {
-    padding: 1rem;
+.apt-btn--primary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+@container apt-form (max-width: 30rem) {
+  .apt-form-actions {
+    flex-direction: column-reverse;
   }
 
-  .appointment-form-card {
-    padding: 1.25rem;
+  .apt-btn {
+    inline-size: 100%;
+    block-size: 2.75rem;
+  }
+}
+
+/* ─── PrimeNG controls: one height, one look, from the app tokens ─────────── */
+
+:host ::ng-deep {
+  /* The host element is the PrimeNG root, so keep it a flex container (not block). */
+  p-autocomplete,
+  p-select,
+  p-datepicker,
+  p-inputnumber {
+    display: flex;
+    inline-size: 100%;
   }
 
-  ::ng-deep .appointment-form-btn-create,
-  ::ng-deep .appointment-form-btn-cancel {
-    width: 100%;
+  .apt-control {
+    inline-size: 100%;
+  }
+
+  .apt-form-card {
+    .p-inputtext,
+    .p-textarea,
+    .p-select {
+      box-sizing: border-box;
+      min-block-size: var(--apt-control);
+      border: 1px solid var(--border-color-strong);
+      border-radius: var(--radius-md);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 0.9375rem;
+      box-shadow: none;
+      transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+    }
+
+    .p-select {
+      align-items: center;
+    }
+
+    /* Inputs are flex items with an intrinsic width: let them shrink to, and fill, their column. */
+    .p-inputtext,
+    .p-select-label {
+      min-inline-size: 0;
+    }
+
+    .p-datepicker-input,
+    .p-inputnumber-input,
+    .p-autocomplete-input {
+      flex: 1 1 auto;
+      inline-size: 100%;
+      min-inline-size: 0;
+    }
+
+    .p-inputtext::placeholder,
+    .p-textarea::placeholder,
+    .p-select-label.p-placeholder {
+      color: var(--text-muted);
+    }
+
+    .p-select-dropdown,
+    .p-select-clear-icon,
+    .p-datepicker-input-icon {
+      color: var(--text-muted);
+    }
+
+    .p-inputtext:hover:not(:disabled),
+    .p-textarea:hover:not(:disabled),
+    .p-select:not(.p-disabled):hover {
+      border-color: var(--text-muted);
+    }
+
+    p-select.ng-touched.ng-invalid:not(.p-disabled):hover {
+      border-color: var(--color-danger);
+    }
+
+    .p-inputtext:focus,
+    .p-textarea:focus,
+    .p-select.p-focus,
+    .p-select:not(.p-disabled).p-focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 22%, transparent);
+      outline: 0;
+    }
+
+    p-autocomplete.ng-touched.ng-invalid .p-inputtext,
+    p-datepicker.ng-touched.ng-invalid .p-inputtext,
+    p-select.ng-touched.ng-invalid {
+      border-color: var(--color-danger);
+    }
+
+    /* The suggestions toggle sits flush against the input, like one control. */
+    .p-autocomplete-dropdown {
+      inline-size: var(--apt-control);
+      border: 1px solid var(--border-color-strong);
+      background: var(--bg-app);
+      color: var(--text-secondary);
+    }
+
+    .p-autocomplete-dropdown:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--text-primary) 6%, var(--bg-app));
+      color: var(--text-primary);
+    }
+
+    .p-textarea {
+      min-block-size: 6rem;
+      padding: 0.625rem 0.75rem;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .apt-textarea {
+      inline-size: 100%;
+    }
+
+    .apt-price {
+      inline-size: 100%;
+      min-inline-size: 0;
+      padding-inline-end: 2.25rem;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+
+    .apt-price::-webkit-inner-spin-button,
+    .apt-price::-webkit-outer-spin-button {
+      margin: 0;
+      -webkit-appearance: none;
+    }
+  }
+}
+
+.apt-affix {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.apt-affix-symbol {
+  position: absolute;
+  inset-inline-end: 0.875rem;
+  color: var(--text-secondary);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Option rows render inside a body-level panel, so they are scoped by attribute, not :host. */
+.apt-option-service {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  inline-size: 100%;
+}
+
+.apt-option-service-name {
+  font-weight: 600;
+}
+
+.apt-option-service-meta {
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+  .apt-form-card {
+    padding: 1.25rem 1rem;
   }
 }
