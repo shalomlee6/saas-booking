@@ -6,7 +6,7 @@
 $sidebar-width:   240px;
 $sidebar-collapsed: 64px;
 $topbar-height:   56px;
-$breakpoint:      1024px;
+$breakpoint:      1024px; // keep in sync with LAYOUT_SIDEBAR_BREAKPOINT_PX
 
 // ─── Screen reader only ───────────────────────────────────────────────────────
 .sr-only {

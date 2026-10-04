@@ -5,18 +5,18 @@ export function orderServicesById<T extends { id: string }>(list: T[], order: st
   if (!order?.length) return list;
   const map = new Map(list.map((x) => [x.id, x]));
   const seen = new Set<string>();
-  const out: T[] = [];
+  const ordered: T[] = [];
   for (const id of order) {
     const x = map.get(id);
     if (x) {
-      out.push(x);
+      ordered.push(x);
       seen.add(id);
     }
   }
-  for (const x of list) {
-    if (!seen.has(x.id)) out.push(x);
-  }
-  return out;
+  // Active services the owner has not placed yet lead the list, so a new
+  // service is in the first screen of the landing carousel. The saved order follows.
+  const extras = list.filter((x) => !seen.has(x.id));
+  return [...extras, ...ordered];
 }
 
 export type GalleryItemNormalized = {

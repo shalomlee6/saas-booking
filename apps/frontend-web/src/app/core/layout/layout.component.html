@@ -22,7 +22,11 @@
   <div class="layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
 
   <!-- ─── Sidebar ───────────────────────────────────────────────────────── -->
-  <aside class="layout-sidebar" [attr.aria-label]="'navigation.menu' | translate">
+  <aside
+    class="layout-sidebar"
+    [attr.aria-label]="'navigation.menu' | translate"
+    [attr.inert]="isMobile() && !isMobileMenuOpen() ? '' : null"
+  >
     <div class="layout-sidebar-header">
       <div class="layout-sidebar-logo-mark" aria-hidden="true">b</div>
       <span class="layout-sidebar-logo-text">boki</span>
@@ -38,7 +42,7 @@
     </div>
 
     <div class="layout-sidebar-body">
-      <nav id="layout-sidebar-nav" class="layout-sidebar-nav" [attr.aria-label]="'navigation.menu' | translate">
+      <nav id="layout-sidebar-nav" class="layout-sidebar-nav" [attr.aria-label]="'navigation.menu' | translate" (click)="onSidebarNavigate($event)">
         <span class="layout-sidebar-section-label" aria-hidden="true">{{ 'navigation.menu' | translate }}</span>
 
         <a

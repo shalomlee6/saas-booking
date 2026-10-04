@@ -5,6 +5,8 @@ import { seedOwner, seedService, seedBusinessSettings, seedCustomer } from './he
 import { OtpChallenge } from '../models/OtpChallenge';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
+import { BusinessSettings } from '../models/BusinessSettings';
+import { Service } from '../models/Service';
 
 const app = buildTestApp();
 
@@ -40,6 +42,42 @@ describe('PUBLIC BOOKING', () => {
     expect(res.status).toBe(200);
     const services: unknown[] = Array.isArray(res.body) ? res.body : res.body.services ?? [];
     expect(services.length).toBeGreaterThan(0);
+  });
+
+  it('shows a newly created active service on the public list and hides it after deactivation', async () => {
+    const { business, token } = await seedOwner();
+    const older = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await BusinessSettings.updateOne(
+      { businessId: business._id },
+      { $set: { landingServiceOrder: [older._id.toString()] } }
+    );
+
+    const created = await request(app)
+      .post('/api/services')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'New Cut', durationMinutes: 30, price: 80 });
+    expect(created.status).toBe(201);
+    const createdId = String(created.body._id);
+
+    const listed = await request(app).get(`/api/public/businesses/${business.slug}/services`);
+    expect(listed.status).toBe(200);
+    const ids = (listed.body as { id: string }[]).map((row) => row.id);
+    expect(ids[0]).toBe(createdId);
+    expect(ids.includes(older._id.toString())).toBe(true);
+
+    const hidden = await request(app)
+      .put(`/api/services/${createdId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ isActive: false });
+    expect(hidden.status).toBe(200);
+
+    const after = await request(app).get(`/api/public/businesses/${business.slug}/services`);
+    const afterIds = (after.body as { id: string }[]).map((row) => row.id);
+    expect(afterIds.includes(createdId)).toBe(false);
+    expect(afterIds.includes(older._id.toString())).toBe(true);
+    const stored = await Service.findById(createdId);
+    expect(stored?.isActive).toBe(false);
   });
 
   it('unauthenticated request to /api/customers returns 401', async () => {
