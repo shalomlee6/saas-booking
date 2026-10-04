@@ -723,6 +723,11 @@ export class DataManagementTableComponent<T> implements OnInit {
     this.selectedIds.set([]);
   }
 
+  rowConfirmText(action: DataRowAction<T>, row: T): string {
+    const text = action.confirmText;
+    return typeof text === 'function' ? text(row) : (text ?? '');
+  }
+
   requestRow(event: Event, action: DataRowAction<T>, row: T): void {
     event.stopPropagation();
     if (action.confirmText) {

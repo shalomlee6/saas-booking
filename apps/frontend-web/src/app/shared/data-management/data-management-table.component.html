@@ -678,7 +678,7 @@
         (click)="$event.stopPropagation()"
       >
         <h2 class="data-table-dialog-title">{{ pending.action.label }}</h2>
-        <p class="data-table-dialog-consequence">{{ pending.action.confirmText }}</p>
+        <p class="data-table-dialog-consequence">{{ rowConfirmText(pending.action, pending.row) }}</p>
         <div class="data-table-dialog-actions">
           <button type="button" class="data-table-btn" data-testid="dm-row-dismiss" (click)="dismissRow()">
             {{ 'common.cancel' | translate }}

@@ -767,7 +767,44 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   // ——— Services ———
   if (isServicesGetList(req)) {
     return from(loadInitialServices()).pipe(
-      map((list) => new HttpResponse({ status: 200, body: [...list] }))
+      map((list) => {
+        const params = parseUrlQuery(req);
+        const page = params.get('page');
+        if (!page) {
+          const active = list.filter((service) => service['isActive'] !== false);
+          return new HttpResponse({ status: 200, body: active.map((service) => ({ ...service })) });
+        }
+        const status = params.get('status') || 'active';
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const filtered = list.filter((service) => {
+          const active = service['isActive'] !== false;
+          if (status === 'active' && !active) return false;
+          if (status === 'inactive' && active) return false;
+          if (!search) return true;
+          const name = String(service['name'] ?? '').toLowerCase();
+          const description = String(service['description'] ?? '').toLowerCase();
+          return name.includes(search) || description.includes(search);
+        });
+        const limit = Number(params.get('limit') || 25);
+        const pageNum = Number(page);
+        const start = (pageNum - 1) * limit;
+        const items = filtered.slice(start, start + limit).map((service) => ({
+          ...service,
+          duration: Number(service['durationMinutes'] ?? 0),
+          bookings: 0,
+          completedBookings: 0,
+          revenue: 0,
+          averageActualPrice: 0,
+          revenuePerHour: 0,
+          lastBooking: null,
+          upcomingAppointments: 0,
+          description: service['description'] ?? '',
+        }));
+        return new HttpResponse({
+          status: 200,
+          body: { items, total: filtered.length, page: pageNum, limit },
+        });
+      })
     );
   }
 

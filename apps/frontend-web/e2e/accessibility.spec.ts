@@ -107,6 +107,27 @@ test.describe('Accessibility — axe-core scans', () => {
     const results = await runAxe(page, '/customers');
     expect(results.violations).toHaveLength(0);
   });
+
+  test('/services (owner portal) has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await loginAsOwner(page);
+    await page.goto('/services', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.waitForSelector('.services-page', { timeout: 30_000 });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+
+    const results = await runAxe(page, '/services');
+    expect(results.violations).toHaveLength(0);
+  });
 });
 
 // ─── /customers states ────────────────────────────────────────────────────────

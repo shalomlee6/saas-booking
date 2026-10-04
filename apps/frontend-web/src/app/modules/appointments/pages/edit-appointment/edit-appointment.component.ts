@@ -126,7 +126,7 @@ export class EditAppointmentComponent implements OnInit {
       .subscribe({
         next: ({ detail, services, customers }) => {
           this.detail = detail;
-          this.services.set(services);
+          this.setServiceOptions(services, detail.serviceId);
           const selectedId = detail.customerId;
           this.customers.set(
             customers.filter((customer) => customer.isActive !== false || customer._id === selectedId)
@@ -142,6 +142,25 @@ export class EditAppointmentComponent implements OnInit {
           this.router.navigate(['/appointments']);
         },
       });
+  }
+
+  /** Active services only. The appointment's current service stays even when inactive. */
+  private setServiceOptions(services: Service[], selectedId: string | undefined): void {
+    const active = services.filter((service) => service.isActive !== false);
+    if (!selectedId || active.some((service) => service._id === selectedId)) {
+      this.services.set(active);
+      return;
+    }
+    const current = services.find((service) => service._id === selectedId);
+    if (current) {
+      this.services.set([...active, current]);
+      return;
+    }
+    this.services.set(active);
+    this.servicesApi.getById(selectedId).subscribe({
+      next: (service) => this.services.set([...active, service]),
+      error: () => undefined,
+    });
   }
 
   private refreshNoShowWarning(customerId: string): void {

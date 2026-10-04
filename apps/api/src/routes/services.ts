@@ -1,16 +1,20 @@
-import { Router } from 'express';
+import { Router, type NextFunction, type Response } from 'express';
 import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
+import { requireOwner } from '../middleware/requireOwner';
 import { asyncHandler } from '../utils/asyncHandler';
-import { validateBody, validateParams } from '../middleware/validateRequest';
+import { validateBody, validateParams, validateQuery } from '../middleware/validateRequest';
 import { Service } from '../models/Service';
 import { assertCanCreateService } from '../utils/planPolicy';
+import { bulkSetServiceStatus, exportServices, listServices } from '../controllers/servicesController';
 import {
   serviceCreateBodySchema,
   serviceIdParamsSchema,
   serviceUpdateBodySchema,
+  servicesBulkStatusBodySchema,
+  servicesPagedQuerySchema,
 } from '../validation/schemas/services';
 
 export const servicesRouter = Router();
@@ -19,14 +23,38 @@ servicesRouter.use(auth);
 servicesRouter.use(requireBackofficeRole);
 servicesRouter.use(requireBusinessContext);
 
-// GET /api/services
-servicesRouter.get('/', asyncHandler(async (req: AuthRequest, res) => {
-  const businessId = req.effectiveBusinessId!;
-  const services = await Service.find({ businessId, isActive: true }).sort({
-    name: 1,
-  });
-  res.json(services);
-}));
+function servicesListQuery(req: AuthRequest, res: Response, next: NextFunction): void {
+  const raw = req.query.page;
+  const page = Array.isArray(raw) ? raw[0] : raw;
+  const paged = page !== undefined && page !== null && String(page) !== '';
+  (req as AuthRequest & { serviceListPaged?: boolean }).serviceListPaged = paged;
+  if (!paged) {
+    next();
+    return;
+  }
+  validateQuery(servicesPagedQuerySchema)(req, res, next);
+}
+
+// GET /api/services — array of active services unless `page` is present.
+servicesRouter.get(
+  '/',
+  servicesListQuery,
+  asyncHandler((req: AuthRequest, res) => listServices(req, res))
+);
+
+servicesRouter.get(
+  '/export',
+  requireOwner,
+  validateQuery(servicesPagedQuerySchema),
+  asyncHandler((req: AuthRequest, res) => exportServices(req, res))
+);
+
+servicesRouter.post(
+  '/bulk-status',
+  requireOwner,
+  validateBody(servicesBulkStatusBodySchema),
+  asyncHandler((req: AuthRequest, res) => bulkSetServiceStatus(req, res))
+);
 
 // POST /api/services
 servicesRouter.post('/', validateBody(serviceCreateBodySchema), asyncHandler(async (req: AuthRequest, res) => {

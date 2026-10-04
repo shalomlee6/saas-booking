@@ -16,6 +16,13 @@ export const SERVICES_ROUTES: Routes = [
       ),
   },
   {
+    path: ':id',
+    loadComponent: () =>
+      import('./pages/service-details/service-details.component').then(
+        (m) => m.ServiceDetailsComponent
+      ),
+  },
+  {
     path: ':id/edit',
     loadComponent: () =>
       import('./pages/service-form/service-form.component').then(

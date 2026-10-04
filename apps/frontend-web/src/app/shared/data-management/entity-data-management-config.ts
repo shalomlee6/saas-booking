@@ -102,8 +102,8 @@ export interface DataRowAction<T> {
   severity?: DataActionSeverity;
   /** Keep an empty slot when the action is hidden so the other buttons stay aligned. */
   keepSlot?: boolean;
-  /** When set, the shell asks for confirmation before `run`. */
-  confirmText?: string;
+  /** When set, the shell asks for confirmation before `run`. A function can use the row. */
+  confirmText?: string | ((row: T) => string);
   /** When omitted, the action is shown for every row. */
   visible?: (row: T) => boolean;
   run: (row: T) => void;

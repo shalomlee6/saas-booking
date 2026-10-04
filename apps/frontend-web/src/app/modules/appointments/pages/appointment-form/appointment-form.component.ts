@@ -122,7 +122,7 @@ export class AppointmentFormComponent implements OnInit {
             }));
           this.allCustomers.set(normalized);
           this.filteredCustomers.set(normalized);
-          this.services.set(services);
+          this.services.set(services.filter((service) => service.isActive !== false));
           this.applyQueryPrefill();
         },
         error: () => {
