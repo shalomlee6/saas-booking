@@ -1,0 +1,693 @@
+<section class="data-table" [attr.aria-busy]="loading()">
+  @if (showHeader()) {
+    <header class="data-table-header">
+      <div class="data-table-heading">
+        @if (config().title) {
+          <h1 class="data-table-title">{{ config().title }}</h1>
+        }
+        @if (countText()) {
+          <p class="data-table-count" data-testid="dm-count">{{ countText() }}</p>
+        }
+      </div>
+      <div class="data-table-header-actions">
+        @for (action of config().headerActions ?? []; track action.id) {
+          <button
+            type="button"
+            class="data-table-btn data-table-btn--icon"
+            [attr.data-testid]="'dm-header-' + action.id"
+            [attr.aria-label]="action.label"
+            [pTooltip]="action.label"
+            tooltipPosition="bottom"
+            (click)="action.run()"
+          >
+            <i [class]="action.icon" aria-hidden="true"></i>
+          </button>
+        }
+        @if (config().primaryAction; as primary) {
+          <button
+            type="button"
+            class="data-table-btn data-table-btn--primary data-table-btn--collapse"
+            data-testid="dm-primary"
+            [attr.aria-label]="primary.label"
+            (click)="primary.run()"
+          >
+            <i [class]="primary.icon ?? 'pi pi-plus'" aria-hidden="true"></i>
+            <span class="data-table-btn-label">{{ primary.label }}</span>
+          </button>
+        }
+      </div>
+    </header>
+  }
+
+  <div class="data-table-toolbar-card">
+    <div class="data-table-toolbar">
+      <div class="data-table-search">
+        <i class="pi pi-search data-table-search-icon" aria-hidden="true"></i>
+        <input
+          data-testid="dm-search"
+          class="data-table-input data-table-search-input"
+          type="search"
+          [value]="searchDraft()"
+          [attr.placeholder]="searchPlaceholderText()"
+          [attr.aria-label]="'dataManagement.searchAria' | translate"
+          (input)="onSearchInput($event)"
+        />
+        @if (searchDraft()) {
+          <button
+            type="button"
+            class="data-table-search-clear"
+            data-testid="dm-clear-search"
+            (click)="clearSearch()"
+            [attr.aria-label]="'dataManagement.clearSearch' | translate"
+          >
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+
+      @for (filter of quickFilterViews(); track filter.id) {
+        <div
+          class="data-table-segment"
+          role="group"
+          [attr.aria-label]="filter.label"
+          [attr.data-testid]="'dm-filter-' + filter.id"
+        >
+          @for (option of filter.options; track option.value) {
+            <button
+              type="button"
+              class="data-table-segment-btn"
+              [attr.aria-pressed]="option.active"
+              (click)="setFilter(filter.id, option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      }
+
+      @if (drawerFieldViews().length > 0) {
+        <button
+          type="button"
+          class="data-table-btn data-table-btn--collapse data-table-btn--filters"
+          data-testid="dm-open-filters"
+          [attr.aria-label]="moreFiltersAria()"
+          (click)="openDrawer()"
+        >
+          <i class="pi pi-filter" aria-hidden="true"></i>
+          <span class="data-table-btn-label">{{ 'dataManagement.moreFilters' | translate }}</span>
+          @if (drawerActiveCount() > 0) {
+            <span class="data-table-badge" data-testid="dm-active-count">{{ drawerActiveCount() }}</span>
+          }
+        </button>
+      }
+
+      <div class="data-table-toolbar-end">
+        <div class="data-table-columns-wrap" [attr.data-columns-wrap]="uid">
+          <button
+            type="button"
+            class="data-table-btn data-table-btn--icon"
+            data-testid="dm-columns"
+            [attr.aria-label]="'dataManagement.columns' | translate"
+            [pTooltip]="'dataManagement.columns' | translate"
+            tooltipPosition="bottom"
+            aria-haspopup="true"
+            [attr.aria-expanded]="columnsOpen()"
+            [attr.aria-controls]="uid + '-columns'"
+            (click)="toggleColumns()"
+          >
+            <i class="pi pi-table" aria-hidden="true"></i>
+          </button>
+          <div
+            class="data-table-columns"
+            role="group"
+            [id]="uid + '-columns'"
+            [attr.aria-label]="'dataManagement.columnsMenu' | translate"
+            [hidden]="!columnsOpen()"
+          >
+            <ul class="data-table-column-list">
+              @for (column of columnMenu(); track column.id) {
+                <li>
+                  <label class="data-table-check">
+                    <input
+                      type="checkbox"
+                      [checked]="column.visible"
+                      [attr.data-testid]="'dm-column-' + column.id"
+                      (change)="toggleColumn(column.id)"
+                    />
+                    <span>{{ column.header }}</span>
+                  </label>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+
+        @if (showExport()) {
+          <button
+            type="button"
+            class="data-table-btn data-table-btn--icon"
+            data-testid="dm-export"
+            [attr.aria-label]="'dataManagement.export' | translate"
+            [pTooltip]="'dataManagement.export' | translate"
+            tooltipPosition="bottom"
+            (click)="requestExport()"
+          >
+            <i class="pi pi-download" aria-hidden="true"></i>
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (chipViews().length > 0) {
+      <div class="data-table-chips">
+        @for (chip of chipViews(); track chip.id) {
+          <button
+            type="button"
+            class="data-table-chip"
+            [attr.data-testid]="'dm-remove-' + chip.id"
+            [attr.aria-label]="'dataManagement.removeFilter' | translate: { label: chip.label }"
+            (click)="clearFilter(chip.id)"
+          >
+            <span>{{ chip.text }}</span>
+            <i class="pi pi-times" aria-hidden="true"></i>
+          </button>
+        }
+        @if (hasActiveQuery()) {
+          <button type="button" class="data-table-text-button" data-testid="dm-clear-filters" (click)="clearAllFilters()">
+            {{ 'dataManagement.clearAll' | translate }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (showSelection() && selectedRows().length > 0) {
+    <div class="data-table-bulk" data-testid="dm-bulk">
+      <span class="data-table-bulk-count">{{ 'dataManagement.selected' | translate: { count: selectedRows().length } }}</span>
+      @for (action of config().bulkActions; track action.id) {
+        <button type="button" class="data-table-btn" [attr.data-testid]="'dm-bulk-' + action.id" (click)="requestBulk(action)">
+          {{ action.label }}
+        </button>
+      }
+    </div>
+  }
+
+  @switch (viewState()) {
+    @case ('loading') {
+      <div class="data-table-loading" data-testid="dm-loading" role="status">
+        <span class="data-table-sr-only">{{ 'common.loading' | translate }}</span>
+        <div class="data-table-desktop data-table-table-card" aria-hidden="true">
+          <table class="data-table-table">
+            <tbody>
+              @for (index of skeletonRows; track index) {
+                <tr class="data-table-skeleton-row">
+                  @for (column of skeletonColumns(); track column.id) {
+                    <td class="data-table-cell" [class.data-table-col-desktop]="column.desktopOnly">
+                      @if (column.avatar) {
+                        <div class="data-table-identity">
+                          <span class="data-table-avatar data-table-skeleton"></span>
+                          <span class="data-table-skeleton-stack">
+                            <span class="data-table-skeleton data-table-skeleton--w-lg"></span>
+                            <span class="data-table-skeleton data-table-skeleton--w-md"></span>
+                          </span>
+                        </div>
+                      } @else {
+                        <span class="data-table-skeleton data-table-skeleton--w-md"></span>
+                      }
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <ul class="data-table-cards" aria-hidden="true">
+          @for (index of skeletonCards; track index) {
+            <li class="data-table-card">
+              <div class="data-table-identity">
+                <span class="data-table-avatar data-table-skeleton"></span>
+                <span class="data-table-skeleton-stack">
+                  <span class="data-table-skeleton data-table-skeleton--w-lg"></span>
+                  <span class="data-table-skeleton data-table-skeleton--w-md"></span>
+                </span>
+              </div>
+              <span class="data-table-skeleton data-table-skeleton--w-lg"></span>
+            </li>
+          }
+        </ul>
+      </div>
+    }
+    @case ('error') {
+      <div class="data-table-state" data-testid="dm-error" role="alert">
+        <span class="data-table-state-icon data-table-state-icon--danger" aria-hidden="true">
+          <i class="pi pi-exclamation-circle"></i>
+        </span>
+        <p class="data-table-state-title">{{ 'dataManagement.loadError' | translate }}</p>
+        <button type="button" class="data-table-btn" data-testid="dm-retry" (click)="retry()">
+          <i class="pi pi-refresh" aria-hidden="true"></i>
+          {{ 'common.retry' | translate }}
+        </button>
+      </div>
+    }
+    @case ('empty') {
+      <div class="data-table-state" data-testid="dm-empty">
+        <span class="data-table-state-icon" aria-hidden="true">
+          <i [class]="config().empty?.icon ?? 'pi pi-inbox'"></i>
+        </span>
+        <p class="data-table-state-title">{{ config().empty?.title ?? ('dataManagement.empty' | translate) }}</p>
+        @if (config().empty?.hint; as hint) {
+          <p class="data-table-state-hint">{{ hint }}</p>
+        }
+        @if (config().primaryAction; as primary) {
+          <button type="button" class="data-table-btn data-table-btn--primary" (click)="primary.run()">
+            <i [class]="primary.icon ?? 'pi pi-plus'" aria-hidden="true"></i>
+            {{ config().empty?.actionLabel ?? primary.label }}
+          </button>
+        }
+      </div>
+    }
+    @case ('no-results') {
+      <div class="data-table-state" data-testid="dm-no-results">
+        <span class="data-table-state-icon" aria-hidden="true">
+          <i class="pi pi-search"></i>
+        </span>
+        <p class="data-table-state-title">{{ 'dataManagement.noResults' | translate }}</p>
+        <p class="data-table-state-hint">{{ 'dataManagement.noResultsHint' | translate }}</p>
+        <button type="button" class="data-table-btn" data-testid="dm-no-results-clear" (click)="clearAllFilters()">
+          {{ 'dataManagement.clearAll' | translate }}
+        </button>
+      </div>
+    }
+    @case ('ready') {
+      <div class="data-table-desktop data-table-table-card" [class.data-table-refreshing]="loading()">
+        <div class="data-table-scroll">
+          <table class="data-table-table">
+            @if (config().title) {
+              <caption class="data-table-sr-only">{{ config().title }}</caption>
+            }
+            <thead>
+              <tr>
+                @if (showSelection()) {
+                  <th class="data-table-cell data-table-cell--select" scope="col">
+                    <input
+                      type="checkbox"
+                      data-testid="dm-select-page"
+                      [checked]="allOnPageSelected()"
+                      (change)="togglePageSelection()"
+                      [attr.aria-label]="'dataManagement.selected' | translate: { count: selectedRows().length }"
+                    />
+                  </th>
+                }
+                @for (head of headerViews(); track head.id) {
+                  <th
+                    class="data-table-cell"
+                    [class.data-table-col-desktop]="head.desktopOnly"
+                    [class.data-table-col-end]="head.end"
+                    [class.data-table-col-numeric]="head.numeric"
+                    scope="col"
+                    [attr.aria-sort]="head.sortable ? head.sortState : null"
+                  >
+                    @if (head.sortable) {
+                      <button
+                        type="button"
+                        class="data-table-sort"
+                        [class.data-table-sort-active]="head.sortActive"
+                        [attr.data-testid]="'dm-sort-' + head.id"
+                        (click)="toggleSort(head.id)"
+                      >
+                        <span>{{ head.header }}</span>
+                        <i
+                          class="pi data-table-sort-icon"
+                          [class.pi-sort-alt]="head.sortState === 'none'"
+                          [class.pi-sort-amount-up-alt]="head.sortState === 'ascending'"
+                          [class.pi-sort-amount-down]="head.sortState === 'descending'"
+                          aria-hidden="true"
+                        ></i>
+                      </button>
+                    } @else {
+                      <span>{{ head.header }}</span>
+                    }
+                  </th>
+                }
+                @if (config().rowActions.length > 0) {
+                  <th class="data-table-cell data-table-cell--actions" scope="col">
+                    <span class="data-table-actions-heading">{{ 'dataManagement.actions' | translate }}</span>
+                  </th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (view of rowViews(); track view.id) {
+                <tr
+                  [class.data-table-row-clickable]="!!config().onRowClick"
+                  [class.data-table-row-selected]="view.selected"
+                  (click)="onRowClick($event, view.row)"
+                >
+                  @if (showSelection()) {
+                    <td class="data-table-cell data-table-cell--select">
+                      <input
+                        type="checkbox"
+                        [attr.data-testid]="'dm-row-' + view.id"
+                        [checked]="view.selected"
+                        (change)="toggleRow(view.row)"
+                        [attr.aria-label]="view.cells[0]?.value || view.id"
+                      />
+                    </td>
+                  }
+                  @for (cell of view.cells; track cell.id) {
+                    <td
+                      class="data-table-cell"
+                      [class.data-table-col-desktop]="cell.desktopOnly"
+                      [class.data-table-col-end]="cell.end"
+                      [class.data-table-col-numeric]="cell.numeric"
+                    >
+                      @if (cell.tags) {
+                        <span class="data-table-tags">
+                          @for (tag of cell.tags; track tag.label) {
+                            <span class="data-table-tag" [attr.data-tone]="tag.severity">{{ tag.label }}</span>
+                          }
+                        </span>
+                      } @else if (cell.avatar) {
+                        <div class="data-table-identity">
+                          <span class="data-table-avatar" aria-hidden="true">{{ cell.initials }}</span>
+                          <span class="data-table-identity-text">
+                            <span class="data-table-primary-text">{{ cell.value }}</span>
+                            @if (cell.secondary) {
+                              <bdi class="data-table-secondary">{{ cell.secondary }}</bdi>
+                            }
+                          </span>
+                        </div>
+                      } @else {
+                        <span class="data-table-value" [class.data-table-muted]="cell.muted">{{ cell.value }}</span>
+                        @if (cell.secondary) {
+                          <bdi class="data-table-secondary">{{ cell.secondary }}</bdi>
+                        }
+                      }
+                    </td>
+                  }
+                  @if (config().rowActions.length > 0) {
+                    <td class="data-table-cell data-table-cell--actions">
+                      <div class="data-table-actions">
+                        @for (slot of view.actions; track slot.action.id) {
+                          <span class="data-table-action-slot">
+                            @if (slot.shown) {
+                              <button
+                                type="button"
+                                class="data-table-action"
+                                [attr.data-tone]="slot.action.severity || 'secondary'"
+                                [attr.data-testid]="'dm-action-' + slot.action.id"
+                                [attr.aria-label]="slot.action.label"
+                                [pTooltip]="slot.action.label"
+                                tooltipPosition="top"
+                                (click)="requestRow($event, slot.action, view.row)"
+                              >
+                                <i [class]="slot.action.icon || 'pi pi-circle'" aria-hidden="true"></i>
+                              </button>
+                            }
+                          </span>
+                        }
+                      </div>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ul class="data-table-cards" [class.data-table-refreshing]="loading()">
+        @for (view of rowViews(); track view.id) {
+          <li
+            class="data-table-card"
+            [class.data-table-row-clickable]="!!config().onRowClick"
+            [class.data-table-row-selected]="view.selected"
+            (click)="onRowClick($event, view.row)"
+          >
+            <div class="data-table-card-head">
+              @if (showSelection()) {
+                <input
+                  type="checkbox"
+                  [checked]="view.selected"
+                  (change)="toggleRow(view.row)"
+                  [attr.aria-label]="view.card.identity?.value || view.id"
+                />
+              }
+              @if (view.card.identity; as identity) {
+                <div class="data-table-identity">
+                  @if (identity.avatar) {
+                    <span class="data-table-avatar" aria-hidden="true">{{ identity.initials }}</span>
+                  }
+                  <span class="data-table-identity-text">
+                    <span class="data-table-primary-text">{{ identity.value }}</span>
+                    @if (identity.secondary) {
+                      <bdi class="data-table-secondary">{{ identity.secondary }}</bdi>
+                    }
+                  </span>
+                </div>
+              }
+              @if (view.card.tags.length > 0) {
+                <span class="data-table-tags">
+                  @for (tag of view.card.tags; track tag.label) {
+                    <span class="data-table-tag" [attr.data-tone]="tag.severity">{{ tag.label }}</span>
+                  }
+                </span>
+              }
+            </div>
+            @for (line of view.card.meta; track $index) {
+              <p class="data-table-card-meta">
+                <span class="data-table-card-meta-label">{{ line.label }}</span>
+                <span class="data-table-card-meta-value" [class.data-table-muted]="line.muted">{{ line.value }}</span>
+              </p>
+            }
+            @if (config().rowActions.length > 0) {
+              <div class="data-table-actions data-table-card-actions">
+                @for (slot of view.actions; track slot.action.id) {
+                  <span class="data-table-action-slot">
+                    @if (slot.shown) {
+                      <button
+                        type="button"
+                        class="data-table-action"
+                        [attr.data-tone]="slot.action.severity || 'secondary'"
+                        [attr.aria-label]="slot.action.label"
+                        (click)="requestRow($event, slot.action, view.row)"
+                      >
+                        <i [class]="slot.action.icon || 'pi pi-circle'" aria-hidden="true"></i>
+                      </button>
+                    }
+                  </span>
+                }
+              </div>
+            }
+          </li>
+        }
+      </ul>
+
+      <div class="data-table-footer">
+        <p class="data-table-footer-summary" data-testid="dm-summary" aria-live="polite">
+          {{
+            'dataManagement.showing'
+              | translate: { from: pageRange().from, to: pageRange().to, total: pageRange().total }
+          }}
+        </p>
+        <div class="data-table-footer-end">
+          <label class="data-table-pagesize">
+            <span class="data-table-pagesize-label">{{ 'dataManagement.rowsPerPage' | translate }}</span>
+            <select
+              class="data-table-input data-table-select"
+              data-testid="dm-page-size"
+              [ngModel]="limit()"
+              (ngModelChange)="onLimitChange($event)"
+            >
+              @for (size of pageSizes; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+              }
+            </select>
+          </label>
+          <nav class="data-table-pager" [attr.aria-label]="'dataManagement.pagination' | translate">
+            <button
+              type="button"
+              class="data-table-page-btn"
+              data-testid="dm-prev"
+              [disabled]="!canGoPrev()"
+              [attr.aria-label]="'dataManagement.previousPage' | translate"
+              (click)="setPage(page() - 1)"
+            >
+              <i [class]="prevIcon()" aria-hidden="true"></i>
+            </button>
+            @for (item of pageItems(); track item.key) {
+              @if (item.page === null) {
+                <span class="data-table-page-gap" aria-hidden="true">…</span>
+              } @else {
+                <button
+                  type="button"
+                  class="data-table-page-btn data-table-page-btn--number"
+                  [class.data-table-page-btn--current]="item.current"
+                  [attr.aria-current]="item.current ? 'page' : null"
+                  [attr.aria-label]="'dataManagement.pageN' | translate: { page: item.page }"
+                  (click)="setPage(item.page)"
+                >
+                  {{ item.page }}
+                </button>
+              }
+            }
+            <button
+              type="button"
+              class="data-table-page-btn"
+              data-testid="dm-next"
+              [disabled]="!canGoNext()"
+              [attr.aria-label]="'dataManagement.nextPage' | translate"
+              (click)="setPage(page() + 1)"
+            >
+              <i [class]="nextIcon()" aria-hidden="true"></i>
+            </button>
+          </nav>
+        </div>
+      </div>
+    }
+  }
+
+  <p-drawer
+    [visible]="drawerOpen()"
+    (visibleChange)="drawerOpen.set($event)"
+    [position]="drawerPosition()"
+    [header]="'dataManagement.moreFilters' | translate"
+    [modal]="true"
+    [fullScreen]="isMobile()"
+    [ariaCloseLabel]="'dataManagement.closeFilters' | translate"
+    appendTo="body"
+    styleClass="data-table-drawer"
+    [style]="drawerStyle()"
+  >
+    <div class="data-table-drawer-body" [attr.dir]="isRtl() ? 'rtl' : 'ltr'">
+      @for (field of drawerFieldViews(); track field.id) {
+        @if (field.kind === 'segment') {
+          <div class="data-table-field" role="group" [attr.aria-label]="field.label">
+            <span class="data-table-field-label">{{ field.label }}</span>
+            <div class="data-table-segment data-table-segment--block" [attr.data-testid]="'dm-filter-' + field.id">
+              @for (option of field.options; track option.value) {
+                <button
+                  type="button"
+                  class="data-table-segment-btn"
+                  [attr.aria-pressed]="option.active"
+                  (click)="setFilter(field.id, option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+          </div>
+        } @else {
+          <label class="data-table-field">
+            <span class="data-table-field-label">{{ field.label }}</span>
+            @if (field.kind === 'text') {
+              <input
+                class="data-table-input"
+                type="text"
+                [attr.data-testid]="'dm-filter-' + field.id"
+                [value]="field.value"
+                (input)="setFilter(field.id, $any($event.target).value)"
+              />
+            } @else {
+              <select
+                class="data-table-input data-table-select"
+                [attr.data-testid]="'dm-filter-' + field.id"
+                [ngModel]="field.value"
+                (ngModelChange)="setFilter(field.id, $event)"
+              >
+                <option value="">{{ 'dataManagement.all' | translate }}</option>
+                @for (option of field.options; track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+              @if (field.showCustomRange) {
+                <p-datepicker
+                  selectionMode="range"
+                  dateFormat="dd/mm/yy"
+                  [readonlyInput]="true"
+                  [showIcon]="true"
+                  appendTo="body"
+                  [placeholder]="field.label"
+                  [ngModel]="field.customRange"
+                  (ngModelChange)="onCustomRange($any(field.filter), $event)"
+                />
+              }
+            }
+          </label>
+        }
+      }
+    </div>
+    <ng-template #footer>
+      <div class="data-table-drawer-footer">
+        <button
+          type="button"
+          class="data-table-btn"
+          data-testid="dm-drawer-clear"
+          [disabled]="drawerActiveCount() === 0"
+          (click)="clearDrawerFilters()"
+        >
+          {{ 'dataManagement.clearAll' | translate }}
+        </button>
+        <button
+          type="button"
+          class="data-table-btn data-table-btn--primary"
+          data-testid="dm-drawer-apply"
+          (click)="drawerOpen.set(false)"
+        >
+          {{ 'dataManagement.showResults' | translate }}
+        </button>
+      </div>
+    </ng-template>
+  </p-drawer>
+
+  @if (pendingBulk(); as pending) {
+    <div class="data-table-dialog-backdrop" (click)="dismissBulk()">
+      <div
+        class="data-table-dialog"
+        role="dialog"
+        aria-modal="true"
+        data-testid="dm-dialog"
+        [attr.aria-label]="pending.label"
+        (click)="$event.stopPropagation()"
+      >
+        <h2 class="data-table-dialog-title">{{ pending.label }}</h2>
+        <p data-testid="dm-dialog-summary">
+          {{ 'dataManagement.bulkConfirm' | translate: { count: selectedRows().length, action: pending.label } }}
+        </p>
+        <p class="data-table-dialog-consequence" data-testid="dm-dialog-consequence">{{ pending.consequence }}</p>
+        <div class="data-table-dialog-actions">
+          <button type="button" class="data-table-btn" data-testid="dm-dismiss" (click)="dismissBulk()">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button type="button" class="data-table-btn data-table-btn--primary" data-testid="dm-confirm" (click)="confirmBulk()">
+            {{ 'dataManagement.confirm' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (pendingRow(); as pending) {
+    <div class="data-table-dialog-backdrop" (click)="dismissRow()">
+      <div
+        class="data-table-dialog"
+        role="dialog"
+        aria-modal="true"
+        data-testid="dm-row-dialog"
+        [attr.aria-label]="pending.action.label"
+        (click)="$event.stopPropagation()"
+      >
+        <h2 class="data-table-dialog-title">{{ pending.action.label }}</h2>
+        <p class="data-table-dialog-consequence">{{ pending.action.confirmText }}</p>
+        <div class="data-table-dialog-actions">
+          <button type="button" class="data-table-btn" data-testid="dm-row-dismiss" (click)="dismissRow()">
+            {{ 'common.cancel' | translate }}
+          </button>
+          <button type="button" class="data-table-btn data-table-btn--primary" data-testid="dm-row-confirm" (click)="confirmRow()">
+            {{ 'dataManagement.confirm' | translate }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</section>

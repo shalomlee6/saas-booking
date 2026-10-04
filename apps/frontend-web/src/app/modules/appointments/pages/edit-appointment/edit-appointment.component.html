@@ -32,6 +32,9 @@
           @if (form.get('customerId')?.invalid && form.get('customerId')?.touched) {
             <small class="edit-apt-error">{{ 'appointments.fieldRequired' | translate }}</small>
           }
+          @if (noShowLimitWarning()) {
+            <p class="edit-apt-warning" role="status">{{ 'appointments.noShowLimitWarning' | translate }}</p>
+          }
         </div>
 
         <div class="col-12 lg:col-6">
@@ -68,7 +71,7 @@
           <p-select
             inputId="status"
             formControlName="status"
-            [options]="statusOptions"
+            [options]="statusOptions()"
             optionLabel="label"
             optionValue="value"
             styleClass="w-full edit-apt-field"

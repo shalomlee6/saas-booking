@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import {
   FormBuilder,
@@ -9,6 +9,7 @@ import {
   type AbstractControl,
 } from '@angular/forms';
 import { forkJoin, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -67,9 +68,11 @@ export class AppointmentFormComponent implements OnInit {
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
 
   readonly loading = signal(true);
+  readonly noShowLimitWarning = signal(false);
   readonly saving = signal(false);
   readonly allCustomers = signal<Customer[]>([]);
   readonly filteredCustomers = signal<Customer[]>([]);
@@ -98,6 +101,12 @@ export class AppointmentFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.form
+      .get('customer')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value: Customer | null) => {
+        this.refreshNoShowWarning(value && typeof value === 'object' ? value._id : '');
+      });
     forkJoin({
       customers: this.customersApi.getList(),
       services: this.servicesApi.list(),
@@ -105,10 +114,12 @@ export class AppointmentFormComponent implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: ({ customers, services }) => {
-          const normalized = customers.map((c) => ({
-            ...c,
-            fullName: c.fullName ?? c.name,
-          }));
+          const normalized = customers
+            .filter((c) => c.isActive !== false)
+            .map((c) => ({
+              ...c,
+              fullName: c.fullName ?? c.name,
+            }));
           this.allCustomers.set(normalized);
           this.filteredCustomers.set(normalized);
           this.services.set(services);
@@ -124,8 +135,24 @@ export class AppointmentFormComponent implements OnInit {
       });
   }
 
+  private refreshNoShowWarning(customerId: string): void {
+    if (!customerId) {
+      this.noShowLimitWarning.set(false);
+      return;
+    }
+    this.customersApi.getById(customerId).subscribe({
+      next: (customer) => this.noShowLimitWarning.set(customer.blocked === true),
+      error: () => this.noShowLimitWarning.set(false),
+    });
+  }
+
   private applyQueryPrefill(): void {
     const params = this.route.snapshot.queryParamMap;
+    const customerId = params.get('customerId');
+    if (customerId) {
+      const match = this.allCustomers().find((customer) => customer._id === customerId);
+      if (match) this.form.patchValue({ customer: match });
+    }
     const date = params.get('date');
     const time = params.get('time');
     if (!date || !time) return;

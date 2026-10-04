@@ -58,7 +58,13 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     }
     const period = parseInsightsPeriod(req.query?.period);
     const rangeStart = periodStart(period);
-    const matchPeriod = {
+    /** Revenue is completed visits only. Pending, confirmed, and no-show are not income. */
+    const revenueMatch = {
+      businessId: businessIdObj,
+      status: 'completed',
+      start: { $gte: rangeStart },
+    };
+    const appointmentsInPeriod = {
       businessId: businessIdObj,
       status: { $ne: 'cancelled' },
       start: { $gte: rangeStart },
@@ -70,18 +76,24 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     const [revenueResult, revenueByServiceResult, revenueByWeekdayResult, appointmentsInWindow, appointmentsCount] =
       await Promise.all([
       Appointment.aggregate([
-        { $match: matchPeriod },
-        { $group: { _id: null, total: { $sum: { $ifNull: ['$price', 0] } } } },
+        { $match: revenueMatch },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ['$price', 0] } },
+            count: { $sum: 1 },
+          },
+        },
       ]),
       Appointment.aggregate([
-        { $match: matchPeriod },
+        { $match: revenueMatch },
         { $group: { _id: '$serviceId', total: { $sum: { $ifNull: ['$price', 0] } } } },
         { $lookup: { from: 'services', localField: '_id', foreignField: '_id', as: 'svc' } },
         { $unwind: { path: '$svc', preserveNullAndEmptyArrays: true } },
         { $project: { total: 1, serviceName: { $ifNull: ['$svc.name', ''] } } },
       ]),
       Appointment.aggregate([
-        { $match: matchPeriod },
+        { $match: revenueMatch },
         { $project: { weekday: { $dayOfWeek: '$start' }, price: { $ifNull: ['$price', 0] } } },
         { $group: { _id: '$weekday', total: { $sum: '$price' } } },
       ]),
@@ -91,10 +103,11 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
         status: { $ne: 'cancelled' },
         customerId: { $exists: true, $ne: null },
       }),
-      Appointment.countDocuments(matchPeriod),
+      Appointment.countDocuments(appointmentsInPeriod),
     ]);
 
     const totalRevenue = revenueResult[0]?.total ?? 0;
+    const completedAppointmentsCount = revenueResult[0]?.count ?? 0;
     const revenueByService = revenueByServiceResult.map((r: { serviceName?: string; total: number }) => ({
       serviceName: r.serviceName ?? '',
       total: r.total,
@@ -111,7 +124,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     const topCustomersAgg = await Appointment.aggregate([
       {
         $match: {
-          ...matchPeriod,
+          ...revenueMatch,
           customerId: { $exists: true, $ne: null },
         },
       },
@@ -134,6 +147,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       inactiveCustomersCount,
       topCustomers,
       appointmentsCount,
+      completedAppointmentsCount,
       period,
     });
   } catch (err) {

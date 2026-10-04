@@ -1,0 +1,1172 @@
+:host {
+  display: block;
+}
+
+.data-table {
+  --dm-control: 2.5rem;
+  --dm-radius-control: var(--radius-md);
+  --dm-muted: var(--text-muted);
+  --dm-surface-subtle: color-mix(in srgb, var(--text-primary) 3%, var(--bg-card));
+  --dm-hover: color-mix(in srgb, var(--color-primary) 5%, var(--bg-card));
+  --dm-selected: color-mix(in srgb, var(--color-primary) 9%, var(--bg-card));
+
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  color: var(--text-primary);
+}
+
+/* Severity → theme token. Used by status tags and row action buttons. */
+[data-tone='primary'],
+[data-tone='info'],
+[data-tone='help'] {
+  --tone: var(--color-primary);
+}
+
+[data-tone='success'] {
+  --tone: var(--color-success);
+}
+
+[data-tone='danger'] {
+  --tone: var(--color-danger);
+}
+
+[data-tone='warn'] {
+  --tone: var(--color-warning);
+}
+
+[data-tone='secondary'] {
+  --tone: var(--text-muted);
+}
+
+[data-tone='contrast'] {
+  --tone: var(--text-primary);
+}
+
+.data-table-sr-only {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.data-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.data-table-heading {
+  min-inline-size: 0;
+}
+
+.data-table-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.data-table-count {
+  margin: 0.125rem 0 0;
+  color: var(--dm-muted);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.data-table-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ─── Buttons and inputs (all controls share one height) ─────────────────── */
+
+.data-table-btn {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  block-size: var(--dm-control);
+  padding-inline: 0.875rem;
+  border: 1px solid var(--border-color-strong);
+  border-radius: var(--dm-radius-control);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.data-table-btn:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--text-primary) 5%, var(--bg-card));
+}
+
+.data-table-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.data-table-btn--icon {
+  inline-size: var(--dm-control);
+  padding-inline: 0;
+  color: var(--text-secondary);
+}
+
+.data-table-btn--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--p-primary-contrast-color, #fff);
+}
+
+.data-table-btn--primary:hover:not(:disabled) {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary-hover);
+}
+
+.data-table-btn .pi {
+  font-size: 0.9375rem;
+}
+
+.data-table-input {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  inline-size: 100%;
+  block-size: var(--dm-control);
+  padding-inline: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--dm-radius-control);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 0.875rem;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.data-table-input:hover {
+  border-color: var(--border-color-strong);
+}
+
+.data-table-input:focus {
+  border-color: var(--color-primary);
+  background: var(--bg-card);
+}
+
+.data-table-select {
+  appearance: none;
+  padding-inline-end: 2rem;
+  cursor: pointer;
+  background-image:
+    linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1.05rem) 50%,
+    calc(100% - 0.75rem) 50%;
+  background-size: 0.3125rem 0.3125rem;
+  background-repeat: no-repeat;
+}
+
+:host-context([dir='rtl']) .data-table-select,
+.data-table-drawer-body[dir='rtl'] .data-table-select {
+  background-position:
+    0.75rem 50%,
+    1.05rem 50%;
+}
+
+.data-table-search-input:focus-visible,
+.data-table-input:focus-visible,
+.data-table-btn:focus-visible,
+.data-table-sort:focus-visible,
+.data-table-chip:focus-visible,
+.data-table-text-button:focus-visible,
+.data-table-segment-btn:focus-visible,
+.data-table-page-btn:focus-visible,
+.data-table-action:focus-visible,
+.data-table-search-clear:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.data-table-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: 1.25rem;
+  block-size: 1.25rem;
+  padding-inline: 0.375rem;
+  border-radius: 999px;
+  background: var(--color-primary);
+  color: var(--p-primary-contrast-color, #fff);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Toolbar card ───────────────────────────────────────────────────────── */
+
+.data-table-toolbar-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+
+.data-table-toolbar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.data-table-toolbar-end {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-start: auto;
+}
+
+.data-table-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  max-inline-size: 22.5rem;
+  min-inline-size: 10rem;
+}
+
+.data-table-search-icon {
+  position: absolute;
+  inset-inline-start: 0.875rem;
+  color: var(--dm-muted);
+  font-size: 0.875rem;
+  pointer-events: none;
+}
+
+.data-table-search-input {
+  padding-inline: 2.5rem;
+}
+
+.data-table-search-input::placeholder {
+  color: var(--dm-muted);
+}
+
+.data-table-search-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.data-table-search-clear {
+  position: absolute;
+  inset-inline-end: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--dm-muted);
+  cursor: pointer;
+}
+
+.data-table-search-clear:hover {
+  color: var(--text-primary);
+}
+
+/* Segmented control */
+
+.data-table-segment {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: stretch;
+  gap: 0.125rem;
+  box-sizing: border-box;
+  block-size: var(--dm-control);
+  padding: 0.1875rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--dm-radius-control);
+  background: var(--bg-app);
+}
+
+.data-table-segment--block {
+  display: flex;
+  inline-size: 100%;
+}
+
+.data-table-segment-btn {
+  flex: 1 1 auto;
+  padding-inline: 0.875rem;
+  border: 1px solid transparent;
+  border-radius: calc(var(--dm-radius-control) - 3px);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.data-table-segment-btn:hover {
+  color: var(--text-primary);
+}
+
+.data-table-segment-btn[aria-pressed='true'] {
+  border-color: var(--border-color);
+  background: var(--bg-card);
+  color: var(--color-primary-ink);
+  box-shadow: var(--shadow-xs);
+}
+
+/* Columns popover */
+
+.data-table-columns-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.data-table-columns {
+  position: absolute;
+  z-index: 20;
+  inset-block-start: calc(100% + 0.375rem);
+  inset-inline-end: 0;
+  min-inline-size: 13rem;
+  padding: 0.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  box-shadow: var(--shadow-md);
+}
+
+.data-table-columns[hidden] {
+  display: none;
+}
+
+.data-table-column-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.data-table-check {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 0.625rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.data-table-check:hover {
+  background: var(--dm-surface-subtle);
+}
+
+.data-table-check input,
+.data-table-cell input[type='checkbox'],
+.data-table-card input[type='checkbox'] {
+  inline-size: 1rem;
+  block-size: 1rem;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+/* Active filter chips */
+
+.data-table-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--border-color);
+}
+
+.data-table-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  block-size: 2rem;
+  padding-inline: 0.75rem;
+  border: 1px solid var(--color-primary-muted);
+  border-radius: 999px;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-ink);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.data-table-chip .pi {
+  font-size: 0.6875rem;
+}
+
+.data-table-chip:hover {
+  border-color: var(--color-primary);
+}
+
+.data-table-text-button {
+  padding: 0.25rem 0.5rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.data-table-text-button:hover {
+  color: var(--text-primary);
+}
+
+/* Bulk bar */
+
+.data-table-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-primary-muted);
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-subtle);
+}
+
+.data-table-bulk-count {
+  margin-inline-end: auto;
+  color: var(--color-primary-ink);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+/* ─── Table ──────────────────────────────────────────────────────────────── */
+
+.data-table-table-card {
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+
+/*
+ * The table scrolls inside its card: the header stays pinned while rows scroll, and a
+ * narrow container scrolls sideways instead of clipping columns.
+ */
+.data-table-scroll {
+  overflow: auto;
+  max-block-size: max(24rem, calc(100dvh - 21rem));
+}
+
+.data-table-refreshing {
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.data-table-table {
+  inline-size: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.875rem;
+}
+
+.data-table-table thead th {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+  background: var(--dm-surface-subtle);
+  border-block-end: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.data-table-cell {
+  padding: 0.75rem 0.75rem;
+  text-align: start;
+  vertical-align: middle;
+}
+
+.data-table-table thead .data-table-cell {
+  padding-block: 0.625rem;
+}
+
+.data-table-cell:first-child {
+  padding-inline-start: 1rem;
+}
+
+.data-table-cell:last-child {
+  padding-inline-end: 1rem;
+}
+
+.data-table-table tbody td {
+  border-block-end: 1px solid var(--border-color);
+}
+
+.data-table-table tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.data-table-table tbody tr:hover {
+  background: var(--dm-hover);
+}
+
+.data-table-row-selected,
+.data-table-table tbody tr.data-table-row-selected:hover {
+  background: var(--dm-selected);
+}
+
+.data-table-row-clickable {
+  cursor: pointer;
+}
+
+.data-table-cell--select {
+  inline-size: 3rem;
+  padding-inline-end: 0;
+}
+
+.data-table-cell--actions {
+  inline-size: 1%;
+  text-align: end;
+  white-space: nowrap;
+}
+
+.data-table-actions-heading {
+  font-weight: inherit;
+}
+
+.data-table-col-end {
+  text-align: end;
+}
+
+.data-table-col-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table-table tbody .data-table-col-numeric .data-table-value {
+  font-weight: 600;
+}
+
+.data-table-sort {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.data-table-sort:hover,
+.data-table-sort-active {
+  color: var(--text-primary);
+}
+
+/* Out of flow: the label stays flush with the same edge as the values under it. */
+.data-table-sort-icon {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: calc(100% + 0.375rem);
+  font-size: 0.6875rem;
+  opacity: 0;
+  transform: translateY(-50%);
+}
+
+.data-table-col-end .data-table-sort-icon {
+  inset-inline-start: auto;
+  inset-inline-end: calc(100% + 0.375rem);
+}
+
+.data-table-sort:hover .data-table-sort-icon,
+.data-table-sort:focus-visible .data-table-sort-icon,
+.data-table-sort-active .data-table-sort-icon {
+  opacity: 1;
+}
+
+.data-table-value {
+  display: block;
+}
+
+.data-table-secondary {
+  display: block;
+  text-align: match-parent;
+  white-space: nowrap;
+  margin-block-start: 0.125rem;
+  color: var(--dm-muted);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+.data-table-muted {
+  color: var(--dm-muted);
+}
+
+/* Identity cell */
+
+.data-table-identity {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-inline-size: 0;
+}
+
+.data-table-avatar {
+  display: grid;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  border-radius: 50%;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-ink);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.data-table-identity-text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  white-space: nowrap;
+}
+
+.data-table-primary-text {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Status tag */
+
+.data-table-tags {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.data-table-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.625rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--tone, var(--text-muted)) 14%, var(--bg-card));
+  color: color-mix(in srgb, var(--tone, var(--text-muted)) 55%, var(--text-primary));
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.data-table-tag::before {
+  content: '';
+  inline-size: 0.375rem;
+  block-size: 0.375rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Row actions */
+
+.data-table-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.25rem;
+}
+
+.data-table-action-slot {
+  display: inline-flex;
+  flex: 0 0 2rem;
+  inline-size: 2rem;
+  block-size: 2rem;
+}
+
+.data-table-action {
+  display: grid;
+  place-items: center;
+  inline-size: 100%;
+  block-size: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: var(--dm-radius-control);
+  background: color-mix(in srgb, var(--tone, var(--text-muted)) 12%, transparent);
+  color: color-mix(in srgb, var(--tone, var(--text-muted)) 78%, var(--text-primary));
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.data-table-action:hover {
+  background: color-mix(in srgb, var(--tone, var(--text-muted)) 22%, transparent);
+}
+
+.data-table-action .pi {
+  font-size: 0.9375rem;
+}
+
+/* ─── Footer and pager ───────────────────────────────────────────────────── */
+
+.data-table-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.data-table-footer-summary {
+  margin: 0;
+  color: var(--dm-muted);
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table-footer-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.data-table-pagesize {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--dm-muted);
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.data-table-pagesize .data-table-select {
+  inline-size: 4.75rem;
+}
+
+.data-table-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.data-table-page-btn {
+  display: inline-grid;
+  place-items: center;
+  min-inline-size: 2.25rem;
+  block-size: 2.25rem;
+  padding-inline: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--dm-radius-control);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.data-table-page-btn:hover:not(:disabled) {
+  background: var(--dm-surface-subtle);
+  color: var(--text-primary);
+}
+
+.data-table-page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.data-table-page-btn--current,
+.data-table-page-btn--current:hover:not(:disabled) {
+  border-color: var(--color-primary-muted);
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-ink);
+}
+
+.data-table-page-gap {
+  min-inline-size: 1.5rem;
+  color: var(--dm-muted);
+  text-align: center;
+}
+
+/* ─── States ─────────────────────────────────────────────────────────────── */
+
+.data-table-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 3.5rem 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  text-align: center;
+}
+
+.data-table-state-icon {
+  display: grid;
+  place-items: center;
+  inline-size: 3rem;
+  block-size: 3rem;
+  margin-block-end: 0.25rem;
+  border-radius: 50%;
+  background: var(--color-primary-subtle);
+  color: var(--color-primary-ink);
+  font-size: 1.25rem;
+}
+
+.data-table-state-icon--danger {
+  --tone: var(--color-danger);
+
+  background: color-mix(in srgb, var(--tone) 14%, var(--bg-card));
+  color: color-mix(in srgb, var(--tone) 55%, var(--text-primary));
+}
+
+.data-table-state-title {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.data-table-state-hint {
+  max-inline-size: 26rem;
+  margin: 0;
+  color: var(--dm-muted);
+  font-size: 0.875rem;
+}
+
+.data-table-state .data-table-btn {
+  margin-block-start: 0.75rem;
+}
+
+.data-table-skeleton {
+  display: block;
+  block-size: 0.75rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--border-color) 25%,
+    color-mix(in srgb, var(--border-color) 45%, var(--bg-card)) 50%,
+    var(--border-color) 75%
+  );
+  background-size: 200% 100%;
+  animation: data-table-shimmer 1.4s linear infinite;
+}
+
+.data-table-skeleton--w-md {
+  inline-size: 5rem;
+}
+
+.data-table-skeleton--w-lg {
+  inline-size: 8rem;
+}
+
+.data-table-avatar.data-table-skeleton {
+  block-size: 2.25rem;
+  border-radius: 50%;
+}
+
+.data-table-skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.data-table-skeleton-row .data-table-cell {
+  padding-block: 1rem;
+}
+
+@keyframes data-table-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .data-table-skeleton {
+    animation: none;
+  }
+}
+
+/* ─── Mobile cards ───────────────────────────────────────────────────────── */
+
+.data-table-cards {
+  display: none;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.data-table-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+}
+
+.data-table-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.data-table-card-head .data-table-identity {
+  flex: 1 1 auto;
+}
+
+.data-table-card-head input[type='checkbox'] {
+  margin-block-start: 0.625rem;
+}
+
+.data-table-card-head .data-table-tags {
+  flex-shrink: 0;
+  margin-block-start: 0.5rem;
+}
+
+.data-table-card-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+.data-table-card-meta-label {
+  color: var(--dm-muted);
+}
+
+.data-table-card-meta-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table-card-meta-value.data-table-muted {
+  color: var(--dm-muted);
+  font-weight: 400;
+}
+
+.data-table-card-actions {
+  justify-content: space-evenly;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--border-color);
+}
+
+/* ─── Filters drawer ─────────────────────────────────────────────────────── */
+
+/* Portaled to <body>: re-declare what .data-table provides to everything inside it. */
+.data-table-drawer-body,
+.data-table-drawer-footer {
+  --dm-control: 2.5rem;
+  --dm-radius-control: var(--radius-md);
+  --dm-muted: var(--text-muted);
+  --dm-surface-subtle: color-mix(in srgb, var(--text-primary) 3%, var(--bg-card));
+}
+
+.data-table-drawer-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.data-table-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+
+.data-table-field-label {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.data-table-drawer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  inline-size: 100%;
+}
+
+.data-table-drawer-footer .data-table-btn--primary {
+  flex: 1 1 auto;
+}
+
+/* ─── Confirm dialogs ────────────────────────────────────────────────────── */
+
+.data-table-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--text-primary) 45%, transparent);
+}
+
+.data-table-dialog {
+  inline-size: min(28rem, calc(100% - 2rem));
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  box-shadow: var(--shadow-md);
+}
+
+.data-table-dialog p {
+  margin: 0 0 0.5rem;
+}
+
+.data-table-dialog-consequence {
+  color: var(--text-secondary);
+}
+
+.data-table-dialog-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+
+.data-table-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-block-start: 1rem;
+}
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+
+@media (max-width: 40rem) {
+  .data-table-btn--collapse {
+    inline-size: var(--dm-control);
+    padding-inline: 0;
+  }
+
+  .data-table-btn--collapse .data-table-btn-label {
+    display: none;
+  }
+
+  .data-table-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .data-table-search {
+    flex: 1 1 100%;
+    max-inline-size: none;
+  }
+
+  .data-table-segment {
+    flex: 1 1 0;
+    min-inline-size: 0;
+  }
+
+  .data-table-segment-btn {
+    flex: 1 1 0;
+    padding-inline: 0.5rem;
+  }
+
+  .data-table-toolbar-end {
+    display: contents;
+  }
+
+  .data-table-columns-wrap {
+    display: none;
+  }
+
+  .data-table-btn--filters .data-table-badge {
+    position: absolute;
+    inset-block-start: -0.375rem;
+    inset-inline-end: -0.375rem;
+    box-shadow: 0 0 0 2px var(--bg-card);
+  }
+
+  .data-table-desktop {
+    display: none;
+  }
+
+  .data-table-cards {
+    display: flex;
+  }
+
+  .data-table-action-slot {
+    flex-basis: 2.75rem;
+    inline-size: 2.75rem;
+    block-size: 2.75rem;
+  }
+
+  .data-table-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .data-table-footer-end {
+    justify-content: space-between;
+  }
+
+  .data-table-drawer-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .data-table-drawer-footer .data-table-btn {
+    inline-size: 100%;
+  }
+}

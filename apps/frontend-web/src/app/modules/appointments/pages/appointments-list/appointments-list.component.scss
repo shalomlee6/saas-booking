@@ -684,6 +684,10 @@
   border-left-color: #dc2626;
 }
 
+.calendar-block--no-show {
+  border-left-color: var(--color-warning);
+}
+
 .calendar-block--neutral {
   border-left-color: var(--border-color);
 }

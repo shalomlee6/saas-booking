@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
@@ -7,6 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { forkJoin, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -29,6 +30,24 @@ import {
 import type { AppointmentDetailDto } from '../../services/appointments-api.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+
+/** Mirrors `ALLOWED_NEXT` in appointmentStatusPolicy.ts. Identity is always listed so the current value stays selected. */
+const STATUS_NEXT: Record<string, readonly string[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['completed', 'cancelled', 'no_show'],
+  completed: ['no_show'],
+  no_show: ['completed'],
+  cancelled: [],
+};
+
+function statusChoices(
+  current: string,
+  label: (key: string) => string
+): { label: string; value: string }[] {
+  const next = STATUS_NEXT[current] ?? [];
+  const values = [current, ...next.filter((value) => value !== current)];
+  return values.map((value) => ({ value, label: label(`status.${value}`) }));
+}
 
 @Component({
   selector: 'app-edit-appointment',
@@ -57,20 +76,18 @@ export class EditAppointmentComponent implements OnInit {
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
 
   readonly loading = signal(true);
+  readonly noShowLimitWarning = signal(false);
   readonly saving = signal(false);
   readonly confirmingCancel = signal(false);
   readonly cancelling = signal(false);
   readonly customers = signal<Customer[]>([]);
   readonly services = signal<Service[]>([]);
-  readonly statusOptions: { label: string; value: string }[] = [
-    { label: this.language.t('status.confirmed'), value: 'confirmed' },
-    { label: this.language.t('status.pending'), value: 'pending' },
-    { label: this.language.t('status.completed'), value: 'completed' },
-    { label: this.language.t('status.cancelled'), value: 'cancelled' },
-  ];
+  /** Current status plus the moves the policy allows from it. */
+  readonly statusOptions = signal<{ label: string; value: string }[]>([]);
 
   appointmentId = '';
   private detail: AppointmentDetailDto | null = null;
@@ -87,6 +104,10 @@ export class EditAppointmentComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.form
+      .get('customerId')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((customerId: string) => this.refreshNoShowWarning(customerId));
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.router.navigate(['/appointments']);
@@ -106,7 +127,10 @@ export class EditAppointmentComponent implements OnInit {
         next: ({ detail, services, customers }) => {
           this.detail = detail;
           this.services.set(services);
-          this.customers.set(customers);
+          const selectedId = detail.customerId;
+          this.customers.set(
+            customers.filter((customer) => customer.isActive !== false || customer._id === selectedId)
+          );
           this.patchFormFromDetail(detail);
         },
         error: () => {
@@ -118,6 +142,17 @@ export class EditAppointmentComponent implements OnInit {
           this.router.navigate(['/appointments']);
         },
       });
+  }
+
+  private refreshNoShowWarning(customerId: string): void {
+    if (!customerId) {
+      this.noShowLimitWarning.set(false);
+      return;
+    }
+    this.customersApi.getById(customerId).subscribe({
+      next: (customer) => this.noShowLimitWarning.set(customer.blocked === true),
+      error: () => this.noShowLimitWarning.set(false),
+    });
   }
 
   /** Build wall-clock date + time Date objects from ISO range in business TZ. */
@@ -147,6 +182,7 @@ export class EditAppointmentComponent implements OnInit {
       status: d.status,
       notes: d.notes ?? '',
     });
+    this.statusOptions.set(statusChoices(d.status, (key) => this.language.t(key)));
   }
 
   onServiceChange(): void {

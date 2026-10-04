@@ -5,10 +5,38 @@ import type { CreateCustomerDto } from '../dto/create-customer.dto';
 import type { UpdateCustomerDto } from '../dto/update-customer.dto';
 import type { CustomerAppointmentHistoryItem, CustomerCardStatsResponse } from '../model/customer-card';
 import { ApiService } from '../../../core/api/api.service';
+import type { DataListPage, DataListQuery } from '../../../shared/data-management/entity-data-management-config';
+import type { CustomerListRow } from '../model/customer-list-row';
 
 @Injectable({ providedIn: 'root' })
 export class CustomersApiService {
   private readonly api = inject(ApiService);
+
+  listPage(query: DataListQuery): Observable<DataListPage<CustomerListRow>> {
+    return this.api.get<DataListPage<CustomerListRow>>('customers', {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sort: query.sort,
+      order: query.order,
+      ...query.filters,
+    });
+  }
+
+  exportCsv(query: DataListQuery): Observable<string> {
+    return this.api.getText('customers/export', {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sort: query.sort,
+      order: query.order,
+      ...query.filters,
+    });
+  }
+
+  resetNoShows(id: string): Observable<{ ok: boolean; noShowResetAt: string }> {
+    return this.api.post<{ ok: boolean; noShowResetAt: string }>(`customers/${id}/no-show-reset`, {});
+  }
 
   getList(search?: string): Observable<Customer[]> {
     const params = search ? `?search=${encodeURIComponent(search)}` : '';
@@ -50,6 +78,19 @@ export class CustomersApiService {
   bulkSetStatus(ids: string[], isActive: boolean): Observable<{ updated: number }> {
     return this.api.post<{ updated: number }>('customers/bulk-status', { ids, isActive });
   }
+
+  getNoShowPolicy(): Observable<NoShowPolicy> {
+    return this.api.get<NoShowPolicy>('customers/no-show-policy');
+  }
+
+  updateNoShowPolicy(policy: NoShowPolicy): Observable<NoShowPolicy> {
+    return this.api.put<NoShowPolicy>('customers/no-show-policy', policy);
+  }
+}
+
+export interface NoShowPolicy {
+  enabled: boolean;
+  threshold: number;
 }
 
 export interface BulkDeleteCustomersResponse {

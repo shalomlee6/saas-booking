@@ -14,7 +14,7 @@
             [suggestions]="filteredCustomers()"
             (completeMethod)="filterCustomers($event)"
             [dropdown]="true"
-            field="fullName"
+            optionLabel="fullName"
             [forceSelection]="true"
             [placeholder]="'appointments.searchByNameOrPhone' | translate"
             styleClass="w-full"
@@ -26,6 +26,9 @@
           </p-autocomplete>
           @if (form.get('customer')?.invalid && form.get('customer')?.touched) {
             <small class="appointment-form-error">{{ 'appointments.fieldRequired' | translate }}</small>
+          }
+          @if (noShowLimitWarning()) {
+            <p class="appointment-form-warning" role="status">{{ 'appointments.noShowLimitWarning' | translate }}</p>
           }
         </div>
 

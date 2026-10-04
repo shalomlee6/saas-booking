@@ -1,7 +1,16 @@
 import { Response } from 'express';
 import { Types } from 'mongoose';
 import { AuthRequest } from '../middleware/auth';
+import { isOwnerAccess } from '../middleware/requireOwner';
 import { NotFoundError } from '../errors/httpErrors';
+import { Customer } from '../models/Customer';
+import { recordAudit } from '../utils/recordAudit';
+import {
+  customersToCsv,
+  listCustomersForExport,
+  listCustomersPage,
+  type CustomersPagedQuery,
+} from '../services/customerListService';
 import {
   createCustomerForTenant,
   deleteCustomerForTenant,
@@ -14,9 +23,26 @@ import {
 import { ConflictError } from '../errors/httpErrors';
 import { listAppointmentsForCustomer } from '../services/appointmentQueryService';
 import { computeCustomerInsights, computeCustomerStats } from '../services/customerStatsService';
+import {
+  countCustomerNoShows,
+  isBlockedByNoShowPolicy,
+  readNoShowPolicy,
+  resolveNoShowPolicy,
+  saveNoShowPolicy,
+} from '../services/customerNoShows';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 
 export async function listCustomers(req: AuthRequest, res: Response): Promise<void> {
   const businessId = req.effectiveBusinessId!;
+  if ((req as AuthRequest & { customerListPaged?: boolean }).customerListPaged) {
+    const page = await listCustomersPage(
+      businessId,
+      req.query as unknown as CustomersPagedQuery,
+      isOwnerAccess(req)
+    );
+    res.json(page);
+    return;
+  }
   const q = req.query as { search?: string };
   const search = q.search ?? '';
   const customers = await listCustomersForTenant(businessId, search);
@@ -28,11 +54,51 @@ export async function listCustomers(req: AuthRequest, res: Response): Promise<vo
       phone: c.phone ?? '',
       email: c.email ?? '',
       notes: c.notes,
+      isActive: c.isActive !== false,
       preferences: c.preferences,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
     }))
   );
+}
+
+export async function exportCustomers(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = req.effectiveBusinessId!;
+  const rows = await listCustomersForExport(businessId, req.query as unknown as CustomersPagedQuery);
+  const csv = customersToCsv(rows);
+  await recordAudit({
+    actorUserId: req.user?.userId,
+    actorEmail: req.user?.email,
+    action: 'customer.exported',
+    entity: 'Customer',
+    metadata: { businessId, rowCount: csv.rowCount },
+  });
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="customers.csv"');
+  res.send(csv.body);
+}
+
+export async function resetCustomerNoShows(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = req.effectiveBusinessId!;
+  const { id } = req.params;
+  const noShowResetAt = new Date();
+  const customer = await Customer.findOneAndUpdate(
+    { _id: id, businessId },
+    { $set: { noShowResetAt } },
+    { new: true }
+  );
+  if (!customer) {
+    throw new NotFoundError('Customer not found');
+  }
+  await recordAudit({
+    actorUserId: req.user?.userId,
+    actorEmail: req.user?.email,
+    action: 'customer.no_shows_reset',
+    entity: 'Customer',
+    entityId: id,
+    metadata: { businessId, noShowResetAt: noShowResetAt.toISOString() },
+  });
+  res.json({ ok: true, noShowResetAt: noShowResetAt.toISOString() });
 }
 
 export async function createCustomer(req: AuthRequest, res: Response): Promise<void> {
@@ -55,7 +121,32 @@ export async function getCustomer(req: AuthRequest, res: Response): Promise<void
   if (!customer) {
     throw new NotFoundError('Customer not found');
   }
-  res.json(customer);
+  const settings = await ensureBusinessSettings(businessId);
+  const noShowCount = await countCustomerNoShows(businessId, customer._id.toString(), customer.noShowResetAt);
+  const blocked = isBlockedByNoShowPolicy(resolveNoShowPolicy(settings), noShowCount);
+  res.json({ ...customer.toObject(), blocked });
+}
+
+export async function getNoShowPolicy(req: AuthRequest, res: Response): Promise<void> {
+  const policy = await readNoShowPolicy(req.effectiveBusinessId!);
+  res.json(policy);
+}
+
+export async function updateNoShowPolicy(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = req.effectiveBusinessId!;
+  const body = req.body as { enabled: boolean; threshold: number };
+  const result = await saveNoShowPolicy(businessId, body);
+  if (result.changed) {
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'customer.no_show_policy_updated',
+      entity: 'BusinessSettings',
+      entityId: result.settingsId,
+      metadata: { businessId, before: result.previous, after: result.current },
+    });
+  }
+  res.json(result.current);
 }
 
 export async function updateCustomer(req: AuthRequest, res: Response): Promise<void> {
@@ -120,7 +211,18 @@ export async function bulkDeleteCustomers(req: AuthRequest, res: Response): Prom
 export async function bulkSetCustomerStatus(req: AuthRequest, res: Response): Promise<void> {
   const businessId = req.effectiveBusinessId!;
   const { ids, isActive } = req.body as { ids: string[]; isActive: boolean };
+  const existing = await Customer.find({ businessId, _id: { $in: ids } }).select('_id');
   const updated = await setCustomersActiveForTenant(businessId, ids, isActive);
+  for (const customer of existing) {
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: isActive ? 'customer.activated' : 'customer.deactivated',
+      entity: 'Customer',
+      entityId: customer._id.toString(),
+      metadata: { businessId },
+    });
+  }
   res.json({ updated });
 }
 

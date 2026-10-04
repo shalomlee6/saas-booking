@@ -86,6 +86,11 @@ export interface IBusinessSettings extends Document {
   landingProducts?: ILandingProduct[];
   /** Display rating when there are no computed reviews yet (1–5). */
   publicRating?: number;
+  /** Online-booking block. Missing on older documents — treated as enabled with threshold 3. */
+  noShowPolicy?: {
+    enabled: boolean;
+    threshold: number;
+  };
   /** Public contact phone shown on landing / booking CTA (optional). */
   businessPhonePublic?: string;
   /** Secondary hero / feature image URL for public landing. */
@@ -202,6 +207,10 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       default: [],
     },
     publicRating: { type: Number, min: 1, max: 5, default: 5 },
+    noShowPolicy: {
+      enabled: { type: Boolean, default: true },
+      threshold: { type: Number, default: 3, min: 1, max: 20 },
+    },
     businessPhonePublic: { type: String, default: '' },
     localization: {
       language: { type: String, enum: ['he', 'en'], default: 'he' },

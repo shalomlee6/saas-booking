@@ -31,6 +31,7 @@ const STATUS_KEYS: Record<string, string> = {
   done: 'status.completed',
   cancelled: 'status.cancelled',
   canceled: 'status.cancelled',
+  no_show: 'status.no_show',
 };
 
 @Component({
@@ -167,6 +168,9 @@ export class CustomerDetailsComponent implements OnInit {
         this.customer.set(customer);
         this.loadingCustomer.set(false);
         this.resetProfileForm(customer);
+        if (this.route.snapshot.queryParamMap.get('edit') === '1') {
+          this.startEditProfile();
+        }
       },
       error: () => {
         this.customerError.set(this.language.t('customerCard.loadError'));

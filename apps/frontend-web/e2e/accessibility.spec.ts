@@ -87,6 +87,101 @@ test.describe('Accessibility — axe-core scans', () => {
     const results = await runAxe(page, '/dashboard');
     expect(results.violations).toHaveLength(0);
   });
+
+  test('/customers (owner portal) has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await loginAsOwner(page);
+    await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.waitForSelector('.customers-page', { timeout: 30_000 });
+
+    const results = await runAxe(page, '/customers');
+    expect(results.violations).toHaveLength(0);
+  });
+});
+
+// ─── /customers states ────────────────────────────────────────────────────────
+
+test.describe('Accessibility — /customers states', () => {
+  test.setTimeout(180_000);
+
+  async function openCustomers(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
+    await page.context().clearCookies();
+    await loginAsOwner(page);
+    await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
+    await page.setViewportSize({ width, height: width >= 640 ? 800 : 844 });
+    await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+    await expect(
+      width >= 640 ? page.locator('tbody tr').first() : page.locator('.data-table-card').first()
+    ).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(400);
+  }
+
+  async function setDark(page: import('@playwright/test').Page, dark: boolean) {
+    await page.evaluate((isDark) => {
+      document.documentElement.classList.toggle('theme-dark', isDark);
+      document.querySelector('.layout')?.classList.toggle('theme-dark', isDark);
+    }, dark);
+    await page.waitForTimeout(400);
+  }
+
+  for (const [lang, width] of [
+    ['he', 390],
+    ['en', 1280],
+    ['en', 390],
+  ] as const) {
+    test(`/customers (${lang}, ${width}px) has no axe violations`, async ({ page }) => {
+      await openCustomers(page, lang, width);
+      const results = await runAxe(page, `/customers ${lang} ${width}`);
+      expect(results.violations).toHaveLength(0);
+    });
+  }
+
+  test('/customers dark mode has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await setDark(page, true);
+    const results = await runAxe(page, '/customers dark');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers with the columns menu open has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await page.getByTestId('dm-columns').click();
+    await page.waitForTimeout(200);
+    const results = await runAxe(page, '/customers columns menu');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers with the filters drawer open has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await page.getByTestId('dm-open-filters').click();
+    await page.getByTestId('dm-drawer-apply').waitFor();
+    await page.waitForTimeout(600);
+    const results = await runAxe(page, '/customers filters drawer');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers with active filters and no results has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await page.getByTestId('dm-open-filters').click();
+    await page.getByTestId('dm-filter-customerType').getByRole('button').nth(1).click();
+    await page.getByTestId('dm-drawer-apply').click();
+    await page.getByTestId('dm-search').fill('zzzz-no-match');
+    await expect(page.getByTestId('dm-no-results')).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(400);
+    const results = await runAxe(page, '/customers no results');
+    expect(results.violations).toHaveLength(0);
+  });
 });
 
 // ─── Keyboard navigation — public booking ─────────────────────────────────────

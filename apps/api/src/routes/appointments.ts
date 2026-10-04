@@ -30,6 +30,7 @@ import {
 } from '../services/createAppointmentAtomic';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
+import type { AppointmentStatus } from '../dto/enums';
 
 export const appointmentsRouter = Router();
 
@@ -161,7 +162,7 @@ appointmentsRouter.put(
       if (
         !isAllowedAppointmentStatusTransition(
           existing.status,
-          status as 'pending' | 'confirmed' | 'completed' | 'cancelled'
+          status as AppointmentStatus
         )
       ) {
         throw new ConflictError('Invalid appointment status transition');

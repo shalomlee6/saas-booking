@@ -32,6 +32,8 @@ import {
   toDateKeyInBusinessTimezone,
 } from '../../dto/public-booking-dto.adapter';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
 /** 3-step flow: 1=service, 2=date+time, 3=confirm */
@@ -61,6 +63,7 @@ function startOfDay(d: Date): Date {
   standalone: true,
   imports: [
     FormsModule,
+    TranslatePipe,
     ButtonModule,
     DatePickerModule,
     HoldToConfirmButtonComponent,
@@ -76,6 +79,7 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly session = inject(PublicSessionService);
   private readonly auth = inject(AuthService);
+  private readonly language = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);
 
@@ -161,12 +165,13 @@ export class CustomerBookPageComponent implements OnInit {
   readonly stepTitle = computed(() => STEP_TITLES[this.currentStep()]);
   readonly progressPercent = computed(() => (this.currentStep() / 3) * 100);
 
+  readonly guestPhoneValid = computed(() => /^05\d{8}$/.test(this.guestPhone()));
+
   /** Used only for the hold-to-confirm disabled state on step 3. */
   readonly canConfirm = computed(
     () =>
       !this.submitting() &&
-      (this.isLoggedIn() ||
-        (this.guestName().trim().length > 0 && this.guestPhone().length === 10))
+      (this.isLoggedIn() || (this.guestName().trim().length > 0 && this.guestPhoneValid()))
   );
 
   // ── Two-way binding shim for p-datePicker [(ngModel)] ──────────────────────
@@ -323,6 +328,11 @@ export class CustomerBookPageComponent implements OnInit {
 
   // ── Booking submission ─────────────────────────────────────────────────────
 
+  private hasCustomerPhoneError(err: { error?: { errors?: { path?: string }[] } }): boolean {
+    const errors = err?.error?.errors;
+    return Array.isArray(errors) && errors.some((issue) => issue?.path === 'customerPhone');
+  }
+
   confirmBooking(): void {
     const b = this.business();
     const svc = this.selectedService();
@@ -395,6 +405,18 @@ export class CustomerBookPageComponent implements OnInit {
           if (b2 && svc2 && dateStr) {
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
+        } else if (err?.error?.code === 'ONLINE_BOOKING_UNAVAILABLE') {
+          const msg = this.language.t('customers.onlineBookingUnavailable');
+          this.submitError.set(msg);
+          this.showError(msg);
+          this.showHoldButton.set(false);
+          setTimeout(() => this.showHoldButton.set(true), 50);
+        } else if (err?.status === 400 && this.hasCustomerPhoneError(err)) {
+          const msg = this.language.t('customers.phoneInvalid');
+          this.submitError.set(msg);
+          this.showError(msg);
+          this.showHoldButton.set(false);
+          setTimeout(() => this.showHoldButton.set(true), 50);
         } else {
           const msg = friendlyPublicBookingError(err);
           this.submitError.set(msg);

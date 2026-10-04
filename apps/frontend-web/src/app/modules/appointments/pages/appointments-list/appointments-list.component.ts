@@ -62,6 +62,7 @@ const STATUS_KEYS: Record<string, string> = {
   done: 'status.completed',
   cancelled: 'status.cancelled',
   canceled: 'status.cancelled',
+  no_show: 'status.no_show',
 };
 
 const STATUS_SEVERITY_MAP: Record<string, 'success' | 'info' | 'warn' | 'danger' | 'secondary'> = {
@@ -70,6 +71,7 @@ const STATUS_SEVERITY_MAP: Record<string, 'success' | 'info' | 'warn' | 'danger'
   completed: 'info',
   cancelled: 'danger',
   canceled: 'danger',
+  no_show: 'warn',
 };
 
 const STATUS_CLASS_MAP: Record<string, string> = {
@@ -79,6 +81,7 @@ const STATUS_CLASS_MAP: Record<string, string> = {
   done: 'calendar-block--completed',
   cancelled: 'calendar-block--cancelled',
   canceled: 'calendar-block--cancelled',
+  no_show: 'calendar-block--no-show',
 };
 
 export interface DayChip {
@@ -127,6 +130,7 @@ export interface AppointmentCardVm {
   statusLabel: string;
   preferredTimeLabel: string;
   severity: 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast';
+  canMarkNoShow: boolean;
 }
 
 const TIME_OF_DAY_KEYS: Record<string, string> = {
@@ -193,6 +197,13 @@ function getStatusClass(status: string): string {
   return STATUS_CLASS_MAP[(status || '').toLowerCase()] ?? 'calendar-block--neutral';
 }
 
+function canMarkNoShow(apt: Appointment): boolean {
+  const status = (apt.status ?? '').toLowerCase();
+  if (status !== 'confirmed' && status !== 'completed') return false;
+  const end = apt.end instanceof Date ? apt.end : new Date(apt.end);
+  return !Number.isNaN(end.getTime()) && end.getTime() < Date.now();
+}
+
 /** Below this width → mobile agenda view + drawer for detail panel. */
 const MOBILE_BREAKPOINT_PX = 768;
 /** Below this width → 5-day week grid instead of 7-day. */
@@ -252,6 +263,7 @@ export class AppointmentsListComponent implements OnInit {
   readonly searchQuery = signal('');
   readonly isMobile = signal(false);
   readonly selectedAppointment = signal<Appointment | null>(null);
+  readonly markingNoShow = signal(false);
 
   readonly visibleStartDate = signal<Date>(startOfDay(new Date()));
   readonly visibleDaysCount = signal(7);
@@ -458,6 +470,7 @@ export class AppointmentsListComponent implements OnInit {
       statusLabel: this.statusLabel(apt.status),
       preferredTimeLabel: this.preferredTimeLabel(apt),
       severity: getStatusSeverity(apt.status ?? ''),
+      canMarkNoShow: canMarkNoShow(apt),
     }))
   );
 
@@ -567,6 +580,7 @@ export class AppointmentsListComponent implements OnInit {
       statusLabel: this.statusLabel(apt.status),
       preferredTimeLabel: this.preferredTimeLabel(apt),
       severity: getStatusSeverity(apt.status ?? ''),
+      canMarkNoShow: canMarkNoShow(apt),
     };
   });
 
@@ -819,6 +833,32 @@ export class AppointmentsListComponent implements OnInit {
       this.closeDetail();
       this.router.navigate(['/appointments', apt._id, 'edit']);
     }
+  }
+
+  onMarkNoShow(): void {
+    const apt = this.selectedAppointment();
+    if (!apt?._id || this.markingNoShow() || !canMarkNoShow(apt)) return;
+    this.markingNoShow.set(true);
+    this.appointmentsApi.patchAppointment(apt._id, { status: 'no_show' }).subscribe({
+      next: () => {
+        this.markingNoShow.set(false);
+        this.messageService.add({
+          severity: 'success',
+          summary: this.language.t('appointments.markedNoShow'),
+        });
+        this.closeDetail();
+        this.loadForCurrentView();
+        this.appointmentsApi.refresh();
+      },
+      error: () => {
+        this.markingNoShow.set(false);
+        this.messageService.add({
+          severity: 'error',
+          summary: this.language.t('common.error'),
+          detail: this.language.t('appointments.markNoShowFailed'),
+        });
+      },
+    });
   }
 
   onDetailVisibleChange(visible: boolean): void {

@@ -63,6 +63,49 @@ function isServicesPut(req: HttpRequest<unknown>): boolean {
   return (req.method === 'PUT' || req.method === 'PATCH') && /\/api\/services\/[^/]+$/.test(req.url);
 }
 
+const MOCK_HE_NAMES = [
+  'נועה כהן',
+  'מאיה לוי',
+  'שירה מזרחי',
+  'תמר ביטון',
+  'יעל אברהם',
+  'דנה פרידמן',
+  'רותם דהן',
+  'ליאור אזולאי',
+  'הילה גולן',
+  'אור שמעוני',
+  'מור אוחיון',
+  'ענבר חדד',
+];
+
+/** Deterministic list-row metrics so the customers table shows realistic variety in the mock. */
+function mockCustomerListRow(customer: Record<string, unknown>, index: number): Record<string, unknown> {
+  const day = 86_400_000;
+  const visits = [0, 1, 3, 7, 12, 24, 2, 5][index % 8];
+  const lastDays = [null, 3, 12, 34, 75, 140, 1, 21][index % 8];
+  const nextDays = [null, null, 2, null, 6, null, 1, null][index % 8];
+  const next = nextDays === null ? null : new Date(Date.now() + nextDays * day);
+  next?.setHours(9 + (index % 8), index % 2 ? 30 : 0, 0, 0);
+  const named = index < MOCK_HE_NAMES.length;
+  return {
+    ...customer,
+    ...(named
+      ? { name: MOCK_HE_NAMES[index], phone: `05${index % 5}-${String(1234000 + index * 137).slice(0, 7)}` }
+      : {}),
+    isActive: index % 7 !== 6 && customer['isActive'] !== false,
+    totalVisits: visits,
+    totalRevenue: visits * (index % 3 === 0 ? 220 : 180),
+    averageVisitValue: visits === 0 ? 0 : index % 3 === 0 ? 220 : 180,
+    lastVisit: lastDays === null ? null : new Date(Date.now() - lastDays * day).toISOString(),
+    nextAppointment: next ? next.toISOString() : null,
+    noShowCount: index % 5 === 2 ? 2 : 0,
+    blocked: index % 11 === 10,
+    customerType: visits > 1 ? 'returning' : 'new',
+    preferredServiceName: '',
+    preferredTimeOfDay: null,
+  };
+}
+
 /** GET /api/customers (list only, no extra path segment). */
 function isCustomersGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/customers\/?(\?.*)?$/.test(req.url);
@@ -134,7 +177,7 @@ function adminUrlPath(req: HttpRequest<unknown>): string {
 
 function parseUrlQuery(req: HttpRequest<unknown>): URLSearchParams {
   try {
-    return new URL(req.url, 'http://localhost').searchParams;
+    return new URL(req.urlWithParams, 'http://localhost').searchParams;
   } catch {
     const q = req.url.includes('?') ? req.url.split('?')[1] : '';
     return new URLSearchParams(q);
@@ -836,7 +879,31 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         const filtered = imp
           ? withIds.filter((c) => c.businessId === imp.impersonatingBusinessId)
           : withIds;
-        return new HttpResponse({ status: 200, body: [...filtered] });
+        const params = new URL(req.urlWithParams, 'http://localhost').searchParams;
+        const page = params.get('page');
+        if (!page) {
+          return new HttpResponse({ status: 200, body: [...filtered] });
+        }
+        const limit = Number(params.get('limit') || 25);
+        const pageNum = Number(page);
+        const status = params.get('status') || 'active';
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const enriched = filtered.map((customer, index) => mockCustomerListRow(customer, index));
+        const matched = enriched.filter((customer) => {
+          if (search && !`${customer['name']} ${customer['phone']} ${customer['email'] ?? ''}`.toLowerCase().includes(search)) {
+            return false;
+          }
+          const active = customer['isActive'] !== false;
+          if (status === 'inactive') return !active;
+          if (status === 'all') return true;
+          return active;
+        });
+        const start = (pageNum - 1) * limit;
+        const items = matched.slice(start, start + limit);
+        return new HttpResponse({
+          status: 200,
+          body: { items, total: matched.length, page: pageNum, limit },
+        });
       })
     );
   }

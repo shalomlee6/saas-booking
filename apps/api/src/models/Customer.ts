@@ -20,6 +20,11 @@ export interface ICustomer extends Document {
   notes?: string;
   /** Missing on older documents — treated as active. */
   isActive?: boolean;
+  /**
+   * No-shows with `start` at or before this instant are ignored.
+   * Unset means every stored `no_show` counts.
+   */
+  noShowResetAt?: Date;
   preferences?: ICustomerPreferences;
   defaultTreatmentDurationMinutes?: number;
   createdAt: Date;
@@ -51,6 +56,7 @@ const CustomerSchema = new Schema<ICustomer>(
     email: String,
     notes: String,
     isActive: { type: Boolean, default: true },
+    noShowResetAt: Date,
     preferences: CustomerPreferencesSchema,
     defaultTreatmentDurationMinutes: Number,
   },

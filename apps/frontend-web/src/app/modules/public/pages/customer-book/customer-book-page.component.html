@@ -259,6 +259,9 @@
                 inputmode="numeric"
                 maxlength="10"
               />
+              @if (guestPhone() && !guestPhoneValid()) {
+                <p class="book-field-error">{{ 'customers.phoneInvalid' | translate }}</p>
+              }
             </div>
           </div>
         }

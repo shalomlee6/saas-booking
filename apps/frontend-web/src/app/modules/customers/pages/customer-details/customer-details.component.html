@@ -75,7 +75,6 @@
     @if (loadingStats()) {
       <p class="cd-loading">{{ 'common.loading' | translate }}</p>
     } @else if (stats(); as s) {
-      @if (!s.isNewCustomer) {
         <div class="cd-stats-grid">
           <div class="cd-stat cd-stat--headline">
             <span class="cd-stat-label">{{ 'customerCard.totalRevenue' | translate }}</span>
@@ -127,6 +126,7 @@
         @if (s.mostBookedServices.length > 0) {
           <div class="customers-card cd-section">
             <h2 class="cd-section-title">{{ 'customerCard.topServicesTitle' | translate }}</h2>
+            <p class="cd-section-hint">{{ 'customerCard.topServicesHint' | translate }}</p>
             <ul class="cd-service-breakdown">
               @for (svc of s.mostBookedServices; track svc.serviceId) {
                 <li>{{ svc.serviceName || ('customerCard.unknownService' | translate) }} — {{ svc.count }} {{ 'customerCard.visitsSuffix' | translate }}</li>
@@ -134,7 +134,6 @@
             </ul>
           </div>
         }
-      }
     }
 
     <div class="customers-card cd-section">

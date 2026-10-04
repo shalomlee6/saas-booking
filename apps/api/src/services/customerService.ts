@@ -1,7 +1,16 @@
 import { Customer, type ICustomerPreferences } from '../models/Customer';
 import { Appointment } from '../models/Appointment';
 import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
-import { ConflictError } from '../errors/httpErrors';
+import { ConflictError, ValidationError } from '../errors/httpErrors';
+import { canonicalLocalPhone } from '../listQuery/search';
+
+function canonicalCustomerPhone(raw: string): string {
+  const phone = canonicalLocalPhone(raw);
+  if (!phone) {
+    throw new ValidationError('Enter an Israeli mobile (05 and 8 digits)');
+  }
+  return phone;
+}
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -59,7 +68,7 @@ export async function createCustomerForTenant(
   }
 ) {
   const name = input.name.trim();
-  const phone = input.phone.trim();
+  const phone = canonicalCustomerPhone(input.phone);
   const email = typeof input.email === 'string' ? input.email.trim() : input.email;
   const notes = typeof input.notes === 'string' ? input.notes.trim() : input.notes;
   return Customer.create({
@@ -91,7 +100,7 @@ export async function updateCustomerForTenant(
 ) {
   const update: Record<string, unknown> = {};
   if (body.name !== undefined) update.name = body.name.trim();
-  if (body.phone !== undefined) update.phone = body.phone.trim();
+  if (body.phone !== undefined) update.phone = canonicalCustomerPhone(body.phone);
   if (body.email !== undefined) {
     const email = body.email.trim();
     update.email = email === '' ? undefined : email;

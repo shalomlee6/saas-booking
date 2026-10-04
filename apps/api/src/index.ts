@@ -24,6 +24,7 @@ import {
 } from './middleware/rateLimits';
 import { requestLogger } from './middleware/requestLogger';
 import { logger } from './utils/logger';
+import { autoCompleteConfirmedAppointments } from './services/autoCompleteAppointments';
 
 const env = validateEnv();
 
@@ -105,9 +106,32 @@ app.use((_req, res) => {
 
 app.use(errorHandler);
 
+const AUTO_COMPLETE_INTERVAL_MS = 15 * 60 * 1000;
+let autoCompleteTimer: ReturnType<typeof setInterval> | undefined;
+
+function runAutoComplete(): void {
+  void autoCompleteConfirmedAppointments().catch((err: unknown) => {
+    logger.error('auto_complete_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
+}
+
+/** V1 trigger only. An external scheduler can call `autoCompleteConfirmedAppointments` instead. */
+function startAutoCompleteSchedule(): void {
+  if (env.NODE_ENV === 'test') return;
+  runAutoComplete();
+  autoCompleteTimer = setInterval(runAutoComplete, AUTO_COMPLETE_INTERVAL_MS);
+  autoCompleteTimer.unref();
+}
+
 function setupGracefulShutdown(server: Server): void {
   const shutdown = (signal: string): void => {
     logger.info('shutdown_signal', { signal });
+    if (autoCompleteTimer) {
+      clearInterval(autoCompleteTimer);
+      autoCompleteTimer = undefined;
+    }
     const forceTimer = setTimeout(() => {
       logger.error('shutdown_force_exit_timeout', {});
       process.exit(1);
@@ -141,6 +165,7 @@ bootstrap()
       }
     });
     setupGracefulShutdown(server);
+    startAutoCompleteSchedule();
   })
   .catch((err) => {
     logger.error('bootstrap_failed', {

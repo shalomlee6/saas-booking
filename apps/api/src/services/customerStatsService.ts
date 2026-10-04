@@ -1,6 +1,9 @@
 import { Types } from 'mongoose';
 import { Appointment } from '../models/Appointment';
+import { Customer } from '../models/Customer';
+import { averageVisitValue, customerTypeFromVisits } from './customerMetrics';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { noShowAppointmentFilter } from './customerNoShows';
 import { toIsoUtcString } from '../dto/datetime';
 import { TIME_OF_DAY_BUCKETS, type TimeOfDayBucket } from '../dto/enums';
 
@@ -31,11 +34,7 @@ export interface CustomerStats {
   totalAppointments: number;
   completedVisits: number;
   cancellations: number;
-  /**
-   * Heuristic proxy, not a hard fact: there is no explicit `no_show` value in
-   * APPOINTMENT_STATUSES, so this counts appointments left `pending`/`confirmed` whose
-   * end time has already passed. A real status value would make this exact.
-   */
+  /** Appointments whose stored status is `no_show`. Past `pending`/`confirmed` are not counted. */
   noShows: number;
   isNewCustomer: boolean;
   lastAppointment: CustomerAppointmentSummary | null;
@@ -84,7 +83,7 @@ function toSummary(row: FacetAppointmentRow | undefined): CustomerAppointmentSum
 }
 
 /** Maps an hour-of-day (0-23, already in business-local time) to a coarse bucket. */
-function hourToBucket(hour: number): TimeOfDayBucket {
+export function hourToBucket(hour: number): TimeOfDayBucket {
   if (hour >= 5 && hour < 12) return 'morning';
   if (hour >= 12 && hour < 17) return 'afternoon';
   if (hour >= 17 && hour < 22) return 'evening';
@@ -117,6 +116,11 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
   const matchBase: Record<string, unknown> = { businessId };
   if (customerId) matchBase.customerId = customerId;
 
+  const customer = customerId
+    ? await Customer.findOne({ _id: customerId, businessId }).select('noShowResetAt').lean()
+    : null;
+  const noShowMatch = noShowAppointmentFilter(customer?.noShowResetAt);
+
   const serviceLookupStages = [
     { $lookup: { from: 'services', localField: 'serviceId', foreignField: '_id', as: 'svc' } },
     { $unwind: { path: '$svc', preserveNullAndEmptyArrays: true } },
@@ -128,7 +132,7 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
       $facet: {
         statusCounts: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
         noShowCount: [
-          { $match: { status: { $in: ['pending', 'confirmed'] }, end: { $lt: now } } },
+          { $match: noShowMatch },
           { $count: 'count' },
         ],
         recentCancellationCount: [
@@ -136,7 +140,7 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
           { $count: 'count' },
         ],
         lastAppointment: [
-          { $match: { status: { $ne: 'cancelled' }, start: { $lte: now } } },
+          { $match: { status: 'completed' } },
           { $sort: { start: -1 } },
           { $limit: 1 },
           ...serviceLookupStages,
@@ -186,7 +190,7 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
 
   const completed = facet.completedStats[0];
   const totalRevenue = completed?.totalRevenue ?? 0;
-  const averageSpend = completed && completed.count > 0 ? totalRevenue / completed.count : 0;
+  const averageSpend = averageVisitValue(totalRevenue, completedVisits);
   const visitFrequencyDays = completed ? averageIntervalDays(completed.starts) : null;
 
   let preferredTimeOfDay: TimeOfDayBucket | null = null;
@@ -213,7 +217,7 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
     completedVisits,
     cancellations,
     noShows,
-    isNewCustomer: completedVisits === 0,
+    isNewCustomer: customerTypeFromVisits(completedVisits) === 'new',
     lastAppointment: toSummary(facet.lastAppointment[0]),
     nextAppointment: toSummary(facet.nextAppointment[0]),
     visitFrequencyDays,
@@ -251,7 +255,7 @@ const FREQUENT_CANCELLATION_THRESHOLD = 2;
 export function computeCustomerInsights(stats: CustomerStats, now: Date = new Date()): CustomerInsight[] {
   const insights: CustomerInsight[] = [];
 
-  if (stats.isNewCustomer && stats.totalAppointments <= 1) {
+  if (stats.isNewCustomer) {
     insights.push({ code: 'NEW_CUSTOMER', severity: 'info', data: {} });
   }
 

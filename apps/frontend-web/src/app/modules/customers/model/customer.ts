@@ -18,6 +18,8 @@ export interface Customer {
   notes?: string;
   /** Omitted on older records — treat anything other than `false` as active. */
   isActive?: boolean;
+  /** Computed from the no-show policy. Present on GET /api/customers/:id. */
+  blocked?: boolean;
   preferences?: CustomerPreferences;
   createdAt: string;
   updatedAt: string;

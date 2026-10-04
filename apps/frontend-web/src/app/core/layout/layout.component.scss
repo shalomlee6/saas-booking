@@ -663,7 +663,8 @@ $breakpoint:      1024px;
 // ─── Mobile (< 1024px) ────────────────────────────────────────────────────────
 @media (max-width: #{$breakpoint - 1px}) {
   .layout {
-    grid-template-columns: 1fr;
+    // minmax(0, ...) so a wide topbar can't stretch the page past the viewport.
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: $topbar-height 1fr;
   }
 

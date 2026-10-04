@@ -1,278 +1,48 @@
-<div class="customers-page">
-  <div class="customers-page-header">
-    <div class="customers-page-heading">
-      <h1 class="customers-page-title">{{ 'customers.title' | translate }}</h1>
-      <span class="customers-page-count">{{ filteredList().length }} {{ 'customers.countSuffix' | translate }}</span>
-    </div>
-    <div class="customers-page-actions">
-      <label class="customers-search-wrap">
-        <i class="pi pi-search customers-search-icon" aria-hidden="true"></i>
+<section class="customers-page">
+  <p-dialog
+    [header]="'customers.noShowSettings' | translate"
+    [visible]="policyOpen()"
+    (visibleChange)="policyOpen.set($event)"
+    [modal]="true"
+    [style]="{ width: '24rem' }"
+  >
+    <form class="customers-policy-form" (ngSubmit)="saveNoShowSettings()">
+      <label class="customers-policy-field">
         <input
-          type="text"
-          class="customers-search"
-          [placeholder]="'customers.searchPlaceholder' | translate"
-          [ngModel]="searchQuery()"
-          (ngModelChange)="onSearchInput($event)"
+          type="checkbox"
+          name="enabled"
+          [ngModel]="policyEnabled()"
+          (ngModelChange)="policyEnabled.set($event)"
+        />
+        {{ 'customers.noShowPolicyEnabled' | translate }}
+      </label>
+      <label class="customers-policy-field">
+        {{ 'customers.noShowThreshold' | translate }}
+        <input
+          class="customers-policy-threshold"
+          type="number"
+          name="threshold"
+          min="1"
+          max="20"
+          step="1"
+          [ngModel]="policyThreshold()"
+          (ngModelChange)="onPolicyThreshold($event)"
         />
       </label>
-      <a routerLink="/customers/new" class="customers-btn customers-btn-primary">
-        <i class="pi pi-plus" aria-hidden="true"></i>
-        {{ 'customers.newCustomer' | translate }}
-      </a>
-    </div>
-  </div>
-
-  <div class="customers-toolbar">
-    <div class="customers-toolbar-primary">
-      <div class="customers-filter-group">
-        <span class="customers-filter-label" id="customers-status-label">{{ 'common.status' | translate }}</span>
-        <div class="customers-status-switch" role="radiogroup" aria-labelledby="customers-status-label">
-          <button
-            type="button"
-            class="customers-status-option"
-            role="radio"
-            [class.customers-status-option-active]="statusFilter() === 'all'"
-            [attr.aria-checked]="statusFilter() === 'all'"
-            (click)="onStatusFilter('all')"
-          >
-            {{ 'customers.statusAll' | translate }}
-          </button>
-          <button
-            type="button"
-            class="customers-status-option"
-            role="radio"
-            [class.customers-status-option-active]="statusFilter() === 'active'"
-            [attr.aria-checked]="statusFilter() === 'active'"
-            (click)="onStatusFilter('active')"
-          >
-            {{ 'customers.statusActive' | translate }}
-          </button>
-          <button
-            type="button"
-            class="customers-status-option"
-            role="radio"
-            [class.customers-status-option-active]="statusFilter() === 'inactive'"
-            [attr.aria-checked]="statusFilter() === 'inactive'"
-            (click)="onStatusFilter('inactive')"
-          >
-            {{ 'customers.statusInactive' | translate }}
-          </button>
-        </div>
-      </div>
-
-      <div class="customers-filter-group">
-        <span class="customers-filter-label">{{ 'customers.addedRange' | translate }}</span>
-        <div class="customers-date-range">
-          <p-datepicker
-            inputId="customers-created-from"
-            styleClass="customers-date-field"
-            [ngModel]="createdFrom()"
-            (ngModelChange)="onDateChange('from', $event)"
-            dateFormat="dd/mm/yy"
-            [showIcon]="true"
-            [showClear]="true"
-            appendTo="body"
-            [placeholder]="'customers.createdFrom' | translate"
-            [attr.aria-label]="'customers.createdFrom' | translate"
-          />
-          <span class="customers-date-range-sep" aria-hidden="true">–</span>
-          <p-datepicker
-            inputId="customers-created-to"
-            styleClass="customers-date-field"
-            [ngModel]="createdTo()"
-            (ngModelChange)="onDateChange('to', $event)"
-            dateFormat="dd/mm/yy"
-            [showIcon]="true"
-            [showClear]="true"
-            appendTo="body"
-            [placeholder]="'customers.createdTo' | translate"
-            [attr.aria-label]="'customers.createdTo' | translate"
-          />
-        </div>
-      </div>
-
-      @if (hasActiveFilters()) {
-        <button type="button" class="customers-btn customers-btn-ghost customers-clear" (click)="clearFilters()">
-          <i class="pi pi-filter-slash" aria-hidden="true"></i>
-          {{ 'customers.clearFilters' | translate }}
-        </button>
-      }
-    </div>
-
-    <div class="customers-toolbar-secondary">
-      <label class="customers-mini-filter">
-        <span class="customers-filter-label">{{ 'common.email' | translate }}</span>
-        <select
-          class="customers-filter-control"
-          [ngModel]="emailFilter()"
-          (ngModelChange)="onPresenceFilter('email', $event)"
-        >
-          <option value="any">{{ 'customers.contactAny' | translate }}</option>
-          <option value="yes">{{ 'customers.contactHas' | translate }}</option>
-          <option value="no">{{ 'customers.contactMissing' | translate }}</option>
-        </select>
-      </label>
-      <label class="customers-mini-filter">
-        <span class="customers-filter-label">{{ 'common.phone' | translate }}</span>
-        <select
-          class="customers-filter-control"
-          [ngModel]="phoneFilter()"
-          (ngModelChange)="onPresenceFilter('phone', $event)"
-        >
-          <option value="any">{{ 'customers.contactAny' | translate }}</option>
-          <option value="yes">{{ 'customers.contactHas' | translate }}</option>
-          <option value="no">{{ 'customers.contactMissing' | translate }}</option>
-        </select>
-      </label>
-      <button
-        type="button"
-        class="customers-chip"
-        [class.customers-chip-active]="newCustomersOnly()"
-        [attr.aria-pressed]="newCustomersOnly()"
-        (click)="toggleNewCustomers()"
-      >
-        {{ 'customers.newCustomers' | translate }}
-      </button>
-      <label class="customers-mini-filter">
-        <span class="customers-filter-label">{{ 'customers.sortLabel' | translate }}</span>
-        <select class="customers-filter-control" [ngModel]="sortBy()" (ngModelChange)="onSort($event)">
-          <option value="createdDesc">{{ 'customers.sortNewest' | translate }}</option>
-          <option value="createdAsc">{{ 'customers.sortOldest' | translate }}</option>
-          <option value="name">{{ 'customers.sortName' | translate }}</option>
-          <option value="status">{{ 'customers.sortStatus' | translate }}</option>
-        </select>
-      </label>
-    </div>
-  </div>
-
-  @if (selectedCount() > 0) {
-    <div class="customers-bulk-bar">
-      <span class="customers-bulk-count">{{ 'customers.selectedCount' | translate: { count: selectedCount() } }}</span>
-      <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="clearSelection()">
-        {{ 'common.cancel' | translate }}
-      </button>
-      <button
-        type="button"
-        class="customers-btn customers-btn-ghost customers-btn-sm"
-        (click)="setSelectedStatus(true)"
-        [disabled]="updatingStatus()"
-      >
-        {{ 'customers.markActive' | translate }}
-      </button>
-      <button
-        type="button"
-        class="customers-btn customers-btn-ghost customers-btn-sm"
-        (click)="setSelectedStatus(false)"
-        [disabled]="updatingStatus()"
-      >
-        {{ 'customers.markInactive' | translate }}
-      </button>
-      <button type="button" class="customers-btn customers-btn-danger customers-btn-sm" (click)="requestDeleteSelected()">
-        <i class="pi pi-trash" aria-hidden="true"></i>
-        {{ 'customers.deleteSelected' | translate }}
-      </button>
-    </div>
-  }
-
-  <div class="customers-card">
-    @if (error()) {
-      <p class="customers-error">
-        {{ error() }}
-        <button type="button" class="customers-error-retry" (click)="reload()">{{ 'common.retry' | translate }}</button>
-      </p>
-    }
-
-    @if (loading()) {
-      <div class="customers-loading">{{ 'customers.loading' | translate }}</div>
-    }
-
-    @if (!loading() && filteredList().length === 0) {
-      <div class="customers-empty">
-        <i class="pi pi-users customers-empty-icon" aria-hidden="true"></i>
-        @if (hasActiveFilters() && list().length > 0) {
-          <p class="customers-empty-title">{{ 'customers.noFilterResults' | translate }}</p>
-        } @else {
-          <p class="customers-empty-title">{{ 'customers.emptyTitle' | translate }}</p>
-          <p class="customers-empty-text">{{ 'customers.emptyText' | translate }}</p>
-          <a routerLink="/customers/new" class="customers-btn customers-btn-primary">{{ 'customers.addFirst' | translate }}</a>
-        }
-      </div>
-    }
-
-    @if (!loading() && filteredList().length > 0) {
-      <div class="customers-table-wrap">
-        <table class="customers-table">
-          <thead>
-            <tr>
-              <th class="customers-table-select-head">
-                <input
-                  type="checkbox"
-                  [checked]="allSelected()"
-                  (change)="toggleSelectAll()"
-                  [attr.aria-label]="'customers.selectAll' | translate"
-                />
-              </th>
-              <th>{{ 'common.name' | translate }}</th>
-              <th>{{ 'common.phone' | translate }}</th>
-              <th>{{ 'common.email' | translate }}</th>
-              <th>{{ 'common.status' | translate }}</th>
-              <th>{{ 'common.created' | translate }}</th>
-              <th class="customers-table-actions-head"></th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (customer of filteredList(); track customer._id) {
-              <tr [class.customers-table-row--selected]="isSelected(customer._id)">
-                <td class="customers-table-select">
-                  <input
-                    type="checkbox"
-                    [checked]="isSelected(customer._id)"
-                    (change)="toggleSelect(customer._id)"
-                    [attr.aria-label]="customer.name"
-                  />
-                </td>
-                <td class="customers-table-name">{{ customer.name }}</td>
-                <td class="customers-table-muted"><span dir="ltr">{{ customer.phone }}</span></td>
-                <td class="customers-table-muted">{{ customer.email || '—' }}</td>
-                <td>
-                  <span
-                    class="customer-status-badge"
-                    [class.customer-status-badge-inactive]="!isCustomerActive(customer.isActive)"
-                  >
-                    {{ (isCustomerActive(customer.isActive) ? 'customers.statusActive' : 'customers.statusInactive') | translate }}
-                  </span>
-                </td>
-                <td class="customers-table-muted">{{ formatCreatedAt(customer.createdAt) }}</td>
-                <td class="customers-table-actions">
-                  <a [routerLink]="['/customers', customer._id]" class="customers-btn customers-btn-ghost customers-btn-sm customers-view-btn">
-                    <i class="pi pi-eye" aria-hidden="true"></i>
-                    {{ 'common.view' | translate }}
-                  </a>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </div>
-</div>
-
-@if (confirmingDelete()) {
-  <div class="customers-confirm-backdrop" (click)="cancelDeleteSelected()">
-    <div class="customers-confirm-dialog" role="alertdialog" aria-modal="true" (click)="$event.stopPropagation()">
-      <h2 class="customers-confirm-title">{{ 'customers.deleteSelectedConfirmTitle' | translate }}</h2>
-      <p class="customers-confirm-text">
-        {{ 'customers.deleteSelectedConfirmText' | translate: { count: selectedCount() } }}
-      </p>
-      <div class="customers-confirm-actions">
-        <button type="button" class="customers-btn customers-btn-ghost" (click)="cancelDeleteSelected()" [disabled]="deleting()">
+      <div class="customers-policy-actions">
+        <button type="button" class="customers-policy-cancel" (click)="policyOpen.set(false)">
           {{ 'common.cancel' | translate }}
         </button>
-        <button type="button" class="customers-btn customers-btn-danger" (click)="confirmDeleteSelected()" [disabled]="deleting()">
-          {{ (deleting() ? 'common.loading' : 'customers.deleteSelected') | translate }}
+        <button type="submit" class="customers-policy-save" [disabled]="policySaving()">
+          {{ 'common.save' | translate }}
         </button>
       </div>
-    </div>
-  </div>
-}
+    </form>
+  </p-dialog>
+  <app-data-management-table
+    [config]="tableConfig()"
+    [load]="loadPage"
+    [reloadNonce]="reloadNonce()"
+    (exportRequested)="onExport($event)"
+  />
+</section>

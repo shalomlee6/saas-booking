@@ -75,5 +75,6 @@ AppointmentSchema.index({ businessId: 1, status: 1 });
 AppointmentSchema.index({ businessId: 1, customerId: 1 });
 
 AppointmentSchema.index({ businessId: 1, status: 1, start: 1, end: 1 });
+AppointmentSchema.index({ businessId: 1, customerId: 1, status: 1, start: -1 });
 
 export const Appointment = model<IAppointment>('Appointment', AppointmentSchema);

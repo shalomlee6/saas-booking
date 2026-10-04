@@ -26,6 +26,7 @@ import {
 import { mergeSectionVisibility, normalizeGalleryItems, orderServicesById } from '../utils/publicLanding';
 import { rewriteStoredUploadUrl } from '../utils/publicUploadUrl';
 import { setNoStore } from '../utils/httpCache';
+import { enforcePublicBookingCustomer, requirePublicBookingPhone } from '../services/publicBookingPolicy';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -393,6 +394,7 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
     if (!customer) {
       throw new NotFoundError('Customer not found');
     }
+    await enforcePublicBookingCustomer(req, customer);
     customerId = customer._id as Types.ObjectId;
     resolvedCustomerName = customer.name ?? '';
     resolvedCustomerPhone = customer.phone ?? undefined;
@@ -407,21 +409,18 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
     }
     resolvedCustomerName = customerName;
     const rawPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
-    const normalizedPhone = rawPhone.replace(/\D/g, '');
-    if (!normalizedPhone) {
-      throw new ValidationError('customerPhone is required', [
-        { path: 'customerPhone', message: 'customerPhone is required', code: 'custom' },
-      ]);
-    }
-    resolvedCustomerPhone = normalizedPhone;
+    const storedPhone = requirePublicBookingPhone(req, rawPhone);
+    resolvedCustomerPhone = storedPhone.phone;
 
-    let guest = await Customer.findOne({ phone: normalizedPhone, businessId });
+    let guest = await Customer.findOne({ phone: { $in: storedPhone.lookupPhones }, businessId });
     if (!guest) {
       guest = await Customer.create({
         businessId,
         name: customerName,
-        phone: normalizedPhone,
+        phone: storedPhone.phone,
       });
+    } else {
+      await enforcePublicBookingCustomer(req, guest);
     }
     customerId = guest._id as Types.ObjectId;
   }
@@ -590,9 +589,11 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
  * Rules enforced:
  *  - appointment must belong to the authenticated customer
  *  - appointment must belong to the same business as the JWT
- *  - appointment must not already be cancelled
+ *  - only pending and confirmed appointments can be cancelled
  *  - a non-empty cancellationReason is required (validated here as defence-in-depth)
  */
+
+const CLIENT_CANCELLABLE_STATUSES = new Set(['pending', 'confirmed']);
 export async function cancelCustomerAppointment(req: Request, res: Response): Promise<void> {
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
   if (!publicCustomer) {
@@ -614,12 +615,8 @@ export async function cancelCustomerAppointment(req: Request, res: Response): Pr
     throw new NotFoundError('Appointment not found');
   }
 
-  if (apt.status === 'cancelled') {
-    throw new ConflictError('Appointment is already cancelled');
-  }
-
-  if (apt.status === 'completed') {
-    throw new ConflictError('Completed appointments cannot be cancelled');
+  if (!CLIENT_CANCELLABLE_STATUSES.has(apt.status)) {
+    throw new ConflictError('This appointment cannot be cancelled');
   }
 
   apt.status = 'cancelled';

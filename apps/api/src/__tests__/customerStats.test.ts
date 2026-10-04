@@ -170,7 +170,7 @@ describe('CUSTOMER STATS — rule-based insights', () => {
     ).toBe(true);
   });
 
-  it('counts a past appointment left pending/confirmed as a no-show (heuristic)', async () => {
+  it('counts status no_show and does not treat a past pending appointment as one', async () => {
     const { business, token } = await seedOwner();
     await seedBusinessSettings(business._id);
     const service = await seedService(business._id);
@@ -186,6 +186,15 @@ describe('CUSTOMER STATS — rule-based insights', () => {
       status: 'pending',
       source: 'owner',
     });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(3),
+      end: new Date(daysAgo(3).getTime() + 30 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
 
     const res = await request(app)
       .get(`/api/customers/${customer._id.toString()}/stats`)
@@ -193,6 +202,7 @@ describe('CUSTOMER STATS — rule-based insights', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.stats.noShows).toBe(1);
+    expect(res.body.stats.completedVisits).toBe(0);
   });
 
   it('reports the soonest upcoming appointment as nextAppointment', async () => {
@@ -281,5 +291,90 @@ describe('CUSTOMER APPOINTMENT HISTORY', () => {
     // Sorted most-recent-first: the upcoming one (further in the future) comes before the past one.
     expect(new Date(res.body[0].start).getTime()).toBe(upcoming.getTime());
     expect(new Date(res.body[1].start).getTime()).toBe(past.getTime());
+  });
+});
+
+describe('CUSTOMER STATS — canonical visit metrics', () => {
+  it('treats one completed visit as New and two as Returning', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const customer = await Customer.create({ businessId: business._id, name: 'Boundary', phone: '777' });
+
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(10),
+      end: new Date(daysAgo(10).getTime() + 60 * 60 * 1000),
+      status: 'completed',
+      source: 'owner',
+      price: 80,
+    });
+
+    const one = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(one.status).toBe(200);
+    expect(one.body.stats.completedVisits).toBe(1);
+    expect(one.body.stats.isNewCustomer).toBe(true);
+    expect(one.body.stats.totalRevenue).toBe(80);
+    expect(one.body.stats.averageSpend).toBe(80);
+
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(3),
+      end: new Date(daysAgo(3).getTime() + 60 * 60 * 1000),
+      status: 'completed',
+      source: 'owner',
+      price: 20,
+    });
+
+    const two = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(two.body.stats.completedVisits).toBe(2);
+    expect(two.body.stats.isNewCustomer).toBe(false);
+    expect(two.body.stats.totalRevenue).toBe(100);
+    expect(two.body.stats.averageSpend).toBe(50);
+  });
+
+  it('ignores no-shows at or before noShowResetAt', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const resetAt = daysAgo(5);
+    const customer = await Customer.create({
+      businessId: business._id,
+      name: 'Reset',
+      phone: '888',
+      noShowResetAt: resetAt,
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(10),
+      end: new Date(daysAgo(10).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(1),
+      end: new Date(daysAgo(1).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
+
+    const res = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.stats.noShows).toBe(1);
   });
 });

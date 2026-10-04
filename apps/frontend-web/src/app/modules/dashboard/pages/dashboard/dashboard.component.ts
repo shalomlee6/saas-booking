@@ -36,6 +36,7 @@ const STATUS_KEYS: Record<string, string> = {
   done: 'status.completed',
   cancelled: 'status.cancelled',
   canceled: 'status.cancelled',
+  no_show: 'status.no_show',
 };
 
 const STATUS_TONES: Record<string, StatusTone> = {
@@ -45,6 +46,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   done: 'success',
   cancelled: 'danger',
   canceled: 'danger',
+  no_show: 'warn',
 };
 
 function statusLabel(status: string | undefined, language: LanguageService): string {
@@ -174,7 +176,9 @@ export class DashboardComponent {
   );
 
   readonly avgPerAppointment$ = this.insights$.pipe(
-    map((i) => (i.appointmentsCount > 0 ? i.totalRevenue / i.appointmentsCount : 0)),
+    map((i) =>
+      i.completedAppointmentsCount > 0 ? i.totalRevenue / i.completedAppointmentsCount : 0
+    ),
     catchError(() => of(0))
   );
 

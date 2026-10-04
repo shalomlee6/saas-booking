@@ -4,6 +4,7 @@ import { dbConnect, dbDisconnect, dbClear } from './helpers/db';
 import { seedOwner, seedService, seedBusinessSettings, seedCustomer } from './helpers/seed';
 import { OtpChallenge } from '../models/OtpChallenge';
 import { Appointment } from '../models/Appointment';
+import { Customer } from '../models/Customer';
 
 const app = buildTestApp();
 
@@ -212,5 +213,101 @@ describe('PUBLIC BOOKING', () => {
     expect(verify.status).toBe(200);
     expect(verify.body.token).toBeTruthy();
     expect(verify.body.customerId).toBeTruthy();
+  });
+
+  it('lets a customer cancel only pending or confirmed appointments', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    const tomorrow = new Date();
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const date = tomorrow.toISOString().slice(0, 10);
+
+    const created = await request(app).post('/api/public/appointments').send({
+      businessId: business._id.toString(),
+      serviceId: service._id.toString(),
+      date,
+      time: '10:00',
+      customerName: 'Dana Cohen',
+      customerPhone: '0501234567',
+    });
+    expect(created.status).toBe(201);
+    const token = created.body.token as string;
+    const customerId = created.body.customerId as string;
+    const confirmedId = created.body.id as string;
+
+    const start = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    const base = {
+      businessId: business._id,
+      customerId,
+      serviceId: service._id,
+      start,
+      end,
+      source: 'client-online' as const,
+    };
+    const pending = await Appointment.create({ ...base, status: 'pending' });
+    const noShow = await Appointment.create({ ...base, status: 'no_show' });
+    const completed = await Appointment.create({ ...base, status: 'completed' });
+    const alreadyCancelled = await Appointment.create({
+      ...base,
+      status: 'cancelled',
+      cancellationReason: 'earlier',
+    });
+
+    const cancel = (id: string) =>
+      request(app)
+        .delete(`/api/public/appointments/${id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ cancellationReason: 'Cannot make it' });
+
+    const confirmedRes = await cancel(confirmedId);
+    expect(confirmedRes.status).toBe(200);
+    expect((await Appointment.findById(confirmedId))?.status).toBe('cancelled');
+
+    const pendingRes = await cancel(pending._id.toString());
+    expect(pendingRes.status).toBe(200);
+    expect((await Appointment.findById(pending._id))?.status).toBe('cancelled');
+
+    const blocked = [noShow, completed, alreadyCancelled];
+    for (const row of blocked) {
+      const res = await cancel(row._id.toString());
+      expect(res.status).toBe(409);
+      expect((await Appointment.findById(row._id))?.status).toBe(row.status);
+    }
+  });
+
+  it('stores a canonical phone and rejects a non-canonical public phone', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    const tomorrow = new Date();
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const date = tomorrow.toISOString().slice(0, 10);
+
+    const canonical = await request(app).post('/api/public/appointments').send({
+      businessId: business._id.toString(),
+      serviceId: service._id.toString(),
+      date,
+      time: '10:00',
+      customerName: 'Dana Cohen',
+      customerPhone: '050-123-4567',
+    });
+    expect(canonical.status).toBe(201);
+    const stored = await Customer.findById(canonical.body.customerId);
+    expect(stored?.phone).toBe('0501234567');
+
+    const kept = await request(app).post('/api/public/appointments').send({
+      businessId: business._id.toString(),
+      serviceId: service._id.toString(),
+      date,
+      time: '11:00',
+      customerName: 'Other Guest',
+      customerPhone: '12345',
+    });
+    expect(kept.status).toBe(400);
+    expect(kept.body.message).toBe('יש להזין מספר נייד ישראלי: 05 ואחריו 8 ספרות.');
+    const raw = await Customer.findOne({ name: 'Other Guest' });
+    expect(raw).toBeNull();
   });
 });

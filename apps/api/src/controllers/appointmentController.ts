@@ -11,6 +11,7 @@ import { computeOwnerAvailableSlots } from '../services/appointmentQueryService'
 import { updateAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
+import type { AppointmentStatus } from '../dto/enums';
 import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
 
 function requireBusinessId(req: AuthRequest): string {
@@ -241,7 +242,7 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
     if (
       !isAllowedAppointmentStatusTransition(
         existing.status,
-        body.status as 'pending' | 'confirmed' | 'completed' | 'cancelled'
+        body.status as AppointmentStatus
       )
     ) {
       throw new ConflictError('Invalid appointment status transition');

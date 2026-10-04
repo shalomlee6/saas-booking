@@ -10,6 +10,7 @@ import {
   signPublicCustomerToken,
 } from '../utils/publicCustomerSession';
 import { isSmsConfigured, sendOtpSms, toE164 } from '../services/smsService';
+import { resolveStoredPhone } from '../listQuery/search';
 import { logger } from '../utils/logger';
 
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
@@ -199,18 +200,35 @@ export async function verifyOtp(req: Request, res: Response) {
       await OtpChallenge.deleteOne({ _id: stored._id });
     }
 
-    let customer = await Customer.findOne({ phone: normalizedPhone, businessId: business._id });
+    const storedPhone = resolveStoredPhone(normalizedPhone) ?? {
+      phone: normalizedPhone,
+      canonical: false,
+    };
+    if (!storedPhone.canonical && storedPhone.phone) {
+      logger.warn('customer_phone_unnormalized', {
+        businessId: business._id.toString(),
+        digitLength: storedPhone.phone.length,
+        source: 'public_otp',
+      });
+    }
+    const lookupPhones = [storedPhone.phone, normalizedPhone].filter(
+      (value, index, all) => value.length > 0 && all.indexOf(value) === index
+    );
+    let customer = await Customer.findOne({
+      phone: { $in: lookupPhones },
+      businessId: business._id,
+    });
 
     if (!customer) {
       const customerName =
         firstName && lastName
           ? `${firstName} ${lastName}`.trim()
-          : firstName || lastName || normalizedPhone;
+          : firstName || lastName || storedPhone.phone;
 
       customer = await Customer.create({
         businessId: business._id,
         name: customerName,
-        phone: normalizedPhone,
+        phone: storedPhone.phone,
         firstName: firstName || undefined,
         lastName: lastName || undefined,
       });
