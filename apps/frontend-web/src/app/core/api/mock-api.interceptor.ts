@@ -184,6 +184,53 @@ function parseUrlQuery(req: HttpRequest<unknown>): URLSearchParams {
   }
 }
 
+function mockNestedName(value: unknown, key: 'name' | 'phone'): string {
+  if (value && typeof value === 'object' && key in value) {
+    return String((value as Record<string, unknown>)[key] ?? '');
+  }
+  return '';
+}
+
+/** Paged list for `?page=`. Rebases fixture dates into the future so the default upcoming view has rows. */
+function mockPagedAppointments(
+  rows: Record<string, unknown>[],
+  params: URLSearchParams
+): { items: Record<string, unknown>[]; total: number; page: number; limit: number } {
+  const now = Date.now();
+  const prices = [80, 150, 220, 360];
+  const items = rows.map((row, index) => {
+    const duration = Number(row['durationMinutes'] ?? 45);
+    const start = new Date(now + (index + 1) * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + duration * 60 * 1000);
+    const customer = row['customerId'];
+    const service = row['serviceId'];
+    return {
+      _id: String(row['_id'] ?? ''),
+      customerName: mockNestedName(customer, 'name') || String(row['customerName'] ?? ''),
+      customerPhone: mockNestedName(customer, 'phone') || String(row['customerPhone'] ?? ''),
+      customerPreferredTimeOfDay: null,
+      serviceId:
+        service && typeof service === 'object' && '_id' in service
+          ? String((service as { _id: string })._id)
+          : row['serviceId'] != null
+            ? String(row['serviceId'])
+            : null,
+      serviceName: mockNestedName(service, 'name') || String(row['serviceName'] ?? ''),
+      start: start.toISOString(),
+      end: end.toISOString(),
+      duration,
+      price: typeof row['price'] === 'number' ? row['price'] : prices[index % prices.length],
+      status: String(row['status'] ?? 'confirmed'),
+      source: String(row['source'] ?? 'owner'),
+      notes: row['notes'] == null ? '' : String(row['notes']),
+    };
+  });
+  const page = Math.max(1, Number(params.get('page') ?? '1') || 1);
+  const limit = Number(params.get('limit') ?? '25') || 25;
+  const offset = (page - 1) * limit;
+  return { items: items.slice(offset, offset + limit), total: items.length, page, limit };
+}
+
 const MOCK_ADMIN_USER_ROWS: Record<string, unknown>[] = [
   {
     id: 'mock-super-admin',
@@ -701,6 +748,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isAppointmentsGetList(req)) {
     const imp = getImpersonationFromRequest(req);
+    const params = parseUrlQuery(req);
     return from(loadInitialAppointments()).pipe(
       map((list) => {
         const withIds = withMockBusinessIds(list);
@@ -713,6 +761,9 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         const filtered = imp
           ? merged.filter((a) => String(a['businessId'] ?? '') === imp.impersonatingBusinessId)
           : merged;
+        if (params.has('page')) {
+          return new HttpResponse({ status: 200, body: mockPagedAppointments(filtered, params) });
+        }
         return new HttpResponse({ status: 200, body: filtered });
       })
     );

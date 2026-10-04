@@ -48,6 +48,11 @@ export function createdRangeForPreset(
   if (preset === 'today') return { from: today, to: tomorrow };
   if (preset === 'last7') return { from: addCalendarDays(today, -6), to: tomorrow };
   if (preset === 'last30') return { from: addCalendarDays(today, -29), to: tomorrow };
+  if (preset === 'thisWeek') {
+    const weekday = dateFromCalendarKey(today).getDay();
+    const from = addCalendarDays(today, -weekday);
+    return { from, to: addCalendarDays(from, 7) };
+  }
   if (preset === 'thisMonth') {
     const [year, month] = today.split('-').map(Number);
     const from = `${today.slice(0, 7)}-01`;

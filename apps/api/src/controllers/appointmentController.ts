@@ -13,6 +13,7 @@ import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
 import type { AppointmentStatus } from '../dto/enums';
 import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
+import { listAppointmentsPage, type AppointmentsPagedQuery } from '../services/appointmentListService';
 
 function requireBusinessId(req: AuthRequest): string {
   const businessId = getEffectiveBusinessId(req);
@@ -38,6 +39,11 @@ function addCalendarDays(base: Date, days: number): Date {
 /** GET /api/appointments - list for owner dashboard; flattened DTO, sort start ASC */
 export async function getAppointmentsList(req: AuthRequest, res: Response): Promise<void> {
   const businessId = requireBusinessId(req);
+  if ((req as AuthRequest & { appointmentListPaged?: boolean }).appointmentListPaged) {
+    const page = await listAppointmentsPage(businessId, req.query as unknown as AppointmentsPagedQuery);
+    res.json(page);
+    return;
+  }
   const q = req.query as {
     from?: string;
     to?: string;

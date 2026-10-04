@@ -10,10 +10,11 @@ import {
 } from '@angular/core';
 import { DOCUMENT, DatePipe } from '@angular/common';
 import { Store } from '@ngrx/store';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
-import type { Appointment } from '../../model/appointment';
+import type { Appointment, TimeOfDayBucket } from '../../model/appointment';
+import type { AppointmentListRow } from '../../model/appointment-list-row';
 import * as AppointmentsActions from '../../state/appointments.actions';
 import {
   selectItems,
@@ -50,9 +51,13 @@ import { DatePickerModule } from 'primeng/datepicker';
 import { MessageService } from 'primeng/api';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { DataManagementTableComponent } from '../../../../shared/data-management/data-management-table.component';
+import type { DataListQuery } from '../../../../shared/data-management/entity-data-management-config';
+import { ServicesApiService } from '../../../services/services/services-api.service';
+import { buildAppointmentTableConfig } from './appointment-list.config';
 import type { DaySummaryLabels } from '../../../../core/working-hours/working-hours.util';
 
-type ViewMode = 'day' | 'week';
+type ViewMode = 'day' | 'week' | 'list';
 
 /** 'done' is a legacy status value some records still carry — treated the same as 'completed'. */
 const STATUS_KEYS: Record<string, string> = {
@@ -223,6 +228,7 @@ const TABLET_BREAKPOINT_PX = 1024;
     DatePickerModule,
     DatePipe,
     TranslatePipe,
+    DataManagementTableComponent,
   ],
   templateUrl: './appointments-list.component.html',
   styleUrl: './appointments-list.component.scss',
@@ -230,6 +236,8 @@ const TABLET_BREAKPOINT_PX = 1024;
 export class AppointmentsListComponent implements OnInit {
   private readonly store = inject(Store);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly growthBrain = inject(GrowthBrainService);
@@ -260,7 +268,23 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   readonly viewMode = signal<ViewMode>('week');
+  readonly reloadNonce = signal(0);
+  readonly serviceOptions = signal<{ value: string; label: string }[]>([]);
   readonly searchQuery = signal('');
+  readonly loadPage = (query: DataListQuery) => this.appointmentsApi.listPage(query);
+  readonly tableConfig = computed(() => {
+    this.language.language();
+    return buildAppointmentTableConfig({
+      t: (key, params) => this.language.t(key, params),
+      locale: this.language.intlLocale(),
+      services: this.serviceOptions(),
+      onView: (row) => this.openAppointment(appointmentFromListRow(row)),
+      onEdit: (row) => void this.router.navigate(['/appointments', row._id, 'edit']),
+      onNoShow: (row) => this.markListNoShow(row),
+      onCancel: (row) => this.cancelListAppointment(row),
+      onCreate: () => void this.router.navigate(['/appointments', 'new']),
+    });
+  });
   readonly isMobile = signal(false);
   readonly selectedAppointment = signal<Appointment | null>(null);
   readonly markingNoShow = signal(false);
@@ -712,7 +736,7 @@ export class AppointmentsListComponent implements OnInit {
         this.isMobile.set(nowMobile);
         this.updateVisibleDaysCount();
         // Reload only when crossing the mobile boundary to fix day count.
-        if (wasMobile !== nowMobile) this.loadForCurrentView();
+        if (wasMobile !== nowMobile && this.viewMode() !== 'list') this.loadForCurrentView();
       };
       update();
       win.addEventListener('resize', update);
@@ -725,7 +749,10 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const view = this.route.snapshot.queryParamMap.get('view');
+    if (view === 'list' || view === 'day') this.viewMode.set(view);
     this.updateVisibleDaysCount();
+    if (this.viewMode() === 'list') this.loadServiceOptions();
     this.loadForCurrentView();
   }
 
@@ -747,6 +774,13 @@ export class AppointmentsListComponent implements OnInit {
   setViewMode(mode: ViewMode): void {
     this.viewMode.set(mode);
     this.updateVisibleDaysCount();
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { view: mode === 'week' ? null : mode },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
+    if (mode === 'list') this.loadServiceOptions();
     this.loadForCurrentView();
   }
 
@@ -765,6 +799,7 @@ export class AppointmentsListComponent implements OnInit {
   }
 
   private loadForCurrentView(): void {
+    if (this.viewMode() === 'list') return;
     const count = this.visibleDaysCount();
     const params = getListParamsForVisibleRange(
       this.visibleStartDate(),
@@ -835,8 +870,7 @@ export class AppointmentsListComponent implements OnInit {
     }
   }
 
-  onMarkNoShow(): void {
-    const apt = this.selectedAppointment();
+  onMarkNoShow(apt: Appointment | null = this.selectedAppointment()): void {
     if (!apt?._id || this.markingNoShow() || !canMarkNoShow(apt)) return;
     this.markingNoShow.set(true);
     this.appointmentsApi.patchAppointment(apt._id, { status: 'no_show' }).subscribe({
@@ -847,6 +881,7 @@ export class AppointmentsListComponent implements OnInit {
           summary: this.language.t('appointments.markedNoShow'),
         });
         this.closeDetail();
+        this.reloadNonce.update((value) => value + 1);
         this.loadForCurrentView();
         this.appointmentsApi.refresh();
       },
@@ -864,4 +899,55 @@ export class AppointmentsListComponent implements OnInit {
   onDetailVisibleChange(visible: boolean): void {
     if (!visible) this.closeDetail();
   }
+
+  private loadServiceOptions(): void {
+    if (this.serviceOptions().length > 0) return;
+    this.servicesApi.list().subscribe({
+      next: (services) =>
+        this.serviceOptions.set(services.map((service) => ({ value: service._id, label: service.name }))),
+      error: () => this.serviceOptions.set([]),
+    });
+  }
+
+  private markListNoShow(row: AppointmentListRow): void {
+    this.onMarkNoShow(appointmentFromListRow(row));
+  }
+
+  private cancelListAppointment(row: AppointmentListRow): void {
+    this.appointmentsApi.cancel(row._id).subscribe({
+      next: () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: this.language.t('appointments.cancelledToast'),
+        });
+        this.reloadNonce.update((value) => value + 1);
+        this.appointmentsApi.refresh();
+      },
+      error: () => {
+        this.messageService.add({
+          severity: 'error',
+          summary: this.language.t('common.error'),
+          detail: this.language.t('appointments.cancelFailed'),
+        });
+      },
+    });
+  }
+}
+
+function appointmentFromListRow(row: AppointmentListRow): Appointment {
+  return {
+    _id: row._id,
+    customerName: row.customerName,
+    customerPhone: row.customerPhone,
+    customerPreferredTimeOfDay: (row.customerPreferredTimeOfDay as TimeOfDayBucket | null) ?? null,
+    serviceId: row.serviceId ?? undefined,
+    serviceName: row.serviceName,
+    price: row.price,
+    durationMinutes: row.duration,
+    start: new Date(row.start),
+    end: new Date(row.end),
+    status: row.status,
+    source: row.source,
+    notes: row.notes,
+  };
 }

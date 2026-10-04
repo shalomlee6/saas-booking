@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type NextFunction, type Response } from 'express';
 import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
@@ -12,6 +12,7 @@ import {
   appointmentUpdateBodySchema,
   appointmentPatchBodySchema,
   appointmentsListQuerySchema,
+  appointmentsPagedQuerySchema,
   appointmentsWeekQuerySchema,
   availableSlotsQuerySchema,
 } from '../validation/schemas/appointments';
@@ -50,9 +51,17 @@ appointmentsRouter.get(
   asyncHandler(getAvailableSlots)
 );
 
+function appointmentsListQuery(req: AuthRequest, res: Response, next: NextFunction): void {
+  const raw = req.query.page;
+  const page = Array.isArray(raw) ? raw[0] : raw;
+  const paged = page !== undefined && page !== null && String(page) !== '';
+  (req as AuthRequest & { appointmentListPaged?: boolean }).appointmentListPaged = paged;
+  validateQuery(paged ? appointmentsPagedQuerySchema : appointmentsListQuerySchema)(req, res, next);
+}
+
 appointmentsRouter.get(
   '/',
-  validateQuery(appointmentsListQuerySchema),
+  appointmentsListQuery,
   asyncHandler(getAppointmentsList)
 );
 

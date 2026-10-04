@@ -1603,3 +1603,14 @@
 .apt-week-empty-cta {
   text-decoration: none;
 }
+
+.appointments-list-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.apt-list-switch {
+  display: flex;
+  justify-content: flex-end;
+}

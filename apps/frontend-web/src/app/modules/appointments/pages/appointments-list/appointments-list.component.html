@@ -1,5 +1,22 @@
 <div class="appointments-page">
 
+  @if (viewMode() === 'list') {
+    <section class="appointments-list-page">
+      <div class="apt-list-switch">
+        <div class="apt-view-toggle">
+          <button type="button" class="apt-view-btn" (click)="setViewMode('day')">{{ 'appointments.day' | translate }}</button>
+          <button type="button" class="apt-view-btn" (click)="setViewMode('week')">{{ 'appointments.week' | translate }}</button>
+          <button type="button" class="apt-view-btn apt-view-btn--active" (click)="setViewMode('list')">{{ 'appointments.list' | translate }}</button>
+        </div>
+      </div>
+      <app-data-management-table
+        [config]="tableConfig()"
+        [load]="loadPage"
+        [reloadNonce]="reloadNonce()"
+      />
+    </section>
+  } @else {
+
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!--  DESKTOP / TABLET VIEW  (≥ 768px)                                      -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -51,6 +68,11 @@
             [class.apt-view-btn--active]="vm.isWeekMode"
             (click)="setViewMode('week')"
           >{{ 'appointments.week' | translate }}</button>
+          <button
+            type="button"
+            class="apt-view-btn"
+            (click)="setViewMode('list')"
+          >{{ 'appointments.list' | translate }}</button>
         </div>
         <a routerLink="/appointments/new" class="apt-btn-primary">
           <i class="pi pi-plus" aria-hidden="true"></i>
@@ -350,6 +372,8 @@
       <i class="pi pi-plus" aria-hidden="true"></i>
     </a>
     }
+  }
+
   }
 
 

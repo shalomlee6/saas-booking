@@ -27,10 +27,15 @@ describe('calendar dates', () => {
       from: '2026-09-05',
       to: '2026-10-05',
     });
+    expect(createdRangeForPreset('thisWeek', eveningBeforeJerusalemMidnight)).toEqual({
+      from: '2026-10-04',
+      to: '2026-10-11',
+    });
     expect(createdRangeForPreset('thisMonth', eveningBeforeJerusalemMidnight)).toEqual({
       from: '2026-10-01',
       to: '2026-11-01',
     });
+    expect(createdRangeForPreset('upcoming', eveningBeforeJerusalemMidnight)).toBeNull();
     expect(createdRangeForPreset('previousMonth', eveningBeforeJerusalemMidnight)).toEqual({
       from: '2026-09-01',
       to: '2026-10-01',

@@ -8,7 +8,9 @@ import {
   combineLatest,
 } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
+import type { DataListPage, DataListQuery } from '../../../shared/data-management/entity-data-management-config';
 import type { Appointment, AppointmentListItem } from '../model/appointment';
+import type { AppointmentListRow } from '../model/appointment-list-row';
 import type { CreateAppointmentDto } from '../dto/create-appointment.dto';
 import {
   buildUpdateAppointmentDto,
@@ -46,6 +48,18 @@ export class AppointmentsApiService {
   /** Call on logout / unauthorized so tenant-scoped cache is not reused. */
   invalidateTenantScope(): void {
     this.tenantContext$.next(this.tenantContext$.value + 1);
+  }
+
+  /** Paged list. Sent only when the calendar is in list view. */
+  listPage(query: DataListQuery): Observable<DataListPage<AppointmentListRow>> {
+    return this.api.get<DataListPage<AppointmentListRow>>('appointments', {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sort: query.sort,
+      order: query.order,
+      ...query.filters,
+    });
   }
 
   /** GET /api/appointments?from=...&to=... Returns flattened DTO; map to Appointment with start/end as Date for calendar. */

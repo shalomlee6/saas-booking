@@ -507,6 +507,7 @@
 }
 
 .data-table-table thead th {
+  text-align: center;
   position: sticky;
   inset-block-start: 0;
   z-index: 2;
@@ -538,6 +539,7 @@
 }
 
 .data-table-table tbody td {
+  text-align: center;
   border-block-end: 1px solid var(--border-color);
 }
 
@@ -1114,13 +1116,15 @@
   }
 
   .data-table-segment {
-    flex: 1 1 0;
+    flex: 1 1 100%;
+    block-size: auto;
+    flex-wrap: wrap;
     min-inline-size: 0;
   }
 
   .data-table-segment-btn {
-    flex: 1 1 0;
-    padding-inline: 0.5rem;
+    flex: 1 1 auto;
+    padding-inline: 0.75rem;
   }
 
   .data-table-toolbar-end {
