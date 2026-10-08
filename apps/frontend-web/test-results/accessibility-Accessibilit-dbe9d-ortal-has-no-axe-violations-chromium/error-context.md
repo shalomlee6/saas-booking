@@ -44,7 +44,7 @@ Received array:  [{"description": "Ensure elements with an ARIA role that requir
   - button "התנתקות"
 - banner:
   - heading "לוח בקרה" [level=1]
-  - text: יום ראשון · 4 באוק׳ 2026
+  - text: יום שני · 5 באוק׳ 2026
   - link "אתר הלקוחות":
     - /url: /b/demo-salon/login
   - link "תורים":
@@ -54,7 +54,7 @@ Received array:  [{"description": "Ensure elements with an ARIA role that requir
   - link "תור חדש":
     - /url: /appointments/new
 - main:
-  - heading "ערב טוב ✨" [level=1]
+  - heading "בוקר טוב ✨" [level=1]
   - paragraph: אין תורים היום.
   - tablist "טווח נתונים":
     - button "שבוע"
@@ -231,41 +231,41 @@ Received array:  [{"description": "Ensure elements with an ARIA role that requir
   149 |     const results = await runAxe(page, '/appointments?view=list');
   150 |     expect(results.violations).toHaveLength(0);
   151 |   });
-  152 | });
-  153 |
-  154 | // ─── /customers states ────────────────────────────────────────────────────────
-  155 |
-  156 | test.describe('Accessibility — /customers states', () => {
-  157 |   test.setTimeout(180_000);
-  158 |
-  159 |   async function openCustomers(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
-  160 |     await page.context().clearCookies();
-  161 |     await loginAsOwner(page);
-  162 |     await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
-  163 |     await page.setViewportSize({ width, height: width >= 640 ? 800 : 844 });
-  164 |     await page.goto('/customers', { waitUntil: 'domcontentloaded' });
-  165 |     await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
-  166 |     await expect(
-  167 |       width >= 640 ? page.locator('tbody tr').first() : page.locator('.data-table-card').first()
-  168 |     ).toBeVisible({ timeout: 30_000 });
-  169 |     await page.waitForTimeout(400);
-  170 |   }
-  171 |
-  172 |   async function setDark(page: import('@playwright/test').Page, dark: boolean) {
-  173 |     await page.evaluate((isDark) => {
-  174 |       document.documentElement.classList.toggle('theme-dark', isDark);
-  175 |       document.querySelector('.layout')?.classList.toggle('theme-dark', isDark);
-  176 |     }, dark);
-  177 |     await page.waitForTimeout(400);
-  178 |   }
-  179 |
-  180 |   for (const [lang, width] of [
-  181 |     ['he', 390],
-  182 |     ['en', 1280],
-  183 |     ['en', 390],
-  184 |   ] as const) {
-  185 |     test(`/customers (${lang}, ${width}px) has no axe violations`, async ({ page }) => {
-  186 |       await openCustomers(page, lang, width);
-  187 |       const results = await runAxe(page, `/customers ${lang} ${width}`);
-  188 |       expect(results.violations).toHaveLength(0);
+  152 |
+  153 |   test('/super-admin/audit has no axe violations', async ({ page, context }) => {
+  154 |     await context.clearCookies();
+  155 |     await page.addInitScript(() => {
+  156 |       try {
+  157 |         localStorage.clear();
+  158 |         sessionStorage.removeItem('sb_session_exp_ms');
+  159 |       } catch {
+  160 |         /* ignore */
+  161 |       }
+  162 |     });
+  163 |
+  164 |     await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+  165 |     await page.waitForSelector('[data-testid="login-email"]', { timeout: 60_000 });
+  166 |     await page.getByTestId('login-email').fill('superadmin@example.com');
+  167 |     await page.getByTestId('login-password').fill('password12345');
+  168 |     await page.locator('button.login-form-submit').click();
+  169 |     await expect(page).toHaveURL(/\/super-admin/, { timeout: 30_000 });
+  170 |     await page.goto('/super-admin/audit', { waitUntil: 'domcontentloaded' });
+  171 |     await page.waitForSelector('#main-content', { timeout: 30_000 });
+  172 |     await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+  173 |
+  174 |     const results = await runAxe(page, '/super-admin/audit');
+  175 |     expect(results.violations).toHaveLength(0);
+  176 |   });
+  177 | });
+  178 |
+  179 | // ─── /customers states ────────────────────────────────────────────────────────
+  180 |
+  181 | test.describe('Accessibility — /customers states', () => {
+  182 |   test.setTimeout(180_000);
+  183 |
+  184 |   async function openCustomers(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
+  185 |     await page.context().clearCookies();
+  186 |     await loginAsOwner(page);
+  187 |     await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
+  188 |     await page.setViewportSize({ width, height: width >= 640 ? 800 : 844 });
 ```

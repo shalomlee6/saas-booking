@@ -4,8 +4,10 @@ import { Customer } from '../models/Customer';
 import { ForbiddenError } from '../errors/httpErrors';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import {
+  bookingBlockedExpression,
   noShowCountAggregationExpression,
   resolveNoShowPolicy,
+  type BookingOverride,
   type NoShowPolicy,
 } from './customerNoShows';
 import {
@@ -54,6 +56,7 @@ export interface CustomerListRow {
   nextAppointment: Date | null;
   noShowCount: number;
   blocked: boolean;
+  bookingOverride: BookingOverride;
   customerType: 'new' | 'returning';
   preferredServiceId: Types.ObjectId | null;
   preferredServiceName: string;
@@ -97,7 +100,7 @@ function metricStages(now: Date, timezone: string, policy: NoShowPolicy): Record
               },
             },
           },
-          { $project: { status: 1, start: 1, price: 1, serviceId: 1 } },
+          { $project: { status: 1, start: 1, price: 1, serviceId: 1, noShowExcused: 1 } },
         ],
         as: 'appointments',
       },
@@ -221,7 +224,8 @@ function metricStages(now: Date, timezone: string, policy: NoShowPolicy): Record
         averageVisitValue: {
           $cond: [{ $gt: ['$totalVisits', 0] }, { $divide: ['$totalRevenue', '$totalVisits'] }, 0],
         },
-        blocked: policy.enabled ? { $gte: ['$noShowCount', policy.threshold] } : false,
+        bookingOverride: { $ifNull: ['$bookingOverride', 'auto'] },
+        blocked: bookingBlockedExpression(policy),
         customerType: {
           $cond: [{ $lt: ['$totalVisits', 2] }, 'new', 'returning'],
         },
@@ -337,6 +341,7 @@ function projectRow(): Record<string, unknown> {
       nextAppointment: 1,
       noShowCount: 1,
       blocked: 1,
+      bookingOverride: 1,
       customerType: 1,
       preferredServiceId: 1,
       preferredServiceName: 1,

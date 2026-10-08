@@ -29,7 +29,7 @@ export interface CustomerListConfigInput {
   onEdit: (row: CustomerListRow) => void;
   onBook: (row: CustomerListRow) => void;
   onSetActive: (row: CustomerListRow, isActive: boolean) => void;
-  onResetNoShows: (row: CustomerListRow) => void;
+  onExcuseAllNoShows: (row: CustomerListRow, reason?: string) => void;
   onCreate: () => void;
   onBulkSetActive: (rows: CustomerListRow[], isActive: boolean) => void;
   onOpenSettings?: () => void;
@@ -75,6 +75,7 @@ export function buildCustomerTableConfig(
             : { label: t('customers.statusInactive'), severity: 'secondary' },
         ];
         if (row.blocked) tags.push({ label: t('customers.blockedTag'), severity: 'danger' });
+        if (row.bookingOverride === 'allow') tags.push({ label: t('customers.alwaysAllowedTag'), severity: 'success' });
         return tags;
       },
     },
@@ -328,14 +329,15 @@ export function buildCustomerTableConfig(
         run: (row) => input.onSetActive(row, true),
       },
       {
-        id: 'reset-no-shows',
-        label: t('customers.resetNoShowsAction'),
+        id: 'excuse-all',
+        label: t('customers.excuseAllAction'),
         icon: 'pi pi-refresh',
         severity: 'warn',
         keepSlot: true,
-        confirmText: t('customers.resetNoShowsConfirm'),
+        confirmText: t('customers.excuseAllConfirm'),
+        confirmReason: true,
         visible: (row) => owner && (row.noShowCount ?? 0) > 0,
-        run: input.onResetNoShows,
+        run: input.onExcuseAllNoShows,
       },
     ],
     bulkActions: owner

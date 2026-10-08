@@ -238,23 +238,23 @@ Received array:  [{"description": "Ensure the contrast between foreground and ba
   149 |     const results = await runAxe(page, '/appointments?view=list');
   150 |     expect(results.violations).toHaveLength(0);
   151 |   });
-  152 | });
-  153 |
-  154 | // ─── /customers states ────────────────────────────────────────────────────────
-  155 |
-  156 | test.describe('Accessibility — /customers states', () => {
-  157 |   test.setTimeout(180_000);
-  158 |
-  159 |   async function openCustomers(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
-  160 |     await page.context().clearCookies();
-  161 |     await loginAsOwner(page);
-  162 |     await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
-  163 |     await page.setViewportSize({ width, height: width >= 640 ? 800 : 844 });
-  164 |     await page.goto('/customers', { waitUntil: 'domcontentloaded' });
-  165 |     await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
-  166 |     await expect(
-  167 |       width >= 640 ? page.locator('tbody tr').first() : page.locator('.data-table-card').first()
-  168 |     ).toBeVisible({ timeout: 30_000 });
-  169 |     await page.waitForTimeout(400);
-  170 |   }
+  152 |
+  153 |   test('/super-admin/audit has no axe violations', async ({ page, context }) => {
+  154 |     await context.clearCookies();
+  155 |     await page.addInitScript(() => {
+  156 |       try {
+  157 |         localStorage.clear();
+  158 |         sessionStorage.removeItem('sb_session_exp_ms');
+  159 |       } catch {
+  160 |         /* ignore */
+  161 |       }
+  162 |     });
+  163 |
+  164 |     await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+  165 |     await page.waitForSelector('[data-testid="login-email"]', { timeout: 60_000 });
+  166 |     await page.getByTestId('login-email').fill('superadmin@example.com');
+  167 |     await page.getByTestId('login-password').fill('password12345');
+  168 |     await page.locator('button.login-form-submit').click();
+  169 |     await expect(page).toHaveURL(/\/super-admin/, { timeout: 30_000 });
+  170 |     await page.goto('/super-admin/audit', { waitUntil: 'domcontentloaded' });
 ```

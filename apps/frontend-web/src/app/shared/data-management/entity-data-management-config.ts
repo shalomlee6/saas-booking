@@ -48,6 +48,10 @@ export interface DataColumn<T> {
   secondary?: (row: T) => string;
   /** Identity cell: shows an initials avatar (from `value`) before the value. */
   avatar?: boolean;
+  /** Render the value in a monospace face. */
+  mono?: boolean;
+  /** When set, the cell shows a button that copies this text. */
+  copy?: (row: T) => string;
 }
 
 export interface DataFilterOption {
@@ -78,7 +82,8 @@ export type DataFilter =
       fromId: string;
       toId: string;
       options: DataFilterOption[];
-    });
+    })
+  | (DataFilterBase & { kind: 'multi'; options: DataFilterOption[] });
 
 export interface DataSort {
   field: string;
@@ -104,9 +109,11 @@ export interface DataRowAction<T> {
   keepSlot?: boolean;
   /** When set, the shell asks for confirmation before `run`. A function can use the row. */
   confirmText?: string | ((row: T) => string);
+  /** Shows an optional reason field in the confirmation dialog and passes it to `run`. */
+  confirmReason?: boolean;
   /** When omitted, the action is shown for every row. */
   visible?: (row: T) => boolean;
-  run: (row: T) => void;
+  run: (row: T, reason?: string) => void;
 }
 
 export interface DataBulkAction<T> {
@@ -177,4 +184,6 @@ export interface EntityDataManagementConfig<T> {
   permissions: DataManagementPermissions;
   /** Applied on first load and when filters are cleared. */
   defaultFilters?: Readonly<Record<string, string>>;
+  /** First-load sort direction. Defaults to ascending. */
+  defaultOrder?: 'asc' | 'desc';
 }

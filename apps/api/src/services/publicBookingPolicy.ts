@@ -6,7 +6,8 @@ import { recordAudit } from '../utils/recordAudit';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import {
   countCustomerNoShows,
-  isBlockedByNoShowPolicy,
+  normalizeBookingOverride,
+  resolveBookingBlock,
   resolveNoShowPolicy,
 } from './customerNoShows';
 
@@ -61,12 +62,9 @@ export async function enforcePublicBookingCustomer(req: Request, customer: ICust
   const businessId = customer.businessId.toString();
   const settings = await ensureBusinessSettings(businessId);
   const policy = resolveNoShowPolicy(settings);
-  const noShowCount = await countCustomerNoShows(
-    businessId,
-    customer._id.toString(),
-    customer.noShowResetAt
-  );
-  if (isBlockedByNoShowPolicy(policy, noShowCount)) {
+  const noShowCount = await countCustomerNoShows(businessId, customer._id.toString());
+  const block = resolveBookingBlock(normalizeBookingOverride(customer.bookingOverride), policy, noShowCount);
+  if (block.blocked) {
     throw new HttpError(
       403,
       ONLINE_BOOKING_UNAVAILABLE[publicRequestLanguage(req)],

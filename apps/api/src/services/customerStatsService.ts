@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
 import { Appointment } from '../models/Appointment';
-import { Customer } from '../models/Customer';
 import { averageVisitValue, customerTypeFromVisits } from './customerMetrics';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { noShowAppointmentFilter } from './customerNoShows';
@@ -116,10 +115,7 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
   const matchBase: Record<string, unknown> = { businessId };
   if (customerId) matchBase.customerId = customerId;
 
-  const customer = customerId
-    ? await Customer.findOne({ _id: customerId, businessId }).select('noShowResetAt').lean()
-    : null;
-  const noShowMatch = noShowAppointmentFilter(customer?.noShowResetAt);
+  const noShowMatch = noShowAppointmentFilter();
 
   const serviceLookupStages = [
     { $lookup: { from: 'services', localField: 'serviceId', foreignField: '_id', as: 'svc' } },

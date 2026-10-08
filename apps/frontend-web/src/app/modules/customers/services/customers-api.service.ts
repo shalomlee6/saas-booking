@@ -7,6 +7,7 @@ import type { CustomerAppointmentHistoryItem, CustomerCardStatsResponse } from '
 import { ApiService } from '../../../core/api/api.service';
 import type { DataListPage, DataListQuery } from '../../../shared/data-management/entity-data-management-config';
 import type { CustomerListRow } from '../model/customer-list-row';
+import type { BookingOverride, NoShowControl } from '../model/no-show-control';
 
 @Injectable({ providedIn: 'root' })
 export class CustomersApiService {
@@ -34,8 +35,33 @@ export class CustomersApiService {
     });
   }
 
-  resetNoShows(id: string): Observable<{ ok: boolean; noShowResetAt: string }> {
-    return this.api.post<{ ok: boolean; noShowResetAt: string }>(`customers/${id}/no-show-reset`, {});
+  getNoShowControl(id: string): Observable<NoShowControl> {
+    return this.api.get<NoShowControl>(`customers/${id}/no-show-control`);
+  }
+
+  excuseAllNoShows(id: string, reason?: string): Observable<NoShowControl & { excused: number }> {
+    return this.api.post<NoShowControl & { excused: number }>(`customers/${id}/no-shows/excuse-all`, {
+      ...(reason ? { reason } : {}),
+    });
+  }
+
+  setNoShowExcused(
+    id: string,
+    appointmentId: string,
+    excused: boolean,
+    reason?: string
+  ): Observable<NoShowControl> {
+    return this.api.post<NoShowControl>(`customers/${id}/no-shows/${appointmentId}`, {
+      excused,
+      ...(reason ? { reason } : {}),
+    });
+  }
+
+  setBookingOverride(id: string, override: BookingOverride, reason?: string): Observable<NoShowControl> {
+    return this.api.patch<NoShowControl>(`customers/${id}/booking-override`, {
+      override,
+      ...(reason ? { reason } : {}),
+    });
   }
 
   getList(search?: string): Observable<Customer[]> {

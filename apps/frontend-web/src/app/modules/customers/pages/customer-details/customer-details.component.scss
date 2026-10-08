@@ -425,6 +425,108 @@ textarea.customer-form-input {
   gap: 1rem;
 }
 
+.cd-noshow-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+}
+
+.cd-noshow-override {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-inline-size: 16rem;
+}
+
+.cd-noshow-select {
+  height: 40px;
+  padding: 0 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.cd-noshow-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cd-noshow-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.cd-noshow-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.cd-noshow-state {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.cd-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--text-primary) 45%, transparent);
+}
+
+.cd-dialog {
+  inline-size: min(28rem, calc(100% - 2rem));
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.cd-dialog-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.125rem;
+}
+
+.cd-dialog-reason {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin-block-start: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.cd-dialog-reason-input {
+  min-block-size: 4.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+
+.cd-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-block-start: 1rem;
+}
+
 .cd-section-title {
   margin: 0;
   font-size: 1rem;

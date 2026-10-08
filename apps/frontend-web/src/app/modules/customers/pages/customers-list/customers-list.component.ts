@@ -54,7 +54,7 @@ export class CustomersListComponent implements OnInit {
       onEdit: (row) => void this.router.navigate(['/customers', row._id], { queryParams: { edit: '1' } }),
       onBook: (row) => void this.router.navigate(['/appointments', 'new'], { queryParams: { customerId: row._id } }),
       onSetActive: (row, isActive) => this.setOneActive(row._id, isActive),
-      onResetNoShows: (row) => this.resetNoShows(row),
+      onExcuseAllNoShows: (row, reason) => this.excuseAllNoShows(row, reason),
       onCreate: () => void this.router.navigate(['/customers', 'new']),
       onBulkSetActive: (rows, isActive) => this.setManyActive(rows.map((row) => row._id), isActive),
       onOpenSettings: () => this.openNoShowSettings(),
@@ -169,14 +169,14 @@ export class CustomersListComponent implements OnInit {
     });
   }
 
-  private resetNoShows(row: CustomerListRow): void {
-    this.api.resetNoShows(row._id).subscribe({
+  private excuseAllNoShows(row: CustomerListRow, reason?: string): void {
+    this.api.excuseAllNoShows(row._id, reason).subscribe({
       next: () => this.reloadNonce.update((value) => value + 1),
       error: () => {
         this.messages.add({
           severity: 'error',
           summary: this.language.t('common.error'),
-          detail: this.language.t('customers.resetNoShowsFailed'),
+          detail: this.language.t('customers.excuseAllFailed'),
         });
       },
     });

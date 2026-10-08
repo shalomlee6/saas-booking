@@ -65,6 +65,35 @@
         }
       </div>
 
+      @for (field of quickDateViews(); track field.id) {
+        <div class="data-table-quick-date">
+          <select
+            class="data-table-input data-table-select"
+            [attr.aria-label]="field.label"
+            [attr.data-testid]="'dm-filter-' + field.id"
+            [ngModel]="field.value"
+            (ngModelChange)="setFilter(field.id, $event)"
+          >
+            <option value="">{{ 'dataManagement.all' | translate }}</option>
+            @for (option of field.options; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+          @if (field.showCustomRange) {
+            <p-datepicker
+              selectionMode="range"
+              dateFormat="dd/mm/yy"
+              [readonlyInput]="true"
+              [showIcon]="true"
+              appendTo="body"
+              [placeholder]="field.label"
+              [ngModel]="field.customRange"
+              (ngModelChange)="onCustomRange($any(field.filter), $event)"
+            />
+          }
+        </div>
+      }
+
       @for (filter of quickFilterViews(); track filter.id) {
         <div
           class="data-table-segment"
@@ -378,7 +407,28 @@
                           </span>
                         </div>
                       } @else {
-                        <span class="data-table-value" [class.data-table-muted]="cell.muted">{{ cell.value }}</span>
+                        <span class="data-table-value-row">
+                          <span
+                            class="data-table-value"
+                            [class.data-table-muted]="cell.muted"
+                            [class.data-table-mono]="cell.mono"
+                          >{{ cell.value }}</span>
+                          @if (cell.copy) {
+                            <button
+                              type="button"
+                              class="data-table-copy"
+                              [attr.aria-label]="'dataManagement.copy' | translate"
+                              (click)="copyText($event, view.id + ':' + cell.id, cell.copy)"
+                            >
+                              <i
+                                class="pi"
+                                [class.pi-check]="copiedKey() === view.id + ':' + cell.id"
+                                [class.pi-copy]="copiedKey() !== view.id + ':' + cell.id"
+                                aria-hidden="true"
+                              ></i>
+                            </button>
+                          }
+                        </span>
                         @if (cell.secondary) {
                           <bdi class="data-table-secondary">{{ cell.secondary }}</bdi>
                         }
@@ -577,6 +627,22 @@
               }
             </div>
           </div>
+        } @else if (field.kind === 'multi') {
+          <fieldset class="data-table-field" [attr.data-testid]="'dm-filter-' + field.id">
+            <legend class="data-table-field-label">{{ field.label }}</legend>
+            <div class="data-table-checks">
+              @for (option of field.options; track option.value) {
+                <label class="data-table-check">
+                  <input
+                    type="checkbox"
+                    [checked]="multiSelected(field.id, option.value)"
+                    (change)="toggleMulti(field.id, option.value)"
+                  />
+                  <span>{{ option.label }}</span>
+                </label>
+              }
+            </div>
+          </fieldset>
         } @else {
           <label class="data-table-field">
             <span class="data-table-field-label">{{ field.label }}</span>
@@ -679,6 +745,17 @@
       >
         <h2 class="data-table-dialog-title">{{ pending.action.label }}</h2>
         <p class="data-table-dialog-consequence">{{ rowConfirmText(pending.action, pending.row) }}</p>
+        @if (pending.action.confirmReason) {
+          <label class="data-table-dialog-reason">
+            <span>{{ 'dataManagement.reasonOptional' | translate }}</span>
+            <textarea
+              class="data-table-dialog-reason-input"
+              maxlength="500"
+              [value]="rowReason()"
+              (input)="onRowReason($event)"
+            ></textarea>
+          </label>
+        }
         <div class="data-table-dialog-actions">
           <button type="button" class="data-table-btn" data-testid="dm-row-dismiss" (click)="dismissRow()">
             {{ 'common.cancel' | translate }}

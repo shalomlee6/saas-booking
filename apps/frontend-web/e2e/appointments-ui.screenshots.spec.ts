@@ -44,3 +44,26 @@ test('appointments list and calendar hebrew light screenshots', async ({ page })
     });
   }
 });
+
+test('day, week, and list keep the view toggle in one place', async ({ page }) => {
+  test.setTimeout(120_000);
+  await loginAsOwner(page);
+  await page.evaluate(() => localStorage.setItem('sb_lang', 'he'));
+
+  for (const width of [1280, 390] as const) {
+    await page.setViewportSize({ width, height: width === 1280 ? 800 : 844 });
+    const boxes: { x: number; y: number }[] = [];
+    for (const view of ['day', 'week', 'list'] as const) {
+      const url = view === 'week' ? '/appointments' : `/appointments?view=${view}`;
+      await page.goto(url, { waitUntil: 'domcontentloaded' });
+      const toggle = page.locator('.apt-view-switch');
+      await expect(toggle).toHaveCount(1);
+      await expect(toggle).toBeVisible();
+      const box = await toggle.boundingBox();
+      expect(box).not.toBeNull();
+      boxes.push({ x: Math.round(box!.x), y: Math.round(box!.y) });
+    }
+    expect(boxes[1]).toEqual(boxes[0]);
+    expect(boxes[2]).toEqual(boxes[0]);
+  }
+});

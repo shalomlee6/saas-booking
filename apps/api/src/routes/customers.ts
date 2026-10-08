@@ -14,6 +14,10 @@ import {
   customersListQuerySchema,
   customersPagedQuerySchema,
   noShowPolicyBodySchema,
+  excuseAllNoShowsBodySchema,
+  excuseNoShowBodySchema,
+  bookingOverrideBodySchema,
+  noShowAppointmentParamsSchema,
 } from '../validation/schemas/customers';
 import {
   bulkDeleteCustomers,
@@ -27,7 +31,10 @@ import {
   getCustomerAppointmentHistory,
   getCustomerCardStats,
   listCustomers,
-  resetCustomerNoShows,
+  getNoShowControl,
+  excuseCustomerNoShows,
+  excuseCustomerNoShow,
+  updateBookingOverride,
   updateCustomer,
 } from '../controllers/customersController';
 
@@ -109,11 +116,34 @@ customersRouter.delete(
   asyncHandler((req: AuthRequest, res) => deleteCustomer(req, res))
 );
 
+customersRouter.get(
+  '/:id/no-show-control',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => getNoShowControl(req, res))
+);
+
 customersRouter.post(
-  '/:id/no-show-reset',
+  '/:id/no-shows/excuse-all',
   requireOwner,
   validateParams(customerIdParamsSchema),
-  asyncHandler((req: AuthRequest, res) => resetCustomerNoShows(req, res))
+  validateBody(excuseAllNoShowsBodySchema),
+  asyncHandler((req: AuthRequest, res) => excuseCustomerNoShows(req, res))
+);
+
+customersRouter.post(
+  '/:id/no-shows/:appointmentId',
+  requireOwner,
+  validateParams(noShowAppointmentParamsSchema),
+  validateBody(excuseNoShowBodySchema),
+  asyncHandler((req: AuthRequest, res) => excuseCustomerNoShow(req, res))
+);
+
+customersRouter.patch(
+  '/:id/booking-override',
+  requireOwner,
+  validateParams(customerIdParamsSchema),
+  validateBody(bookingOverrideBodySchema),
+  asyncHandler((req: AuthRequest, res) => updateBookingOverride(req, res))
 );
 
 customersRouter.get(

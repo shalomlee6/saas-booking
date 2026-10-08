@@ -136,6 +136,91 @@
         }
     }
 
+    @if (noShowControl(); as control) {
+      <section class="customers-card cd-section" [attr.aria-label]="'customerCard.noShowSection' | translate">
+        <div class="cd-section-header">
+          <h2 class="cd-section-title">{{ 'customerCard.noShowSection' | translate }}</h2>
+          @if (owner() && control.noShowCount > 0) {
+            <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="requestExcuseAll()">
+              {{ 'customerCard.noShowExcuseAll' | translate }}
+            </button>
+          }
+        </div>
+        <div class="cd-noshow-summary">
+          <span>{{ 'customerCard.noShowCount' | translate: { count: control.noShowCount } }}</span>
+          <span>{{ noShowStateLabel(control) }}</span>
+          @if (noShowReasonLabel(control)) {
+            <span>{{ noShowReasonLabel(control) }}</span>
+          }
+        </div>
+        @if (owner()) {
+          <label class="cd-noshow-override">
+            <span>{{ 'customerCard.noShowOverride' | translate }}</span>
+            <select
+              class="cd-noshow-select"
+              [value]="overrideDraft()"
+              [disabled]="noShowSaving()"
+              (change)="requestOverride($any($event.target).value)"
+            >
+              <option value="auto">{{ 'customerCard.noShowOverrideAuto' | translate }}</option>
+              <option value="allow">{{ 'customerCard.noShowOverrideAllow' | translate }}</option>
+              <option value="block">{{ 'customerCard.noShowOverrideBlock' | translate }}</option>
+            </select>
+          </label>
+        } @else {
+          <p class="cd-noshow-state">{{ overrideLabel(control.bookingOverride) }}</p>
+        }
+        @if (control.noShows.length === 0) {
+          <p class="cd-noshow-state">{{ 'customerCard.noShowEmpty' | translate }}</p>
+        } @else {
+          <ul class="cd-noshow-list">
+            @for (item of control.noShows; track item.id) {
+              <li class="cd-noshow-item">
+                <span class="cd-noshow-meta">
+                  <span>{{ formatDate(item.start) }}</span>
+                  <span>{{ item.serviceName || ('customerCard.unknownService' | translate) }}</span>
+                  <span class="cd-noshow-state">{{ (item.excused ? 'customerCard.noShowExcused' : 'customerCard.noShowCounted') | translate }}</span>
+                </span>
+                @if (owner()) {
+                  <button
+                    type="button"
+                    class="customers-btn customers-btn-ghost customers-btn-sm"
+                    [disabled]="noShowSaving()"
+                    (click)="requestExcuse(item)"
+                  >
+                    {{ (item.excused ? 'customerCard.noShowUnexcuse' : 'customerCard.noShowExcuse') | translate }}
+                  </button>
+                }
+              </li>
+            }
+          </ul>
+        }
+        <div>
+          <h3 class="cd-section-title">{{ 'customerCard.noShowHistory' | translate }}</h3>
+          @if (control.history.length === 0) {
+            <p class="cd-noshow-state">{{ 'customerCard.noShowHistoryEmpty' | translate }}</p>
+          } @else {
+            <ul class="cd-noshow-list">
+              @for (entry of control.history; track entry.at + entry.action) {
+                <li class="cd-noshow-item">
+                  <span class="cd-noshow-meta">
+                    <span>{{ formatDateTime(entry.at) }}</span>
+                    <span>{{ noShowActionLabel(entry.action) }}</span>
+                    @if (entry.reason) {
+                      <span class="cd-noshow-state">{{ entry.reason }}</span>
+                    }
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+        @if (noShowError()) {
+          <p class="cd-status-error">{{ noShowError() }}</p>
+        }
+      </section>
+    }
+
     <div class="customers-card cd-section">
       <div class="cd-section-header">
         <h2 class="cd-section-title">{{ 'customerCard.profileTitle' | translate }}</h2>
@@ -371,5 +456,37 @@
         }
       }
     </div>
+
+    @if (pendingNoShow(); as pending) {
+      <div class="cd-dialog-backdrop" (click)="dismissNoShow()">
+        <div
+          class="cd-dialog"
+          role="dialog"
+          aria-modal="true"
+          [attr.aria-label]="noShowDialogTitle(pending)"
+          (click)="$event.stopPropagation()"
+        >
+          <h2 class="cd-dialog-title">{{ noShowDialogTitle(pending) }}</h2>
+          <p class="cd-noshow-state">{{ noShowDialogText(pending) }}</p>
+          <label class="cd-dialog-reason">
+            <span>{{ 'dataManagement.reasonOptional' | translate }}</span>
+            <textarea
+              class="cd-dialog-reason-input"
+              maxlength="500"
+              [value]="noShowReason()"
+              (input)="onNoShowReason($event)"
+            ></textarea>
+          </label>
+          <div class="cd-dialog-actions">
+            <button type="button" class="customers-btn customers-btn-ghost" (click)="dismissNoShow()">
+              {{ 'common.cancel' | translate }}
+            </button>
+            <button type="button" class="customers-btn customers-btn-primary" [disabled]="noShowSaving()" (click)="confirmNoShow()">
+              {{ 'dataManagement.confirm' | translate }}
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   }
 </div>

@@ -21,10 +21,10 @@ export interface ICustomer extends Document {
   /** Missing on older documents — treated as active. */
   isActive?: boolean;
   /**
-   * No-shows with `start` at or before this instant are ignored.
-   * Unset means every stored `no_show` counts.
+   * `auto` follows the business no-show policy.
+   * `allow` is never blocked. `block` is always blocked.
    */
-  noShowResetAt?: Date;
+  bookingOverride?: 'auto' | 'allow' | 'block';
   preferences?: ICustomerPreferences;
   defaultTreatmentDurationMinutes?: number;
   createdAt: Date;
@@ -56,7 +56,7 @@ const CustomerSchema = new Schema<ICustomer>(
     email: String,
     notes: String,
     isActive: { type: Boolean, default: true },
-    noShowResetAt: Date,
+    bookingOverride: { type: String, enum: ['auto', 'allow', 'block'], default: 'auto' },
     preferences: CustomerPreferencesSchema,
     defaultTreatmentDurationMinutes: Number,
   },

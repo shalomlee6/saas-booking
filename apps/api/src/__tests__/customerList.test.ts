@@ -170,7 +170,7 @@ describe('GET /api/customers paged list', () => {
     expect(second.body.items[0].name).not.toBe('Outsider');
   });
 
-  it('counts no-shows only after noShowResetAt', async () => {
+  it('counts no-shows that are not excused', async () => {
     const { business, token } = await seedOwner();
     await seedBusinessSettings(business._id);
     const service = await seedService(business._id);
@@ -178,7 +178,6 @@ describe('GET /api/customers paged list', () => {
       businessId: business._id,
       name: 'No Show',
       phone: '0504444444',
-      noShowResetAt: daysAgo(5),
     });
     await Appointment.create({
       businessId: business._id,
@@ -188,6 +187,7 @@ describe('GET /api/customers paged list', () => {
       end: new Date(daysAgo(9).getTime() + 60 * 60 * 1000),
       status: 'no_show',
       source: 'owner',
+      noShowExcused: true,
     });
     await Appointment.create({
       businessId: business._id,

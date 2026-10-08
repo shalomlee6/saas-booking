@@ -23,7 +23,7 @@ describe('customer list config', () => {
     onEdit: () => undefined,
     onBook: () => undefined,
     onSetActive: () => undefined,
-    onResetNoShows: () => undefined,
+    onExcuseAllNoShows: () => undefined,
     onCreate: () => undefined,
     onBulkSetActive: () => undefined,
   });
@@ -38,11 +38,23 @@ describe('customer list config', () => {
     }
   });
 
-  it('hides the reset action until the customer has no-shows', () => {
-    const reset = config.rowActions.find((action) => action.id === 'reset-no-shows');
-    expect(reset?.keepSlot).toBeTrue();
-    expect(reset?.visible?.({ _id: '1', name: 'A', phone: '1', isActive: true, createdAt: '', noShowCount: 0 })).toBeFalse();
-    expect(reset?.visible?.({ _id: '1', name: 'A', phone: '1', isActive: true, createdAt: '', noShowCount: 2 })).toBeTrue();
+  it('hides the excuse-all action until the customer has no-shows', () => {
+    const action = config.rowActions.find((item) => item.id === 'excuse-all');
+    expect(action?.keepSlot).toBeTrue();
+    expect(action?.icon).toBe('pi pi-refresh');
+    expect(action?.confirmReason).toBeTrue();
+    expect(action?.visible?.({ _id: '1', name: 'A', phone: '1', isActive: true, createdAt: '', noShowCount: 0 })).toBeFalse();
+    expect(action?.visible?.({ _id: '1', name: 'A', phone: '1', isActive: true, createdAt: '', noShowCount: 2 })).toBeTrue();
+  });
+
+  it('tags a blocked customer and an always-allowed customer', () => {
+    const status = config.columns.find((column) => column.id === 'isActive');
+    const row = { _id: '1', name: 'A', phone: '1', isActive: true, createdAt: '' };
+    const blocked = status?.tags?.({ ...row, blocked: true }) ?? [];
+    const allowed = status?.tags?.({ ...row, bookingOverride: 'allow' }) ?? [];
+    expect(blocked.some((tag) => tag.label === 'customers.blockedTag')).toBeTrue();
+    expect(allowed.some((tag) => tag.label === 'customers.alwaysAllowedTag')).toBeTrue();
+    expect(allowed.some((tag) => tag.label === 'customers.blockedTag')).toBeFalse();
   });
 
   it('maps visit and revenue presets onto the existing half-open range params', () => {
@@ -115,7 +127,7 @@ describe('customer list config', () => {
       onEdit: () => undefined,
       onBook: () => undefined,
       onSetActive: () => undefined,
-      onResetNoShows: () => undefined,
+      onExcuseAllNoShows: () => undefined,
       onCreate: () => undefined,
       onBulkSetActive: () => undefined,
       onOpenSettings: () => undefined,

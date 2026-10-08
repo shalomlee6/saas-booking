@@ -159,7 +159,7 @@ describe('NO-SHOW POLICY', () => {
     expect(list.body.total).toBe(0);
   });
 
-  it('clears the block when no-shows are reset', async () => {
+  it('clears the block when no-shows are excused', async () => {
     const { business, token } = await seedOwner();
     await seedBusinessSettings(business._id);
     const service = await seedService(business._id);
@@ -167,9 +167,14 @@ describe('NO-SHOW POLICY', () => {
       businessId: business._id,
       name: 'Noa',
       phone: '0501234567',
-      noShowResetAt: new Date(),
     });
     await addNoShows(business._id, customer._id, service._id, 3);
+    const excused = await request(app)
+      .post(`/api/customers/${customer._id.toString()}/no-shows/excuse-all`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({});
+    expect(excused.status).toBe(200);
+    expect(excused.body.noShowCount).toBe(0);
 
     const res = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
     expect(res.status).toBe(201);
@@ -177,6 +182,8 @@ describe('NO-SHOW POLICY', () => {
       .get(`/api/customers/${customer._id.toString()}`)
       .set('Authorization', `Bearer ${token}`);
     expect(detail.body.blocked).toBe(false);
+    const stored = await Appointment.find({ customerId: customer._id, status: 'no_show' });
+    expect(stored.length).toBe(3);
   });
 
   it('reactivates an inactive customer who is not blocked', async () => {

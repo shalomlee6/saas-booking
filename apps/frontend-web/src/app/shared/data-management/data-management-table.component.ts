@@ -71,6 +71,8 @@ export interface DataCellView {
   end: boolean;
   numeric: boolean;
   smallScreen: boolean;
+  mono: boolean;
+  copy: string;
 }
 
 export interface DataCardMeta {
@@ -196,8 +198,10 @@ export class DataManagementTableComponent<T> implements OnInit {
   readonly loadError = signal(false);
   readonly pendingBulk = signal<DataBulkAction<T> | null>(null);
   readonly pendingRow = signal<PendingRowAction<T> | null>(null);
+  readonly rowReason = signal('');
   readonly drawerOpen = signal(false);
   readonly columnsOpen = signal(false);
+  readonly copiedKey = signal('');
   readonly isMobile = signal(false);
   private readonly retryNonce = signal(0);
 
@@ -359,19 +363,23 @@ export class DataManagementTableComponent<T> implements OnInit {
       const cells = columns.map((column): DataCellView => {
         const value = column.value(row);
         const muted = value === '' || value === EMPTY_VALUE;
+        const tags = column.tags?.(row) ?? [];
+        const copy = (column.copy?.(row) ?? '').trim();
         return {
           id: column.id,
           header: column.header,
           value,
           secondary: muted ? '' : (column.secondary?.(row) ?? ''),
           muted,
-          tags: column.tags ? [...column.tags(row)] : null,
+          tags: tags.length > 0 ? tags : null,
           avatar: !!column.avatar,
           initials: column.avatar ? this.initials(value) : '',
           desktopOnly: !column.showOnSmallScreen,
           end: column.align === 'end',
           numeric: !!column.numeric,
           smallScreen: column.showOnSmallScreen,
+          mono: !!column.mono,
+          copy: copy && copy !== EMPTY_VALUE ? copy : '',
         };
       });
       const cardCells = cells.filter((cell) => cell.smallScreen);
@@ -434,6 +442,31 @@ export class DataManagementTableComponent<T> implements OnInit {
         showCustomRange: filter.kind === 'date-preset' && value === 'custom',
       };
     });
+  });
+
+  readonly quickDateViews = computed(() => {
+    const values = this.filterValues();
+    return this.config()
+      .filters.filter(
+        (filter): filter is DatePresetFilter => filter.placement === 'quick' && filter.kind === 'date-preset'
+      )
+      .map((filter) => {
+        const value = values[filter.id] ?? '';
+        return {
+          filter,
+          id: filter.id,
+          label: filter.label,
+          kind: filter.kind,
+          value,
+          options: filter.options.map((option) => ({
+            label: option.label,
+            value: option.value,
+            active: value === option.value,
+          })),
+          customRange: value === 'custom' ? this.customRange(filter) : null,
+          showCustomRange: value === 'custom',
+        };
+      });
   });
 
   readonly chipViews = computed<DataChipView[]>(() =>
@@ -504,6 +537,8 @@ export class DataManagementTableComponent<T> implements OnInit {
   }
 
   ngOnInit(): void {
+    const defaultOrder = this.config().defaultOrder;
+    if (defaultOrder) this.sortOrder.set(defaultOrder);
     const defaults = this.config().defaultFilters ?? {};
     if (Object.keys(defaults).length > 0) {
       this.filterValues.set({ ...defaults });
@@ -627,9 +662,50 @@ export class DataManagementTableComponent<T> implements OnInit {
 
   chipLabel(filter: DataFilter): string {
     const value = this.filterValue(filter.id);
+    if (filter.kind === 'multi') {
+      const labels = value
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .map((item) => filter.options.find((option) => option.value === item)?.label ?? item);
+      return `${filter.label}: ${labels.join(', ')}`;
+    }
     if (!('options' in filter)) return `${filter.label}: ${value}`;
     const option = filter.options.find((item) => item.value === value);
     return option ? `${filter.label}: ${option.label}` : filter.label;
+  }
+
+  multiSelected(id: string, option: string): boolean {
+    return this.filterValue(id)
+      .split(',')
+      .map((part) => part.trim())
+      .includes(option);
+  }
+
+  toggleMulti(id: string, option: string): void {
+    const selected = new Set(
+      this.filterValue(id)
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean)
+    );
+    if (selected.has(option)) selected.delete(option);
+    else selected.add(option);
+    this.setFilter(id, [...selected].join(','));
+  }
+
+  copyText(event: Event, key: string, value: string): void {
+    event.stopPropagation();
+    const write = navigator.clipboard?.writeText(value);
+    if (!write) return;
+    void write
+      .then(() => {
+        this.copiedKey.set(key);
+        window.setTimeout(() => {
+          if (this.copiedKey() === key) this.copiedKey.set('');
+        }, 1500);
+      })
+      .catch(() => undefined);
   }
 
   private initials(value: string): string {
@@ -731,6 +807,7 @@ export class DataManagementTableComponent<T> implements OnInit {
   requestRow(event: Event, action: DataRowAction<T>, row: T): void {
     event.stopPropagation();
     if (action.confirmText) {
+      this.rowReason.set('');
       this.pendingRow.set({ action, row });
       return;
     }
@@ -739,13 +816,21 @@ export class DataManagementTableComponent<T> implements OnInit {
 
   dismissRow(): void {
     this.pendingRow.set(null);
+    this.rowReason.set('');
+  }
+
+  onRowReason(event: Event): void {
+    const value = event.target instanceof HTMLTextAreaElement ? event.target.value : '';
+    this.rowReason.set(value);
   }
 
   confirmRow(): void {
     const pending = this.pendingRow();
     if (!pending) return;
-    pending.action.run(pending.row);
+    const reason = pending.action.confirmReason ? this.rowReason().trim() : '';
+    pending.action.run(pending.row, reason || undefined);
     this.pendingRow.set(null);
+    this.rowReason.set('');
   }
 
   onRowClick(event: Event, row: T): void {

@@ -5,6 +5,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CustomersApiService } from '../../services/customers-api.service';
 import { CustomerServiceConfigApiService } from '../../services/customer-service-config-api.service';
 import { ServicesApiService } from '../../../services/services/services-api.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import type { Customer, TimeOfDayBucket } from '../../model/customer';
@@ -15,6 +16,16 @@ import type {
 } from '../../model/customer-card';
 import type { CustomerServiceConfig } from '../../model/customer-service-config';
 import type { Service } from '../../../services/model/service';
+import type {
+  BookingOverride,
+  NoShowControl,
+  NoShowControlAppointment,
+} from '../../model/no-show-control';
+
+type NoShowDialog =
+  | { kind: 'excuse' | 'unexcuse'; appointmentId: string }
+  | { kind: 'excuse-all' }
+  | { kind: 'override'; override: BookingOverride };
 
 const TIME_OF_DAY_KEYS: Record<TimeOfDayBucket, string> = {
   morning: 'timeOfDay.morning',
@@ -43,11 +54,18 @@ const STATUS_KEYS: Record<string, string> = {
 })
 export class CustomerDetailsComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly auth = inject(AuthService);
   private readonly fb = inject(FormBuilder);
   private readonly customersApi = inject(CustomersApiService);
   private readonly configApi = inject(CustomerServiceConfigApiService);
   private readonly servicesApi = inject(ServicesApiService);
   readonly language = inject(LanguageService);
+
+  readonly owner = computed(() => {
+    const role = this.auth.user()?.role;
+    if (role === 'owner') return true;
+    return role === 'super_admin' && this.auth.isImpersonating();
+  });
 
   private readonly customerId = this.route.snapshot.paramMap.get('id')!;
 
@@ -153,10 +171,18 @@ export class CustomerDetailsComponent implements OnInit {
     notes: [''],
   });
 
+  readonly noShowControl = signal<NoShowControl | null>(null);
+  readonly overrideDraft = signal<BookingOverride>('auto');
+  readonly pendingNoShow = signal<NoShowDialog | null>(null);
+  readonly noShowReason = signal('');
+  readonly noShowSaving = signal(false);
+  readonly noShowError = signal<string | null>(null);
+
   ngOnInit(): void {
     this.loadCustomer();
     this.loadStats();
     this.loadHistory();
+    this.loadNoShowControl();
     this.loadServiceConfigs();
     this.loadServices();
   }
@@ -385,6 +411,126 @@ export class CustomerDetailsComponent implements OnInit {
       hour: '2-digit',
       minute: '2-digit',
     }).format(new Date(date));
+  }
+
+  private loadNoShowControl(): void {
+    this.customersApi.getNoShowControl(this.customerId).subscribe({
+      next: (control) => {
+        this.noShowControl.set(control);
+        this.overrideDraft.set(control.bookingOverride);
+      },
+      error: () => this.noShowControl.set(null),
+    });
+  }
+
+  noShowStateLabel(control: NoShowControl): string {
+    return this.language.t(control.blocked ? 'customerCard.noShowStateBlocked' : 'customerCard.noShowStateClear');
+  }
+
+  noShowReasonLabel(control: NoShowControl): string {
+    if (control.blockReason === 'threshold') return this.language.t('customerCard.noShowReasonThreshold');
+    if (control.blockReason === 'manual') return this.language.t('customerCard.noShowReasonManual');
+    if (control.blockReason === 'allowed') return this.language.t('customerCard.noShowReasonAllowed');
+    return '';
+  }
+
+  overrideLabel(override: BookingOverride): string {
+    if (override === 'allow') return this.language.t('customerCard.noShowOverrideAllow');
+    if (override === 'block') return this.language.t('customerCard.noShowOverrideBlock');
+    return this.language.t('customerCard.noShowOverrideAuto');
+  }
+
+  noShowActionLabel(action: string): string {
+    const key = `audit.actionLabels.${action.replace(/\./g, '_')}`;
+    const label = this.language.t(key);
+    return label === key ? action : label;
+  }
+
+  requestExcuse(item: NoShowControlAppointment): void {
+    this.noShowReason.set('');
+    this.noShowError.set(null);
+    this.pendingNoShow.set({
+      kind: item.excused ? 'unexcuse' : 'excuse',
+      appointmentId: item.id,
+    });
+  }
+
+  requestExcuseAll(): void {
+    this.noShowReason.set('');
+    this.noShowError.set(null);
+    this.pendingNoShow.set({ kind: 'excuse-all' });
+  }
+
+  requestOverride(value: string): void {
+    const next: BookingOverride = value === 'allow' || value === 'block' ? value : 'auto';
+    const current = this.noShowControl()?.bookingOverride ?? 'auto';
+    if (next === current) {
+      this.overrideDraft.set(current);
+      return;
+    }
+    this.overrideDraft.set(next);
+    this.noShowReason.set('');
+    this.noShowError.set(null);
+    this.pendingNoShow.set({ kind: 'override', override: next });
+  }
+
+  onNoShowReason(event: Event): void {
+    const value = event.target instanceof HTMLTextAreaElement ? event.target.value : '';
+    this.noShowReason.set(value);
+  }
+
+  dismissNoShow(): void {
+    this.pendingNoShow.set(null);
+    this.noShowReason.set('');
+    this.overrideDraft.set(this.noShowControl()?.bookingOverride ?? 'auto');
+  }
+
+  noShowDialogTitle(pending: NoShowDialog): string {
+    if (pending.kind === 'excuse-all') return this.language.t('customerCard.noShowExcuseAll');
+    if (pending.kind === 'override') return this.language.t('customerCard.noShowOverride');
+    return this.language.t(pending.kind === 'excuse' ? 'customerCard.noShowExcuse' : 'customerCard.noShowUnexcuse');
+  }
+
+  noShowDialogText(pending: NoShowDialog): string {
+    if (pending.kind === 'excuse-all') return this.language.t('customerCard.noShowExcuseAllConfirm');
+    if (pending.kind === 'override') return this.language.t('customerCard.noShowOverrideConfirm');
+    return this.language.t(
+      pending.kind === 'excuse' ? 'customerCard.noShowExcuseConfirm' : 'customerCard.noShowUnexcuseConfirm'
+    );
+  }
+
+  confirmNoShow(): void {
+    const pending = this.pendingNoShow();
+    if (!pending || this.noShowSaving()) return;
+    const reason = this.noShowReason().trim() || undefined;
+    this.noShowSaving.set(true);
+    this.noShowError.set(null);
+    const request =
+      pending.kind === 'excuse-all'
+        ? this.customersApi.excuseAllNoShows(this.customerId, reason)
+        : pending.kind === 'override'
+          ? this.customersApi.setBookingOverride(this.customerId, pending.override, reason)
+          : this.customersApi.setNoShowExcused(
+              this.customerId,
+              pending.appointmentId,
+              pending.kind === 'excuse',
+              reason
+            );
+    request.subscribe({
+      next: (control) => {
+        this.noShowControl.set(control);
+        this.overrideDraft.set(control.bookingOverride);
+        this.noShowSaving.set(false);
+        this.pendingNoShow.set(null);
+        this.noShowReason.set('');
+        this.loadStats();
+      },
+      error: () => {
+        this.noShowSaving.set(false);
+        this.noShowError.set(this.language.t('customerCard.noShowFailed'));
+        this.overrideDraft.set(this.noShowControl()?.bookingOverride ?? 'auto');
+      },
+    });
   }
 
   deleteOverride(config: CustomerServiceConfig): void {

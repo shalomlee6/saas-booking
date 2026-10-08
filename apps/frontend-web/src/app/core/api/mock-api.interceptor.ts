@@ -290,7 +290,26 @@ const MOCK_AUDIT_ROWS: Record<string, unknown>[] = [
     action: 'impersonation.start',
     entity: 'Business',
     entityId: 'mock-business-1',
+    metadata: { businessId: 'mock-business-1', impersonatingSuperAdminId: 'mock-super-admin' },
+    impersonatingSuperAdminId: 'mock-super-admin',
+  },
+  {
+    id: 'audit-2',
+    timestamp: new Date(Date.now() - 3600_000).toISOString(),
+    actor: 'system',
+    action: 'appointment.auto_completed',
+    entity: 'Appointment',
+    entityId: 'appt-204',
     metadata: { businessId: 'mock-business-1' },
+  },
+  {
+    id: 'audit-3',
+    timestamp: new Date(Date.now() - 86_400_000).toISOString(),
+    actor: 'owner@example.com',
+    action: 'customer.exported',
+    entity: 'Customer',
+    entityId: 'cust-18',
+    metadata: { rowCount: 42 },
   },
 ];
 
@@ -1359,6 +1378,12 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const page = Math.max(1, parseInt(q.get('page') || '1', 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(q.get('limit') || '25', 10) || 25));
     const search = (q.get('search') || '').toLowerCase();
+    const actor = (q.get('actor') || '').toLowerCase();
+    const entity = (q.get('entity') || '').toLowerCase();
+    const actions = (q.get('action') || '')
+      .split(',')
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean);
     let list = [...MOCK_AUDIT_ROWS];
     if (search) {
       list = list.filter(
@@ -1368,6 +1393,26 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
           String(r['entityId']).toLowerCase().includes(search)
       );
     }
+    if (actor) {
+      list = list.filter((r) =>
+        actor === 'system'
+          ? String(r['actor']).toLowerCase() === 'system'
+          : String(r['actor']).toLowerCase() === actor
+      );
+    }
+    if (entity) {
+      list = list.filter((r) => String(r['entity']).toLowerCase() === entity);
+    }
+    if (actions.length > 0) {
+      list = list.filter((r) => actions.includes(String(r['action']).toLowerCase()));
+    }
+    const sort = q.get('sort') || 'timestamp';
+    const direction = q.get('order') === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      const left = String(a[sort === 'actor' ? 'actor' : sort === 'action' ? 'action' : 'timestamp']);
+      const right = String(b[sort === 'actor' ? 'actor' : sort === 'action' ? 'action' : 'timestamp']);
+      return left < right ? -direction : left > right ? direction : 0;
+    });
     const total = list.length;
     const start = (page - 1) * limit;
     const items = list.slice(start, start + limit);

@@ -6,9 +6,9 @@ import { Business } from '../models/Business';
 import { Appointment } from '../models/Appointment';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { PlatformSettings } from '../models/PlatformSettings';
-import { AuditLog } from '../models/AuditLog';
 import { Service } from '../models/Service';
 import { recordAudit } from '../utils/recordAudit';
+import { AuditQueryError, listAdminAudit } from '../services/auditListService';
 import { computeDeleteImpact, deleteUserCascade } from '../utils/deleteUserCascade';
 import { normalizePlan, type PlanTier } from '../utils/planPolicy';
 import { syncBusinessPlanDocuments } from '../utils/provisionTenant';
@@ -944,41 +944,13 @@ export async function getAdminOverview(_req: AuthRequest, res: Response): Promis
 // GET /api/admin/audit
 export async function getAdminAudit(req: AuthRequest, res: Response): Promise<void> {
   try {
-    const page = Math.max(1, parseInt(String(req.query.page || '1'), 10) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(String(req.query.limit || '25'), 10) || 25));
-    const skip = (page - 1) * limit;
-    const search = String(req.query.search || '').trim();
-    const action = String(req.query.action || '').trim();
-    const entity = String(req.query.entity || '').trim();
-
-    const filter: Record<string, unknown> = {};
-    if (action) filter.action = action;
-    if (entity) filter.entity = entity;
-    if (search) {
-      const rx = new RegExp(escapeRegex(search), 'i');
-      filter.$or = [{ actorEmail: rx }, { entityId: rx }, { action: rx }];
-    }
-
-    const [total, rows] = await Promise.all([
-      AuditLog.countDocuments(filter),
-      AuditLog.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    ]);
-
-    res.json({
-      items: rows.map((r) => ({
-        id: r._id.toString(),
-        timestamp: r.createdAt,
-        actor: r.actorEmail ?? r.actorUserId?.toString() ?? '—',
-        action: r.action,
-        entity: r.entity,
-        entityId: r.entityId ?? '—',
-        metadata: r.metadata ?? {},
-      })),
-      total,
-      page,
-      limit,
-    });
+    const page = await listAdminAudit(req.query as Record<string, unknown>);
+    res.json(page);
   } catch (err) {
+    if (err instanceof AuditQueryError) {
+      res.status(400).json({ message: err.message });
+      return;
+    }
     logger.error('get_admin_audit_failed', { error: err instanceof Error ? err.message : String(err) });
     res.status(500).json({ message: 'Internal server error' });
   }

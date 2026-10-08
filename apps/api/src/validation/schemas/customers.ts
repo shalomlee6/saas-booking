@@ -118,6 +118,40 @@ export const noShowPolicyBodySchema = z
   })
   .strict();
 
+const optionalReason = z
+  .string()
+  .trim()
+  .max(500)
+  .optional()
+  .transform((value) => (value ? value : undefined));
+
+export const excuseAllNoShowsBodySchema = z
+  .object({
+    reason: optionalReason,
+  })
+  .strict();
+
+export const excuseNoShowBodySchema = z
+  .object({
+    excused: z.boolean(),
+    reason: optionalReason,
+  })
+  .strict();
+
+export const bookingOverrideBodySchema = z
+  .object({
+    override: z.enum(['auto', 'allow', 'block']),
+    reason: optionalReason,
+  })
+  .strict();
+
+export const noShowAppointmentParamsSchema = z
+  .object({
+    id: mongoObjectIdString,
+    appointmentId: mongoObjectIdString,
+  })
+  .strict();
+
 export const customersListQuerySchema = z.object({
   search: z.preprocess(
     (v) => (Array.isArray(v) ? v[0] : v),

@@ -18,8 +18,11 @@ export interface Customer {
   notes?: string;
   /** Omitted on older records — treat anything other than `false` as active. */
   isActive?: boolean;
-  /** Computed from the no-show policy. Present on GET /api/customers/:id. */
+  /** Computed from the no-show policy and booking override. Present on GET /api/customers/:id. */
   blocked?: boolean;
+  blockReason?: 'threshold' | 'manual' | 'allowed' | 'clear';
+  noShowCount?: number;
+  bookingOverride?: 'auto' | 'allow' | 'block';
   preferences?: CustomerPreferences;
   createdAt: string;
   updatedAt: string;

@@ -685,7 +685,21 @@
 }
 
 .calendar-block--no-show {
+  position: relative;
+  background: var(--color-blocked);
   border-left-color: var(--color-warning);
+}
+
+.calendar-block--no-show:after {
+  content: "\274c\FE0E";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 50px;
+  color: black;
+  pointer-events: none;
 }
 
 .calendar-block--neutral {
@@ -1610,7 +1624,16 @@
   gap: 0.75rem;
 }
 
-.apt-list-switch {
+.apt-view-switch {
   display: flex;
   justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+@media (max-width: 767px) {
+  .apt-view-switch {
+    padding: 0.5rem 1rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+  }
 }

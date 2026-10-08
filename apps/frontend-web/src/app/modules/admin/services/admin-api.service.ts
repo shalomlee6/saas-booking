@@ -210,6 +210,8 @@ export interface AdminAuditRow {
   entity: string;
   entityId: string;
   metadata: Record<string, unknown>;
+  /** Set only when the record stored an impersonating super-admin id. */
+  impersonatingSuperAdminId?: string;
 }
 
 export interface AdminAuditPage {

@@ -5,6 +5,7 @@ export interface CustomerListRow {
   email?: string;
   isActive: boolean;
   blocked?: boolean;
+  bookingOverride?: 'auto' | 'allow' | 'block';
   createdAt: string;
   totalVisits?: number;
   totalRevenue?: number;

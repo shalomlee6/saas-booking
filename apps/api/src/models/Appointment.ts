@@ -24,6 +24,10 @@ export interface IAppointment extends Document {
   notes?: string;
   /** Free-text reason supplied by the customer when cancelling their own appointment. */
   cancellationReason?: string;
+  /** Excused no-shows stay `no_show` but drop out of the canonical count. */
+  noShowExcused?: boolean;
+  excusedAt?: Date;
+  excusedReason?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +69,9 @@ const AppointmentSchema = new Schema<IAppointment>(
     },
     notes: String,
     cancellationReason: String,
+    noShowExcused: { type: Boolean, default: false },
+    excusedAt: Date,
+    excusedReason: { type: String, maxlength: 500 },
   },
   { timestamps: true }
 );

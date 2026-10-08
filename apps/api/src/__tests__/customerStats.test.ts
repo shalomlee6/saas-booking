@@ -341,16 +341,14 @@ describe('CUSTOMER STATS — canonical visit metrics', () => {
     expect(two.body.stats.averageSpend).toBe(50);
   });
 
-  it('ignores no-shows at or before noShowResetAt', async () => {
+  it('ignores excused no-shows', async () => {
     const { business, token } = await seedOwner();
     await seedBusinessSettings(business._id);
     const service = await seedService(business._id);
-    const resetAt = daysAgo(5);
     const customer = await Customer.create({
       businessId: business._id,
       name: 'Reset',
       phone: '888',
-      noShowResetAt: resetAt,
     });
     await Appointment.create({
       businessId: business._id,
@@ -360,6 +358,7 @@ describe('CUSTOMER STATS — canonical visit metrics', () => {
       end: new Date(daysAgo(10).getTime() + 60 * 60 * 1000),
       status: 'no_show',
       source: 'owner',
+      noShowExcused: true,
     });
     await Appointment.create({
       businessId: business._id,

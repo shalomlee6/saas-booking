@@ -29,7 +29,7 @@ export interface CustomerStats {
   totalAppointments: number;
   completedVisits: number;
   cancellations: number;
-  /** Stored `no_show` appointments after `noShowResetAt`, when that timestamp is set. */
+  /** Unexcused `no_show` appointments. */
   noShows: number;
   isNewCustomer: boolean;
   lastAppointment: CustomerAppointmentSummary | null;

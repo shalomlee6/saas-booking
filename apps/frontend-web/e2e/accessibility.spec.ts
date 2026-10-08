@@ -149,6 +149,31 @@ test.describe('Accessibility — axe-core scans', () => {
     const results = await runAxe(page, '/appointments?view=list');
     expect(results.violations).toHaveLength(0);
   });
+
+  test('/super-admin/audit has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-testid="login-email"]', { timeout: 60_000 });
+    await page.getByTestId('login-email').fill('superadmin@example.com');
+    await page.getByTestId('login-password').fill('password12345');
+    await page.locator('button.login-form-submit').click();
+    await expect(page).toHaveURL(/\/super-admin/, { timeout: 30_000 });
+    await page.goto('/super-admin/audit', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+
+    const results = await runAxe(page, '/super-admin/audit');
+    expect(results.violations).toHaveLength(0);
+  });
 });
 
 // ─── /customers states ────────────────────────────────────────────────────────
