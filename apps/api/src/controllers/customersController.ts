@@ -131,6 +131,7 @@ export async function createCustomer(req: AuthRequest, res: Response): Promise<v
     phone: string;
     email?: string;
     notes?: string;
+    birthday?: { day: number; month: number };
     preferences?: CustomerPreferencesInput;
   };
   const customer = await createCustomerForTenant(businessId, body);
@@ -190,6 +191,7 @@ export async function updateCustomer(req: AuthRequest, res: Response): Promise<v
     phone?: string;
     email?: string;
     notes?: string;
+    birthday?: { day: number; month: number } | null;
     preferences?: CustomerPreferencesInput;
     isActive?: boolean;
   };

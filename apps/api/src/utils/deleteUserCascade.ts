@@ -10,6 +10,7 @@ import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
 import { AvailabilityOverride } from '../models/AvailabilityOverride';
 import { BusinessReview } from '../models/BusinessReview';
 import { OtpChallenge } from '../models/OtpChallenge';
+import { PublicClientSession } from '../models/PublicClientSession';
 import { PasswordResetToken } from '../models/PasswordResetToken';
 import { countBusinessUploadFiles, deleteBusinessUploads } from './deleteBusinessUploads';
 import { logger } from './logger';
@@ -136,6 +137,12 @@ export async function deleteUserCascade(user: IUser): Promise<DeleteResult> {
       if (businessSlug) {
         await OtpChallenge.deleteMany({ businessSlug }, opts);
       }
+      await PublicClientSession.updateMany(
+        { 'bindings.businessId': businessId },
+        { $pull: { bindings: { businessId } } },
+        opts
+      );
+      await PublicClientSession.deleteMany({ bindings: { $size: 0 }, revokedAt: { $exists: false } }, opts);
       await Business.deleteOne({ _id: businessId }, opts);
     }
     await PasswordResetToken.deleteMany({ userId: user._id }, opts);

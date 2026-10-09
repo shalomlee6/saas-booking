@@ -9,6 +9,7 @@ import { User } from '../models/User';
 import { AuditLog } from '../models/AuditLog';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { ONLINE_BOOKING_UNAVAILABLE, PUBLIC_MOBILE_REQUIRED } from '../services/publicBookingPolicy';
+import { OtpChallenge } from '../models/OtpChallenge';
 
 const app = buildTestApp();
 
@@ -375,9 +376,18 @@ describe('NO-SHOW POLICY', () => {
     });
     expect(first.status).toBe(201);
     const sessionCustomer = await Customer.findById(first.body.customerId);
+    const started = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0508888888' });
+    expect(started.status).toBe(200);
+    const challenge = await OtpChallenge.findOne({ businessSlug: business.slug, phone: '0508888888' });
+    const verified = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/verify`)
+      .send({ phone: '0508888888', code: challenge?.code });
+    expect(verified.status).toBe(200);
     await addNoShows(business._id, sessionCustomer?._id, service._id, 3);
     const second = await book(business._id.toString(), service._id.toString(), '', '11:00', {
-      token: first.body.token,
+      token: verified.body.sessionId,
     });
     expect(second.status).toBe(403);
     expect(second.body.message).toBe(ONLINE_BOOKING_UNAVAILABLE.he);

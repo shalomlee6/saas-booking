@@ -91,6 +91,8 @@ export interface IBusinessSettings extends Document {
     enabled: boolean;
     threshold: number;
   };
+  /** Public identify birthday field. Missing on older documents — treated as required. */
+  birthdayField?: 'required' | 'optional' | 'hidden';
   /** Public contact phone shown on landing / booking CTA (optional). */
   businessPhonePublic?: string;
   /** Secondary hero / feature image URL for public landing. */
@@ -211,6 +213,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       enabled: { type: Boolean, default: true },
       threshold: { type: Number, default: 3, min: 1, max: 20 },
     },
+    birthdayField: { type: String, enum: ['required', 'optional', 'hidden'], default: 'required' },
     businessPhonePublic: { type: String, default: '' },
     localization: {
       language: { type: String, enum: ['he', 'en'], default: 'he' },

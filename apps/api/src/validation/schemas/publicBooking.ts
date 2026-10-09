@@ -23,6 +23,39 @@ export const slugAvailabilityQuerySchema = z
   })
   .strip();
 
+const birthdayBodySchema = z
+  .object({
+    day: z.number().int(),
+    month: z.number().int(),
+  })
+  .strict();
+
+export const identifyStartBodySchema = z
+  .object({
+    phone: z.string().min(1).max(40),
+  })
+  .strict();
+
+export const identifyVerifyBodySchema = z
+  .object({
+    phone: z.string().min(1).max(40),
+    code: z.string().min(1).max(12),
+  })
+  .strict();
+
+export const identifyCompleteBodySchema = z
+  .object({
+    name: z.string().max(200).optional(),
+    birthday: birthdayBodySchema.optional(),
+  })
+  .strict();
+
+export const birthdayFieldBodySchema = z
+  .object({
+    birthdayField: z.enum(['required', 'optional', 'hidden']),
+  })
+  .strict();
+
 export const slugParamsSchema = z
   .object({
     slug: businessSlugParam,

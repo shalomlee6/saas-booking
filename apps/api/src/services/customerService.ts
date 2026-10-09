@@ -3,6 +3,16 @@ import { Appointment } from '../models/Appointment';
 import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
 import { ConflictError, ValidationError } from '../errors/httpErrors';
 import { canonicalLocalPhone } from '../listQuery/search';
+import { isRealBirthday, type Birthday } from './birthday';
+
+function optionalBirthday(value: Birthday | null | undefined): Birthday | undefined | null {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (!isRealBirthday(value.day, value.month)) {
+    throw new ValidationError('Birthday is not a real date');
+  }
+  return { day: value.day, month: value.month };
+}
 
 function canonicalCustomerPhone(raw: string): string {
   const phone = canonicalLocalPhone(raw);
@@ -63,6 +73,7 @@ export async function createCustomerForTenant(
     phone: string;
     email?: string;
     notes?: string;
+    birthday?: Birthday;
     preferences?: CustomerPreferencesInput;
     isActive?: boolean;
   }
@@ -71,12 +82,14 @@ export async function createCustomerForTenant(
   const phone = canonicalCustomerPhone(input.phone);
   const email = typeof input.email === 'string' ? input.email.trim() : input.email;
   const notes = typeof input.notes === 'string' ? input.notes.trim() : input.notes;
+  const birthday = optionalBirthday(input.birthday);
   return Customer.create({
     businessId,
     name,
     phone,
     email: email === '' ? undefined : email,
     notes,
+    ...(birthday ? { birthday } : {}),
     preferences: input.preferences,
     ...(typeof input.isActive === 'boolean' ? { isActive: input.isActive } : {}),
   });
@@ -94,11 +107,16 @@ export async function updateCustomerForTenant(
     phone?: string;
     email?: string;
     notes?: string;
+    birthday?: Birthday | null;
     preferences?: CustomerPreferencesInput;
     isActive?: boolean;
   }
 ) {
   const update: Record<string, unknown> = {};
+  if (body.birthday !== undefined) {
+    const birthday = optionalBirthday(body.birthday);
+    update.birthday = birthday ?? undefined;
+  }
   if (body.name !== undefined) update.name = body.name.trim();
   if (body.phone !== undefined) update.phone = canonicalCustomerPhone(body.phone);
   if (body.email !== undefined) {

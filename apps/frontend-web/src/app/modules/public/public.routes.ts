@@ -15,13 +15,8 @@ export const PUBLIC_ROUTES: Routes = [
             (m) => m.PublicLandingComponent
           ),
       },
-      {
-        path: 'login',
-        loadChildren: () =>
-          import('./pages/customer-login/customer-login.routes').then(
-            (m) => m.CUSTOMER_LOGIN_ROUTES
-          ),
-      },
+      { path: 'login', redirectTo: '', pathMatch: 'full' },
+      { path: 'register', redirectTo: '', pathMatch: 'full' },
       {
         path: 'book',
         loadChildren: () =>

@@ -24,9 +24,11 @@ import {
 } from './middleware/rateLimits';
 import { requestLogger } from './middleware/requestLogger';
 import { logger } from './utils/logger';
+import { installSmsProvider } from './services/smsProvider';
 import { autoCompleteConfirmedAppointments } from './services/autoCompleteAppointments';
 
 const env = validateEnv();
+installSmsProvider(env.NODE_ENV);
 
 const app = express();
 

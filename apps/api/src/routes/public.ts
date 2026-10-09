@@ -16,7 +16,14 @@ import {
   getUpcomingCustomerAppointment,
   cancelCustomerAppointment,
 } from '../controllers/publicBookingController';
-import { getPublicAuthMe, logoutPublicCustomer, requestOtp, verifyOtp } from '../controllers/publicAuthController';
+import {
+  getPublicConfig,
+  getSessionMe,
+  postIdentifyComplete,
+  postIdentifyStart,
+  postIdentifyVerify,
+  postSessionLogout,
+} from '../controllers/publicIdentityController';
 import { optionalPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { otpRouteLimiter, otpVerifyRouteLimiter, otpIpRouteLimiter } from '../middleware/rateLimits';
 import { requirePublicCustomer } from '../middleware/requirePublicCustomer';
@@ -31,12 +38,17 @@ import {
   publicCreateAppointmentBodySchema,
   slugAvailabilityQuerySchema,
   slugParamsSchema,
+  identifyStartBodySchema,
+  identifyVerifyBodySchema,
+  identifyCompleteBodySchema,
 } from '../validation/schemas/publicBooking';
 
 export const publicRouter = Router();
 
-publicRouter.get('/auth/me', requirePublicCustomer, asyncHandler(getPublicAuthMe));
-publicRouter.post('/auth/logout', logoutPublicCustomer);
+publicRouter.get('/session/me', requirePublicCustomer, asyncHandler(getSessionMe));
+publicRouter.get('/auth/me', requirePublicCustomer, asyncHandler(getSessionMe));
+publicRouter.post('/session/logout', asyncHandler(postSessionLogout));
+publicRouter.post('/auth/logout', asyncHandler(postSessionLogout));
 
 // --- Public booking API (used by customer UI at /b/:slug/book)
 publicRouter.get(
@@ -44,6 +56,34 @@ publicRouter.get(
   validateQuery(publicAvailabilityQuerySchema),
   optionalPublicCustomer,
   asyncHandler(getPublicAvailability)
+);
+publicRouter.get(
+  '/businesses/:slug/config',
+  validateParams(slugParamsSchema),
+  asyncHandler(getPublicConfig)
+);
+publicRouter.post(
+  '/businesses/:slug/identify/start',
+  otpIpRouteLimiter,
+  otpRouteLimiter,
+  validateParams(slugParamsSchema),
+  validateBody(identifyStartBodySchema),
+  asyncHandler(postIdentifyStart)
+);
+publicRouter.post(
+  '/businesses/:slug/identify/verify',
+  otpIpRouteLimiter,
+  otpVerifyRouteLimiter,
+  validateParams(slugParamsSchema),
+  validateBody(identifyVerifyBodySchema),
+  asyncHandler(postIdentifyVerify)
+);
+publicRouter.post(
+  '/businesses/:slug/identify/complete',
+  requirePublicCustomer,
+  validateParams(slugParamsSchema),
+  validateBody(identifyCompleteBodySchema),
+  asyncHandler(postIdentifyComplete)
 );
 publicRouter.get(
   '/businesses/:slug',
@@ -102,18 +142,3 @@ publicRouter.post(
   createPublicAppointment
 );
 
-// OTP auth
-publicRouter.post(
-  '/:businessSlug/auth/request-otp',
-  otpIpRouteLimiter,
-  otpRouteLimiter,
-  validateParams(legacyBusinessSlugParamsSchema),
-  requestOtp
-);
-publicRouter.post(
-  '/:businessSlug/auth/verify-otp',
-  otpIpRouteLimiter,
-  otpVerifyRouteLimiter,
-  validateParams(legacyBusinessSlugParamsSchema),
-  verifyOtp
-);

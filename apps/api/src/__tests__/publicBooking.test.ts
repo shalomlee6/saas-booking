@@ -10,6 +10,17 @@ import { Service } from '../models/Service';
 
 const app = buildTestApp();
 
+async function verifiedSession(slug: string, phone: string): Promise<string> {
+  const start = await request(app).post(`/api/public/businesses/${slug}/identify/start`).send({ phone });
+  if (start.status !== 200) throw new Error(`identify start ${start.status}`);
+  const stored = await OtpChallenge.findOne({ businessSlug: slug, phone });
+  const verify = await request(app)
+    .post(`/api/public/businesses/${slug}/identify/verify`)
+    .send({ phone, code: stored?.code });
+  if (verify.status !== 200) throw new Error(`identify verify ${verify.status}`);
+  return verify.body.sessionId as string;
+}
+
 beforeAll(async () => dbConnect());
 afterAll(async () => dbDisconnect());
 beforeEach(async () => dbClear());
@@ -114,7 +125,7 @@ describe('PUBLIC BOOKING', () => {
     expect(res.status).toBe(400);
   });
 
-  it('guest booking creates a customer session and upcoming appointment', async () => {
+  it('guest booking does not open a session; a verified session can list upcoming', async () => {
     const { business } = await seedOwner();
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
@@ -132,12 +143,14 @@ describe('PUBLIC BOOKING', () => {
     });
 
     expect(created.status).toBe(201);
-    expect(created.body.token).toBeTruthy();
+    expect(created.body.token).toBeUndefined();
     expect(created.body.customerId).toBeTruthy();
+    expect(created.headers['set-cookie']).toBeUndefined();
 
+    const sessionId = await verifiedSession(business.slug, '0501234567');
     const upcoming = await request(app)
       .get('/api/public/appointments/upcoming')
-      .set('Authorization', `Bearer ${created.body.token}`);
+      .set('Authorization', `Bearer ${sessionId}`);
 
     expect(upcoming.status).toBe(200);
     expect(upcoming.body.appointment).not.toBeNull();
@@ -168,7 +181,7 @@ describe('PUBLIC BOOKING', () => {
       customerPhone: '0501234567',
     });
     expect(laterBooking.status).toBe(201);
-    const token = laterBooking.body.token as string;
+    const token = await verifiedSession(business.slug, '0501234567');
     const customerId = laterBooking.body.customerId as string;
 
     const soonerBooking = await request(app)
@@ -229,30 +242,6 @@ describe('PUBLIC BOOKING', () => {
     expect(guest.body.appointments).toEqual([]);
   });
 
-  it('request-otp stores a code and verify-otp issues a customer session', async () => {
-    const { business } = await seedOwner();
-    const reqOtp = await request(app)
-      .post(`/api/public/${business.slug}/auth/request-otp`)
-      .send({ phone: '0501234567', firstName: 'Dana', lastName: 'Cohen' });
-
-    expect(reqOtp.status).toBe(200);
-    expect(reqOtp.body.ok).toBe(true);
-
-    const stored = await OtpChallenge.findOne({
-      businessSlug: business.slug,
-      phone: '0501234567',
-    });
-    expect(stored?.code).toBeTruthy();
-
-    const verify = await request(app)
-      .post(`/api/public/${business.slug}/auth/verify-otp`)
-      .send({ phone: '0501234567', code: stored!.code });
-
-    expect(verify.status).toBe(200);
-    expect(verify.body.token).toBeTruthy();
-    expect(verify.body.customerId).toBeTruthy();
-  });
-
   it('lets a customer cancel only pending or confirmed appointments', async () => {
     const { business } = await seedOwner();
     const service = await seedService(business._id);
@@ -270,7 +259,7 @@ describe('PUBLIC BOOKING', () => {
       customerPhone: '0501234567',
     });
     expect(created.status).toBe(201);
-    const token = created.body.token as string;
+    const token = await verifiedSession(business.slug, '0501234567');
     const customerId = created.body.customerId as string;
     const confirmedId = created.body.id as string;
 

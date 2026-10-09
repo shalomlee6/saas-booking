@@ -58,6 +58,14 @@ export const customersPagedQuerySchema = createEntityListQuerySchema({
 
 const optionalEmail = z.union([z.string().email(), z.literal('')]).optional();
 
+const optionalBirthdayBody = z
+  .object({
+    day: z.number().int(),
+    month: z.number().int(),
+  })
+  .strict()
+  .optional();
+
 const customerPreferencesBodySchema = z
   .object({
     preferredStaffId: z.union([mongoObjectIdString, z.literal('')]).optional(),
@@ -73,6 +81,7 @@ export const customerCreateBodySchema = z
     phone: z.string().min(1).max(40).trim(),
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
+    birthday: optionalBirthdayBody,
     preferences: customerPreferencesBodySchema.optional(),
     isActive: z.boolean().optional(),
   })
@@ -84,6 +93,7 @@ export const customerUpdateBodySchema = z
     phone: z.string().min(1).max(40).trim().optional(),
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
+    birthday: optionalBirthdayBody.nullable(),
     preferences: customerPreferencesBodySchema.optional(),
     isActive: z.boolean().optional(),
   })

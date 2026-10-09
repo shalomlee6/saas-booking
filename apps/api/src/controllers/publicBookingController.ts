@@ -13,10 +13,6 @@ import { getAvailabilityForBusiness } from '../services/publicAvailabilityServic
 import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
 import { toUtcDate } from '../services/publicBookingTime';
 import {
-  setPublicCustomerSessionCookie,
-  signPublicCustomerToken,
-} from '../utils/publicCustomerSession';
-import {
   ConflictError,
   ForbiddenError,
   NotFoundError,
@@ -317,12 +313,11 @@ export async function getAvailability(req: Request, res: Response): Promise<void
   }
 
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  const result = await getAvailabilityForBusiness(
-    business._id,
-    serviceId,
-    dateStr,
-    publicCustomer?.customerId
-  );
+  const customerId =
+    publicCustomer?.customerId && publicCustomer.businessId === business._id.toString()
+      ? publicCustomer.customerId
+      : undefined;
+  const result = await getAvailabilityForBusiness(business._id, serviceId, dateStr, customerId);
   res.json(result);
 }
 
@@ -340,12 +335,11 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
   }
 
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  const result = await getAvailabilityForBusiness(
-    business._id,
-    serviceId,
-    dateStr,
-    publicCustomer?.customerId
-  );
+  const customerId =
+    publicCustomer?.customerId && publicCustomer.businessId === business._id.toString()
+      ? publicCustomer.customerId
+      : undefined;
+  const result = await getAvailabilityForBusiness(business._id, serviceId, dateStr, customerId);
   res.json(result);
 }
 
@@ -386,6 +380,9 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
     }
     if (publicCustomer.businessId !== businessId.toString()) {
       throw new ForbiddenError('Business mismatch');
+    }
+    if (!publicCustomer.customerId) {
+      throw new ValidationError('Complete your details before booking');
     }
     const customer = await Customer.findOne({
       _id: publicCustomer.customerId,
@@ -438,6 +435,8 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
   const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
   const durationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
+  const price =
+    typeof override?.priceOverride === 'number' ? override.priceOverride : service.price;
 
   let startAt: Date;
   try {
@@ -463,34 +462,16 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
       customerId,
       customerName: resolvedCustomerName,
       customerPhone: resolvedCustomerPhone,
+      price,
     },
     { requireCustomerId: false }
   );
 
-  const payload: {
-    id: string;
-    status: string;
-    token?: string;
-    customerId?: string;
-    customerName?: string;
-  } = {
+  res.status(201).json({
     id: appointment._id.toString(),
     status: appointment.status,
-  };
-
-  if (!publicCustomer && customerId) {
-    const token = signPublicCustomerToken({
-      customerId: customerId.toString(),
-      businessId: businessId.toString(),
-      slug: business.slug,
-    });
-    setPublicCustomerSessionCookie(res, token);
-    payload.token = token;
-    payload.customerId = customerId.toString();
-    payload.customerName = resolvedCustomerName;
-  }
-
-  res.status(201).json(payload);
+    ...(customerId ? { customerId: customerId.toString() } : {}),
+  });
 }
 
 type PopulatedUpcomingService = { _id: Types.ObjectId; name: string };
@@ -552,6 +533,9 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     res.json(EMPTY_UPCOMING);
     return;
   }
+  if (!publicCustomer.verified || !publicCustomer.customerId) {
+    throw new UnauthorizedError('Authentication required');
+  }
 
   const now = new Date();
   const apts = await Appointment.find({
@@ -596,7 +580,7 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
 const CLIENT_CANCELLABLE_STATUSES = new Set(['pending', 'confirmed']);
 export async function cancelCustomerAppointment(req: Request, res: Response): Promise<void> {
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  if (!publicCustomer) {
+  if (!publicCustomer?.verified || !publicCustomer.customerId) {
     throw new UnauthorizedError('Authentication required');
   }
 

@@ -19,6 +19,7 @@ import {
   bookingOverrideBodySchema,
   noShowAppointmentParamsSchema,
 } from '../validation/schemas/customers';
+import { birthdayFieldBodySchema } from '../validation/schemas/publicBooking';
 import {
   bulkDeleteCustomers,
   bulkSetCustomerStatus,
@@ -37,6 +38,7 @@ import {
   updateBookingOverride,
   updateCustomer,
 } from '../controllers/customersController';
+import { getBirthdayField, updateBirthdayField } from '../controllers/publicIdentityController';
 
 export const customersRouter = Router();
 
@@ -82,6 +84,19 @@ customersRouter.post(
   requireOwner,
   validateBody(customersBulkStatusBodySchema),
   asyncHandler((req: AuthRequest, res) => bulkSetCustomerStatus(req, res))
+);
+
+customersRouter.get(
+  '/birthday-field',
+  requireOwner,
+  asyncHandler((req: AuthRequest, res) => getBirthdayField(req, res))
+);
+
+customersRouter.put(
+  '/birthday-field',
+  requireOwner,
+  validateBody(birthdayFieldBodySchema),
+  asyncHandler((req: AuthRequest, res) => updateBirthdayField(req, res))
 );
 
 customersRouter.get(
