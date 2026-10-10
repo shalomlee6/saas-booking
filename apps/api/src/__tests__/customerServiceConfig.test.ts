@@ -5,6 +5,7 @@ import { seedOwner, seedService, seedBusinessSettings } from './helpers/seed';
 import { Customer } from '../models/Customer';
 import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
 import { Appointment } from '../models/Appointment';
+import { loginPublicClient } from './helpers/publicSession';
 
 const app = buildTestApp();
 
@@ -130,15 +131,15 @@ describe('CUSTOMER SERVICE CONFIG — availability engine wiring', () => {
       durationOverrideMinutes: 90,
     });
 
+    const session = await loginPublicClient(app, business.slug, '972500000123');
     const res = await request(app)
       .post('/api/public/appointments')
+      .set('Cookie', session.cookie)
       .send({
         businessId: business._id.toString(),
         serviceId: service._id.toString(),
         date: futureDateStr(7),
         time: '10:00',
-        customerName: 'Override Customer',
-        customerPhone: '972500000123',
       });
 
     expect(res.status).toBe(201);
@@ -154,15 +155,17 @@ describe('CUSTOMER SERVICE CONFIG — availability engine wiring', () => {
     await seedBusinessSettings(business._id);
     const service = await seedService(business._id); // 60 min default
 
+    const session = await loginPublicClient(app, business.slug, '972500000124', {
+      name: 'No Override Customer',
+    });
     const res = await request(app)
       .post('/api/public/appointments')
+      .set('Cookie', session.cookie)
       .send({
         businessId: business._id.toString(),
         serviceId: service._id.toString(),
         date: futureDateStr(7),
         time: '11:00',
-        customerName: 'No Override Customer',
-        customerPhone: '972500000124',
       });
 
     expect(res.status).toBe(201);

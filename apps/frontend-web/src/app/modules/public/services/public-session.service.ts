@@ -54,13 +54,6 @@ export class PublicSessionService {
     return this.slugSignal() === slug && !!profile?.verified && profile.hasCustomer;
   }
 
-  getToken(): string | null {
-    return null;
-  }
-
-  /** The public session is an httpOnly cookie. Sliding renewal stays on the server. */
-  updateToken(_token: string): void {}
-
   clearSession(slug?: string): void {
     if (slug !== undefined && this.slugSignal() !== slug) return;
     this.profileSignal.set(null);

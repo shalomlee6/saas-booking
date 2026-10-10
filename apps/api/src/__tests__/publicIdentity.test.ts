@@ -59,7 +59,7 @@ describe('PUBLIC CLIENT IDENTITY', () => {
       .post(`/api/public/businesses/${business.slug}/identify/start`)
       .send({ phone: '050-111-1111' });
     expect(start.status).toBe(200);
-    expect(start.body.status).toBe('known');
+    expect(start.body.status).toBe('code_sent');
     expect(start.body.sessionId).toBeUndefined();
     expect(start.body.firstName).toBeUndefined();
     expect(start.body.name).toBeUndefined();
@@ -230,21 +230,22 @@ describe('PUBLIC CLIENT IDENTITY', () => {
       .post(`/api/public/businesses/${business.slug}/identify/verify`)
       .send({ phone, code: await otpCode(business.slug, phone) });
     expect(verify.status).toBe(200);
-    const sessionId = verify.body.sessionId as string;
+    expect(verify.body.sessionId).toBeUndefined();
+    expect(verify.body.status).toBe('new');
+    const cookie = sessionCookie(verify);
+    const sessionId = sessionIdFromCookie(cookie);
     await PublicClientSession.updateOne(
       { sessionId },
       { $set: { expiresAt: new Date(Date.now() + 60_000) } }
     );
-    const me = await request(app).get('/api/public/session/me').set('Authorization', `Bearer ${sessionId}`);
+    const me = await request(app).get('/api/public/session/me').set('Cookie', cookie);
     expect(me.status).toBe(200);
     const renewed = await PublicClientSession.findOne({ sessionId });
     expect((renewed?.expiresAt.getTime() ?? 0) > Date.now() + 300 * 24 * 60 * 60 * 1000).toBe(true);
 
-    const logout = await request(app)
-      .post('/api/public/session/logout')
-      .set('Authorization', `Bearer ${sessionId}`);
+    const logout = await request(app).post('/api/public/session/logout').set('Cookie', cookie);
     expect(logout.status).toBe(200);
-    const after = await request(app).get('/api/public/session/me').set('Authorization', `Bearer ${sessionId}`);
+    const after = await request(app).get('/api/public/session/me').set('Cookie', cookie);
     expect(after.status).toBe(401);
     const revoked = await PublicClientSession.findOne({ sessionId });
     expect(revoked?.revokedAt).toBeTruthy();
@@ -327,28 +328,29 @@ describe('PUBLIC CLIENT IDENTITY', () => {
     const verify = await request(app)
       .post(`/api/public/businesses/${business.slug}/identify/verify`)
       .send({ phone, code: await otpCode(business.slug, phone) });
-    const sessionId = verify.body.sessionId as string;
-    const me = await request(app).get('/api/public/session/me').set('Authorization', `Bearer ${sessionId}`);
+    expect(verify.body.sessionId).toBeUndefined();
+    const cookie = sessionCookie(verify);
+    const me = await request(app).get('/api/public/session/me').set('Cookie', cookie);
     expect(me.body.verified).toBe(true);
     expect(me.body.needsBirthday).toBe(true);
     expect(me.body.firstName).toBeUndefined();
 
     const invalid = await request(app)
       .post(`/api/public/businesses/${business.slug}/identify/complete`)
-      .set('Authorization', `Bearer ${sessionId}`)
+      .set('Cookie', cookie)
       .send({ name: 'Dana Cohen', birthday: { day: 31, month: 4 } });
     expect(invalid.status).toBe(400);
 
     const leap = await request(app)
       .post(`/api/public/businesses/${business.slug}/identify/complete`)
-      .set('Authorization', `Bearer ${sessionId}`)
+      .set('Cookie', cookie)
       .send({ name: 'Dana Cohen', birthday: { day: 29, month: 2 } });
     expect(leap.status).toBe(200);
     expect(leap.body.needsBirthday).toBe(false);
     const customer = await Customer.findOne({ businessId: business._id, phone });
     expect(customer?.birthday?.day).toBe(29);
     expect(customer?.birthday?.month).toBe(2);
-    const named = await request(app).get('/api/public/session/me').set('Authorization', `Bearer ${sessionId}`);
+    const named = await request(app).get('/api/public/session/me').set('Cookie', cookie);
     expect(named.body.firstName).toBe('Dana');
   });
 
@@ -398,9 +400,8 @@ describe('PUBLIC CLIENT IDENTITY', () => {
         customerName: 'Guest On B',
         customerPhone: '0508888883',
       });
-    expect(guestBook.status).toBe(201);
-    const guestRow = await Appointment.findById(guestBook.body.id);
-    expect(guestRow?.customerId?.toString()).not.toBe(customer._id.toString());
+    expect(guestBook.status).toBe(401);
+    expect(await Appointment.countDocuments({ businessId: second.business._id })).toBe(0);
 
     const startB = await request(app)
       .post(`/api/public/businesses/${second.business.slug}/identify/start`)

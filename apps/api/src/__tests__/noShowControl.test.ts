@@ -10,6 +10,7 @@ import { AuditLog } from '../models/AuditLog';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { migrateNoShowResets } from '../services/customerNoShows';
 import { ONLINE_BOOKING_UNAVAILABLE } from '../services/publicBookingPolicy';
+import { loginPublicClient } from './helpers/publicSession';
 
 const app = buildTestApp();
 
@@ -205,33 +206,33 @@ describe('NO-SHOW CONTROL', () => {
       businessId: business._id,
       name: 'Blocked',
       phone: '0502222222',
-      bookingOverride: 'block',
     });
     await addNoShow(business._id, allowed._id, service._id, 4);
     await addNoShow(business._id, allowed._id, service._id, 3);
     await addNoShow(business._id, allowed._id, service._id, 2);
 
+    const allowedSession = await loginPublicClient(app, business.slug, '0501111111');
     const open = await request(app)
       .post('/api/public/appointments')
+      .set('Cookie', allowedSession.cookie)
       .send({
         businessId: business._id.toString(),
         serviceId: service._id.toString(),
         date: tomorrowKey(),
         time: '10:00',
-        customerName: 'Allowed',
-        customerPhone: '0501111111',
       });
     expect(open.status).toBe(201);
 
+    const blockedSession = await loginPublicClient(app, business.slug, '0502222222');
+    await Customer.updateOne({ _id: blocked._id }, { $set: { bookingOverride: 'block' } });
     const closed = await request(app)
       .post('/api/public/appointments')
+      .set('Cookie', blockedSession.cookie)
       .send({
         businessId: business._id.toString(),
         serviceId: service._id.toString(),
         date: tomorrowKey(),
         time: '11:00',
-        customerName: 'Blocked',
-        customerPhone: '0502222222',
       });
     expect(closed.status).toBe(403);
     expect(closed.body.code).toBe('ONLINE_BOOKING_UNAVAILABLE');

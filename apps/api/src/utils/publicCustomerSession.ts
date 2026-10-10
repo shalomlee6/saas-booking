@@ -52,11 +52,6 @@ export function publicBusinessHint(req: Request): PublicBusinessHint {
 }
 
 export function readPublicSessionId(req: Request): string | undefined {
-  const header = req.headers['authorization'];
-  if (typeof header === 'string' && header.startsWith('Bearer ')) {
-    const token = header.slice(7).trim();
-    if (token && !token.includes('.')) return token;
-  }
   const fromCookie = req.cookies?.[PUBLIC_CUSTOMER_COOKIE_NAME];
   if (typeof fromCookie === 'string' && fromCookie.trim() && !fromCookie.includes('.')) {
     return fromCookie.trim();

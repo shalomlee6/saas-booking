@@ -18,7 +18,6 @@ import { routes } from './app.routes';
 import { AuthService } from './core/auth/auth.service';
 import { authInterceptor, unauthorizedInterceptor, rateLimitInterceptor } from './core/api/http.config';
 import { mockApiInterceptor } from './core/api/mock-api.interceptor';
-import { publicCustomerAuthInterceptor } from './modules/public/interceptors/public-customer-auth.interceptor';
 import { sessionRefreshInterceptor } from './core/api/session-refresh.interceptor';
 import { environment } from '../environments/environment';
 import {
@@ -91,14 +90,12 @@ export const appConfig: ApplicationConfig = {
         environment.useMocks
           ? [
               mockApiInterceptor,
-              publicCustomerAuthInterceptor,
               authInterceptor,
               sessionRefreshInterceptor,
               unauthorizedInterceptor,
               rateLimitInterceptor,
             ]
           : [
-              publicCustomerAuthInterceptor,
               authInterceptor,
               sessionRefreshInterceptor,
               unauthorizedInterceptor,

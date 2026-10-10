@@ -380,11 +380,6 @@ export class CustomerBookPageComponent implements OnInit {
 
   // ── Booking submission ─────────────────────────────────────────────────────
 
-  private hasCustomerPhoneError(err: { error?: { errors?: { path?: string }[] } }): boolean {
-    const errors = err?.error?.errors;
-    return Array.isArray(errors) && errors.some((issue) => issue?.path === 'customerPhone');
-  }
-
   confirmBooking(): void {
     const b = this.business();
     const svc = this.selectedService();
@@ -449,12 +444,6 @@ export class CustomerBookPageComponent implements OnInit {
           }
         } else if (err?.error?.code === 'ONLINE_BOOKING_UNAVAILABLE') {
           const msg = this.language.t('customers.onlineBookingUnavailable');
-          this.submitError.set(msg);
-          this.showError(msg);
-          this.showHoldButton.set(false);
-          setTimeout(() => this.showHoldButton.set(true), 50);
-        } else if (err?.status === 400 && this.hasCustomerPhoneError(err)) {
-          const msg = this.language.t('customers.phoneInvalid');
           this.submitError.set(msg);
           this.showError(msg);
           this.showHoldButton.set(false);

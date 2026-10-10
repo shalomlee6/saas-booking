@@ -113,20 +113,3 @@ export function buildCreateAppointmentDtoFromRange(args: {
     notes: args.notes?.trim() || undefined,
   };
 }
-
-/**
- * Centralized update payload builder for appointment update endpoint.
- */
-export function buildUpdateAppointmentDto(body: Partial<{
-  start: string;
-  end: string;
-  status: string;
-  notes: string;
-}>): Partial<{ start: string; end: string; status: string; notes: string }> {
-  const out: Partial<{ start: string; end: string; status: string; notes: string }> = {};
-  if (body.start) out.start = body.start;
-  if (body.end) out.end = body.end;
-  if (body.status) out.status = body.status;
-  if (body.notes != null) out.notes = body.notes;
-  return out;
-}

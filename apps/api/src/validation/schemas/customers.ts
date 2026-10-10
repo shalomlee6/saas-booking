@@ -108,12 +108,6 @@ export const customerIdParamsSchema = z
   })
   .strict();
 
-export const customersBulkDeleteBodySchema = z
-  .object({
-    ids: z.array(mongoObjectIdString).min(1).max(200),
-  })
-  .strict();
-
 export const customersBulkStatusBodySchema = z
   .object({
     ids: z.array(mongoObjectIdString).min(1).max(200),

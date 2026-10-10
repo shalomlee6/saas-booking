@@ -13,14 +13,12 @@ import {
 } from '../services/customerListService';
 import {
   createCustomerForTenant,
-  deleteCustomerForTenant,
   getCustomerForTenant,
   listCustomersForTenant,
   setCustomersActiveForTenant,
   updateCustomerForTenant,
   type CustomerPreferencesInput,
 } from '../services/customerService';
-import { ConflictError } from '../errors/httpErrors';
 import { listAppointmentsForCustomer } from '../services/appointmentQueryService';
 import { computeCustomerInsights, computeCustomerStats } from '../services/customerStatsService';
 import {
@@ -200,46 +198,6 @@ export async function updateCustomer(req: AuthRequest, res: Response): Promise<v
     throw new NotFoundError('Customer not found');
   }
   res.json(customer);
-}
-
-/** DELETE /api/customers/:id — refuses (409) when the customer has appointment history. */
-export async function deleteCustomer(req: AuthRequest, res: Response): Promise<void> {
-  const businessId = req.effectiveBusinessId!;
-  const { id } = req.params;
-  const customer = await deleteCustomerForTenant(businessId, id);
-  if (!customer) {
-    throw new NotFoundError('Customer not found');
-  }
-  res.json({ ok: true });
-}
-
-/**
- * POST /api/customers/bulk-delete — best-effort delete over a set of ids.
- * Customers with appointment history are skipped (not an all-or-nothing failure)
- * so a mixed selection still deletes what it safely can.
- */
-export async function bulkDeleteCustomers(req: AuthRequest, res: Response): Promise<void> {
-  const businessId = req.effectiveBusinessId!;
-  const { ids } = req.body as { ids: string[] };
-
-  const deleted: string[] = [];
-  const blocked: { id: string; name: string }[] = [];
-
-  for (const id of ids) {
-    try {
-      const customer = await deleteCustomerForTenant(businessId, id);
-      if (customer) deleted.push(id);
-    } catch (err) {
-      if (err instanceof ConflictError) {
-        const customer = await getCustomerForTenant(businessId, id);
-        blocked.push({ id, name: customer?.name ?? id });
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  res.json({ deleted, blocked });
 }
 
 /** POST /api/customers/bulk-status — sets Active/Inactive for the selected customers. */

@@ -47,7 +47,7 @@ export async function postIdentifyVerify(req: RequestWithPublicCustomer, res: Re
     readPublicSessionId(req)
   );
   issueSession(res, result.session.sessionId);
-  res.json({ status: result.status, verified: true, sessionId: result.session.sessionId });
+  res.json({ status: result.status, verified: true });
 }
 
 export async function postIdentifyComplete(req: RequestWithPublicCustomer, res: Response): Promise<void> {

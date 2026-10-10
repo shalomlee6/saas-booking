@@ -1,7 +1,6 @@
 import type { Request } from 'express';
 import type { ICustomer } from '../models/Customer';
-import { HttpError, ValidationError } from '../errors/httpErrors';
-import { canonicalLocalPhone } from '../listQuery/search';
+import { HttpError } from '../errors/httpErrors';
 import { recordAudit } from '../utils/recordAudit';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import {
@@ -31,11 +30,6 @@ export function isInsideCancellationWindow(start: Date, hours: number, now = new
   return start.getTime() - now.getTime() >= hours * 60 * 60 * 1000;
 }
 
-export const PUBLIC_MOBILE_REQUIRED = {
-  he: 'יש להזין מספר נייד ישראלי: 05 ואחריו 8 ספרות.',
-  en: 'Enter an Israeli mobile: 05 followed by 8 digits.',
-} as const;
-
 /** Product default is Hebrew. English only when the first Accept-Language tag is English. */
 export function publicRequestLanguage(req: Request): 'he' | 'en' {
   const header = req.get('accept-language') ?? '';
@@ -55,18 +49,6 @@ export function publicPhoneLookupKeys(canonical: string, rawInput: string): stri
   const digits = rawInput.replace(/\D/g, '');
   if (digits) keys.add(digits);
   return [...keys];
-}
-
-export function requirePublicBookingPhone(req: Request, rawPhone: string): {
-  phone: string;
-  lookupPhones: string[];
-} {
-  const phone = canonicalLocalPhone(rawPhone);
-  if (!phone) {
-    const message = PUBLIC_MOBILE_REQUIRED[publicRequestLanguage(req)];
-    throw new ValidationError(message, [{ path: 'customerPhone', message, code: 'custom' }]);
-  }
-  return { phone, lookupPhones: publicPhoneLookupKeys(phone, rawPhone) };
 }
 
 /**

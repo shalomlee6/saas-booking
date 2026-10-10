@@ -26,7 +26,6 @@ import { recordAudit } from '../utils/recordAudit';
 import {
   enforcePublicBookingCustomer,
   isInsideCancellationWindow,
-  requirePublicBookingPhone,
   resolveCancellationWindowHours,
 } from '../services/publicBookingPolicy';
 
@@ -373,8 +372,6 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
     serviceId: string;
     date: string;
     time: string;
-    customerName?: string;
-    customerPhone?: string;
   };
 
   const { serviceId, date: dateStr, time: timeStr } = body;
@@ -392,57 +389,29 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   const businessId = business._id;
 
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  let customerId: Types.ObjectId | undefined;
-  let resolvedCustomerName: string;
-  let resolvedCustomerPhone: string | undefined;
-
-  if (publicCustomer) {
-    if (body.slug && publicCustomer.slug && publicCustomer.slug !== body.slug) {
-      throw new ForbiddenError('Business mismatch');
-    }
-    if (publicCustomer.businessId !== businessId.toString()) {
-      throw new ForbiddenError('Business mismatch');
-    }
-    if (!publicCustomer.customerId) {
-      throw new ValidationError('Complete your details before booking');
-    }
-    const customer = await Customer.findOne({
-      _id: publicCustomer.customerId,
-      businessId,
-    });
-    if (!customer) {
-      throw new NotFoundError('Customer not found');
-    }
-    await enforcePublicBookingCustomer(req, customer);
-    customerId = customer._id as Types.ObjectId;
-    resolvedCustomerName = customer.name ?? '';
-    resolvedCustomerPhone = customer.phone ?? undefined;
-  } else {
-    const rawName = body.customerName;
-    const customerName = typeof rawName === 'string' ? rawName.trim() : '';
-    if (!customerName) {
-      throw new ValidationError('customerName is required and cannot be blank');
-    }
-    if (customerName.length > 200) {
-      throw new ValidationError('customerName must be at most 200 characters');
-    }
-    resolvedCustomerName = customerName;
-    const rawPhone = typeof body.customerPhone === 'string' ? body.customerPhone.trim() : '';
-    const storedPhone = requirePublicBookingPhone(req, rawPhone);
-    resolvedCustomerPhone = storedPhone.phone;
-
-    let guest = await Customer.findOne({ phone: { $in: storedPhone.lookupPhones }, businessId });
-    if (!guest) {
-      guest = await Customer.create({
-        businessId,
-        name: customerName,
-        phone: storedPhone.phone,
-      });
-    } else {
-      await enforcePublicBookingCustomer(req, guest);
-    }
-    customerId = guest._id as Types.ObjectId;
+  if (!publicCustomer) {
+    throw new UnauthorizedError('Authentication required');
   }
+  if (body.slug && publicCustomer.slug && publicCustomer.slug !== body.slug) {
+    throw new ForbiddenError('Business mismatch');
+  }
+  if (publicCustomer.businessId !== businessId.toString()) {
+    throw new ForbiddenError('Business mismatch');
+  }
+  if (!publicCustomer.customerId) {
+    throw new ValidationError('Complete your details before booking');
+  }
+  const customer = await Customer.findOne({
+    _id: publicCustomer.customerId,
+    businessId,
+  });
+  if (!customer) {
+    throw new NotFoundError('Customer not found');
+  }
+  await enforcePublicBookingCustomer(req, customer);
+  const customerId = customer._id as Types.ObjectId;
+  const resolvedCustomerName = customer.name ?? '';
+  const resolvedCustomerPhone = customer.phone ?? undefined;
 
   const settings = await ensureBusinessSettings(businessId);
   if (!settings.features?.bookingEnabled) {
@@ -637,7 +606,7 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
 // --- DELETE /api/public/appointments/:appointmentId
 /**
  * Customer-initiated cancellation of their own appointment.
- * Requires a valid public-customer Bearer JWT (role=customer).
+ * Requires the public-customer httpOnly cookie for this business.
  *
  * Rules enforced:
  *  - appointment must belong to the authenticated customer

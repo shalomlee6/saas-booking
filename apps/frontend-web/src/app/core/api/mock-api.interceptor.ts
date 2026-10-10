@@ -317,10 +317,6 @@ function isPublicBusinessGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/[^/]+\/business\/?(\?|$)/.test(req.url);
 }
 
-function isPublicAuthMeGet(req: HttpRequest<unknown>): boolean {
-  return req.method === 'GET' && /\/api\/public\/auth\/me\/?(\?|$)/.test(req.url);
-}
-
 function getPublicSlugFromUrl(url: string): string | null {
   const m = url.match(/\/api\/public\/([^/]+)\//);
   return m ? m[1] : null;
@@ -1440,58 +1436,6 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         },
       }),
     ]);
-  }
-
-  if (isPublicAuthMeGet(req)) {
-    const auth = req.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Authentication required' },
-        }),
-      ]);
-    }
-    const token = auth.slice(7).trim();
-    if (!token) {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Authentication required' },
-        }),
-      ]);
-    }
-    try {
-      const payload = JSON.parse(atob(token)) as {
-        customerId?: string;
-        businessId?: string;
-      };
-      const customerId = String(payload.customerId ?? 'mock-public-customer');
-      const businessId = String(payload.businessId ?? 'mock-business-1');
-      const known = MOCK_BUSINESSES.find((b) => String(b['_id']) === businessId) as
-        | Record<string, unknown>
-        | undefined;
-      const slug = known ? String(known['slug']) : 'demo-salon';
-      return from([
-        new HttpResponse({
-          status: 200,
-          body: {
-            id: customerId,
-            businessId,
-            slug,
-            name: 'לקוחה דמו',
-            phone: '0500000000',
-          },
-        }),
-      ]);
-    } catch {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Authentication required' },
-        }),
-      ]);
-    }
   }
 
   // ——— Public booking: GET business (full), GET landing bundle, GET services, GET availability, POST appointments ———

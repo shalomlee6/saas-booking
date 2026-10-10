@@ -168,7 +168,7 @@ export interface PublicConfig {
 }
 
 export interface IdentifyStartResponse {
-  status: 'known' | 'new' | 'blocked';
+  status: 'known' | 'new' | 'blocked' | 'code_sent';
 }
 
 export type PublicSessionResult =
@@ -181,15 +181,11 @@ export interface CreateAppointmentBody {
   serviceId: string;
   date: string;
   time: string;
-  /** Required for guest booking; omitted when logged in (server uses JWT customer). */
-  customerName?: string;
-  customerPhone?: string;
 }
 
 export interface CreateAppointmentResponse {
   id: string;
   status: string;
-  token?: string;
   customerId?: string;
   customerName?: string;
 }

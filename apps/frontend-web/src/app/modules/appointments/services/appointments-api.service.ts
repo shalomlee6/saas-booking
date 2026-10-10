@@ -12,10 +12,7 @@ import type { DataListPage, DataListQuery } from '../../../shared/data-managemen
 import type { Appointment, AppointmentListItem } from '../model/appointment';
 import type { AppointmentListRow } from '../model/appointment-list-row';
 import type { CreateAppointmentDto } from '../dto/create-appointment.dto';
-import {
-  buildUpdateAppointmentDto,
-  mapAppointmentDtoToModel,
-} from '../dto/appointment-dto-adapter';
+import { mapAppointmentDtoToModel } from '../dto/appointment-dto-adapter';
 
 export interface AppointmentsListParams {
   from?: string;
@@ -79,11 +76,6 @@ export class AppointmentsApiService {
   /** POST /api/appointments */
   create(dto: CreateAppointmentDto): Observable<Appointment> {
     return this.api.post<Appointment>('appointments', dto);
-  }
-
-  /** PUT /api/appointments/:id */
-  update(id: string, body: Partial<{ start: string; end: string; status: string; notes: string }>): Observable<Appointment> {
-    return this.api.put<Appointment>(`appointments/${id}`, buildUpdateAppointmentDto(body));
   }
 
   /** GET /api/appointments/:id — single appointment for edit screen */

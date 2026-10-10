@@ -105,7 +105,10 @@ export function mockSessionMe(slug: string): PublicClientProfile | null {
   return profileOf(client);
 }
 
-export function mockIdentifyStart(slug: string, phoneRaw: string): { status: 'known' | 'new' | 'blocked' } {
+export function mockIdentifyStart(
+  slug: string,
+  phoneRaw: string
+): { status: 'known' | 'new' | 'blocked' | 'code_sent' } {
   const phone = digits(phoneRaw);
   if (phone === BLOCKED_PHONE) return { status: 'blocked' };
   const known = phone === KNOWN_PHONE;
@@ -125,6 +128,7 @@ export function mockIdentifyStart(slug: string, phoneRaw: string): { status: 'kn
   }
   clients.set(slug, client);
   persist(client, slug);
+  if (mockIdentityMode() === 'otp') return { status: 'code_sent' };
   return { status: known || client.hasCustomer ? 'known' : 'new' };
 }
 

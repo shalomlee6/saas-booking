@@ -26,7 +26,7 @@ const OTP_MAX_ATTEMPTS = 5;
 const OTP_RESEND_MS = 30 * 1000;
 
 export type IdentityMode = 'otp' | 'phone';
-export type IdentifyStatus = 'known' | 'new' | 'blocked';
+export type IdentifyStatus = 'known' | 'new' | 'blocked' | 'code_sent';
 export type BirthdayField = 'required' | 'optional' | 'hidden';
 
 export function resolveIdentityMode(): IdentityMode {
@@ -115,7 +115,7 @@ export async function startIdentify(
   }
 
   await sendOtp(business.slug, phone);
-  return { status };
+  return { status: 'code_sent' };
 }
 
 async function sendOtp(businessSlug: string, phone: string): Promise<void> {

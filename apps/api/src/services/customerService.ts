@@ -1,7 +1,5 @@
 import { Customer, type ICustomerPreferences } from '../models/Customer';
-import { Appointment } from '../models/Appointment';
-import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
-import { ConflictError, ValidationError } from '../errors/httpErrors';
+import { ValidationError } from '../errors/httpErrors';
 import { canonicalLocalPhone } from '../listQuery/search';
 import { isRealBirthday, type Birthday } from './birthday';
 
@@ -134,28 +132,6 @@ export async function updateCustomerForTenant(
     { $set: update },
     { new: true }
   );
-}
-
-/**
- * Deletes a customer, refusing when they have any appointment history — that history
- * feeds revenue/analytics and must not silently disappear. Their service-config
- * overrides (duration/price overrides) are cleaned up since those are meaningless
- * without the customer they belong to.
- */
-export async function deleteCustomerForTenant(businessId: string, customerId: string) {
-  const appointmentCount = await Appointment.countDocuments({ businessId, customerId });
-  if (appointmentCount > 0) {
-    throw new ConflictError(
-      'This customer has appointment history and cannot be deleted.',
-      'CUSTOMER_HAS_APPOINTMENTS'
-    );
-  }
-
-  const customer = await Customer.findOneAndDelete({ _id: customerId, businessId });
-  if (!customer) return null;
-
-  await CustomerServiceConfig.deleteMany({ businessId, customerId });
-  return customer;
 }
 
 export async function setCustomersActiveForTenant(

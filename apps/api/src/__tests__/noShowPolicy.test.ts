@@ -8,8 +8,8 @@ import { Appointment } from '../models/Appointment';
 import { User } from '../models/User';
 import { AuditLog } from '../models/AuditLog';
 import { BusinessSettings } from '../models/BusinessSettings';
-import { ONLINE_BOOKING_UNAVAILABLE, PUBLIC_MOBILE_REQUIRED } from '../services/publicBookingPolicy';
-import { OtpChallenge } from '../models/OtpChallenge';
+import { ONLINE_BOOKING_UNAVAILABLE } from '../services/publicBookingPolicy';
+import { loginPublicClient } from './helpers/publicSession';
 
 const app = buildTestApp();
 
@@ -26,24 +26,17 @@ function tomorrowKey(): string {
 function book(
   businessId: string,
   serviceId: string,
-  phone: string,
   time: string,
-  extra: { name?: string; language?: string; token?: string } = {}
+  extra: { language?: string; cookie: string }
 ) {
-  const req = request(app).post('/api/public/appointments');
+  const req = request(app).post('/api/public/appointments').set('Cookie', extra.cookie);
   if (extra.language) req.set('Accept-Language', extra.language);
-  if (extra.token) req.set('Authorization', `Bearer ${extra.token}`);
-  const body: Record<string, string> = {
+  return req.send({
     businessId,
     serviceId,
     date: tomorrowKey(),
     time,
-  };
-  if (!extra.token) {
-    body.customerName = extra.name ?? 'Guest';
-    body.customerPhone = phone;
-  }
-  return req.send(body);
+  });
 }
 
 async function addNoShows(
@@ -96,8 +89,11 @@ describe('NO-SHOW POLICY', () => {
     });
     await Customer.create({ businessId: business._id, name: 'Clear', phone: '0509999999' });
     await addNoShows(business._id, customer._id, service._id, 2);
+    const session = await loginPublicClient(app, business.slug, '0501234567');
 
-    const allowed = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
+    const allowed = await book(business._id.toString(), service._id.toString(), '10:00', {
+      cookie: session.cookie,
+    });
     expect(allowed.status).toBe(201);
     expect(allowed.body.customerId).toBe(customer._id.toString());
 
@@ -108,12 +104,15 @@ describe('NO-SHOW POLICY', () => {
     expect(open.body.blocked).toBe(false);
 
     await addNoShows(business._id, customer._id, service._id, 1);
-    const blocked = await book(business._id.toString(), service._id.toString(), '050-123-4567', '11:00');
+    const blocked = await book(business._id.toString(), service._id.toString(), '11:00', {
+      cookie: session.cookie,
+    });
     expect(blocked.status).toBe(403);
     expect(blocked.body.code).toBe('ONLINE_BOOKING_UNAVAILABLE');
     expect(blocked.body.message).toBe(ONLINE_BOOKING_UNAVAILABLE.he);
 
-    const english = await book(business._id.toString(), service._id.toString(), '0501234567', '12:00', {
+    const english = await book(business._id.toString(), service._id.toString(), '12:00', {
+      cookie: session.cookie,
       language: 'en',
     });
     expect(english.status).toBe(403);
@@ -150,7 +149,10 @@ describe('NO-SHOW POLICY', () => {
       { $set: { noShowPolicy: { enabled: false, threshold: 3 } } }
     );
 
-    const res = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
+    const session = await loginPublicClient(app, business.slug, '0501234567');
+    const res = await book(business._id.toString(), service._id.toString(), '10:00', {
+      cookie: session.cookie,
+    });
     expect(res.status).toBe(201);
 
     const list = await request(app)
@@ -177,7 +179,10 @@ describe('NO-SHOW POLICY', () => {
     expect(excused.status).toBe(200);
     expect(excused.body.noShowCount).toBe(0);
 
-    const res = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
+    const session = await loginPublicClient(app, business.slug, '0501234567');
+    const res = await book(business._id.toString(), service._id.toString(), '10:00', {
+      cookie: session.cookie,
+    });
     expect(res.status).toBe(201);
     const detail = await request(app)
       .get(`/api/customers/${customer._id.toString()}`)
@@ -198,7 +203,10 @@ describe('NO-SHOW POLICY', () => {
       isActive: false,
     });
 
-    const res = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
+    const session = await loginPublicClient(app, business.slug, '0501234567');
+    const res = await book(business._id.toString(), service._id.toString(), '10:00', {
+      cookie: session.cookie,
+    });
     expect(res.status).toBe(201);
     const fresh = await Customer.findById(customer._id);
     expect(fresh?.isActive).toBe(true);
@@ -220,9 +228,18 @@ describe('NO-SHOW POLICY', () => {
     });
     await addNoShows(business._id, customer._id, service._id, 3);
 
-    const res = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
-    expect(res.status).toBe(403);
-    expect(res.body.message).toBe(ONLINE_BOOKING_UNAVAILABLE.he);
+    const start = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0501234567' });
+    expect(start.status).toBe(200);
+    expect(start.body.status).toBe('blocked');
+    const created = await request(app).post('/api/public/appointments').send({
+      businessId: business._id.toString(),
+      serviceId: service._id.toString(),
+      date: tomorrowKey(),
+      time: '10:00',
+    });
+    expect(created.status).toBe(401);
     const fresh = await Customer.findById(customer._id);
     expect(fresh?.isActive).toBe(false);
     const audits = await AuditLog.find({ action: 'customer.reactivated' });
@@ -231,21 +248,13 @@ describe('NO-SHOW POLICY', () => {
 
   it('rejects a public phone that is not an Israeli mobile', async () => {
     const { business } = await seedOwner();
-    await seedBusinessSettings(business._id);
-    const service = await seedService(business._id);
     const phones = ['12345', '02-1234567', '0721234567'];
-    for (let i = 0; i < phones.length; i++) {
-      const res = await book(
-        business._id.toString(),
-        service._id.toString(),
-        phones[i],
-        `1${i}:00`,
-        { language: i === 1 ? 'en-US,en;q=0.9' : undefined }
-      );
+    for (const phone of phones) {
+      const res = await request(app)
+        .post(`/api/public/businesses/${business.slug}/identify/start`)
+        .send({ phone });
       expect(res.status).toBe(400);
-      const expected = i === 1 ? PUBLIC_MOBILE_REQUIRED.en : PUBLIC_MOBILE_REQUIRED.he;
-      expect(res.body.message).toBe(expected);
-      expect(res.body.errors[0].path).toBe('customerPhone');
+      expect(res.body.message).toBe('Enter an Israeli mobile (05 and 8 digits)');
     }
     const count = await Customer.countDocuments({ businessId: business._id });
     expect(count).toBe(0);
@@ -261,7 +270,10 @@ describe('NO-SHOW POLICY', () => {
       phone: '972501234567',
     });
 
-    const res = await book(business._id.toString(), service._id.toString(), '0501234567', '10:00');
+    const session = await loginPublicClient(app, business.slug, '0501234567');
+    const res = await book(business._id.toString(), service._id.toString(), '10:00', {
+      cookie: session.cookie,
+    });
     expect(res.status).toBe(201);
     expect(res.body.customerId).toBe(legacy._id.toString());
     const count = await Customer.countDocuments({ businessId: business._id });
@@ -289,7 +301,10 @@ describe('NO-SHOW POLICY', () => {
     });
     await addNoShows(first.business._id, blocked._id, serviceA._id, 3);
 
-    const res = await book(second.business._id.toString(), serviceB._id.toString(), '0501234567', '10:00');
+    const session = await loginPublicClient(app, second.business.slug, '0501234567');
+    const res = await book(second.business._id.toString(), serviceB._id.toString(), '10:00', {
+      cookie: session.cookie,
+    });
     expect(res.status).toBe(201);
     expect(res.body.customerId).toBe(local._id.toString());
   });
@@ -371,23 +386,15 @@ describe('NO-SHOW POLICY', () => {
     expect(legacy.body.code).toBe('ONLINE_BOOKING_UNAVAILABLE');
     expect(legacy.body.message).toBe(ONLINE_BOOKING_UNAVAILABLE.he);
 
-    const first = await book(business._id.toString(), service._id.toString(), '0508888888', '10:00', {
+    const sessionCustomer = await Customer.create({
+      businessId: business._id,
       name: 'Session Guest',
+      phone: '0508888888',
     });
-    expect(first.status).toBe(201);
-    const sessionCustomer = await Customer.findById(first.body.customerId);
-    const started = await request(app)
-      .post(`/api/public/businesses/${business.slug}/identify/start`)
-      .send({ phone: '0508888888' });
-    expect(started.status).toBe(200);
-    const challenge = await OtpChallenge.findOne({ businessSlug: business.slug, phone: '0508888888' });
-    const verified = await request(app)
-      .post(`/api/public/businesses/${business.slug}/identify/verify`)
-      .send({ phone: '0508888888', code: challenge?.code });
-    expect(verified.status).toBe(200);
-    await addNoShows(business._id, sessionCustomer?._id, service._id, 3);
-    const second = await book(business._id.toString(), service._id.toString(), '', '11:00', {
-      token: verified.body.sessionId,
+    const session = await loginPublicClient(app, business.slug, '0508888888');
+    await addNoShows(business._id, sessionCustomer._id, service._id, 3);
+    const second = await book(business._id.toString(), service._id.toString(), '11:00', {
+      cookie: session.cookie,
     });
     expect(second.status).toBe(403);
     expect(second.body.message).toBe(ONLINE_BOOKING_UNAVAILABLE.he);

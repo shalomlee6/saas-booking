@@ -2,25 +2,19 @@ import request from 'supertest';
 import { buildTestApp } from './helpers/testApp';
 import { dbConnect, dbDisconnect, dbClear } from './helpers/db';
 import { seedOwner, seedService, seedBusinessSettings, seedCustomer } from './helpers/seed';
-import { OtpChallenge } from '../models/OtpChallenge';
 import { Appointment } from '../models/Appointment';
+import { OtpChallenge } from '../models/OtpChallenge';
 import { Customer } from '../models/Customer';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { AuditLog } from '../models/AuditLog';
 import { PublicClientSession } from '../models/PublicClientSession';
 import { Service } from '../models/Service';
+import { loginPublicClient } from './helpers/publicSession';
 
 const app = buildTestApp();
 
-async function verifiedSession(slug: string, phone: string): Promise<string> {
-  const start = await request(app).post(`/api/public/businesses/${slug}/identify/start`).send({ phone });
-  if (start.status !== 200) throw new Error(`identify start ${start.status}`);
-  const stored = await OtpChallenge.findOne({ businessSlug: slug, phone });
-  const verify = await request(app)
-    .post(`/api/public/businesses/${slug}/identify/verify`)
-    .send({ phone, code: stored?.code });
-  if (verify.status !== 200) throw new Error(`identify verify ${verify.status}`);
-  return verify.body.sessionId as string;
+async function verifiedSession(slug: string, phone: string): Promise<{ cookie: string; sessionId: string }> {
+  return loginPublicClient(app, slug, phone);
 }
 
 beforeAll(async () => dbConnect());
@@ -108,10 +102,11 @@ describe('PUBLIC BOOKING', () => {
     expect(res.status).toBe(401);
   });
 
-  it('rejects guest booking without a phone number', async () => {
+  it('rejects a create request that has no session cookie', async () => {
     const { business } = await seedOwner();
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
     const tomorrow = new Date();
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const date = tomorrow.toISOString().slice(0, 10);
@@ -122,37 +117,44 @@ describe('PUBLIC BOOKING', () => {
       date,
       time: '10:00',
       customerName: 'Dana',
-    });
-
-    expect(res.status).toBe(400);
-  });
-
-  it('guest booking does not open a session; a verified session can list upcoming', async () => {
-    const { business } = await seedOwner();
-    const service = await seedService(business._id);
-    await seedBusinessSettings(business._id);
-    const tomorrow = new Date();
-    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-    const date = tomorrow.toISOString().slice(0, 10);
-
-    const created = await request(app).post('/api/public/appointments').send({
-      businessId: business._id.toString(),
-      serviceId: service._id.toString(),
-      date,
-      time: '10:00',
-      customerName: 'Dana Cohen',
       customerPhone: '0501234567',
     });
 
+    expect(res.status).toBe(401);
+    expect(await Appointment.countDocuments({ businessId: business._id })).toBe(0);
+  });
+
+  it('a verified session can book and list upcoming without a new session cookie', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const tomorrow = new Date();
+    tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+    const date = tomorrow.toISOString().slice(0, 10);
+    const session = await verifiedSession(business.slug, '0501234567');
+
+    const created = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', session.cookie)
+      .send({
+        businessId: business._id.toString(),
+        serviceId: service._id.toString(),
+        date,
+        time: '10:00',
+      });
+
     expect(created.status).toBe(201);
     expect(created.body.token).toBeUndefined();
+    expect(created.body.sessionId).toBeUndefined();
     expect(created.body.customerId).toBeTruthy();
-    expect(created.headers['set-cookie']).toBeUndefined();
+    const refreshed = created.headers['set-cookie'];
+    const refreshedCookie = Array.isArray(refreshed) ? refreshed.join(';') : String(refreshed ?? '');
+    expect(refreshedCookie.includes(session.sessionId)).toBe(true);
 
-    const sessionId = await verifiedSession(business.slug, '0501234567');
     const upcoming = await request(app)
       .get('/api/public/appointments/upcoming')
-      .set('Authorization', `Bearer ${sessionId}`);
+      .set('Cookie', session.cookie);
 
     expect(upcoming.status).toBe(200);
     expect(upcoming.body.appointment).not.toBeNull();
@@ -174,21 +176,23 @@ describe('PUBLIC BOOKING', () => {
     const laterDate = later.toISOString().slice(0, 10);
     const soonerDate = sooner.toISOString().slice(0, 10);
 
-    const laterBooking = await request(app).post('/api/public/appointments').send({
-      businessId: business._id.toString(),
-      serviceId: service._id.toString(),
-      date: laterDate,
-      time: '14:00',
-      customerName: 'Dana Cohen',
-      customerPhone: '0501234567',
-    });
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const session = await verifiedSession(business.slug, '0501234567');
+    const laterBooking = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', session.cookie)
+      .send({
+        businessId: business._id.toString(),
+        serviceId: service._id.toString(),
+        date: laterDate,
+        time: '14:00',
+      });
     expect(laterBooking.status).toBe(201);
-    const token = await verifiedSession(business.slug, '0501234567');
     const customerId = laterBooking.body.customerId as string;
 
     const soonerBooking = await request(app)
       .post('/api/public/appointments')
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({
         businessId: business._id.toString(),
         serviceId: service._id.toString(),
@@ -231,7 +235,7 @@ describe('PUBLIC BOOKING', () => {
 
     const upcoming = await request(app)
       .get('/api/public/appointments/upcoming')
-      .set('Authorization', `Bearer ${token}`);
+      .set('Cookie', session.cookie);
 
     expect(upcoming.status).toBe(200);
     const ids = (upcoming.body.appointments as { id: string }[]).map((a) => a.id);
@@ -253,16 +257,18 @@ describe('PUBLIC BOOKING', () => {
     const date = tomorrow.toISOString().slice(0, 10);
 
     await BusinessSettings.updateOne({ businessId: business._id }, { $set: { cancellationWindowHours: 0 } });
-    const created = await request(app).post('/api/public/appointments').send({
-      businessId: business._id.toString(),
-      serviceId: service._id.toString(),
-      date,
-      time: '10:00',
-      customerName: 'Dana Cohen',
-      customerPhone: '0501234567',
-    });
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const session = await verifiedSession(business.slug, '0501234567');
+    const created = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', session.cookie)
+      .send({
+        businessId: business._id.toString(),
+        serviceId: service._id.toString(),
+        date,
+        time: '10:00',
+      });
     expect(created.status).toBe(201);
-    const token = await verifiedSession(business.slug, '0501234567');
     const customerId = created.body.customerId as string;
     const confirmedId = created.body.id as string;
 
@@ -288,7 +294,7 @@ describe('PUBLIC BOOKING', () => {
     const cancel = (id: string) =>
       request(app)
         .delete(`/api/public/appointments/${id}`)
-        .set('Authorization', `Bearer ${token}`)
+        .set('Cookie', session.cookie)
         .send({ cancellationReason: 'Cannot make it' });
 
     const confirmedRes = await cancel(confirmedId);
@@ -307,7 +313,7 @@ describe('PUBLIC BOOKING', () => {
     }
   });
 
-  it('stores a canonical phone and rejects a non-canonical public phone', async () => {
+  it('stores a canonical phone on identify and rejects a non-mobile', async () => {
     const { business } = await seedOwner();
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
@@ -315,30 +321,28 @@ describe('PUBLIC BOOKING', () => {
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const date = tomorrow.toISOString().slice(0, 10);
 
-    const canonical = await request(app).post('/api/public/appointments').send({
+    const anonymous = await request(app).post('/api/public/appointments').send({
       businessId: business._id.toString(),
       serviceId: service._id.toString(),
       date,
       time: '10:00',
-      customerName: 'Dana Cohen',
-      customerPhone: '050-123-4567',
     });
-    expect(canonical.status).toBe(201);
-    const stored = await Customer.findById(canonical.body.customerId);
-    expect(stored?.phone).toBe('0501234567');
+    expect(anonymous.status).toBe(401);
 
-    const kept = await request(app).post('/api/public/appointments').send({
-      businessId: business._id.toString(),
-      serviceId: service._id.toString(),
-      date,
-      time: '11:00',
-      customerName: 'Other Guest',
-      customerPhone: '12345',
-    });
-    expect(kept.status).toBe(400);
-    expect(kept.body.message).toBe('יש להזין מספר נייד ישראלי: 05 ואחריו 8 ספרות.');
-    const raw = await Customer.findOne({ name: 'Other Guest' });
-    expect(raw).toBeNull();
+    const start = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '050-123-4567' });
+    expect(start.status).toBe(200);
+    expect(start.body.status).toBe('code_sent');
+    const challenge = await OtpChallenge.findOne({ businessSlug: business.slug, phone: '0501234567' });
+    expect(challenge?.phone).toBe('0501234567');
+
+    const rejected = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '12345' });
+    expect(rejected.status).toBe(400);
+    expect(rejected.body.message).toBe('Enter an Israeli mobile (05 and 8 digits)');
+    expect(await Customer.countDocuments({ businessId: business._id })).toBe(0);
   });
 
   it('cancels inside the window and refuses outside it', async () => {
@@ -346,7 +350,7 @@ describe('PUBLIC BOOKING', () => {
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
     await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
-    const token = await verifiedSession(business.slug, '0501234567');
+    const session = await verifiedSession(business.slug, '0501234567');
     const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
     const insideStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
     const outsideStart = new Date(Date.now() + 2 * 60 * 60 * 1000);
@@ -371,7 +375,7 @@ describe('PUBLIC BOOKING', () => {
 
     const blocked = await request(app)
       .delete(`/api/public/appointments/${outside._id.toString()}`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ cancellationReason: 'too soon' });
     expect(blocked.status).toBe(409);
     expect(blocked.body.code).toBe('OUTSIDE_CANCELLATION_WINDOW');
@@ -379,7 +383,7 @@ describe('PUBLIC BOOKING', () => {
 
     const ok = await request(app)
       .delete(`/api/public/appointments/${inside._id.toString()}`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ cancellationReason: 'plans changed' });
     expect(ok.status).toBe(200);
     expect((await Appointment.findById(inside._id))?.status).toBe('cancelled');
@@ -396,7 +400,7 @@ describe('PUBLIC BOOKING', () => {
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
     await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
-    const token = await verifiedSession(business.slug, '0501234567');
+    const session = await verifiedSession(business.slug, '0501234567');
     const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
     const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
     start.setUTCHours(10, 0, 0, 0);
@@ -424,7 +428,7 @@ describe('PUBLIC BOOKING', () => {
     const date = start.toISOString().slice(0, 10);
     const failed = await request(app)
       .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ date, time: '15:00' });
     expect(failed.status).toBe(409);
     const kept = await Appointment.findById(original._id);
@@ -434,7 +438,7 @@ describe('PUBLIC BOOKING', () => {
 
     const moved = await request(app)
       .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ date, time: '18:00' });
     expect(moved.status).toBe(201);
     const originalAfter = await Appointment.findById(original._id);
@@ -458,7 +462,7 @@ describe('PUBLIC BOOKING', () => {
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
     await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
-    const token = await verifiedSession(business.slug, '0501234567');
+    const session = await verifiedSession(business.slug, '0501234567');
     const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
     const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
     start.setUTCHours(10, 0, 0, 0);
@@ -484,7 +488,7 @@ describe('PUBLIC BOOKING', () => {
 
     const shifted = await request(app)
       .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ date: start.toISOString().slice(0, 10), time: '10:30' });
     expect(shifted.status).toBe(201);
     expect((await Appointment.findById(original._id))?.status).toBe('cancelled');
@@ -492,7 +496,7 @@ describe('PUBLIC BOOKING', () => {
 
     const blocked = await request(app)
       .post(`/api/public/appointments/${outside._id.toString()}/reschedule`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ date: soon.toISOString().slice(0, 10), time: '18:00' });
     expect(blocked.status).toBe(409);
     expect(blocked.body.code).toBe('OUTSIDE_CANCELLATION_WINDOW');
@@ -505,8 +509,8 @@ describe('PUBLIC BOOKING', () => {
     await seedBusinessSettings(business._id);
     await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
     await Customer.create({ businessId: business._id, name: 'Other Client', phone: '0507654321' });
-    const ownerToken = await verifiedSession(business.slug, '0501234567');
-    const otherToken = await verifiedSession(business.slug, '0507654321');
+    const ownerSession = await verifiedSession(business.slug, '0501234567');
+    const otherSession = await verifiedSession(business.slug, '0507654321');
     const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
     const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
     start.setUTCHours(10, 0, 0, 0);
@@ -519,10 +523,10 @@ describe('PUBLIC BOOKING', () => {
       status: 'confirmed',
       source: 'client-online',
     });
-    expect(ownerToken).not.toBe(otherToken);
+    expect(ownerSession.sessionId).not.toBe(otherSession.sessionId);
     const moved = await request(app)
       .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
-      .set('Authorization', `Bearer ${otherToken}`)
+      .set('Cookie', otherSession.cookie)
       .send({ date: start.toISOString().slice(0, 10), time: '12:00' });
     expect(moved.status).toBe(404);
     expect((await Appointment.findById(original._id))?.status).toBe('confirmed');
@@ -534,9 +538,9 @@ describe('PUBLIC BOOKING', () => {
     const service = await seedService(business._id);
     await seedBusinessSettings(business._id);
     await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
-    const token = await verifiedSession(business.slug, '0501234567');
+    const session = await verifiedSession(business.slug, '0501234567');
     await PublicClientSession.updateOne(
-      { sessionId: token },
+      { sessionId: session.sessionId },
       { $set: { 'bindings.0.verified': false } }
     );
     const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
@@ -553,12 +557,12 @@ describe('PUBLIC BOOKING', () => {
     const date = start.toISOString().slice(0, 10);
     const cancel = await request(app)
       .delete(`/api/public/appointments/${apt._id.toString()}`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ cancellationReason: 'no' });
     expect(cancel.status).toBe(401);
     const moved = await request(app)
       .post(`/api/public/appointments/${apt._id.toString()}/reschedule`)
-      .set('Authorization', `Bearer ${token}`)
+      .set('Cookie', session.cookie)
       .send({ date, time: '16:00' });
     expect(moved.status).toBe(401);
     expect((await Appointment.findById(apt._id))?.status).toBe('confirmed');

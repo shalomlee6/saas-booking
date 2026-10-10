@@ -78,11 +78,6 @@ export const publicCreateAppointmentBodySchema = z
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
     time: hhMm,
-    customerName: z.string().max(200).optional(),
-    customerPhone: z.preprocess(
-      (v) => (v === '' || v === null || v === undefined ? undefined : v),
-      z.string().min(3).max(50).optional()
-    ),
   })
   .strip()
   .superRefine((data, ctx) => {
@@ -100,14 +95,6 @@ export const publicCreateAppointmentBodySchema = z
         code: z.ZodIssueCode.custom,
         path: ['businessId'],
         message: 'Provide only one of slug or businessId',
-      });
-    }
-    const name = data.customerName?.trim();
-    if (name && !data.customerPhone) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['customerPhone'],
-        message: 'customerPhone is required',
       });
     }
   });

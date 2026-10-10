@@ -91,16 +91,6 @@ export class CustomersApiService {
     return this.api.get<CustomerCardStatsResponse>(`customers/${id}/stats`);
   }
 
-  /** Refused (409) when the customer has appointment history. */
-  delete(id: string): Observable<{ ok: boolean }> {
-    return this.api.delete<{ ok: boolean }>(`customers/${id}`);
-  }
-
-  /** Best-effort: customers with appointment history are skipped, not an all-or-nothing failure. */
-  bulkDelete(ids: string[]): Observable<BulkDeleteCustomersResponse> {
-    return this.api.post<BulkDeleteCustomersResponse>('customers/bulk-delete', { ids });
-  }
-
   bulkSetStatus(ids: string[], isActive: boolean): Observable<{ updated: number }> {
     return this.api.post<{ updated: number }>('customers/bulk-status', { ids, isActive });
   }
@@ -117,9 +107,4 @@ export class CustomersApiService {
 export interface NoShowPolicy {
   enabled: boolean;
   threshold: number;
-}
-
-export interface BulkDeleteCustomersResponse {
-  deleted: string[];
-  blocked: { id: string; name: string }[];
 }
