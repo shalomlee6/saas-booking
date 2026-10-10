@@ -1,9 +1,22 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
-import { catchError, delay, map } from 'rxjs/operators';
+import { catchError, delay, map, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../../core/api/api.service';
 import { environment } from '../../../../environments/environment';
+import type { BirthdayField, IdentityMode, PublicClientProfile } from './public-identity.rules';
+import {
+  mockIdentifyComplete,
+  mockIdentifyStart,
+  mockIdentifyVerify,
+  mockCancelUpcoming,
+  mockLogout,
+  mockOffer,
+  mockPublicConfig,
+  mockRescheduleUpcoming,
+  mockSessionMe,
+  mockUpcomingAppointment,
+} from './public-identity.mock-state';
 
 export interface PublicBusiness {
   businessId: string;
@@ -145,7 +158,23 @@ export interface PublicService {
 export interface AvailabilityResponse {
   date: string;
   slots: string[];
+  durationMinutes?: number;
+  price?: number;
 }
+
+export interface PublicConfig {
+  identityMode: IdentityMode;
+  birthdayField: BirthdayField;
+}
+
+export interface IdentifyStartResponse {
+  status: 'known' | 'new' | 'blocked';
+}
+
+export type PublicSessionResult =
+  | { kind: 'ok'; profile: PublicClientProfile }
+  | { kind: 'unauthorized' }
+  | { kind: 'error' };
 
 export interface CreateAppointmentBody {
   businessId: string;
@@ -172,48 +201,15 @@ export interface UpcomingAppointment {
   status: string;
   serviceName: string;
   serviceId?: string;
+  /** Server decision from the business cancellation window. */
+  canModify?: boolean;
 }
 
 export interface UpcomingAppointmentResponse {
   appointment: UpcomingAppointment | null;
   appointments?: UpcomingAppointment[];
+  businessPhone?: string | null;
 }
-
-export interface RequestOtpBody {
-  phone: string;
-  firstName?: string;
-  lastName?: string;
-}
-
-export interface VerifyOtpBody {
-  phone: string;
-  code: string;
-}
-
-export interface VerifyOtpResponse {
-  token: string;
-  customerId: string;
-  businessId: string;
-  customerName?: string;
-  customerPhone?: string;
-}
-
-/** GET /api/public/auth/me — authenticated public customer profile */
-export interface PublicAuthMeResponse {
-  id: string;
-  businessId: string;
-  slug: string;
-  name?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-  email?: string;
-}
-
-export type PublicAuthMeResult =
-  | { kind: 'ok'; me: PublicAuthMeResponse }
-  | { kind: 'unauthorized' }
-  | { kind: 'error' };
 
 @Injectable({ providedIn: 'root' })
 export class PublicApiService {
@@ -224,49 +220,95 @@ export class PublicApiService {
     return this.api.get<PublicBusiness>(`public/${encodeURIComponent(businessSlug)}/business`);
   }
 
-  /** POST /api/public/:businessSlug/auth/request-otp */
-  requestOtp(businessSlug: string, body: RequestOtpBody): Observable<{ ok: boolean }> {
-    return this.api.post<{ ok: boolean }>(
-      `public/${encodeURIComponent(businessSlug)}/auth/request-otp`,
-      body
-    );
-  }
-
-  /** POST /api/public/:businessSlug/auth/verify-otp */
-  verifyOtp(businessSlug: string, body: VerifyOtpBody): Observable<VerifyOtpResponse> {
-    return this.api.post<VerifyOtpResponse>(
-      `public/${encodeURIComponent(businessSlug)}/auth/verify-otp`,
-      body
-    );
-  }
-
   /**
    * POST /api/public/auth/logout
    * Clears the server-side httpOnly session cookie. Best-effort: callers clear the
    * client-side session (localStorage token + signals) regardless of this call's outcome.
    */
-  logoutPublicCustomer(): Observable<{ ok: boolean }> {
+  logoutPublicCustomer(slug: string): Observable<{ ok: boolean }> {
     if (environment.mockPublicApi) {
+      mockLogout(slug);
       return of({ ok: true });
     }
-    return this.api.post<{ ok: boolean }>('public/auth/logout', {});
+    return this.api.post<{ ok: boolean }>('public/session/logout', {}, { slug });
   }
 
-  /**
-   * GET /api/public/auth/me
-   * Uses Bearer (localStorage) and/or HTTP-only cookie (withCredentials).
-   */
-  getPublicAuthMe(): Observable<PublicAuthMeResult> {
-    return this.api.get<PublicAuthMeResponse>('public/auth/me').pipe(
-      map((me) => ({ kind: 'ok' as const, me })),
+  getPublicConfig(slug: string): Observable<PublicConfig> {
+    if (environment.mockPublicApi) {
+      return of(mockPublicConfig()).pipe(delay(40));
+    }
+    return this.api.get<PublicConfig>(`public/businesses/${encodeURIComponent(slug)}/config`);
+  }
+
+  getSessionMe(slug: string): Observable<PublicSessionResult> {
+    if (environment.mockPublicApi) {
+      const profile = mockSessionMe(slug);
+      if (!profile) return of({ kind: 'unauthorized' as const });
+      return of({ kind: 'ok' as const, profile });
+    }
+    return this.api.get<PublicClientProfile>('public/session/me', { slug }).pipe(
+      map((profile) => ({ kind: 'ok' as const, profile })),
       catchError((err: unknown) => {
         const status = err instanceof HttpErrorResponse ? err.status : 0;
-        if (status === 401) {
-          return of({ kind: 'unauthorized' as const });
-        }
+        if (status === 401) return of({ kind: 'unauthorized' as const });
         return of({ kind: 'error' as const });
       })
     );
+  }
+
+  identifyStart(slug: string, phone: string): Observable<IdentifyStartResponse> {
+    if (environment.mockPublicApi) {
+      return of(mockIdentifyStart(slug, phone)).pipe(delay(80));
+    }
+    return this.api.post<IdentifyStartResponse>(
+      `public/businesses/${encodeURIComponent(slug)}/identify/start`,
+      { phone }
+    );
+  }
+
+  identifyVerify(slug: string, phone: string, code: string): Observable<{ status: 'known' | 'new'; verified: boolean }> {
+    if (environment.mockPublicApi) {
+      const result = mockIdentifyVerify(slug, phone, code);
+      if (!result.ok) {
+        return new Observable((subscriber) => {
+          subscriber.error(new HttpErrorResponse({ status: 400, error: { message: result.reason } }));
+        });
+      }
+      return of({ status: result.status, verified: true as const }).pipe(delay(80));
+    }
+    return this.api.post<{ status: 'known' | 'new'; verified: boolean }>(
+      `public/businesses/${encodeURIComponent(slug)}/identify/verify`,
+      { phone, code }
+    );
+  }
+
+  identifyComplete(
+    slug: string,
+    body: { name?: string; birthday?: { day: number; month: number } }
+  ): Observable<PublicClientProfile> {
+    if (environment.mockPublicApi) {
+      const profile = mockIdentifyComplete(slug, body);
+      if (!profile) {
+        return new Observable((subscriber) => {
+          subscriber.error(new HttpErrorResponse({ status: 401 }));
+        });
+      }
+      return of(profile).pipe(delay(80));
+    }
+    return this.api
+      .post<{ ok: boolean; needsBirthday: boolean }>(
+        `public/businesses/${encodeURIComponent(slug)}/identify/complete`,
+        body
+      )
+      .pipe(
+        switchMap(() => this.getSessionMe(slug)),
+        map((result) => {
+          if (result.kind !== 'ok') {
+            throw new HttpErrorResponse({ status: 401 });
+          }
+          return result.profile;
+        })
+      );
   }
 
   /** GET /api/public/businesses/:slug — for booking page (opening hours, media, cancellation) */
@@ -397,9 +439,12 @@ export class PublicApiService {
     date: string
   ): Observable<AvailabilityResponse> {
     if (environment.mockPublicApi) {
+      const offer = mockOffer();
       const mock: AvailabilityResponse = {
         date,
         slots: ['09:00', '11:00', '12:30', '14:00', '15:00', '16:00'],
+        durationMinutes: offer.durationMinutes,
+        price: offer.price,
       };
       return of(mock).pipe(delay(350));
     }
@@ -413,25 +458,58 @@ export class PublicApiService {
   getAvailabilityByBusinessId(
     businessId: string,
     serviceId: string,
-    date: string
+    date: string,
+    excludeAppointmentId?: string
   ): Observable<AvailabilityResponse> {
     if (environment.mockPublicApi) {
+      const offer = mockOffer();
       const mock: AvailabilityResponse = {
         date,
         slots: ['09:00', '11:00', '12:30', '14:00', '15:00', '16:00'],
+        durationMinutes: offer.durationMinutes,
+        price: offer.price,
       };
       return of(mock).pipe(delay(350));
     }
     const params = new URLSearchParams({ businessId, serviceId, date });
+    if (excludeAppointmentId) params.set('excludeAppointmentId', excludeAppointmentId);
     return this.api.get<AvailabilityResponse>(`public/availability?${params}`);
   }
 
   /** POST /api/public/appointments */
   createAppointment(body: CreateAppointmentBody): Observable<CreateAppointmentResponse> {
     if (environment.mockPublicApi) {
-      return of({ id: 'apt1', status: 'confirmed' }).pipe(delay(800));
+      return of({ id: 'apt1', status: 'confirmed', customerId: 'mock-customer' }).pipe(delay(200));
     }
     return this.api.post<CreateAppointmentResponse>('public/appointments', body);
+  }
+
+  rescheduleAppointment(
+    appointmentId: string,
+    date: string,
+    time: string
+  ): Observable<CreateAppointmentResponse & { date?: string; time?: string; serviceName?: string; serviceId?: string }> {
+    if (environment.mockPublicApi) {
+      const next = mockRescheduleUpcoming(appointmentId, date, time);
+      if (!next) {
+        return new Observable((subscriber) => {
+          subscriber.error(new HttpErrorResponse({ status: 409, error: { code: 'SLOT_TAKEN' } }));
+        });
+      }
+      return of({
+        id: next.id,
+        status: next.status,
+        customerId: 'mock-customer',
+        date: next.date,
+        time: next.time,
+        serviceName: next.serviceName,
+        serviceId: next.serviceId,
+      }).pipe(delay(200));
+    }
+    return this.api.post(`public/appointments/${encodeURIComponent(appointmentId)}/reschedule`, {
+      date,
+      time,
+    });
   }
 
   /**
@@ -441,10 +519,7 @@ export class PublicApiService {
    */
   getUpcomingAppointment(): Observable<UpcomingAppointmentResponse> {
     if (environment.mockPublicApi) {
-      // Return no appointment in mock mode.  Returning a hardcoded appointment
-      // for every session regardless of identity would mask identity-isolation
-      // bugs during development and testing.
-      return of({ appointment: null, appointments: [] }).pipe(delay(400));
+      return of(mockUpcomingAppointment()).pipe(delay(80));
     }
     return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming');
   }
@@ -459,7 +534,13 @@ export class PublicApiService {
     cancellationReason: string
   ): Observable<{ ok: boolean }> {
     if (environment.mockPublicApi) {
-      return of({ ok: true }).pipe(delay(600));
+      const ok = mockCancelUpcoming(appointmentId);
+      if (!ok) {
+        return new Observable((subscriber) => {
+          subscriber.error(new HttpErrorResponse({ status: 409 }));
+        });
+      }
+      return of({ ok: true }).pipe(delay(80));
     }
     return this.api.deleteWithBody<{ ok: boolean }>(
       `public/appointments/${encodeURIComponent(appointmentId)}`,

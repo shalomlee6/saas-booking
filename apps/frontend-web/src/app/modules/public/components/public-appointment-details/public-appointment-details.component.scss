@@ -118,6 +118,11 @@
   font-size: 0.875rem;
 }
 
+::ng-deep .public-apt-details-drawer,
+::ng-deep .public-apt-details-dialog {
+  z-index: 200;
+}
+
 ::ng-deep .public-apt-details-drawer {
   border-radius: 24px 24px 0 0;
   overflow: hidden;

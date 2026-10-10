@@ -15,6 +15,7 @@ import {
   createPublicAppointment as createPublicAppointmentBooking,
   getUpcomingCustomerAppointment,
   cancelCustomerAppointment,
+  rescheduleCustomerAppointment,
 } from '../controllers/publicBookingController';
 import {
   getPublicConfig,
@@ -35,6 +36,7 @@ import {
   publicAvailabilityQuerySchema,
   publicCancelAppointmentBodySchema,
   publicCancelAppointmentParamsSchema,
+  publicRescheduleAppointmentBodySchema,
   publicCreateAppointmentBodySchema,
   slugAvailabilityQuerySchema,
   slugParamsSchema,
@@ -117,6 +119,13 @@ publicRouter.get(
   '/appointments/upcoming',
   optionalPublicCustomer,
   asyncHandler(getUpcomingCustomerAppointment)
+);
+publicRouter.post(
+  '/appointments/:appointmentId/reschedule',
+  validateParams(publicCancelAppointmentParamsSchema),
+  validateBody(publicRescheduleAppointmentBodySchema),
+  optionalPublicCustomer,
+  asyncHandler(rescheduleCustomerAppointment)
 );
 publicRouter.delete(
   '/appointments/:appointmentId',

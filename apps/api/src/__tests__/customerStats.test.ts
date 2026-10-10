@@ -165,9 +165,41 @@ describe('CUSTOMER STATS — rule-based insights', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.stats.recentCancellations).toBe(2);
+    expect(res.body.stats.cancellations).toBe(2);
     expect(
       res.body.insights.some((i: { code: string }) => i.code === 'FREQUENT_CANCELLATIONS')
     ).toBe(true);
+  });
+
+  it('does not count a rescheduled cancellation toward cancellation insights', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const customer = await Customer.create({ businessId: business._id, name: 'Mover', phone: '446' });
+
+    for (let i = 0; i < 2; i++) {
+      await Appointment.create({
+        businessId: business._id,
+        customerId: customer._id,
+        serviceId: service._id,
+        start: daysFromNow(5 + i),
+        end: new Date(daysFromNow(5 + i).getTime() + 60 * 60 * 1000),
+        status: 'cancelled',
+        cancellationReason: 'rescheduled',
+        source: 'client-online',
+      });
+    }
+
+    const res = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stats.cancellations).toBe(0);
+    expect(res.body.stats.recentCancellations).toBe(0);
+    expect(
+      res.body.insights.some((i: { code: string }) => i.code === 'FREQUENT_CANCELLATIONS')
+    ).toBe(false);
   });
 
   it('counts status no_show and does not treat a past pending appointment as one', async () => {

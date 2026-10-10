@@ -1,151 +1,86 @@
-import { Injectable, signal, computed } from '@angular/core';
-import type { PublicAuthMeResponse } from './public-api.service';
+import { Injectable, computed, signal } from '@angular/core';
+import type { BirthdayField, IdentityMode } from './public-identity.rules';
+import { readyToBook, type PublicClientProfile } from './public-identity.rules';
 
 const STORAGE_KEY_TOKEN = 'public_client_token';
 const STORAGE_KEY_SLUG = 'public_client_business_slug';
 const STORAGE_KEY_CUSTOMER_ID = 'public_client_customer_id';
 const STORAGE_KEY_CUSTOMER_NAME = 'public_client_customer_name';
 
-export interface PublicSession {
-  token: string;
-  customerId: string;
-}
-
-function storageAvailable(): boolean {
-  return typeof localStorage !== 'undefined';
-}
-
-/** Prefer localStorage; migrate leftover sessionStorage keys from the previous tab-scoped store. */
-function readPersisted(key: string): string | null {
-  if (!storageAvailable()) return null;
-  const fromLocal = localStorage.getItem(key);
-  if (fromLocal) return fromLocal;
-  if (typeof sessionStorage === 'undefined') return null;
-  const fromSession = sessionStorage.getItem(key);
-  if (!fromSession) return null;
-  localStorage.setItem(key, fromSession);
-  sessionStorage.removeItem(key);
-  return fromSession;
-}
-
-function writePersisted(key: string, value: string): void {
-  if (!storageAvailable()) return;
-  localStorage.setItem(key, value);
-  if (typeof sessionStorage !== 'undefined') {
-    sessionStorage.removeItem(key);
-  }
-}
-
-function removePersisted(key: string): void {
-  if (storageAvailable()) localStorage.removeItem(key);
-  if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(key);
-}
-
 @Injectable({ providedIn: 'root' })
 export class PublicSessionService {
-  private readonly tokenSignal = signal<string | null>(this.readToken());
-  private readonly slugSignal = signal<string | null>(this.readSlug());
-  private readonly customerIdSignal = signal<string | null>(this.readCustomerId());
-  private readonly customerNameSignal = signal<string | null>(this.readCustomerName());
+  private readonly profileSignal = signal<PublicClientProfile | null>(null);
+  private readonly slugSignal = signal<string | null>(null);
+  private readonly customerIdSignal = signal<string | null>(null);
+  private readonly modeSignal = signal<IdentityMode | null>(null);
+  private readonly birthdaySignal = signal<BirthdayField | null>(null);
+  readonly flowEpoch = signal(0);
 
-  readonly token = this.tokenSignal.asReadonly();
-  readonly businessSlug = this.slugSignal.asReadonly();
+  readonly identityMode = this.modeSignal.asReadonly();
+  readonly birthdayField = this.birthdaySignal.asReadonly();
   readonly customerId = this.customerIdSignal.asReadonly();
-  /** Display name for the authenticated customer, or null for guests. */
-  readonly customerName = this.customerNameSignal.asReadonly();
-  readonly hasSession = computed(() => !!this.tokenSignal() && !!this.slugSignal());
+  readonly customerName = computed(() => {
+    const profile = this.profileSignal();
+    if (!profile?.verified) return null;
+    return profile.firstName ?? null;
+  });
 
-  private readToken(): string | null {
-    return readPersisted(STORAGE_KEY_TOKEN);
+  constructor() {
+    this.clearLegacyToken();
   }
 
-  private readSlug(): string | null {
-    return readPersisted(STORAGE_KEY_SLUG);
+  setConfig(mode: IdentityMode, birthdayField: BirthdayField): void {
+    this.modeSignal.set(mode);
+    this.birthdaySignal.set(birthdayField);
   }
 
-  private readCustomerId(): string | null {
-    return readPersisted(STORAGE_KEY_CUSTOMER_ID);
+  applyMe(slug: string, profile: PublicClientProfile): void {
+    this.slugSignal.set(slug);
+    this.profileSignal.set(profile);
   }
 
-  private readCustomerName(): string | null {
-    return readPersisted(STORAGE_KEY_CUSTOMER_NAME);
+  rememberCustomerId(customerId: string): void {
+    this.customerIdSignal.set(customerId);
   }
 
-  setSession(token: string, businessSlug: string, customerId?: string, customerName?: string): void {
-    writePersisted(STORAGE_KEY_TOKEN, token);
-    writePersisted(STORAGE_KEY_SLUG, businessSlug);
-    if (customerId != null) {
-      writePersisted(STORAGE_KEY_CUSTOMER_ID, customerId);
-      this.customerIdSignal.set(customerId);
-    } else {
-      removePersisted(STORAGE_KEY_CUSTOMER_ID);
-      this.customerIdSignal.set(null);
-    }
-    if (customerName) {
-      writePersisted(STORAGE_KEY_CUSTOMER_NAME, customerName);
-      this.customerNameSignal.set(customerName);
-    } else {
-      removePersisted(STORAGE_KEY_CUSTOMER_NAME);
-      this.customerNameSignal.set(null);
-    }
-    this.tokenSignal.set(token);
-    this.slugSignal.set(businessSlug);
+  readyToBook(slug: string): boolean {
+    if (this.slugSignal() !== slug) return false;
+    return readyToBook(this.profileSignal());
   }
 
-  /** Replace only the JWT after a sliding-session renewal (keeps slug / id / name). */
-  updateToken(token: string): void {
-    writePersisted(STORAGE_KEY_TOKEN, token);
-    this.tokenSignal.set(token);
-  }
-
-  getSession(slug: string): PublicSession | null {
-    const t = this.tokenSignal();
-    const s = this.slugSignal();
-    const c = this.customerIdSignal();
-    if (!t || !s || s !== slug) return null;
-    return { token: t, customerId: c ?? '' };
+  /** Verified session for this business — required before listing appointments. */
+  hasSessionFor(slug: string): boolean {
+    const profile = this.profileSignal();
+    return this.slugSignal() === slug && !!profile?.verified && profile.hasCustomer;
   }
 
   getToken(): string | null {
-    return this.tokenSignal();
+    return null;
   }
 
-  getBusinessSlug(): string | null {
-    return this.slugSignal();
-  }
+  /** The public session is an httpOnly cookie. Sliding renewal stays on the server. */
+  updateToken(_token: string): void {}
 
   clearSession(slug?: string): void {
     if (slug !== undefined && this.slugSignal() !== slug) return;
-    removePersisted(STORAGE_KEY_TOKEN);
-    removePersisted(STORAGE_KEY_SLUG);
-    removePersisted(STORAGE_KEY_CUSTOMER_ID);
-    removePersisted(STORAGE_KEY_CUSTOMER_NAME);
-    this.tokenSignal.set(null);
+    this.profileSignal.set(null);
     this.slugSignal.set(null);
     this.customerIdSignal.set(null);
-    this.customerNameSignal.set(null);
+    this.clearLegacyToken();
   }
 
-  /** True when we have a token for the given slug (same business). */
-  hasSessionFor(slug: string): boolean {
-    const t = this.tokenSignal();
-    const s = this.slugSignal();
-    return !!t && !!s && s === slug;
+  bumpFlow(): void {
+    this.flowEpoch.update((value) => value + 1);
   }
 
-  /**
-   * Refreshes display fields from GET /api/public/auth/me.
-   * Requires an existing Bearer token in session (same flow as verify-otp).
-   */
-  applyPublicAuthMe(me: PublicAuthMeResponse): void {
-    const token = this.getToken();
-    if (!token) {
-      return;
+  private clearLegacyToken(): void {
+    try {
+      localStorage.removeItem(STORAGE_KEY_TOKEN);
+      localStorage.removeItem(STORAGE_KEY_SLUG);
+      localStorage.removeItem(STORAGE_KEY_CUSTOMER_ID);
+      localStorage.removeItem(STORAGE_KEY_CUSTOMER_NAME);
+    } catch {
+      /* ignore */
     }
-    const displayName =
-      (me.name && me.name.trim()) ||
-      [me.firstName, me.lastName].filter(Boolean).join(' ').trim() ||
-      undefined;
-    this.setSession(token, me.slug, me.id, displayName);
   }
 }

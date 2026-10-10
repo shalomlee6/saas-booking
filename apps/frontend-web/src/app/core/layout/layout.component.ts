@@ -269,7 +269,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   /** URL for the public customer site (open in new tab). */
   readonly customerSiteUrl = computed<string>(() => {
     const slug = this.auth.business()?.slug;
-    return slug ? `/b/${encodeURIComponent(slug)}/login` : '#';
+    return slug ? `/b/${encodeURIComponent(slug)}` : '#';
   });
 
   readonly linkOptsExact = LINK_OPTS_EXACT;

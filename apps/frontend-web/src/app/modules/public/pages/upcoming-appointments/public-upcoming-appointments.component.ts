@@ -6,6 +6,7 @@ import { SkeletonModule } from 'primeng/skeleton';
 import { distinctUntilChanged, map } from 'rxjs';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { PublicIdentifyComponent } from '../../components/public-identify/public-identify.component';
 import { PublicAppointmentCardComponent } from '../../components/public-appointment-card/public-appointment-card.component';
 import { PublicAppointmentDetailsComponent } from '../../components/public-appointment-details/public-appointment-details.component';
 import { PublicApiService, type UpcomingAppointment } from '../../services/public-api.service';
@@ -17,7 +18,7 @@ import { sortUpcomingAppointments } from '../../utils/upcoming-appointments.util
   selector: 'app-public-upcoming-appointments',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, SkeletonModule, TranslatePipe, PublicAppointmentCardComponent, PublicAppointmentDetailsComponent],
+  imports: [ButtonModule, SkeletonModule, TranslatePipe, PublicIdentifyComponent, PublicAppointmentCardComponent, PublicAppointmentDetailsComponent],
   templateUrl: './public-upcoming-appointments.component.html',
   styleUrl: './public-upcoming-appointments.component.scss',
 })
@@ -34,6 +35,7 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
   readonly error = signal(false);
   readonly appointments = signal<UpcomingAppointment[]>([]);
   readonly selected = signal<UpcomingAppointment | null>(null);
+  readonly identifyFirst = signal(false);
 
   constructor() {
     // Re-fetch whenever the logged-in identity changes (login/logout/switching customer)
@@ -59,14 +61,25 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
       .subscribe(() => this.loadAppointments());
   }
 
+  onIdentified(): void {
+    this.identifyFirst.set(false);
+    this.loadAppointments();
+  }
+
   loadAppointments(): void {
     const slug = this.slug();
+    if (this.session.identityMode() === 'phone') {
+      if (slug) void this.router.navigate(['/b', slug]);
+      return;
+    }
     if (!slug || !this.session.hasSessionFor(slug)) {
       this.appointments.set([]);
       this.error.set(false);
       this.loading.set(false);
+      this.identifyFirst.set(this.session.identityMode() === 'otp');
       return;
     }
+    this.identifyFirst.set(false);
 
     this.loading.set(true);
     this.error.set(false);
@@ -104,7 +117,7 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
     const serviceId = apt.serviceId;
     if (serviceId) {
       void this.router.navigate(['/b', slug, 'book'], {
-        queryParams: { service: serviceId },
+        queryParams: { service: serviceId, reschedule: apt.id },
       });
       return;
     }

@@ -24,6 +24,10 @@ export interface IAppointment extends Document {
   notes?: string;
   /** Free-text reason supplied by the customer when cancelling their own appointment. */
   cancellationReason?: string;
+  /** Set on the cancelled visit when the client moves it. */
+  rescheduledTo?: Types.ObjectId;
+  /** Set on the new visit, pointing at the one it replaced. */
+  rescheduledFrom?: Types.ObjectId;
   /** Excused no-shows stay `no_show` but drop out of the canonical count. */
   noShowExcused?: boolean;
   excusedAt?: Date;
@@ -69,6 +73,8 @@ const AppointmentSchema = new Schema<IAppointment>(
     },
     notes: String,
     cancellationReason: String,
+    rescheduledTo: { type: Schema.Types.ObjectId, ref: 'Appointment' },
+    rescheduledFrom: { type: Schema.Types.ObjectId, ref: 'Appointment' },
     noShowExcused: { type: Boolean, default: false },
     excusedAt: Date,
     excusedReason: { type: String, maxlength: 500 },

@@ -25,10 +25,14 @@ import {
 import { requestLogger } from './middleware/requestLogger';
 import { logger } from './utils/logger';
 import { installSmsProvider } from './services/smsProvider';
+import { resolveIdentityMode } from './services/publicIdentityService';
 import { autoCompleteConfirmedAppointments } from './services/autoCompleteAppointments';
 
 const env = validateEnv();
-installSmsProvider(env.NODE_ENV);
+const smsProvider = installSmsProvider(env.NODE_ENV);
+console.warn(
+  `[boot] NODE_ENV=${env.NODE_ENV} IDENTITY_MODE=${resolveIdentityMode()} sms=${smsProvider.constructor.name}`
+);
 
 const app = express();
 

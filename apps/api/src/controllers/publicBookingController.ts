@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
-import { Types } from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 import { Business } from '../models/Business';
 import { BusinessSettings, defaultOpeningHours } from '../models/BusinessSettings';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
-import { Appointment } from '../models/Appointment';
+import { Appointment, type IAppointment } from '../models/Appointment';
 import { BusinessReview } from '../models/BusinessReview';
 import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
@@ -22,7 +22,13 @@ import {
 import { mergeSectionVisibility, normalizeGalleryItems, orderServicesById } from '../utils/publicLanding';
 import { rewriteStoredUploadUrl } from '../utils/publicUploadUrl';
 import { setNoStore } from '../utils/httpCache';
-import { enforcePublicBookingCustomer, requirePublicBookingPhone } from '../services/publicBookingPolicy';
+import { recordAudit } from '../utils/recordAudit';
+import {
+  enforcePublicBookingCustomer,
+  isInsideCancellationWindow,
+  requirePublicBookingPhone,
+  resolveCancellationWindowHours,
+} from '../services/publicBookingPolicy';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -302,9 +308,10 @@ export { getAvailabilityForBusiness } from '../services/publicAvailabilityServic
 // --- GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD
 export async function getAvailability(req: Request, res: Response): Promise<void> {
   const { slug } = req.params as { slug: string };
-  const { serviceId, date: dateStr } = req.query as {
+  const { serviceId, date: dateStr, excludeAppointmentId } = req.query as {
     serviceId: string;
     date: string;
+    excludeAppointmentId?: string;
   };
 
   const business = await Business.findOne({ slug });
@@ -317,16 +324,24 @@ export async function getAvailability(req: Request, res: Response): Promise<void
     publicCustomer?.customerId && publicCustomer.businessId === business._id.toString()
       ? publicCustomer.customerId
       : undefined;
-  const result = await getAvailabilityForBusiness(business._id, serviceId, dateStr, customerId);
+  const excludeId = await ownedAppointmentId(publicCustomer, business._id.toString(), excludeAppointmentId);
+  const result = await getAvailabilityForBusiness(
+    business._id,
+    serviceId,
+    dateStr,
+    customerId,
+    excludeId
+  );
   res.json(result);
 }
 
 // --- GET /api/public/availability?businessId=...&serviceId=...&date=YYYY-MM-DD
 export async function getPublicAvailability(req: Request, res: Response): Promise<void> {
-  const { businessId, serviceId, date: dateStr } = req.query as {
+  const { businessId, serviceId, date: dateStr, excludeAppointmentId } = req.query as {
     businessId: string;
     serviceId: string;
     date: string;
+    excludeAppointmentId?: string;
   };
 
   const business = await Business.findById(businessId);
@@ -339,7 +354,14 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
     publicCustomer?.customerId && publicCustomer.businessId === business._id.toString()
       ? publicCustomer.customerId
       : undefined;
-  const result = await getAvailabilityForBusiness(business._id, serviceId, dateStr, customerId);
+  const excludeId = await ownedAppointmentId(publicCustomer, business._id.toString(), excludeAppointmentId);
+  const result = await getAvailabilityForBusiness(
+    business._id,
+    serviceId,
+    dateStr,
+    customerId,
+    excludeId
+  );
   res.json(result);
 }
 
@@ -501,7 +523,8 @@ function toPublicUpcomingAppointment(
     status: string;
     serviceId?: PopulatedUpcomingService | Types.ObjectId | null;
   },
-  timezone: string
+  timezone: string,
+  canModify: boolean
 ) {
   const { date, time } = formatPublicAppointmentClock(apt.start, timezone);
   const service =
@@ -515,7 +538,44 @@ function toPublicUpcomingAppointment(
     status: apt.status,
     serviceName: service?.name ?? '',
     serviceId: service?._id?.toString() ?? '',
+    canModify,
   };
+}
+
+async function ownedAppointmentId(
+  publicCustomer: RequestWithPublicCustomer['publicCustomer'],
+  businessId: string,
+  rawId: string | undefined
+): Promise<string | undefined> {
+  if (!rawId || !publicCustomer?.verified || !publicCustomer.customerId) return undefined;
+  if (publicCustomer.businessId !== businessId) return undefined;
+  const apt = await Appointment.findOne({
+    _id: rawId,
+    customerId: new Types.ObjectId(publicCustomer.customerId),
+    businessId: new Types.ObjectId(businessId),
+  }).select('_id');
+  return apt ? apt._id.toString() : undefined;
+}
+
+async function customerAudit(
+  publicCustomer: { phone: string; customerId?: string; businessId: string; sessionId: string },
+  action: string,
+  entityId: string,
+  metadata: Record<string, unknown>
+): Promise<void> {
+  await recordAudit({
+    actorEmail: publicCustomer.phone,
+    action,
+    entity: 'Appointment',
+    entityId,
+    metadata: {
+      actor: 'customer',
+      customerId: publicCustomer.customerId,
+      businessId: publicCustomer.businessId,
+      sessionId: publicCustomer.sessionId,
+      ...metadata,
+    },
+  });
 }
 
 const EMPTY_UPCOMING = { appointment: null, appointments: [] as ReturnType<typeof toPublicUpcomingAppointment>[] };
@@ -557,11 +617,20 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     businessId: new Types.ObjectId(publicCustomer.businessId),
   });
   const timezone = settings?.localization?.timezone ?? 'Asia/Jerusalem';
-  const appointments = apts.map((apt) => toPublicUpcomingAppointment(apt, timezone));
+  const windowHours = resolveCancellationWindowHours(settings?.cancellationWindowHours);
+  const business = await Business.findById(publicCustomer.businessId).select('phone');
+  const fromBusiness = typeof business?.phone === 'string' ? business.phone.trim() : '';
+  const fromSettings =
+    typeof settings?.businessPhonePublic === 'string' ? settings.businessPhonePublic.trim() : '';
+  const businessPhone = fromBusiness || fromSettings || null;
+  const appointments = apts.map((apt) =>
+    toPublicUpcomingAppointment(apt, timezone, isInsideCancellationWindow(apt.start, windowHours, now))
+  );
 
   res.json({
     appointment: appointments[0] ?? null,
     appointments,
+    businessPhone,
   });
 }
 
@@ -603,9 +672,186 @@ export async function cancelCustomerAppointment(req: Request, res: Response): Pr
     throw new ConflictError('This appointment cannot be cancelled');
   }
 
+  const settings = await ensureBusinessSettings(publicCustomer.businessId);
+  const windowHours = resolveCancellationWindowHours(settings.cancellationWindowHours);
+  if (!isInsideCancellationWindow(apt.start, windowHours)) {
+    throw new ConflictError(
+      'This appointment can no longer be changed online',
+      'OUTSIDE_CANCELLATION_WINDOW'
+    );
+  }
+
   apt.status = 'cancelled';
   apt.cancellationReason = trimmedReason;
   await apt.save();
 
+  await customerAudit(publicCustomer, 'appointment.cancelled_by_customer', apt._id.toString(), {});
+
   res.json({ ok: true, appointmentId: apt._id.toString() });
+}
+
+async function moveAppointmentInOneTransaction(input: {
+  businessId: Types.ObjectId;
+  serviceId: Types.ObjectId;
+  start: Date;
+  end: Date;
+  source: 'client-online';
+  customerId: Types.ObjectId;
+  customerName: string;
+  customerPhone?: string;
+  price?: number;
+  rescheduledFrom: Types.ObjectId;
+  originalId: Types.ObjectId;
+}): Promise<IAppointment> {
+  const apply = async (session?: mongoose.ClientSession): Promise<IAppointment> => {
+    const created = await createAppointmentAtomic(
+      {
+        businessId: input.businessId,
+        serviceId: input.serviceId,
+        start: input.start,
+        end: input.end,
+        source: input.source,
+        customerId: input.customerId,
+        customerName: input.customerName,
+        customerPhone: input.customerPhone,
+        price: input.price,
+        rescheduledFrom: input.rescheduledFrom,
+      },
+      { requireCustomerId: true, excludeAppointmentId: input.originalId, session }
+    );
+    const update = Appointment.updateOne(
+      { _id: input.originalId },
+      {
+        $set: {
+          status: 'cancelled',
+          cancellationReason: 'rescheduled',
+          rescheduledTo: created._id,
+        },
+      }
+    );
+    if (session) update.session(session);
+    await update;
+    return created;
+  };
+
+  const session = await mongoose.startSession();
+  try {
+    try {
+      let created: IAppointment | null = null;
+      await session.withTransaction(async () => {
+        created = await apply(session);
+      });
+      if (!created) {
+        throw new Error('Failed to reschedule appointment');
+      }
+      return created;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '';
+      const codeName =
+        typeof error === 'object' && error && 'codeName' in error
+          ? String((error as { codeName?: string }).codeName ?? '')
+          : '';
+      const unsupported =
+        codeName === 'IllegalOperation' || message.includes('Transaction numbers are only allowed');
+      if (!unsupported || process.env.NODE_ENV === 'production') throw error;
+      return apply(undefined);
+    }
+  } finally {
+    await session.endSession();
+  }
+}
+
+export async function rescheduleCustomerAppointment(req: Request, res: Response): Promise<void> {
+  const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+  if (!publicCustomer?.verified || !publicCustomer.customerId) {
+    throw new UnauthorizedError('Authentication required');
+  }
+
+  const { appointmentId } = req.params as { appointmentId: string };
+  const { date: dateStr, time: timeStr } = req.body as { date: string; time: string };
+
+  const apt = await Appointment.findOne({
+    _id: appointmentId,
+    customerId: new Types.ObjectId(publicCustomer.customerId),
+    businessId: new Types.ObjectId(publicCustomer.businessId),
+  });
+  if (!apt) throw new NotFoundError('Appointment not found');
+  if (!CLIENT_CANCELLABLE_STATUSES.has(apt.status)) {
+    throw new ConflictError('This appointment cannot be changed');
+  }
+
+  const settings = await ensureBusinessSettings(publicCustomer.businessId);
+  const windowHours = resolveCancellationWindowHours(settings.cancellationWindowHours);
+  if (!isInsideCancellationWindow(apt.start, windowHours)) {
+    throw new ConflictError(
+      'This appointment can no longer be changed online',
+      'OUTSIDE_CANCELLATION_WINDOW'
+    );
+  }
+  if (!settings.features?.bookingEnabled) {
+    throw new ForbiddenError('Booking is disabled for this business');
+  }
+
+  const serviceId = apt.serviceId?.toString();
+  if (!serviceId) throw new NotFoundError('Service not found');
+  const service = await Service.findOne({ _id: serviceId, businessId: apt.businessId });
+  if (!service) throw new NotFoundError('Service not found');
+
+  const customer = await Customer.findOne({
+    _id: publicCustomer.customerId,
+    businessId: apt.businessId,
+  });
+  if (!customer) throw new NotFoundError('Customer not found');
+  await enforcePublicBookingCustomer(req, customer);
+
+  const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
+  const override = await getServiceOverrideForCustomer(apt.businessId, customer._id, serviceId);
+  const durationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
+  const price = typeof override?.priceOverride === 'number' ? override.priceOverride : service.price;
+
+  let startAt: Date;
+  try {
+    startAt = toUtcDate(dateStr, timeStr, timezone);
+  } catch {
+    throw new ValidationError('Validation failed', [
+      { path: 'date', message: 'Invalid date or time for the business timezone', code: 'custom' },
+    ]);
+  }
+  const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
+
+  const created = await moveAppointmentInOneTransaction({
+    businessId: apt.businessId,
+    serviceId: new Types.ObjectId(serviceId),
+    start: startAt,
+    end: endAt,
+    source: 'client-online',
+    customerId: customer._id as Types.ObjectId,
+    customerName: customer.name ?? '',
+    customerPhone: customer.phone ?? undefined,
+    price,
+    rescheduledFrom: apt._id,
+    originalId: apt._id,
+  });
+
+  await customerAudit(publicCustomer, 'appointment.rescheduled_by_customer', apt._id.toString(), {
+    rescheduledTo: created._id.toString(),
+    date: dateStr,
+    time: timeStr,
+  });
+  await customerAudit(publicCustomer, 'appointment.rescheduled_by_customer', created._id.toString(), {
+    rescheduledFrom: apt._id.toString(),
+    date: dateStr,
+    time: timeStr,
+  });
+
+  const clock = formatPublicAppointmentClock(created.start, timezone);
+  res.status(201).json({
+    id: created._id.toString(),
+    status: created.status,
+    customerId: customer._id.toString(),
+    date: clock.date,
+    time: clock.time,
+    serviceId,
+    serviceName: service.name,
+  });
 }

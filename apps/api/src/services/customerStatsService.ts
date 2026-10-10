@@ -64,6 +64,7 @@ interface FacetResult {
   statusCounts: { _id: string; count: number }[];
   noShowCount: { count: number }[];
   recentCancellationCount: { count: number }[];
+  rescheduledCancellationCount: { count: number }[];
   lastAppointment: FacetAppointmentRow[];
   nextAppointment: FacetAppointmentRow[];
   completedStats: { _id: null; count: number; totalRevenue: number; starts: Date[] }[];
@@ -132,7 +133,17 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
           { $count: 'count' },
         ],
         recentCancellationCount: [
-          { $match: { status: 'cancelled', updatedAt: { $gte: recentCutoff } } },
+          {
+            $match: {
+              status: 'cancelled',
+              cancellationReason: { $ne: 'rescheduled' },
+              updatedAt: { $gte: recentCutoff },
+            },
+          },
+          { $count: 'count' },
+        ],
+        rescheduledCancellationCount: [
+          { $match: { status: 'cancelled', cancellationReason: 'rescheduled' } },
           { $count: 'count' },
         ],
         lastAppointment: [
@@ -180,7 +191,8 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
   const statusCountMap = new Map(facet.statusCounts.map((s) => [s._id, s.count]));
   const totalAppointments = facet.statusCounts.reduce((sum, s) => sum + s.count, 0);
   const completedVisits = statusCountMap.get('completed') ?? 0;
-  const cancellations = statusCountMap.get('cancelled') ?? 0;
+  const rescheduled = facet.rescheduledCancellationCount[0]?.count ?? 0;
+  const cancellations = Math.max(0, (statusCountMap.get('cancelled') ?? 0) - rescheduled);
   const noShows = facet.noShowCount[0]?.count ?? 0;
   const recentCancellations = facet.recentCancellationCount[0]?.count ?? 0;
 

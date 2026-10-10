@@ -1,10 +1,14 @@
 import {
   Component,
-  inject,
+  DestroyRef,
+  ElementRef,
   OnInit,
   computed,
+  effect,
+  inject,
   signal,
-  DestroyRef,
+  untracked,
+  viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -22,6 +26,7 @@ import {
 } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
+import { PublicIdentifyComponent } from '../../components/public-identify/public-identify.component';
 import {
   formatParsedErrorForUi,
   friendlyPublicBookingError,
@@ -36,19 +41,21 @@ import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
-/** 3-step flow: 1=service, 2=date+time, 3=confirm */
-type BookStep = 1 | 2 | 3;
+/** 1 service, 2 identify, 3 date/time, 4 confirm. Identify is skipped for a known device. */
+type BookStep = 1 | 2 | 3 | 4;
 
-const STEP_TITLES: Record<BookStep, string> = {
-  1: 'בחרי שירות',
-  2: 'תאריך ושעה',
-  3: 'אישור התור',
+const STEP_TITLE_KEYS: Record<BookStep, string> = {
+  1: 'publicBook.serviceTitle',
+  2: 'publicBook.identifyTitle',
+  3: 'publicBook.dateTitle',
+  4: 'publicBook.confirmTitle',
 };
 
-const STEP_NAV_LABELS: Record<BookStep, string> = {
-  1: 'שירות',
-  2: 'תאריך ושעה',
-  3: 'אישור',
+const STEP_NAV_KEYS: Record<BookStep, string> = {
+  1: 'publicBook.serviceNav',
+  2: 'publicBook.identifyNav',
+  3: 'publicBook.dateNav',
+  4: 'publicBook.confirmNav',
 };
 
 /** Local calendar day at 00:00 — used for minDate and midnight refresh. */
@@ -67,6 +74,7 @@ function startOfDay(d: Date): Date {
     ButtonModule,
     DatePickerModule,
     HoldToConfirmButtonComponent,
+    PublicIdentifyComponent,
     SkeletonModule,
   ],
   templateUrl: './customer-book-page.component.html',
@@ -79,7 +87,7 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly messageService = inject(MessageService);
   private readonly session = inject(PublicSessionService);
   private readonly auth = inject(AuthService);
-  private readonly language = inject(LanguageService);
+  readonly language = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);
 
@@ -88,6 +96,7 @@ export class CustomerBookPageComponent implements OnInit {
     businessId: string;
     serviceId: string;
     dateStr: string;
+    excludeAppointmentId?: string;
   }>();
 
   /** Refreshed on visibility, timer, and init so “today” advances after midnight. */
@@ -100,15 +109,12 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDate = signal<Date | null>(null);
   readonly slots = signal<string[]>([]);
   readonly selectedSlot = signal<string | null>(null);
-  /** Guest-only: customer full name. */
-  readonly guestName = signal('');
-  /** Guest-only: customer phone (required). Digits only, capped at 10 — see onGuestPhoneInput(). */
-  readonly guestPhone = signal('');
-
-  /** Strips non-digits and caps at 10 as the user types — matches Israeli local mobile format. */
-  onGuestPhoneInput(value: string): void {
-    this.guestPhone.set(value.replace(/\D/g, '').slice(0, 10));
-  }
+  readonly offer = signal<{ durationMinutes: number; price: number } | null>(null);
+  readonly skippedIdentify = signal(false);
+  readonly rescheduleId = signal<string | null>(null);
+  readonly rescheduleFrom = signal<{ date: string; time: string } | null>(null);
+  readonly identifyEntry = signal<'phone' | 'birthday' | 'profile'>('phone');
+  private readonly stepHeading = viewChild<ElementRef<HTMLElement>>('stepHeading');
 
   // ── Loading / error signals ────────────────────────────────────────────────
   readonly loadingBusiness = signal(true);
@@ -130,15 +136,15 @@ export class CustomerBookPageComponent implements OnInit {
   readonly showHoldButton = signal(true);
 
   // ── Progress indicator data ─────────────────────────────────────────────────
-  readonly bookSteps: readonly BookStep[] = [1, 2, 3];
-  readonly stepNavLabels = STEP_NAV_LABELS;
+  readonly bookSteps: readonly BookStep[] = [1, 2, 3, 4];
+  readonly stepNavKeys = STEP_NAV_KEYS;
 
   // ── Route ─────────────────────────────────────────────────────────────────
   readonly slug = computed(() => readBusinessSlugFromPathFromRoot(this.route));
 
   // ── Derived computeds ─────────────────────────────────────────────────────
   readonly minDate = this.minDateForCalendar.asReadonly();
-  readonly isLoggedIn = computed(() => this.session.hasSessionFor(this.slug()));
+  readonly isLoggedIn = computed(() => this.session.readyToBook(this.slug()));
 
   readonly loadingStep1 = computed(
     () => this.loadingBusiness() || this.loadingServices()
@@ -162,17 +168,20 @@ export class CustomerBookPageComponent implements OnInit {
     });
   });
 
-  readonly stepTitle = computed(() => STEP_TITLES[this.currentStep()]);
-  readonly progressPercent = computed(() => (this.currentStep() / 3) * 100);
+  readonly rescheduleMove = computed(() => {
+    const from = this.rescheduleFrom();
+    const toDate = this.formattedBookingDate();
+    const toTime = this.selectedSlot();
+    if (!this.rescheduleId() || !from || !toDate || !toTime) return null;
+    return {
+      from: `${this.formatVisitDate(from.date)} ${from.time}`,
+      to: `${toDate} ${toTime}`,
+    };
+  });
 
-  readonly guestPhoneValid = computed(() => /^05\d{8}$/.test(this.guestPhone()));
-
-  /** Used only for the hold-to-confirm disabled state on step 3. */
-  readonly canConfirm = computed(
-    () =>
-      !this.submitting() &&
-      (this.isLoggedIn() || (this.guestName().trim().length > 0 && this.guestPhoneValid()))
-  );
+  readonly stepTitle = computed(() => this.language.t(STEP_TITLE_KEYS[this.currentStep()]));
+  readonly progressPercent = computed(() => (this.currentStep() / 4) * 100);
+  readonly canConfirm = computed(() => !this.submitting());
 
   // ── Two-way binding shim for p-datePicker [(ngModel)] ──────────────────────
   get selectedDateValue(): Date | null {
@@ -180,6 +189,18 @@ export class CustomerBookPageComponent implements OnInit {
   }
   set selectedDateValue(v: Date | null) {
     this.selectedDate.set(v);
+  }
+
+  constructor() {
+    effect(() => {
+      this.currentStep();
+      untracked(() => queueMicrotask(() => this.stepHeading()?.nativeElement.focus()));
+    });
+    effect(() => {
+      const epoch = this.session.flowEpoch();
+      if (epoch === 0) return;
+      untracked(() => this.resetToStart());
+    });
   }
 
   ngOnInit(): void {
@@ -212,7 +233,8 @@ export class CustomerBookPageComponent implements OnInit {
             .getAvailabilityByBusinessId(
               params.businessId,
               params.serviceId,
-              params.dateStr
+              params.dateStr,
+              params.excludeAppointmentId
             )
             .pipe(
               catchError((err: unknown) => {
@@ -234,6 +256,9 @@ export class CustomerBookPageComponent implements OnInit {
       )
       .subscribe((res) => {
         this.slots.set(res.slots);
+        if (typeof res.durationMinutes === 'number' && typeof res.price === 'number') {
+          this.offer.set({ durationMinutes: res.durationMinutes, price: res.price });
+        }
         this.selectedSlot.set(null);
         this.slotsErrorDetail.set(null);
         this.loadingSlots.set(false);
@@ -264,9 +289,13 @@ export class CustomerBookPageComponent implements OnInit {
     const step = this.currentStep();
     if (step <= 1) {
       this.goToHome();
-    } else {
-      this.currentStep.set((step - 1) as BookStep);
+      return;
     }
+    if (step === 3 && this.skippedIdentify()) {
+      this.currentStep.set(1);
+      return;
+    }
+    this.currentStep.set((step - 1) as BookStep);
   }
 
   // ── Selection handlers — auto-advance ──────────────────────────────────────
@@ -282,8 +311,31 @@ export class CustomerBookPageComponent implements OnInit {
       this.slotsErrorDetail.set(null);
     }
     this.selectedService.set(svc);
-    // Brief pause so the card selection animation is visible, then advance.
-    setTimeout(() => this.currentStep.set(2), 320);
+    const slug = this.slug();
+    if (!slug) return;
+    this.publicApi.getSessionMe(slug).subscribe((result) => {
+      if (result.kind === 'ok') {
+        this.session.applyMe(slug, result.profile);
+        if (this.session.readyToBook(slug)) {
+          this.skippedIdentify.set(true);
+          this.currentStep.set(3);
+          return;
+        }
+        this.skippedIdentify.set(false);
+        this.identifyEntry.set(result.profile.hasCustomer ? 'birthday' : 'profile');
+        this.currentStep.set(2);
+        return;
+      }
+      this.session.clearSession(slug);
+      this.skippedIdentify.set(false);
+      this.identifyEntry.set('phone');
+      this.currentStep.set(2);
+    });
+  }
+
+  onIdentified(): void {
+    this.skippedIdentify.set(false);
+    this.currentStep.set(3);
   }
 
   onDateSelect(): void {
@@ -303,7 +355,7 @@ export class CustomerBookPageComponent implements OnInit {
     this.submitError.set(null);
     this.selectedSlot.set(slot);
     // Brief pause so the pill selection animation is visible, then advance.
-    setTimeout(() => this.currentStep.set(3), 320);
+    setTimeout(() => this.currentStep.set(4), 320);
   }
 
   // ── Step-2 helpers ─────────────────────────────────────────────────────────
@@ -338,12 +390,7 @@ export class CustomerBookPageComponent implements OnInit {
     const svc = this.selectedService();
     const dateStr = this.selectedDateStr();
     const time = this.selectedSlot();
-    const loggedIn = this.isLoggedIn();
-    const name = this.guestName().trim();
-    const phone = this.guestPhone().replace(/\D/g, '');
-
     if (!b || !svc || !dateStr || !time) return;
-    if (!loggedIn && (!name || !phone)) return;
 
     this.submitting.set(true);
     this.submitError.set(null);
@@ -353,22 +400,17 @@ export class CustomerBookPageComponent implements OnInit {
       serviceId: svc.id,
       date: dateStr,
       time,
-      customerName: !loggedIn ? name : undefined,
-      customerPhone: !loggedIn ? phone : undefined,
     });
+    const movingId = this.rescheduleId();
+    const request = movingId
+      ? this.publicApi.rescheduleAppointment(movingId, dateStr, time)
+      : this.publicApi.createAppointment(body);
 
-    this.publicApi.createAppointment(body).subscribe({
+    request.subscribe({
       next: (res) => {
         this.submitting.set(false);
         const slug = this.slug();
-        if (res.token && res.customerId && slug) {
-          this.session.setSession(
-            res.token,
-            slug,
-            res.customerId,
-            res.customerName ?? name
-          );
-        }
+        if (res.customerId) this.session.rememberCustomerId(res.customerId);
         if (slug) {
           this.router.navigate(['/b', slug], {
             state: {
@@ -399,7 +441,7 @@ export class CustomerBookPageComponent implements OnInit {
             life: 5000,
           });
           // Return to date+time step and refresh the slot grid.
-          this.currentStep.set(2);
+          this.currentStep.set(3);
           const b2 = this.business();
           const svc2 = this.selectedService();
           if (b2 && svc2 && dateStr) {
@@ -446,6 +488,15 @@ export class CustomerBookPageComponent implements OnInit {
 
   /** Pre-select service when opening e.g. `/b/:slug/book?service=:id` from the landing page. */
   private applyPresetServiceFromQuery(services: PublicService[]): void {
+    const reschedule = this.route.snapshot.queryParamMap.get('reschedule');
+    if (reschedule) {
+      this.rescheduleId.set(reschedule);
+      this.publicApi.getUpcomingAppointment().subscribe((res) => {
+        const list = res.appointments ?? (res.appointment ? [res.appointment] : []);
+        const match = list.find((row) => row.id === reschedule);
+        if (match) this.rescheduleFrom.set({ date: match.date, time: match.time });
+      });
+    }
     const id = this.route.snapshot.queryParamMap.get('service');
     if (!id) return;
     const match = services.find((s) => s.id === id);
@@ -488,7 +539,8 @@ export class CustomerBookPageComponent implements OnInit {
   }
 
   private loadSlots(businessId: string, serviceId: string, dateStr: string): void {
-    this.loadSlotsTrigger.next({ businessId, serviceId, dateStr });
+    const excludeAppointmentId = this.rescheduleId() ?? undefined;
+    this.loadSlotsTrigger.next({ businessId, serviceId, dateStr, excludeAppointmentId });
   }
 
   /**
@@ -504,10 +556,36 @@ export class CustomerBookPageComponent implements OnInit {
     const slug = this.slug();
     if (slug) {
       this.session.clearSession(slug);
-      this.showError('ההתחברות פגה, יש להתחבר מחדש');
-      void this.router.navigate(['/b', slug, 'login']);
+      this.skippedIdentify.set(false);
+      this.identifyEntry.set('phone');
+      this.currentStep.set(2);
+      this.showError(this.language.t('publicIdentity.genericError'));
     }
     return true;
+  }
+
+  private resetToStart(): void {
+    this.currentStep.set(1);
+    this.selectedService.set(null);
+    this.selectedDate.set(null);
+    this.selectedSlot.set(null);
+    this.slots.set([]);
+    this.offer.set(null);
+    this.skippedIdentify.set(false);
+    this.identifyEntry.set('phone');
+    this.rescheduleId.set(null);
+    this.rescheduleFrom.set(null);
+    this.submitError.set(null);
+  }
+
+  private formatVisitDate(dateStr: string): string {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    if (!year || !month || !day) return dateStr;
+    return new Date(year, month - 1, day).toLocaleDateString('he-IL', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    });
   }
 
   private showError(message: string): void {

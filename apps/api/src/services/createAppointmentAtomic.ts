@@ -28,6 +28,8 @@ export interface CreateAppointmentPayload {
   price?: number;
   /** Defaults to `confirmed` when omitted or invalid. */
   status?: AppointmentStatus;
+  /** The visit this one replaces, stored on the new row. */
+  rescheduledFrom?: Types.ObjectId | string;
 }
 
 export interface CreateAppointmentOptions {
@@ -37,6 +39,8 @@ export interface CreateAppointmentOptions {
   validateCustomerOwnership?: boolean;
   /** When updating an appointment, exclude this id from overlap check */
   excludeAppointmentId?: Types.ObjectId | string;
+  /** Join an existing transaction instead of starting one. */
+  session?: ClientSession;
 }
 
 export interface UpdateAppointmentAtomicInput {
@@ -194,6 +198,7 @@ export async function createAppointmentAtomic(
             status: resolvedStatus,
             source,
             notes: payload.notes,
+            rescheduledFrom: payload.rescheduledFrom,
           },
         ],
         { session }
@@ -214,10 +219,15 @@ export async function createAppointmentAtomic(
       status: resolvedStatus,
       source,
       notes: payload.notes,
+      rescheduledFrom: payload.rescheduledFrom,
     });
 
     return created;
   };
+
+  if (options.session) {
+    return runCreate(options.session);
+  }
 
   const session = await mongoose.startSession();
   try {

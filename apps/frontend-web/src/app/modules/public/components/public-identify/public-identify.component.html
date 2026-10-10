@@ -1,0 +1,140 @@
+<section class="identify" [attr.aria-busy]="busy()">
+  <h2 #heading class="identify-title" tabindex="-1" [attr.aria-live]="view() === 'blocked' ? 'assertive' : null">
+    @switch (view()) {
+      @case ('phone') { {{ 'publicIdentity.phoneTitle' | translate }} }
+      @case ('code') { {{ 'publicIdentity.codeTitle' | translate }} }
+      @case ('profile') { {{ 'publicIdentity.profileTitle' | translate }} }
+      @case ('birthday') { {{ 'publicIdentity.birthdayTitle' | translate }} }
+      @case ('greeting') { {{ 'publicIdentity.greetingTitle' | translate }} }
+      @case ('blocked') { {{ 'customers.onlineBookingUnavailable' | translate }} }
+    }
+  </h2>
+
+  @if (error(); as message) {
+    <p class="identify-error" role="alert">{{ message }}</p>
+  }
+
+  @switch (view()) {
+    @case ('phone') {
+      <form class="identify-form" (ngSubmit)="submitPhone()">
+        <label class="identify-label" for="identify-phone">{{ 'publicIdentity.phoneLabel' | translate }}</label>
+        <input
+          id="identify-phone"
+          class="identify-input"
+          type="tel"
+          inputmode="numeric"
+          autocomplete="tel"
+          maxlength="10"
+          [ngModel]="phone()"
+          (ngModelChange)="onPhoneInput($event)"
+          name="phone"
+          [attr.aria-invalid]="phone() && !phoneValid()"
+        />
+        @if (phone() && !phoneValid()) {
+          <p class="identify-hint" role="alert">{{ 'customers.phoneInvalid' | translate }}</p>
+        }
+        <button class="identify-submit" type="submit" [disabled]="busy() || !phoneValid()">
+          {{ 'publicIdentity.continue' | translate }}
+        </button>
+      </form>
+    }
+    @case ('code') {
+      <form class="identify-form" (ngSubmit)="submitCode()">
+        <label class="identify-label" for="identify-code">{{ 'publicIdentity.codeLabel' | translate }}</label>
+        <input
+          id="identify-code"
+          class="identify-input identify-input-code"
+          type="text"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          maxlength="6"
+          [ngModel]="code()"
+          (ngModelChange)="onCodeInput($event)"
+          name="code"
+        />
+        <button class="identify-submit" type="submit" [disabled]="busy() || code().length < 6">
+          {{ 'publicIdentity.verify' | translate }}
+        </button>
+        @if (canResend()) {
+          <button class="identify-text" type="button" (click)="resend()">
+            {{ 'publicIdentity.resend' | translate }}
+          </button>
+        }
+      </form>
+    }
+    @case ('profile') {
+      <form class="identify-form" (ngSubmit)="submitProfile()">
+        <label class="identify-label" for="identify-name">{{ 'publicIdentity.nameLabel' | translate }}</label>
+        <input
+          id="identify-name"
+          class="identify-input"
+          type="text"
+          autocomplete="name"
+          maxlength="200"
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event); error.set(null)"
+          name="name"
+        />
+        @if (showBirthday()) {
+          <fieldset class="identify-birthday">
+            <legend class="identify-label">{{ 'publicIdentity.birthdayLabel' | translate }}</legend>
+            <div class="identify-birthday-row">
+              <label class="identify-sr" for="identify-day">{{ 'publicIdentity.day' | translate }}</label>
+              <select id="identify-day" name="day" [ngModel]="day()" (ngModelChange)="onDay($event)">
+                <option [ngValue]="null">{{ 'publicIdentity.day' | translate }}</option>
+                @for (value of days; track value) {
+                  <option [ngValue]="value">{{ value }}</option>
+                }
+              </select>
+              <label class="identify-sr" for="identify-month">{{ 'publicIdentity.month' | translate }}</label>
+              <select id="identify-month" name="month" [ngModel]="month()" (ngModelChange)="onMonth($event)">
+                <option [ngValue]="null">{{ 'publicIdentity.month' | translate }}</option>
+                @for (value of months; track value) {
+                  <option [ngValue]="value">{{ monthLabel(value) }}</option>
+                }
+              </select>
+            </div>
+          </fieldset>
+        }
+        <button class="identify-submit" type="submit" [disabled]="busy()">
+          {{ 'publicIdentity.continue' | translate }}
+        </button>
+      </form>
+    }
+    @case ('birthday') {
+      <form class="identify-form" (ngSubmit)="submitBirthday()">
+        <fieldset class="identify-birthday">
+          <legend class="identify-label">{{ 'publicIdentity.birthdayLabel' | translate }}</legend>
+          <div class="identify-birthday-row">
+            <label class="identify-sr" for="identify-day-only">{{ 'publicIdentity.day' | translate }}</label>
+            <select id="identify-day-only" name="day" [ngModel]="day()" (ngModelChange)="onDay($event)">
+              <option [ngValue]="null">{{ 'publicIdentity.day' | translate }}</option>
+              @for (value of days; track value) {
+                <option [ngValue]="value">{{ value }}</option>
+              }
+            </select>
+            <label class="identify-sr" for="identify-month-only">{{ 'publicIdentity.month' | translate }}</label>
+            <select id="identify-month-only" name="month" [ngModel]="month()" (ngModelChange)="onMonth($event)">
+              <option [ngValue]="null">{{ 'publicIdentity.month' | translate }}</option>
+              @for (value of months; track value) {
+                <option [ngValue]="value">{{ monthLabel(value) }}</option>
+              }
+            </select>
+          </div>
+        </fieldset>
+        <button class="identify-submit" type="submit" [disabled]="busy()">
+          {{ 'publicIdentity.continue' | translate }}
+        </button>
+      </form>
+    }
+    @case ('greeting') {
+      <p class="identify-greeting" data-testid="identify-greeting">
+        {{ 'publicIdentity.hello' | translate: { name: firstName() } }}
+      </p>
+      <button class="identify-submit" type="button" (click)="continueFromGreeting()">
+        {{ 'publicIdentity.continue' | translate }}
+      </button>
+    }
+    @case ('blocked') {}
+  }
+</section>

@@ -93,6 +93,8 @@ export interface IBusinessSettings extends Document {
   };
   /** Public identify birthday field. Missing on older documents — treated as required. */
   birthdayField?: 'required' | 'optional' | 'hidden';
+  /** Hours before the visit that a client may still cancel or reschedule. Missing → 24. */
+  cancellationWindowHours?: number;
   /** Public contact phone shown on landing / booking CTA (optional). */
   businessPhonePublic?: string;
   /** Secondary hero / feature image URL for public landing. */
@@ -214,6 +216,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       threshold: { type: Number, default: 3, min: 1, max: 20 },
     },
     birthdayField: { type: String, enum: ['required', 'optional', 'hidden'], default: 'required' },
+    cancellationWindowHours: { type: Number, default: 24, min: 0, max: 24 * 30 },
     businessPhonePublic: { type: String, default: '' },
     localization: {
       language: { type: String, enum: ['he', 'en'], default: 'he' },

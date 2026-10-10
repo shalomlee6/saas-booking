@@ -1,10 +1,8 @@
-import { logger } from '../utils/logger';
-
 export interface SmsProvider {
   send(phone: string, text: string): Promise<void>;
 }
 
-/** Development only. Writes the message, including the OTP, to the API log. */
+/** Development only. Prints the OTP on stderr so it is visible without a log-level filter. */
 export class LogSmsProvider implements SmsProvider {
   constructor(nodeEnv: string = process.env.NODE_ENV ?? 'development') {
     if (nodeEnv === 'production') {
@@ -13,7 +11,8 @@ export class LogSmsProvider implements SmsProvider {
   }
 
   async send(phone: string, text: string): Promise<void> {
-    logger.info('sms_dev', { phone, text });
+    const code = text.match(/\d{6}/)?.[0] ?? text;
+    console.warn(`[DEV OTP] ${phone} → ${code}`);
   }
 }
 

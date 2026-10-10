@@ -23,8 +23,9 @@ export async function getAvailabilityForBusiness(
   businessId: Types.ObjectId,
   serviceId: string,
   dateStr: string,
-  customerId?: string
-): Promise<{ date: string; slots: string[] }> {
+  customerId?: string,
+  excludeAppointmentId?: string
+): Promise<{ date: string; slots: string[]; durationMinutes: number; price: number }> {
   const settings = await ensureBusinessSettings(businessId);
   if (!settings.features?.bookingEnabled) {
     throw new ForbiddenError('Booking is disabled for this business');
@@ -45,7 +46,7 @@ export async function getAvailabilityForBusiness(
   const dayStartUtcDate = dayStart.toUTC().toJSDate();
   const dayEndUtcDate = dayEnd.toUTC().toJSDate();
 
-  const existing = await Appointment.find({
+  const existingRows = await Appointment.find({
     businessId,
     status: { $in: ['confirmed', 'pending'] },
     start: { $lt: dayEndUtcDate },
@@ -53,9 +54,14 @@ export async function getAvailabilityForBusiness(
   })
     .select('start end status')
     .lean();
+  const existing = excludeAppointmentId
+    ? existingRows.filter((row) => row._id.toString() !== excludeAppointmentId)
+    : existingRows;
 
   const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
   const durationMinutes = override?.durationOverrideMinutes ?? service.durationMinutes ?? 30;
+  const price =
+    typeof override?.priceOverride === 'number' ? override.priceOverride : service.price ?? 0;
   const slotStep = openingHours.slotStepMinutes ?? 30;
 
   const overrideDoc = await AvailabilityOverride.findOne({ businessId, date: dateStr })
@@ -103,5 +109,5 @@ export async function getAvailabilityForBusiness(
     if (!overlaps) available.push(timeStr);
   }
 
-  return { date: dateStr, slots: available };
+  return { date: dateStr, slots: available, durationMinutes, price };
 }

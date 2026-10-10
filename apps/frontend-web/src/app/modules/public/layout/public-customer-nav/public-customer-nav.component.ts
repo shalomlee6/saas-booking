@@ -70,6 +70,8 @@ export class PublicCustomerNavComponent implements OnDestroy {
     return null;
   });
 
+  readonly showMyAppointments = computed(() => this.session.identityMode() === 'otp');
+
   readonly menuAriaLabel = computed(() =>
     this.menuOpen()
       ? this.language.t('navigation.publicCloseMenu')
@@ -113,15 +115,21 @@ export class PublicCustomerNavComponent implements OnDestroy {
     this.closeMenu();
   }
 
-  onLogout(): void {
+  onSwitchUser(): void {
     const slug = this.slug();
-    // Best-effort: clears the server-side httpOnly cookie so it can't keep authenticating
-    // requests as this customer after the client-side session is gone.
-    this.publicApi.logoutPublicCustomer().subscribe({ next: () => {}, error: () => {} });
-    this.session.clearSession(slug || undefined);
     this.closeMenu();
-    if (slug) {
-      void this.router.navigate(['/b', slug]);
+    const done = (): void => {
+      if (slug) this.session.clearSession(slug);
+      else this.session.clearSession();
+      this.session.bumpFlow();
+      if (slug) {
+        void this.router.navigate(['/b', slug, 'book'], { queryParams: { restart: Date.now() } });
+      }
+    };
+    if (!slug) {
+      done();
+      return;
     }
+    this.publicApi.logoutPublicCustomer(slug).subscribe({ next: done, error: done });
   }
 }

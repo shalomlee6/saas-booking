@@ -317,14 +317,6 @@ function isPublicBusinessGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/[^/]+\/business\/?(\?|$)/.test(req.url);
 }
 
-function isPublicRequestOtpPost(req: HttpRequest<unknown>): boolean {
-  return req.method === 'POST' && /\/api\/public\/[^/]+\/auth\/request-otp/.test(req.url);
-}
-
-function isPublicVerifyOtpPost(req: HttpRequest<unknown>): boolean {
-  return req.method === 'POST' && /\/api\/public\/[^/]+\/auth\/verify-otp/.test(req.url);
-}
-
 function isPublicAuthMeGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/auth\/me\/?(\?|$)/.test(req.url);
 }
@@ -1419,7 +1411,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     return from([new HttpResponse({ status: 200, body: { items, total, page, limit } })]);
   }
 
-  // ——— Public (customer booking: business by slug, request-otp, verify-otp) ———
+  // ——— Public (customer booking: business by slug) ———
   if (isPublicBusinessGet(req)) {
     const slug = getPublicSlugFromUrl(req.url);
     if (!slug) return next(req);
@@ -1446,28 +1438,6 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
             plan: 'free',
           },
         },
-      }),
-    ]);
-  }
-
-  if (isPublicRequestOtpPost(req)) {
-    const slug = getPublicSlugFromUrl(req.url);
-    if (!slug) return next(req);
-    return from([new HttpResponse({ status: 200, body: { ok: true } })]);
-  }
-
-  if (isPublicVerifyOtpPost(req)) {
-    const slug = getPublicSlugFromUrl(req.url);
-    if (!slug) return next(req);
-    const body = req.body as Record<string, unknown>;
-    const phone = String(body['phone'] ?? '');
-    const mockCustomerId = 'mock-public-customer-' + (phone || createMockId()).slice(-6);
-    const businessId = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug)?.['_id'] ?? 'mock-business-1';
-    const token = btoa(JSON.stringify({ customerId: mockCustomerId, businessId, role: 'client' }));
-    return from([
-      new HttpResponse({
-        status: 200,
-        body: { token, customerId: mockCustomerId, businessId: String(businessId) },
       }),
     ]);
   }

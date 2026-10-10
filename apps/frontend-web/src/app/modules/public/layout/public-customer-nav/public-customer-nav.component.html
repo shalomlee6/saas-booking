@@ -43,16 +43,18 @@
       <span class="public-nav-label">{{ 'navigation.publicHome' | translate }}</span>
     </a>
 
-    <a
-      class="public-nav-link"
-      [class.public-nav-link-active]="activeItem() === 'upcoming'"
-      [routerLink]="['/b', slug(), 'upcoming']"
-      [attr.aria-current]="activeItem() === 'upcoming' ? 'page' : null"
-      (click)="onNavClick()"
-    >
-      <i class="pi pi-calendar public-nav-icon" aria-hidden="true"></i>
-      <span class="public-nav-label">{{ 'navigation.publicUpcoming' | translate }}</span>
-    </a>
+    @if (showMyAppointments()) {
+      <a
+        class="public-nav-link"
+        [class.public-nav-link-active]="activeItem() === 'upcoming'"
+        [routerLink]="['/b', slug(), 'upcoming']"
+        [attr.aria-current]="activeItem() === 'upcoming' ? 'page' : null"
+        (click)="onNavClick()"
+      >
+        <i class="pi pi-calendar public-nav-icon" aria-hidden="true"></i>
+        <span class="public-nav-label">{{ 'navigation.myAppointments' | translate }}</span>
+      </a>
+    }
 
     <a
       class="public-nav-link"
@@ -77,9 +79,9 @@
       <span class="public-nav-label">{{ 'navigation.settings' | translate }}</span>
     </a>
 
-    <button type="button" class="public-nav-link public-nav-logout" (click)="onLogout()">
+    <button type="button" class="public-nav-link public-nav-logout" (click)="onSwitchUser()">
       <i class="pi pi-sign-out public-nav-icon" aria-hidden="true"></i>
-      <span class="public-nav-label">{{ 'navigation.logout' | translate }}</span>
+      <span class="public-nav-label">{{ 'navigation.switchUser' | translate }}</span>
     </button>
   </nav>
 </aside>

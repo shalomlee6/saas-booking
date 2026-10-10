@@ -13,6 +13,7 @@ export const publicAvailabilityQuerySchema = z
     businessId: mongoObjectIdString,
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
+    excludeAppointmentId: mongoObjectIdString.optional(),
   })
   .strip();
 
@@ -20,6 +21,7 @@ export const slugAvailabilityQuerySchema = z
   .object({
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
+    excludeAppointmentId: mongoObjectIdString.optional(),
   })
   .strip();
 
@@ -113,6 +115,13 @@ export const publicCreateAppointmentBodySchema = z
 export const publicCancelAppointmentParamsSchema = z
   .object({
     appointmentId: mongoObjectIdString,
+  })
+  .strip();
+
+export const publicRescheduleAppointmentBodySchema = z
+  .object({
+    date: yyyyMmDd,
+    time: hhMm,
   })
   .strip();
 

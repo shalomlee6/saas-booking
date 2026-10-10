@@ -8,7 +8,7 @@
       [modal]="true"
       [dismissible]="!cancelling()"
       [closeOnEscape]="!cancelling()"
-      appendTo="self"
+      appendTo="body"
     >
       <ng-template pTemplate="header">
         <span class="public-apt-details-title">{{ 'appointments.detailsTitle' | translate }}</span>
@@ -28,7 +28,7 @@
       [closeAriaLabel]="'appointments.close' | translate"
       (visibleChange)="onVisibleChange($event)"
       styleClass="public-apt-details-dialog"
-      appendTo="self"
+      appendTo="body"
     >
       <ng-container *ngTemplateOutlet="detailsBody; context: { $implicit: apt }" />
     </p-dialog>

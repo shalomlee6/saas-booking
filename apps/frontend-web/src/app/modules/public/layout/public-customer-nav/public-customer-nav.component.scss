@@ -23,9 +23,18 @@ $public-nav-topbar-height: 56px;
 }
 
 .public-nav-topbar-title {
+  position: absolute;
+  inset-inline: 3.25rem;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: center;
   font-size: 1.0625rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .public-nav-menu-btn {

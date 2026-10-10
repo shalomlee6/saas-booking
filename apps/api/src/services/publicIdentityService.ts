@@ -243,6 +243,7 @@ export async function completeIdentify(
 
 export async function readSessionProfile(session: PublicCustomer): Promise<{
   verified: boolean;
+  hasCustomer: boolean;
   needsBirthday: boolean;
   firstName?: string;
 }> {
@@ -252,11 +253,12 @@ export async function readSessionProfile(session: PublicCustomer): Promise<{
     ? await Customer.findOne({ _id: session.customerId, businessId: session.businessId }).lean()
     : null;
   const missing = !customer?.birthday?.day || !customer?.birthday?.month;
+  const hasCustomer = !!customer;
   const needsBirthday = field === 'required' && (!customer || missing);
   if (!session.verified || !customer) {
-    return { verified: session.verified, needsBirthday };
+    return { verified: session.verified, hasCustomer, needsBirthday };
   }
-  return { verified: true, needsBirthday, firstName: firstNameOf(customer) };
+  return { verified: true, hasCustomer, needsBirthday, firstName: firstNameOf(customer) };
 }
 
 export async function saveBirthdayField(

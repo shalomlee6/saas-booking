@@ -3,22 +3,13 @@ import { inject } from '@angular/core';
 import { PublicSessionService } from '../services/public-session.service';
 
 /**
- * Adds Authorization: Bearer <token> to all requests that require public customer identity.
- *
- * Rule: any request whose URL contains `/api/public/appointments` or
- * `/api/public/auth/me` gets the token when present. This covers:
- *  - POST   /api/public/appointments          (booking creation)
- *  - GET    /api/public/appointments/upcoming (customer upcoming appointments)
- *  - DELETE /api/public/appointments/:id      (customer cancellation)
- *  - GET    /api/public/auth/me               (hydrate session on load)
- *
- * The token is sourced from PublicSessionService (localStorage).
- * If no token exists the request proceeds without a Bearer header (the
- * browser may still send the public customer HTTP-only cookie on `/api/public/*`).
+ * Adds Authorization: Bearer <token> when a public client token exists.
+ * The live session is the httpOnly cookie on `/api/public/*`. getToken() is
+ * null for that cookie session, so these requests still go out and the
+ * browser attaches the cookie.
  */
 export const publicCustomerAuthInterceptor: HttpInterceptorFn = (req, next) => {
-  const needsCustomerAuth =
-    req.url.includes('/api/public/appointments') || req.url.includes('/api/public/auth/me');
+  const needsCustomerAuth = req.url.includes('/api/public/appointments');
   if (!needsCustomerAuth) {
     return next(req);
   }

@@ -6,6 +6,8 @@ import { OtpChallenge } from '../models/OtpChallenge';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { BusinessSettings } from '../models/BusinessSettings';
+import { AuditLog } from '../models/AuditLog';
+import { PublicClientSession } from '../models/PublicClientSession';
 import { Service } from '../models/Service';
 
 const app = buildTestApp();
@@ -250,6 +252,7 @@ describe('PUBLIC BOOKING', () => {
     tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
     const date = tomorrow.toISOString().slice(0, 10);
 
+    await BusinessSettings.updateOne({ businessId: business._id }, { $set: { cancellationWindowHours: 0 } });
     const created = await request(app).post('/api/public/appointments').send({
       businessId: business._id.toString(),
       serviceId: service._id.toString(),
@@ -336,5 +339,228 @@ describe('PUBLIC BOOKING', () => {
     expect(kept.body.message).toBe('יש להזין מספר נייד ישראלי: 05 ואחריו 8 ספרות.');
     const raw = await Customer.findOne({ name: 'Other Guest' });
     expect(raw).toBeNull();
+  });
+
+  it('cancels inside the window and refuses outside it', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const token = await verifiedSession(business.slug, '0501234567');
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+    const insideStart = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const outsideStart = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const inside = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start: insideStart,
+      end: new Date(insideStart.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    const outside = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start: outsideStart,
+      end: new Date(outsideStart.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+
+    const blocked = await request(app)
+      .delete(`/api/public/appointments/${outside._id.toString()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cancellationReason: 'too soon' });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.code).toBe('OUTSIDE_CANCELLATION_WINDOW');
+    expect((await Appointment.findById(outside._id))?.status).toBe('confirmed');
+
+    const ok = await request(app)
+      .delete(`/api/public/appointments/${inside._id.toString()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cancellationReason: 'plans changed' });
+    expect(ok.status).toBe(200);
+    expect((await Appointment.findById(inside._id))?.status).toBe('cancelled');
+    const audit = await AuditLog.findOne({
+      action: 'appointment.cancelled_by_customer',
+      entityId: inside._id.toString(),
+    });
+    expect(audit?.metadata?.actor).toBe('customer');
+    expect(audit?.actorEmail).toBe('0501234567');
+  });
+
+  it('reschedules by creating the new visit before cancelling the old one', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const token = await verifiedSession(business.slug, '0501234567');
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+    const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    start.setUTCHours(10, 0, 0, 0);
+    const original = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start,
+      end: new Date(start.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    const blockerStart = new Date(start.getTime());
+    blockerStart.setUTCHours(15, 0, 0, 0);
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start: blockerStart,
+      end: new Date(blockerStart.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'owner',
+    });
+
+    const date = start.toISOString().slice(0, 10);
+    const failed = await request(app)
+      .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ date, time: '15:00' });
+    expect(failed.status).toBe(409);
+    const kept = await Appointment.findById(original._id);
+    expect(kept?.status).toBe('confirmed');
+    expect(kept?.rescheduledTo).toBeUndefined();
+    expect(await Appointment.countDocuments({ customerId: customer!._id, status: 'confirmed' })).toBe(2);
+
+    const moved = await request(app)
+      .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ date, time: '18:00' });
+    expect(moved.status).toBe(201);
+    const originalAfter = await Appointment.findById(original._id);
+    expect(originalAfter?.status).toBe('cancelled');
+    expect(originalAfter?.cancellationReason).toBe('rescheduled');
+    expect(originalAfter?.rescheduledTo?.toString()).toBe(moved.body.id);
+    const created = await Appointment.findById(moved.body.id);
+    expect(created?.status).toBe('confirmed');
+    expect(created?.customerId?.toString()).toBe(customer!._id.toString());
+    expect(created?.rescheduledFrom?.toString()).toBe(original._id.toString());
+    expect(await Appointment.countDocuments({ customerId: customer!._id, status: 'confirmed' })).toBe(2);
+    const audits = await AuditLog.find({ action: 'appointment.rescheduled_by_customer' });
+    expect(audits.length).toBe(2);
+    expect(audits.every((row) => row.metadata?.actor === 'customer' && row.actorEmail === '0501234567')).toBe(true);
+    const ids = audits.map((row) => row.entityId).sort();
+    expect(ids).toEqual([original._id.toString(), moved.body.id].sort());
+  });
+
+  it('allows a move that overlaps the original visit and rejects one outside the window', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const token = await verifiedSession(business.slug, '0501234567');
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+    const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    start.setUTCHours(10, 0, 0, 0);
+    const original = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start,
+      end: new Date(start.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    const soon = new Date(Date.now() + 2 * 60 * 60 * 1000);
+    const outside = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start: soon,
+      end: new Date(soon.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+
+    const shifted = await request(app)
+      .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ date: start.toISOString().slice(0, 10), time: '10:30' });
+    expect(shifted.status).toBe(201);
+    expect((await Appointment.findById(original._id))?.status).toBe('cancelled');
+    expect((await Appointment.findById(shifted.body.id))?.status).toBe('confirmed');
+
+    const blocked = await request(app)
+      .post(`/api/public/appointments/${outside._id.toString()}/reschedule`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ date: soon.toISOString().slice(0, 10), time: '18:00' });
+    expect(blocked.status).toBe(409);
+    expect(blocked.body.code).toBe('OUTSIDE_CANCELLATION_WINDOW');
+    expect((await Appointment.findById(outside._id))?.status).toBe('confirmed');
+  });
+
+  it('refuses to reschedule someone else\'s appointment', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    await Customer.create({ businessId: business._id, name: 'Other Client', phone: '0507654321' });
+    const ownerToken = await verifiedSession(business.slug, '0501234567');
+    const otherToken = await verifiedSession(business.slug, '0507654321');
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+    const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    start.setUTCHours(10, 0, 0, 0);
+    const original = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start,
+      end: new Date(start.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    expect(ownerToken).not.toBe(otherToken);
+    const moved = await request(app)
+      .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .send({ date: start.toISOString().slice(0, 10), time: '12:00' });
+    expect(moved.status).toBe(404);
+    expect((await Appointment.findById(original._id))?.status).toBe('confirmed');
+    expect(await Appointment.countDocuments({ customerId: customer!._id })).toBe(1);
+  });
+
+  it('refuses cancel and reschedule for an unverified session', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const token = await verifiedSession(business.slug, '0501234567');
+    await PublicClientSession.updateOne(
+      { sessionId: token },
+      { $set: { 'bindings.0.verified': false } }
+    );
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+    const start = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    const apt = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start,
+      end: new Date(start.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    const date = start.toISOString().slice(0, 10);
+    const cancel = await request(app)
+      .delete(`/api/public/appointments/${apt._id.toString()}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ cancellationReason: 'no' });
+    expect(cancel.status).toBe(401);
+    const moved = await request(app)
+      .post(`/api/public/appointments/${apt._id.toString()}/reschedule`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ date, time: '16:00' });
+    expect(moved.status).toBe(401);
+    expect((await Appointment.findById(apt._id))?.status).toBe('confirmed');
   });
 });

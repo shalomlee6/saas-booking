@@ -42,15 +42,17 @@
           <p class="pl-greeting__sub pl-intro-text pl-intro-text--4">{{ greetingSub }}</p>
         </div>
 
-        <app-public-landing-next-appointment
-          [loading]="loadingUpcoming()"
-          [apt]="displayApt()"
-          [error]="upcomingError()"
-          [staffLine]="''"
-          (book)="goToBook()"
-          (open)="goToUpcoming()"
-          (edit)="openAppointmentDetails()"
-        />
+        @if (showClientAppointments()) {
+          <app-public-landing-next-appointment
+            [loading]="loadingUpcoming()"
+            [apt]="displayApt()"
+            [error]="upcomingError()"
+            [staffLine]="''"
+            (book)="goToBook()"
+            (open)="goToUpcoming()"
+            (edit)="openAppointmentDetails()"
+          />
+        }
       </div>
     </div>
 

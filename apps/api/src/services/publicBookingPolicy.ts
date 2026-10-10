@@ -16,6 +16,21 @@ export const ONLINE_BOOKING_UNAVAILABLE = {
   en: "Online booking isn't available. Please contact the business.",
 } as const;
 
+/** Hours before the visit during which the client can still cancel or reschedule. */
+export const DEFAULT_CANCELLATION_WINDOW_HOURS = 24;
+
+export function resolveCancellationWindowHours(value: unknown): number {
+  if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 24 * 30) {
+    return value;
+  }
+  return DEFAULT_CANCELLATION_WINDOW_HOURS;
+}
+
+/** True when the visit is still at least `hours` away. */
+export function isInsideCancellationWindow(start: Date, hours: number, now = new Date()): boolean {
+  return start.getTime() - now.getTime() >= hours * 60 * 60 * 1000;
+}
+
 export const PUBLIC_MOBILE_REQUIRED = {
   he: 'יש להזין מספר נייד ישראלי: 05 ואחריו 8 ספרות.',
   en: 'Enter an Israeli mobile: 05 followed by 8 digits.',

@@ -330,6 +330,8 @@ export class PublicLandingComponent implements OnInit {
   readonly upcomingError = signal(false);
   readonly justBookedApt = signal<UpcomingAppointment | null>(null);
 
+  readonly showClientAppointments = computed(() => this.session.hasSessionFor(this.businessSlug()));
+
   readonly displayApt = computed(
     () => this.upcomingApt() ?? this.justBookedApt()
   );
@@ -514,7 +516,7 @@ export class PublicLandingComponent implements OnInit {
     const stateCustomerId = (state['customerId'] as string | null | undefined) ?? null;
     const identityMatch = stateCustomerId === currentCustomerId;
 
-    if (aptData && identityMatch) {
+    if (aptData && identityMatch && this.session.hasSessionFor(slug)) {
       this.justBookedApt.set(aptData);
     }
 
@@ -579,6 +581,10 @@ export class PublicLandingComponent implements OnInit {
   onEditAppointment(): void {
     const apt = this.detailsApt() ?? this.displayApt();
     this.detailsApt.set(null);
-    this.goToBook(apt?.serviceId);
+    const slug = this.businessSlug();
+    if (!slug || !apt?.serviceId) return;
+    void this.router.navigate(['/b', slug, 'book'], {
+      queryParams: { service: apt.serviceId, reschedule: apt.id },
+    });
   }
 }

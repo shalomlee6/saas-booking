@@ -169,6 +169,39 @@ describe('PUBLIC CLIENT IDENTITY', () => {
     expect(secondCode).not.toBe(firstCode);
   });
 
+  it('identify/start in otp mode in development calls the provider', async () => {
+    process.env.IDENTITY_MODE = 'otp';
+    const provider = installSmsProvider('development');
+    const calls: string[] = [];
+    const originalSend = provider.send.bind(provider);
+    provider.send = async (phone: string, text: string) => {
+      calls.push(`${phone}|${text}`);
+      await originalSend(phone, text);
+    };
+    const warnings: string[] = [];
+    const previousWarn = console.warn;
+    console.warn = (...args: unknown[]) => {
+      warnings.push(args.map((part) => String(part)).join(' '));
+    };
+    const phone = '0505555555';
+    let startStatus = 0;
+    try {
+      const { business } = await seedOwner();
+      const start = await request(app)
+        .post(`/api/public/businesses/${business.slug}/identify/start`)
+        .send({ phone });
+      startStatus = start.status;
+      const code = await otpCode(business.slug, phone);
+      expect(provider instanceof LogSmsProvider).toBe(true);
+      expect(calls.length).toBe(1);
+      expect(calls[0]).toBe(`${phone}|קוד האימות שלך: ${code}`);
+      expect(warnings.includes(`[DEV OTP] ${phone} → ${code}`)).toBe(true);
+    } finally {
+      console.warn = previousWarn;
+    }
+    expect(startStatus).toBe(200);
+  });
+
   it('refuses the log SMS provider in production and leaves TextMe unconfigured', async () => {
     let refused = false;
     try {
