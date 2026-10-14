@@ -13,11 +13,10 @@ import {
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SkeletonModule } from 'primeng/skeleton';
-import { Subject, EMPTY, fromEvent, interval, filter, switchMap, catchError } from 'rxjs';
+import { Subject, EMPTY, fromEvent, interval, filter, map, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   PublicApiService,
@@ -27,16 +26,13 @@ import {
 import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
 import { PublicIdentifyComponent } from '../../components/public-identify/public-identify.component';
-import {
-  formatParsedErrorForUi,
-  friendlyPublicBookingError,
-  parseHttpClientError,
-} from '../../../../shared/utils/http-field-errors.util';
+import { publicErrorTranslationKey } from '../../utils/public-error-message';
 import {
   buildPublicCreateAppointmentBody,
-  toDateKeyInBusinessTimezone,
+  calendarDayInTimezone,
+  dateKeyFromPicker,
+  DEFAULT_PUBLIC_TIMEZONE,
 } from '../../dto/public-booking-dto.adapter';
-import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
@@ -58,13 +54,6 @@ const STEP_NAV_KEYS: Record<BookStep, string> = {
   4: 'publicBook.confirmNav',
 };
 
-/** Local calendar day at 00:00 — used for minDate and midnight refresh. */
-function startOfDay(d: Date): Date {
-  const out = new Date(d);
-  out.setHours(0, 0, 0, 0);
-  return out;
-}
-
 @Component({
   selector: 'app-customer-book-page',
   standalone: true,
@@ -84,9 +73,7 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly publicApi = inject(PublicApiService);
-  private readonly messageService = inject(MessageService);
   private readonly session = inject(PublicSessionService);
-  private readonly auth = inject(AuthService);
   readonly language = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);
@@ -99,8 +86,12 @@ export class CustomerBookPageComponent implements OnInit {
     excludeAppointmentId?: string;
   }>();
 
-  /** Refreshed on visibility, timer, and init so “today” advances after midnight. */
-  private readonly minDateForCalendar = signal<Date>(startOfDay(new Date()));
+  /** Refreshed on visibility, timer, and init so “today” is the business calendar day. */
+  private readonly minDateForCalendar = signal<Date>(
+    calendarDayInTimezone(new Date(), DEFAULT_PUBLIC_TIMEZONE)
+  );
+  /** Latest service tap wins; a slower session response cannot move the step. */
+  private readonly sessionCheckTrigger = new Subject<void>();
 
   // ── Data signals ───────────────────────────────────────────────────────────
   readonly business = signal<PublicBusinessForBooking | null>(null);
@@ -126,6 +117,8 @@ export class CustomerBookPageComponent implements OnInit {
   readonly submitting = signal(false);
   readonly step1LoadError = signal<string | null>(null);
   readonly submitError = signal<string | null>(null);
+  /** Shown on the time step after a taken slot, once the refreshed list arrives. */
+  private slotNotice: string | null = null;
 
   // ── Step navigation ────────────────────────────────────────────────────────
   readonly currentStep = signal<BookStep>(1);
@@ -153,9 +146,7 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDateStr = computed(() => {
     const d = this.selectedDate();
     if (!d) return '';
-    const tz =
-      this.business()?.localization?.timezone ?? this.auth.businessTimezone();
-    return toDateKeyInBusinessTimezone(d, tz);
+    return dateKeyFromPicker(d);
   });
 
   readonly formattedBookingDate = computed(() => {
@@ -205,13 +196,14 @@ export class CustomerBookPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.wireSlotsLoadPipeline();
+    this.wireSessionCheck();
     this.wireMinDateRefresh();
 
     const slug = this.slug();
     if (!slug) {
       this.loadingBusiness.set(false);
       this.loadingServices.set(false);
-      this.showError('חסר מזהה עסק');
+      this.step1LoadError.set(this.language.t('publicErrors.unknown'));
       return;
     }
     this.loadBusiness(slug);
@@ -244,10 +236,9 @@ export class CustomerBookPageComponent implements OnInit {
                 }
                 this.loadingSlots.set(false);
                 this.slotsError.set(true);
-                this.slotsErrorDetail.set(
-                  formatParsedErrorForUi(parseHttpClientError(err)) ??
-                    'שגיאה בטעינת השעות'
-                );
+                const notice = this.slotNotice;
+                this.slotNotice = null;
+                this.slotsErrorDetail.set(notice ?? this.language.t(publicErrorTranslationKey(err)));
                 return EMPTY;
               })
             );
@@ -260,26 +251,35 @@ export class CustomerBookPageComponent implements OnInit {
           this.offer.set({ durationMinutes: res.durationMinutes, price: res.price });
         }
         this.selectedSlot.set(null);
-        this.slotsErrorDetail.set(null);
+        const notice = this.slotNotice;
+        this.slotNotice = null;
+        if (notice) {
+          this.slotsError.set(true);
+          this.slotsErrorDetail.set(notice);
+        } else {
+          this.slotsErrorDetail.set(null);
+        }
         this.loadingSlots.set(false);
       });
   }
 
-  /** Keeps calendar “today” correct across midnight and when returning to the tab. */
+  /** Keeps calendar “today” on the business calendar across midnight and when returning to the tab. */
+  private refreshMinDate(): void {
+    const tz = this.business()?.localization?.timezone || DEFAULT_PUBLIC_TIMEZONE;
+    this.minDateForCalendar.set(calendarDayInTimezone(new Date(), tz));
+  }
+
   private wireMinDateRefresh(): void {
-    const bump = (): void => {
-      this.minDateForCalendar.set(startOfDay(new Date()));
-    };
-    bump();
+    this.refreshMinDate();
     fromEvent(this.doc, 'visibilitychange')
       .pipe(
         filter(() => this.doc.visibilityState === 'visible'),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => bump());
+      .subscribe(() => this.refreshMinDate());
     interval(60_000)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => bump());
+      .subscribe(() => this.refreshMinDate());
   }
 
 
@@ -311,26 +311,39 @@ export class CustomerBookPageComponent implements OnInit {
       this.slotsErrorDetail.set(null);
     }
     this.selectedService.set(svc);
-    const slug = this.slug();
-    if (!slug) return;
-    this.publicApi.getSessionMe(slug).subscribe((result) => {
-      if (result.kind === 'ok') {
-        this.session.applyMe(slug, result.profile);
-        if (this.session.readyToBook(slug)) {
-          this.skippedIdentify.set(true);
-          this.currentStep.set(3);
+    if (!this.slug()) return;
+    this.sessionCheckTrigger.next();
+  }
+
+  /** Drops an in-flight session read when the visitor picks another service or leaves. */
+  private wireSessionCheck(): void {
+    this.sessionCheckTrigger
+      .pipe(
+        switchMap(() => {
+          const slug = this.slug();
+          if (!slug) return EMPTY;
+          return this.publicApi.getSessionMe(slug).pipe(map((result) => ({ slug, result })));
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ slug, result }) => {
+        if (result.kind === 'ok') {
+          this.session.applyMe(slug, result.profile);
+          if (this.session.readyToBook(slug)) {
+            this.skippedIdentify.set(true);
+            this.currentStep.set(3);
+            return;
+          }
+          this.skippedIdentify.set(false);
+          this.identifyEntry.set(result.profile.hasCustomer ? 'birthday' : 'profile');
+          this.currentStep.set(2);
           return;
         }
+        this.session.clearSession(slug);
         this.skippedIdentify.set(false);
-        this.identifyEntry.set(result.profile.hasCustomer ? 'birthday' : 'profile');
+        this.identifyEntry.set('phone');
         this.currentStep.set(2);
-        return;
-      }
-      this.session.clearSession(slug);
-      this.skippedIdentify.set(false);
-      this.identifyEntry.set('phone');
-      this.currentStep.set(2);
-    });
+      });
   }
 
   onIdentified(): void {
@@ -428,31 +441,17 @@ export class CustomerBookPageComponent implements OnInit {
         if (this.handleUnauthorizedPublicSession(err)) {
           return;
         }
+        const msg = this.language.t(publicErrorTranslationKey(err));
         if (err?.status === 409 && err?.error?.code === 'SLOT_TAKEN') {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'תפוס',
-            detail: 'התור נתפס, בחרי שעה אחרת',
-            life: 5000,
-          });
-          // Return to date+time step and refresh the slot grid.
+          this.slotNotice = msg;
           this.currentStep.set(3);
           const b2 = this.business();
           const svc2 = this.selectedService();
           if (b2 && svc2 && dateStr) {
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
-        } else if (err?.error?.code === 'ONLINE_BOOKING_UNAVAILABLE') {
-          const msg = this.language.t('customers.onlineBookingUnavailable');
-          this.submitError.set(msg);
-          this.showError(msg);
-          this.showHoldButton.set(false);
-          setTimeout(() => this.showHoldButton.set(true), 50);
         } else {
-          const msg = friendlyPublicBookingError(err);
           this.submitError.set(msg);
-          this.showError(msg);
-          // Destroy and recreate hold-to-confirm so the ring resets.
           this.showHoldButton.set(false);
           setTimeout(() => this.showHoldButton.set(true), 50);
         }
@@ -479,11 +478,22 @@ export class CustomerBookPageComponent implements OnInit {
   private applyPresetServiceFromQuery(services: PublicService[]): void {
     const reschedule = this.route.snapshot.queryParamMap.get('reschedule');
     if (reschedule) {
-      this.rescheduleId.set(reschedule);
-      this.publicApi.getUpcomingAppointment().subscribe((res) => {
+      this.publicApi.getUpcomingAppointment().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((res) => {
         const list = res.appointments ?? (res.appointment ? [res.appointment] : []);
         const match = list.find((row) => row.id === reschedule);
-        if (match) this.rescheduleFrom.set({ date: match.date, time: match.time });
+        if (!match?.canChange) {
+          this.rescheduleId.set(null);
+          this.rescheduleFrom.set(null);
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { reschedule: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+          return;
+        }
+        this.rescheduleId.set(reschedule);
+        this.rescheduleFrom.set({ date: match.date, time: match.time });
       });
     }
     const id = this.route.snapshot.queryParamMap.get('service');
@@ -499,13 +509,13 @@ export class CustomerBookPageComponent implements OnInit {
     this.publicApi.getBusinessForBooking(slug).subscribe({
       next: (data) => {
         this.business.set(data);
+        this.refreshMinDate();
         this.step1LoadError.set(null);
         this.loadingBusiness.set(false);
       },
       error: (err) => {
         this.loadingBusiness.set(false);
-        this.step1LoadError.set(err?.error?.message ?? 'שגיאה בטעינת העסק');
-        this.showError(err?.error?.message ?? 'שגיאה בטעינת העסק');
+        this.step1LoadError.set(this.language.t(publicErrorTranslationKey(err)));
       },
     });
   }
@@ -521,8 +531,7 @@ export class CustomerBookPageComponent implements OnInit {
       },
       error: (err) => {
         this.loadingServices.set(false);
-        this.step1LoadError.set(err?.error?.message ?? 'שגיאה בטעינת השירותים');
-        this.showError(err?.error?.message ?? 'שגיאה בטעינת השירותים');
+        this.step1LoadError.set(this.language.t(publicErrorTranslationKey(err)));
       },
     });
   }
@@ -548,7 +557,6 @@ export class CustomerBookPageComponent implements OnInit {
       this.skippedIdentify.set(false);
       this.identifyEntry.set('phone');
       this.currentStep.set(2);
-      this.showError(this.language.t('publicIdentity.genericError'));
     }
     return true;
   }
@@ -577,12 +585,4 @@ export class CustomerBookPageComponent implements OnInit {
     });
   }
 
-  private showError(message: string): void {
-    this.messageService.add({
-      severity: 'error',
-      summary: 'שגיאה',
-      detail: message,
-      life: 5000,
-    });
-  }
 }

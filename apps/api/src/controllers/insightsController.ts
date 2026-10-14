@@ -5,6 +5,8 @@ import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { assertTenantAnalyticsAllowed } from '../utils/planPolicy';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { insightsPeriodStart } from '../listQuery/dateRange';
 import { logger } from '../utils/logger';
 
 type InsightsPeriod = 'week' | 'month' | 'year';
@@ -13,21 +15,6 @@ function parseInsightsPeriod(query: unknown): InsightsPeriod {
   const p = typeof query === 'string' ? query.toLowerCase() : '';
   if (p === 'week' || p === 'month' || p === 'year') return p;
   return 'month';
-}
-
-/** Start of the current calendar week (Sunday 00:00), month, or year in server local time. */
-function periodStart(period: InsightsPeriod): Date {
-  const now = new Date();
-  if (period === 'year') {
-    return new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-  }
-  if (period === 'month') {
-    return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  }
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
 }
 
 /**
@@ -57,7 +44,9 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       throw planErr;
     }
     const period = parseInsightsPeriod(req.query?.period);
-    const rangeStart = periodStart(period);
+    const settings = await ensureBusinessSettings(businessIdObj);
+    const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
+    const rangeStart = insightsPeriodStart(period, timezone);
     /** Revenue is completed visits only. Pending, confirmed, and no-show are not income. */
     const revenueMatch = {
       businessId: businessIdObj,
@@ -94,7 +83,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       ]),
       Appointment.aggregate([
         { $match: revenueMatch },
-        { $project: { weekday: { $dayOfWeek: '$start' }, price: { $ifNull: ['$price', 0] } } },
+        { $project: { weekday: { $dayOfWeek: { date: '$start', timezone } }, price: { $ifNull: ['$price', 0] } } },
         { $group: { _id: '$weekday', total: { $sum: '$price' } } },
       ]),
       Appointment.distinct('customerId', {

@@ -25,6 +25,11 @@ describe('service list config', () => {
     onBulkSetActive: () => undefined,
   });
 
+  it('explains that the bookings column counts every status', () => {
+    const bookings = config.columns.find((column) => column.id === 'bookings');
+    expect(bookings?.headerHint).toBe('services.columnBookingsHint');
+  });
+
   it('uses only sort fields the services API allowlist accepts', () => {
     expect(BACKEND_SORT_ALLOWLIST.length).toBe(SERVICE_LIST_SORT_FIELDS.length);
     for (const field of SERVICE_LIST_SORT_FIELDS) {

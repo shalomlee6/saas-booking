@@ -6,7 +6,7 @@ import { defaultOpeningHours } from '../models/BusinessSettings';
 import { Service } from '../models/Service';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
-import { buildSlotsFromMergedRanges } from './publicBookingTime';
+import { buildSlotsFromMergedRanges, isFutureSlotStart } from './publicBookingTime';
 import { ForbiddenError, NotFoundError } from '../errors/httpErrors';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 
@@ -24,7 +24,8 @@ export async function getAvailabilityForBusiness(
   serviceId: string,
   dateStr: string,
   customerId?: string,
-  excludeAppointmentId?: string
+  excludeAppointmentId?: string,
+  now: Date = new Date()
 ): Promise<{ date: string; slots: string[]; durationMinutes: number; price: number }> {
   const settings = await ensureBusinessSettings(businessId);
   if (!settings.features?.bookingEnabled) {
@@ -92,7 +93,10 @@ export async function getAvailabilityForBusiness(
       millisecond: 0,
     });
 
-    const slotStartMs = slotStartLocal.toUTC().toMillis();
+    const slotStart = slotStartLocal.toJSDate();
+    if (!isFutureSlotStart(slotStart, now)) continue;
+
+    const slotStartMs = slotStart.getTime();
     const slotEndMs = slotStartLocal.plus({ minutes: durationMinutes }).toUTC().toMillis();
 
     let overlaps = false;

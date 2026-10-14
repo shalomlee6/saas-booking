@@ -18,7 +18,21 @@ import {
 } from '../../services/growth-brain.service';
 
 const VIP_THRESHOLD = 500;
-const CANCELLED_STATUSES = new Set(['cancelled', 'canceled']);
+const NEXT_ROW_SKIPPED = new Set(['cancelled', 'canceled', 'completed', 'done', 'no_show']);
+
+/** The next agenda row is the soonest visit that has not ended and is still pending or confirmed. */
+export function nextAgendaAppointmentId(
+  list: { _id: string; end: Date; status?: string | null }[],
+  nowMs: number
+): string | null {
+  return (
+    list.find(
+      (appointment) =>
+        appointment.end.getTime() > nowMs &&
+        !NEXT_ROW_SKIPPED.has((appointment.status ?? '').toLowerCase())
+    )?._id ?? null
+  );
+}
 
 const PERIOD_LABEL_KEYS: Record<InsightsPeriod, string> = {
   week: 'dashboard.periodLabelWeek',
@@ -147,12 +161,7 @@ export class DashboardComponent {
 
   readonly todayAgendaState$ = combineLatest([this.todayAppointments$, this.language$]).pipe(
     map(([list]): AgendaState => {
-      const nextId =
-        list.find(
-          (a) =>
-            a.end.getTime() > this.now.getTime() &&
-            !CANCELLED_STATUSES.has((a.status ?? '').toLowerCase())
-        )?._id ?? null;
+      const nextId = nextAgendaAppointmentId(list, this.now.getTime());
 
       const rows: AgendaRow[] = list.map((a) => ({
         apt: a,

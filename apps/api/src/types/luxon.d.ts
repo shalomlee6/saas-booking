@@ -1,6 +1,13 @@
 declare module 'luxon' {
   export interface DateTime {
     isValid: boolean;
+    /** 1 = January … 12 = December, in this DateTime's zone. */
+    month: number;
+    /** Calendar day of the month in this DateTime's zone. */
+    day: number;
+    /** Calendar year in this DateTime's zone. */
+    year: number;
+    /** 1 = Monday … 7 = Sunday, in this DateTime's zone. */
     weekday: number;
     toUTC(): DateTime;
     toJSDate(): Date;

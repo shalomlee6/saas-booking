@@ -299,5 +299,13 @@ export function computeCustomerInsights(stats: CustomerStats, now: Date = new Da
     });
   }
 
+  if (stats.noShows >= 1 && stats.nextAppointment) {
+    insights.push({
+      code: 'HAS_UPCOMING_NO_SHOW_RISK',
+      severity: 'warning',
+      data: { noShows: stats.noShows },
+    });
+  }
+
   return insights;
 }

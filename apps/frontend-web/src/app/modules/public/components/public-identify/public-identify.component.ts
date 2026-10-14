@@ -1,5 +1,6 @@
 import {
   Component,
+  DestroyRef,
   ElementRef,
   OnDestroy,
   OnInit,
@@ -11,8 +12,8 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { HttpErrorResponse } from '@angular/common/http';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { PublicApiService } from '../../services/public-api.service';
@@ -23,6 +24,7 @@ import {
   type BirthdayField,
   type PublicClientProfile,
 } from '../../services/public-identity.rules';
+import { publicErrorTranslationKey } from '../../utils/public-error-message';
 
 type IdentifyView = 'phone' | 'code' | 'profile' | 'birthday' | 'greeting' | 'blocked';
 
@@ -36,6 +38,7 @@ type IdentifyView = 'phone' | 'code' | 'profile' | 'birthday' | 'greeting' | 'bl
 export class PublicIdentifyComponent implements OnInit, OnDestroy {
   private readonly api = inject(PublicApiService);
   private readonly session = inject(PublicSessionService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
 
   readonly slug = input.required<string>();
@@ -110,7 +113,7 @@ export class PublicIdentifyComponent implements OnInit, OnDestroy {
     this.error.set(null);
     this.busy.set(true);
     const slug = this.slug();
-    this.api.identifyStart(slug, this.phone()).subscribe({
+    this.api.identifyStart(slug, this.phone()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.busy.set(false);
         if (res.status === 'blocked') {
@@ -136,7 +139,7 @@ export class PublicIdentifyComponent implements OnInit, OnDestroy {
     if (this.code().length < 6 || this.busy()) return;
     this.error.set(null);
     this.busy.set(true);
-    this.api.identifyVerify(this.slug(), this.phone(), this.code()).subscribe({
+    this.api.identifyVerify(this.slug(), this.phone(), this.code()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (res) => {
         this.busy.set(false);
         this.stopResendWait();
@@ -158,7 +161,7 @@ export class PublicIdentifyComponent implements OnInit, OnDestroy {
     if (!this.canResend()) return;
     this.error.set(null);
     this.busy.set(true);
-    this.api.identifyStart(this.slug(), this.phone()).subscribe({
+    this.api.identifyStart(this.slug(), this.phone()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => {
         this.busy.set(false);
         this.attempts.set(0);
@@ -199,7 +202,7 @@ export class PublicIdentifyComponent implements OnInit, OnDestroy {
 
   private afterSession(isNew: boolean): void {
     const slug = this.slug();
-    this.api.getSessionMe(slug).subscribe((result) => {
+    this.api.getSessionMe(slug).pipe(takeUntilDestroyed(this.destroyRef)).subscribe((result) => {
       if (result.kind !== 'ok') {
         this.error.set(this.language.t('publicIdentity.genericError'));
         return;
@@ -227,7 +230,7 @@ export class PublicIdentifyComponent implements OnInit, OnDestroy {
     this.error.set(null);
     this.busy.set(true);
     const slug = this.slug();
-    this.api.identifyComplete(slug, body).subscribe({
+    this.api.identifyComplete(slug, body).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (profile) => {
         this.busy.set(false);
         this.session.applyMe(slug, profile);
@@ -290,9 +293,6 @@ export class PublicIdentifyComponent implements OnInit, OnDestroy {
   }
 
   private messageFor(err: unknown): string {
-    if (err instanceof HttpErrorResponse && err.status === 429) {
-      return this.language.t('publicIdentity.pleaseWait');
-    }
-    return this.language.t('publicIdentity.genericError');
+    return this.language.t(publicErrorTranslationKey(err));
   }
 }

@@ -198,7 +198,7 @@ export interface UpcomingAppointment {
   serviceName: string;
   serviceId?: string;
   /** Server decision from the business cancellation window. */
-  canModify?: boolean;
+  canChange?: boolean;
 }
 
 export interface UpcomingAppointmentResponse {

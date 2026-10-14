@@ -60,6 +60,36 @@ export function startOfBusinessDay(isoDate: string, timezone?: string): Date {
 }
 
 /**
+ * [start of today, start of the day after `spanDays` more calendar days) in the business timezone.
+ * The default appointment list uses 30, so the window covers today and the next 30 days.
+ */
+export function defaultAppointmentWindow(
+  now: Date,
+  timezone?: string,
+  spanDays = 30
+): HalfOpenInstantRange {
+  const start = zonedNow(now, zoneOrDefault(timezone)).startOf('day');
+  return { start: start.toJSDate(), end: start.plus({ days: spanDays + 1 }).toJSDate() };
+}
+
+export type InsightsPeriod = 'week' | 'month' | 'year';
+
+/** Start of the current Sunday-based week, month, or year in the business timezone. */
+export function insightsPeriodStart(period: InsightsPeriod, timezone?: string, now?: Date): Date {
+  const zone = zoneOrDefault(timezone);
+  const zoned = zonedNow(now, zone);
+  if (period === 'year') {
+    return DateTime.fromISO(`${zoned.year}-01-01`, { zone }).startOf('day').toJSDate();
+  }
+  if (period === 'month') {
+    return zoned.startOf('month').toJSDate();
+  }
+  const startOfToday = zoned.startOf('day');
+  const daysSinceSunday = startOfToday.weekday % 7;
+  return startOfToday.minus({ days: daysSinceSunday }).toJSDate();
+}
+
+/**
  * Calendar ranges in the business timezone. "Last 7/30 days" includes today
  * and counts calendar days, not rolling 24-hour windows.
  * - today: [start of today, start of tomorrow)

@@ -57,6 +57,7 @@
         <li>
           <app-public-appointment-card
             [apt]="apt"
+            [timezone]="timezone()"
             [clickable]="true"
             (open)="openDetails(apt)"
             (edit)="openDetails(apt)"
@@ -69,6 +70,7 @@
 
 <app-public-appointment-details
   [appointment]="selected()"
+  [businessPhone]="businessPhone()"
   (closed)="selected.set(null)"
   (cancelled)="loadAppointments()"
   (edit)="onEdit($event)"

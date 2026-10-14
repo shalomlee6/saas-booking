@@ -13,7 +13,7 @@ interface MockUpcoming {
   status: string;
   serviceName: string;
   serviceId: string;
-  canModify: boolean;
+  canChange: boolean;
 }
 
 interface MockClient {
@@ -186,7 +186,7 @@ function defaultUpcoming(): MockUpcoming {
     status: 'confirmed',
     serviceName: 'מניקור',
     serviceId: 's1',
-    canModify: true,
+    canChange: true,
   };
 }
 
@@ -216,7 +216,7 @@ export function mockCancelUpcoming(id: string): boolean {
   const stored = readStored();
   if (!stored?.verified) return false;
   const client = clientFor(stored.slug);
-  if (!client?.upcoming || client.upcoming.id !== id || !client.upcoming.canModify) return false;
+  if (!client?.upcoming || client.upcoming.id !== id || !client.upcoming.canChange) return false;
   client.upcoming = null;
   persist(client, client.slug);
   return true;
@@ -230,7 +230,7 @@ export function mockRescheduleUpcoming(
   const stored = readStored();
   if (!stored?.verified) return null;
   const client = clientFor(stored.slug);
-  if (!client?.upcoming || client.upcoming.id !== id || !client.upcoming.canModify) return null;
+  if (!client?.upcoming || client.upcoming.id !== id || !client.upcoming.canChange) return null;
   if (time === '15:00') return null;
   client.upcoming = { ...client.upcoming, date, time };
   persist(client, client.slug);

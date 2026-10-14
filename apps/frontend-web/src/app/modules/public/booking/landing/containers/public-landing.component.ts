@@ -13,7 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { forkJoin, distinctUntilChanged, map } from 'rxjs';
+import { EMPTY, Subject, catchError, distinctUntilChanged, forkJoin, map, switchMap } from 'rxjs';
 import {
   PublicApiService,
   type PublicBusinessForBooking,
@@ -238,6 +238,9 @@ export class PublicLandingComponent implements OnInit {
   readonly heroImageRight = computed(() => this.heroPhotoPair()[1]);
 
   readonly businessDisplayName = computed(() => this.bookingBusiness()?.name ?? '');
+  readonly businessTimezone = computed(
+    () => this.bookingBusiness()?.localization?.timezone || 'Asia/Jerusalem'
+  );
 
   readonly landingPhone = computed(() => this.bookingBusiness()?.landing?.phone ?? null);
 
@@ -325,8 +328,11 @@ export class PublicLandingComponent implements OnInit {
     return digits.length > 0 ? `https://wa.me/${digits}` : null;
   });
 
+  private readonly upcomingTrigger = new Subject<boolean>();
+
   readonly loadingUpcoming = signal(false);
   readonly upcomingApt = signal<UpcomingAppointment | null>(null);
+  readonly businessPhone = signal<string | null>(null);
   readonly upcomingError = signal(false);
   readonly justBookedApt = signal<UpcomingAppointment | null>(null);
 
@@ -341,68 +347,82 @@ export class PublicLandingComponent implements OnInit {
   ngOnInit(): void {
     this.auth.init().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 
+    this.upcomingTrigger
+      .pipe(
+        switchMap((load) => {
+          if (!load) return EMPTY;
+          return this.publicApi.getUpcomingAppointment().pipe(
+            catchError(() => {
+              this.upcomingError.set(true);
+              this.loadingUpcoming.set(false);
+              return EMPTY;
+            })
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((res) => {
+        this.upcomingApt.set(res.appointment);
+        if (res.businessPhone) this.businessPhone.set(res.businessPhone);
+        this.loadingUpcoming.set(false);
+      });
+
     this.route.parent!.paramMap
       .pipe(
         map((p) => p.get('slug') ?? ''),
         distinctUntilChanged(),
+        switchMap((slug) => {
+          this.businessSlug.set(slug);
+          const forceIntro = this.route.snapshot.queryParamMap.get('intro') === '1';
+          this.playIntro.set(shouldPlayEntranceAnimation(slug, forceIntro));
+          if (!slug) {
+            this.loadingPageData.set(false);
+            this.pageLoadError.set('חסר מזהה עסק');
+            return EMPTY;
+          }
+
+          this.consumeBookedHistoryState();
+          if (this.session.hasSessionFor(slug)) {
+            this.loadUpcoming();
+          } else {
+            this.upcomingTrigger.next(false);
+            this.upcomingApt.set(null);
+            this.upcomingError.set(false);
+            this.loadingUpcoming.set(false);
+          }
+
+          this.bookingBusiness.set(null);
+          this.servicesList.set([]);
+          this.loadingPageData.set(true);
+          this.pageLoadError.set(null);
+          return forkJoin({
+            biz: this.publicApi.getBusinessForBooking(slug),
+            svc: this.publicApi.getServices(slug),
+          }).pipe(
+            catchError((err: { error?: { message?: string } }) => {
+              this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
+              this.loadingPageData.set(false);
+              return EMPTY;
+            })
+          );
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((slug) => {
-        this.businessSlug.set(slug);
-        const forceIntro = this.route.snapshot.queryParamMap.get('intro') === '1';
-        this.playIntro.set(shouldPlayEntranceAnimation(slug, forceIntro));
-        if (!slug) {
-          this.loadingPageData.set(false);
-          this.pageLoadError.set('חסר מזהה עסק');
-          return;
-        }
-
-        this.consumeBookedHistoryState();
-        this.reloadLandingData(slug);
-
-        if (this.session.hasSessionFor(slug)) {
-          this.loadUpcoming();
-        } else {
-          this.upcomingApt.set(null);
-          this.upcomingError.set(false);
-          this.loadingUpcoming.set(false);
-        }
-      });
-
-    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => {
-      this.scrollToLandingFragment(id);
-    });
-  }
-
-  private reloadLandingData(slug: string): void {
-    this.bookingBusiness.set(null);
-    this.servicesList.set([]);
-    this.loadingPageData.set(true);
-    this.pageLoadError.set(null);
-    forkJoin({
-      biz: this.publicApi.getBusinessForBooking(slug),
-      svc: this.publicApi.getServices(slug),
-    }).subscribe({
-      next: ({ biz, svc }) => {
+      .subscribe(({ biz, svc }) => {
         this.bookingBusiness.set(biz);
         this.servicesList.set(svc);
         this.loadingPageData.set(false);
         this.scrollToLandingFragment(this.route.snapshot.fragment);
-        // Start the intro's clock only once the hero/sheet are actually
-        // about to render — not back when the slug first resolved, while
-        // the page was still showing the loading spinner. requestAnimationFrame
-        // waits for the loading→loaded change to actually paint first.
         if (this.playIntro()) {
           requestAnimationFrame(() => {
             this.introActive.set(true);
             this.beginIntroStage();
           });
         }
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
-        this.loadingPageData.set(false);
-      },
+      });
+
+    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => {
+      this.scrollToLandingFragment(id);
     });
   }
 
@@ -423,8 +443,8 @@ export class PublicLandingComponent implements OnInit {
    * sequence is done, or immediately if the user interrupts it. Also wires
    * up the "tap or key press skips the intro" behavior — both live here
    * since they share the same lifecycle. Must only be called once the
-   * intro's actual content has rendered (see the caller in
-   * `reloadLandingData`) — starting it earlier would burn the sequence's
+   * intro's actual content has rendered (the slug subscription calls it
+   * after landing data arrives) — starting it earlier would burn the sequence's
    * timers against a loading spinner with nothing yet on screen to animate.
    */
   private beginIntroStage(): void {
@@ -535,16 +555,7 @@ export class PublicLandingComponent implements OnInit {
   loadUpcoming(): void {
     this.loadingUpcoming.set(true);
     this.upcomingError.set(false);
-    this.publicApi.getUpcomingAppointment().subscribe({
-      next: (res) => {
-        this.upcomingApt.set(res.appointment);
-        this.loadingUpcoming.set(false);
-      },
-      error: () => {
-        this.upcomingError.set(true);
-        this.loadingUpcoming.set(false);
-      },
-    });
+    this.upcomingTrigger.next(true);
   }
 
   openAppointmentDetails(): void {
@@ -582,7 +593,7 @@ export class PublicLandingComponent implements OnInit {
     const apt = this.detailsApt() ?? this.displayApt();
     this.detailsApt.set(null);
     const slug = this.businessSlug();
-    if (!slug || !apt?.serviceId) return;
+    if (!slug || !apt?.serviceId || apt.canChange !== true) return;
     void this.router.navigate(['/b', slug, 'book'], {
       queryParams: { service: apt.serviceId, reschedule: apt.id },
     });

@@ -1,4 +1,5 @@
 import request from 'supertest';
+import { DateTime } from 'luxon';
 import { buildTestApp } from './helpers/testApp';
 import { dbConnect, dbDisconnect, dbClear } from './helpers/db';
 import { seedOwner, seedService, seedBusinessSettings, seedCustomer } from './helpers/seed';
@@ -9,7 +10,11 @@ import { BusinessSettings } from '../models/BusinessSettings';
 import { AuditLog } from '../models/AuditLog';
 import { PublicClientSession } from '../models/PublicClientSession';
 import { Service } from '../models/Service';
+import { BusinessReview } from '../models/BusinessReview';
 import { loginPublicClient } from './helpers/publicSession';
+import { isInsideCancellationWindow } from '../services/publicBookingPolicy';
+import { getAvailabilityForBusiness } from '../services/publicAvailabilityService';
+import { isFutureSlotStart } from '../services/publicBookingTime';
 
 const app = buildTestApp();
 
@@ -31,6 +36,32 @@ describe('PUBLIC BOOKING', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.slug).toBe(business.slug);
+  });
+
+  it('dates a public review on the business calendar day', async () => {
+    const { business } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    await BusinessSettings.updateOne(
+      { businessId: business._id },
+      { $set: { 'localization.timezone': 'Asia/Jerusalem' } }
+    );
+    const createdAt = new Date('2026-06-14T22:30:00.000Z');
+    await BusinessReview.collection.insertOne({
+      businessId: business._id,
+      customerName: 'Noa',
+      text: 'Great visit',
+      rating: 5,
+      createdAt,
+      updatedAt: createdAt,
+    });
+
+    const bySlug = await request(app).get(`/api/public/businesses/${business.slug}`);
+    expect(bySlug.status).toBe(200);
+    expect(bySlug.body.landing.reviews[0].date).toBe('2026-06-15');
+
+    const landing = await request(app).get(`/api/public/businesses/${business.slug}/landing`);
+    expect(landing.status).toBe(200);
+    expect(landing.body.reviews[0].date).toBe('2026-06-15');
   });
 
   it('returns 404 for unknown business slug', async () => {
@@ -232,6 +263,24 @@ describe('PUBLIC BOOKING', () => {
       source: 'client-online',
       cancellationReason: 'test',
     });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customerId,
+      serviceId: service._id,
+      start: new Date(sooner.getTime() + 8 * 60 * 60 * 1000),
+      end: new Date(sooner.getTime() + 9 * 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customerId,
+      serviceId: service._id,
+      start: new Date(sooner.getTime() + 10 * 60 * 60 * 1000),
+      end: new Date(sooner.getTime() + 11 * 60 * 60 * 1000),
+      status: 'completed',
+      source: 'owner',
+    });
 
     const upcoming = await request(app)
       .get('/api/public/appointments/upcoming')
@@ -342,7 +391,57 @@ describe('PUBLIC BOOKING', () => {
       .send({ phone: '12345' });
     expect(rejected.status).toBe(400);
     expect(rejected.body.message).toBe('Enter an Israeli mobile (05 and 8 digits)');
+    expect(rejected.body.code).toBe('INVALID_PHONE');
     expect(await Customer.countDocuments({ businessId: business._id })).toBe(0);
+  });
+
+  it('reports canChange from the cancellation window boundary', async () => {
+    const now = new Date('2026-06-15T12:00:00.000Z');
+    const hours = 24;
+    const boundary = new Date(now.getTime() + hours * 60 * 60 * 1000);
+    expect(isInsideCancellationWindow(boundary, hours, now)).toBe(true);
+    expect(isInsideCancellationWindow(new Date(boundary.getTime() - 1), hours, now)).toBe(false);
+
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await BusinessSettings.updateOne(
+      { businessId: business._id },
+      { $set: { cancellationWindowHours: hours } }
+    );
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const session = await verifiedSession(business.slug, '0501234567');
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+    const insideStart = new Date(Date.now() + hours * 60 * 60 * 1000 + 60_000);
+    const outsideStart = new Date(Date.now() + hours * 60 * 60 * 1000 - 60_000);
+    const inside = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start: insideStart,
+      end: new Date(insideStart.getTime() + 30 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    const outside = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start: outsideStart,
+      end: new Date(outsideStart.getTime() + 30 * 60 * 1000),
+      status: 'pending',
+      source: 'client-online',
+    });
+
+    const upcoming = await request(app)
+      .get('/api/public/appointments/upcoming')
+      .set('Cookie', session.cookie);
+    expect(upcoming.status).toBe(200);
+    const rows = upcoming.body.appointments as { id: string; canChange: boolean }[];
+    const insideRow = rows.find((row) => row.id === inside._id.toString());
+    const outsideRow = rows.find((row) => row.id === outside._id.toString());
+    expect(insideRow?.canChange).toBe(true);
+    expect(outsideRow?.canChange).toBe(false);
   });
 
   it('cancels inside the window and refuses outside it', async () => {
@@ -566,5 +665,104 @@ describe('PUBLIC BOOKING', () => {
       .send({ date, time: '16:00' });
     expect(moved.status).toBe(401);
     expect((await Appointment.findById(apt._id))?.status).toBe('confirmed');
+  });
+
+  it('drops slots at or before 18:00 Jerusalem and leaves the next day intact', async () => {
+    const previousTz = process.env.TZ;
+    process.env.TZ = 'UTC';
+    try {
+      const nowLocal = DateTime.fromISO('2026-10-12T18:00:00', { zone: 'Asia/Jerusalem' });
+      const now = nowLocal.toJSDate();
+      expect(now.toISOString()).toBe('2026-10-12T15:00:00.000Z');
+      expect(isFutureSlotStart(now, now)).toBe(false);
+      expect(isFutureSlotStart(new Date(now.getTime() + 1), now)).toBe(true);
+
+      const { business } = await seedOwner();
+      const service = await seedService(business._id);
+      await seedBusinessSettings(business._id);
+      await BusinessSettings.updateOne(
+        { businessId: business._id },
+        {
+          $set: {
+            'localization.timezone': 'Asia/Jerusalem',
+            openingHours: {
+              slotStepMinutes: 30,
+              days: [0, 1, 2, 3, 4, 5, 6].map((day) => ({
+                day,
+                isOpen: true,
+                ranges: [{ start: '09:00', end: '21:00' }],
+              })),
+            },
+          },
+        }
+      );
+
+      const today = await getAvailabilityForBusiness(
+        business._id,
+        service._id.toString(),
+        '2026-10-12',
+        undefined,
+        undefined,
+        now
+      );
+      expect(today.slots.includes('09:30')).toBe(false);
+      expect(today.slots.includes('17:00')).toBe(false);
+      expect(today.slots.includes('18:00')).toBe(false);
+      expect(today.slots[0]).toBe('18:30');
+
+      const tomorrow = await getAvailabilityForBusiness(
+        business._id,
+        service._id.toString(),
+        '2026-10-13',
+        undefined,
+        undefined,
+        now
+      );
+      expect(tomorrow.slots.includes('09:30')).toBe(true);
+      expect(tomorrow.slots.includes('17:00')).toBe(true);
+    } finally {
+      if (previousTz === undefined) delete process.env.TZ;
+      else process.env.TZ = previousTz;
+    }
+  });
+
+  it('rejects a past create and a past reschedule with START_IN_PAST', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await Customer.create({ businessId: business._id, name: 'Dana Cohen', phone: '0501234567' });
+    const session = await verifiedSession(business.slug, '0501234567');
+    const customer = await Customer.findOne({ businessId: business._id, phone: '0501234567' });
+
+    const created = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', session.cookie)
+      .send({
+        slug: business.slug,
+        serviceId: service._id.toString(),
+        date: '2020-01-06',
+        time: '10:00',
+      });
+    expect(created.status).toBe(409);
+    expect(created.body.code).toBe('START_IN_PAST');
+
+    const start = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    start.setUTCHours(10, 0, 0, 0);
+    const original = await Appointment.create({
+      businessId: business._id,
+      customerId: customer!._id,
+      serviceId: service._id,
+      start,
+      end: new Date(start.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+    const moved = await request(app)
+      .post(`/api/public/appointments/${original._id.toString()}/reschedule`)
+      .set('Cookie', session.cookie)
+      .send({ date: '2020-01-06', time: '11:00' });
+    expect(moved.status).toBe(409);
+    expect(moved.body.code).toBe('START_IN_PAST');
+    expect((await Appointment.findById(original._id))?.status).toBe('confirmed');
   });
 });

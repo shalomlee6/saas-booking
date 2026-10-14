@@ -14,6 +14,8 @@ import { isAllowedAppointmentStatusTransition } from '../services/appointmentSta
 import type { AppointmentStatus } from '../dto/enums';
 import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
 import { listAppointmentsPage, type AppointmentsPagedQuery } from '../services/appointmentListService';
+import { defaultAppointmentWindow } from '../listQuery/dateRange';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 
 function requireBusinessId(req: AuthRequest): string {
   const businessId = getEffectiveBusinessId(req);
@@ -53,8 +55,11 @@ export async function getAppointmentsList(req: AuthRequest, res: Response): Prom
   const fromParam = q.from ?? q.startDate;
   const toParam = q.to ?? q.endDate;
 
-  const defaultStart = startOfLocalDay(new Date());
-  const defaultEnd = addCalendarDays(defaultStart, DEFAULT_LIST_SPAN_DAYS + 1);
+  const settings = await ensureBusinessSettings(businessId);
+  const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
+  const defaults = defaultAppointmentWindow(new Date(), timezone, DEFAULT_LIST_SPAN_DAYS);
+  const defaultStart = defaults.start;
+  const defaultEnd = defaults.end;
 
   let start: Date;
   let end: Date;

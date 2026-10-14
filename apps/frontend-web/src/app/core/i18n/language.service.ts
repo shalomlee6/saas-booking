@@ -1,5 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
+import { PrimeNG } from 'primeng/config';
+import { primeNgCalendarTranslation } from './calendar-locale';
 import { TRANSLATIONS } from './translations';
 
 export type AppLanguage = 'he' | 'en';
@@ -36,11 +38,17 @@ function getByPath(obj: unknown, path: string): string | undefined {
 @Injectable({ providedIn: 'root' })
 export class LanguageService {
   private readonly doc = inject(DOCUMENT);
+  /** Absent in unit tests that construct the service without PrimeNG. */
+  private readonly primeNg = inject(PrimeNG, { optional: true });
 
   readonly language = signal<AppLanguage>(resolveInitialLanguage());
 
   constructor() {
-    effect(() => this.applyDocumentAttributes(this.language()));
+    effect(() => {
+      const lang = this.language();
+      this.applyDocumentAttributes(lang);
+      this.primeNg?.setTranslation(primeNgCalendarTranslation(lang));
+    });
   }
 
   get isRtl(): boolean {

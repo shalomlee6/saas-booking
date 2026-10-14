@@ -48,6 +48,7 @@
             [apt]="displayApt()"
             [error]="upcomingError()"
             [staffLine]="''"
+            [timezone]="businessTimezone()"
             (book)="goToBook()"
             (open)="goToUpcoming()"
             (edit)="openAppointmentDetails()"
@@ -157,6 +158,7 @@
 
 <app-public-appointment-details
   [appointment]="detailsApt()"
+  [businessPhone]="businessPhone() || bookingBusiness()?.landing?.phone || null"
   (closed)="detailsApt.set(null)"
   (cancelled)="onAppointmentCancelled()"
   (edit)="onEditAppointment()"

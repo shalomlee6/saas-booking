@@ -24,6 +24,14 @@ export function buildSlotsFromMergedRanges(
   return out;
 }
 
+/**
+ * A slot can be offered or booked only when its start is strictly after `now`.
+ * A start equal to now is already underway, so it is not bookable.
+ */
+export function isFutureSlotStart(slotStart: Date, now: Date): boolean {
+  return slotStart.getTime() > now.getTime();
+}
+
 /** YYYY-MM-DD + HH:mm in IANA timezone → UTC Date (Luxon). */
 export function toUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
   const [h, m] = timeStr.split(':').map((s) => Number(s));

@@ -20,6 +20,7 @@ import { TextareaModule } from 'primeng/textarea';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { PublicApiService, type UpcomingAppointment } from '../../services/public-api.service';
+import { publicErrorTranslationKey } from '../../utils/public-error-message';
 
 const MOBILE_BREAKPOINT_PX = 768;
 const CANCELLABLE_STATUSES = new Set(['confirmed', 'pending']);
@@ -45,6 +46,7 @@ export class PublicAppointmentDetailsComponent implements OnInit {
   readonly language = inject(LanguageService);
 
   readonly appointment = input<UpcomingAppointment | null>(null);
+  readonly businessPhone = input<string | null>(null);
 
   readonly closed = output<void>();
   readonly cancelled = output<void>();
@@ -58,9 +60,18 @@ export class PublicAppointmentDetailsComponent implements OnInit {
   readonly cancelling = signal(false);
   readonly cancelError = signal<string | null>(null);
 
+  readonly canChange = computed(() => this.appointment()?.canChange === true);
+  readonly outsideWindow = computed(() => this.appointment()?.canChange === false);
+
   readonly canCancel = computed(() => {
     const apt = this.appointment();
-    return !!apt && CANCELLABLE_STATUSES.has(apt.status);
+    return this.canChange() && !!apt && CANCELLABLE_STATUSES.has(apt.status);
+  });
+
+  readonly phoneHref = computed(() => {
+    const raw = this.businessPhone()?.trim() ?? '';
+    const digits = raw.replace(/[^\d+]/g, '');
+    return digits ? `tel:${digits}` : null;
   });
 
   readonly reasonInvalid = computed(
@@ -120,7 +131,7 @@ export class PublicAppointmentDetailsComponent implements OnInit {
 
   onEdit(): void {
     const apt = this.appointment();
-    if (!apt || this.cancelling()) return;
+    if (!apt || !apt.canChange || this.cancelling()) return;
     this.edit.emit(apt);
   }
 
@@ -144,16 +155,9 @@ export class PublicAppointmentDetailsComponent implements OnInit {
         this.cancelled.emit();
         this.closed.emit();
       },
-      error: (err: { error?: { message?: string }; status?: number }) => {
+      error: (err: unknown) => {
         this.cancelling.set(false);
-        const serverMsg = err?.error?.message;
-        if (err?.status === 409) {
-          this.cancelError.set(serverMsg ?? this.language.t('appointments.cancelAlreadyCancelled'));
-        } else if (err?.status === 404) {
-          this.cancelError.set(this.language.t('appointments.cancelNotFound'));
-        } else {
-          this.cancelError.set(this.language.t('appointments.cancelGenericError'));
-        }
+        this.cancelError.set(this.language.t(publicErrorTranslationKey(err)));
       },
     });
   }

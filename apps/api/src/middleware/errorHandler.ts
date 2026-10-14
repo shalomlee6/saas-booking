@@ -31,6 +31,7 @@ export function errorHandler(err: unknown, _req: Request, res: Response, next: N
 
   if (err instanceof ValidationError) {
     const body: Record<string, unknown> = { message: err.message };
+    if (err.code) body.code = err.code;
     if (err.fieldErrors?.length) {
       body.errors = err.fieldErrors;
     }
@@ -39,7 +40,9 @@ export function errorHandler(err: unknown, _req: Request, res: Response, next: N
   }
 
   if (err instanceof NotFoundError) {
-    res.status(404).json({ message: err.message });
+    const body: Record<string, unknown> = { message: err.message };
+    if (err.code) body.code = err.code;
+    res.status(404).json(body);
     return;
   }
 
@@ -53,12 +56,16 @@ export function errorHandler(err: unknown, _req: Request, res: Response, next: N
   }
 
   if (err instanceof ForbiddenError) {
-    res.status(403).json({ message: err.message });
+    const body: Record<string, unknown> = { message: err.message };
+    if (err.code) body.code = err.code;
+    res.status(403).json(body);
     return;
   }
 
   if (err instanceof UnauthorizedError) {
-    res.status(401).json({ message: err.message });
+    const body: Record<string, unknown> = { message: err.message };
+    if (err.code) body.code = err.code;
+    res.status(401).json(body);
     return;
   }
 

@@ -50,6 +50,7 @@ interface PendingRowAction<T> {
 export interface DataHeaderView {
   id: string;
   header: string;
+  hint: string;
   desktopOnly: boolean;
   end: boolean;
   numeric: boolean;
@@ -336,6 +337,7 @@ export class DataManagementTableComponent<T> implements OnInit {
       return {
         id: column.id,
         header: column.header,
+        hint: column.headerHint ?? '',
         desktopOnly: !column.showOnSmallScreen,
         end: column.align === 'end',
         numeric: !!column.numeric,

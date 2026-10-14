@@ -10,6 +10,7 @@ import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { NotFoundError } from '../errors/httpErrors';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
+import { isFutureSlotStart } from './publicBookingTime';
 
 /** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
@@ -129,7 +130,7 @@ export async function computeOwnerAvailableSlots(
         const slotStart = slotToUtcDate(dateStr, timeStr, timezone);
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
 
-        if (!isSlotOccupied(slotStart, slotEnd)) {
+        if (!isSlotOccupied(slotStart, slotEnd) && isFutureSlotStart(slotStart, new Date())) {
           availableSlots.push({
             start: toIsoUtcString(slotStart),
             end: toIsoUtcString(slotEnd),

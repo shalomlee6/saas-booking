@@ -18,6 +18,7 @@ export class PublicLandingNextAppointmentComponent {
   readonly apt = input<UpcomingAppointment | null>(null);
   readonly error = input(false);
   readonly staffLine = input('');
+  readonly timezone = input('Asia/Jerusalem');
 
   readonly book = output<void>();
   readonly open = output<void>();

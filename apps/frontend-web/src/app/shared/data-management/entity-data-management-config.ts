@@ -33,6 +33,8 @@ export interface DataTag {
 export interface DataColumn<T> {
   id: string;
   header: string;
+  /** Shown when the header is hovered. */
+  headerHint?: string;
   /** `default` starts visible. `optional` starts hidden and is offered in the column selector. */
   visibility: 'default' | 'optional';
   /** When false, the column is hidden below the small-screen breakpoint. */

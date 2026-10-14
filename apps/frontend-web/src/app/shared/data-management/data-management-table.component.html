@@ -342,6 +342,9 @@
                         class="data-table-sort"
                         [class.data-table-sort-active]="head.sortActive"
                         [attr.data-testid]="'dm-sort-' + head.id"
+                        [pTooltip]="head.hint"
+                        [tooltipDisabled]="!head.hint"
+                        tooltipPosition="top"
                         (click)="toggleSort(head.id)"
                       >
                         <span>{{ head.header }}</span>
@@ -354,7 +357,7 @@
                         ></i>
                       </button>
                     } @else {
-                      <span>{{ head.header }}</span>
+                      <span [pTooltip]="head.hint" [tooltipDisabled]="!head.hint" tooltipPosition="top">{{ head.header }}</span>
                     }
                   </th>
                 }

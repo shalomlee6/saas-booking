@@ -344,6 +344,32 @@ function isPublicBusinessesAvailabilityGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/businesses\/[^/]+\/availability/.test(req.url);
 }
 
+const MOCK_PUBLIC_SLOTS = [
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00',
+];
+
+/** Drop starts at or before now on the business's today (Asia/Jerusalem). Other days stay whole. */
+function mockSlotsForDate(dateStr: string): string[] {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  const today = `${part('year')}-${part('month')}-${part('day')}`;
+  if (dateStr !== today) return MOCK_PUBLIC_SLOTS;
+  const nowMinutes = Number(part('hour')) * 60 + Number(part('minute'));
+  return MOCK_PUBLIC_SLOTS.filter((slot) => {
+    const [hour, minute] = slot.split(':').map(Number);
+    return hour * 60 + minute > nowMinutes;
+  });
+}
+
 function isPublicAppointmentsPost(req: HttpRequest<unknown>): boolean {
   return req.method === 'POST' && /\/api\/public\/appointments\/?(\?|$)/.test(req.url);
 }
@@ -1538,7 +1564,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const serviceId = url.searchParams.get('serviceId') ?? '';
     const dateStr = url.searchParams.get('date') ?? '';
     if (!slug || !serviceId || !dateStr) return next(req);
-    const slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
+    const slots = mockSlotsForDate(dateStr);
     return from([new HttpResponse({ status: 200, body: { date: dateStr, slots } })]);
   }
 

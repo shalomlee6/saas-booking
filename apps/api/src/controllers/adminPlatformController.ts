@@ -616,7 +616,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
         {
           $match: {
             start: { $gte: rangeStart, $lte: now },
-            status: { $nin: ['cancelled'] },
+            status: 'completed',
             price: { $exists: true, $gt: 0 },
           },
         },
@@ -631,7 +631,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
       Appointment.aggregate<{ total: number }>([
         {
           $match: {
-            status: { $nin: ['cancelled'] },
+            status: 'completed',
             price: { $exists: true, $gt: 0 },
           },
         },
@@ -641,7 +641,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
         {
           $match: {
             start: { $gte: thirtyDaysStart, $lte: now },
-            status: { $nin: ['cancelled'] },
+            status: 'completed',
             price: { $exists: true, $gt: 0 },
           },
         },
@@ -651,7 +651,7 @@ export async function getAdminAnalytics(req: AuthRequest, res: Response): Promis
         {
           $match: {
             start: { $gte: rangeStart, $lte: now },
-            status: { $nin: ['cancelled'] },
+            status: 'completed',
             price: { $exists: true, $gt: 0 },
           },
         },
@@ -825,7 +825,7 @@ export async function getAdminOverview(_req: AuthRequest, res: Response): Promis
       Appointment.aggregate<{ total: number }>([
         {
           $match: {
-            status: { $nin: ['cancelled'] },
+            status: 'completed',
             price: { $exists: true, $gte: 0 },
           },
         },

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import mongoose, { Types } from 'mongoose';
+import { DateTime } from 'luxon';
 import { Business } from '../models/Business';
 import { BusinessSettings, defaultOpeningHours } from '../models/BusinessSettings';
 import { Customer } from '../models/Customer';
@@ -31,16 +32,24 @@ import {
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
+/** `yyyy-mm-dd` of an instant on the business calendar, not the UTC day. */
+function reviewDateInTimezone(createdAt: Date, timezone: string): string {
+  const zoned = DateTime.fromJSDate(createdAt, { zone: timezone });
+  const month = String(zoned.month).padStart(2, '0');
+  const day = String(zoned.day).padStart(2, '0');
+  return `${zoned.year}-${month}-${day}`;
+}
+
 // --- GET /api/public/businesses/:slug
 export async function getPublicBusinessBySlug(req: Request, res: Response): Promise<void> {
   const { slug } = req.params;
   const business = await Business.findOne({ slug });
   if (!business) {
-    throw new NotFoundError('Business not found');
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   }
   const settings = await ensureBusinessSettings(business._id);
   if (!settings.features?.bookingEnabled) {
-    throw new ForbiddenError('Booking is disabled for this business');
+    throw new ForbiddenError('Booking is disabled for this business', 'BOOKING_DISABLED');
   }
   const openingHours = settings.openingHours?.days?.length
     ? settings.openingHours
@@ -149,7 +158,7 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
         customerName: r.customerName,
         text: r.text,
         rating: r.rating,
-        date: r.createdAt.toISOString().slice(0, 10),
+        date: reviewDateInTimezone(r.createdAt, timezone),
       })),
     },
   });
@@ -161,14 +170,16 @@ export async function getPublicBusinessLanding(req: Request, res: Response): Pro
   const business = await Business.findOne({ slug });
   if (!business) {
     throw new NotFoundError(
-      'Business not found for this slug. Use the public booking slug (e.g. from /b/:slug), not the internal business id.'
+      'Business not found for this slug. Use the public booking slug (e.g. from /b/:slug), not the internal business id.',
+      'BUSINESS_NOT_FOUND'
     );
   }
   const settings = await ensureBusinessSettings(business._id);
   if (!settings.features?.bookingEnabled) {
-    throw new ForbiddenError('Booking is disabled for this business');
+    throw new ForbiddenError('Booking is disabled for this business', 'BOOKING_DISABLED');
   }
 
+  const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
   const businessIdObj = business._id as Types.ObjectId;
   const [customerCount, completedAppointments, reviewDocs, servicesRaw] = await Promise.all([
     Customer.countDocuments({ businessId: businessIdObj }),
@@ -261,7 +272,7 @@ export async function getPublicBusinessLanding(req: Request, res: Response): Pro
       customerName: r.customerName,
       text: r.text,
       rating: r.rating,
-      date: r.createdAt.toISOString().slice(0, 10),
+      date: reviewDateInTimezone(r.createdAt, timezone),
     })),
     stats: {
       rating,
@@ -278,7 +289,7 @@ export async function getPublicServices(req: Request, res: Response): Promise<vo
   const { slug } = req.params;
   const business = await Business.findOne({ slug });
   if (!business) {
-    throw new NotFoundError('Business not found');
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   }
   const settings = await ensureBusinessSettings(business._id);
   const services = await Service.find({
@@ -315,7 +326,7 @@ export async function getAvailability(req: Request, res: Response): Promise<void
 
   const business = await Business.findOne({ slug });
   if (!business) {
-    throw new NotFoundError('Business not found');
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   }
 
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
@@ -345,7 +356,7 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
 
   const business = await Business.findById(businessId);
   if (!business) {
-    throw new NotFoundError('Business not found');
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   }
 
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
@@ -384,29 +395,29 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   }
 
   if (!business) {
-    throw new NotFoundError('Business not found');
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   }
   const businessId = business._id;
 
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
   if (!publicCustomer) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
   }
   if (body.slug && publicCustomer.slug && publicCustomer.slug !== body.slug) {
-    throw new ForbiddenError('Business mismatch');
+    throw new ForbiddenError('Business mismatch', 'BUSINESS_MISMATCH');
   }
   if (publicCustomer.businessId !== businessId.toString()) {
-    throw new ForbiddenError('Business mismatch');
+    throw new ForbiddenError('Business mismatch', 'BUSINESS_MISMATCH');
   }
   if (!publicCustomer.customerId) {
-    throw new ValidationError('Complete your details before booking');
+    throw new ValidationError('Complete your details before booking', undefined, 'PROFILE_INCOMPLETE');
   }
   const customer = await Customer.findOne({
     _id: publicCustomer.customerId,
     businessId,
   });
   if (!customer) {
-    throw new NotFoundError('Customer not found');
+    throw new NotFoundError('Customer not found', 'CUSTOMER_NOT_FOUND');
   }
   await enforcePublicBookingCustomer(req, customer);
   const customerId = customer._id as Types.ObjectId;
@@ -415,12 +426,12 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
 
   const settings = await ensureBusinessSettings(businessId);
   if (!settings.features?.bookingEnabled) {
-    throw new ForbiddenError('Booking is disabled for this business');
+    throw new ForbiddenError('Booking is disabled for this business', 'BOOKING_DISABLED');
   }
 
   const service = await Service.findOne({ _id: serviceId, businessId });
   if (!service) {
-    throw new NotFoundError('Service not found');
+    throw new NotFoundError('Service not found', 'SERVICE_NOT_FOUND');
   }
 
   const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
@@ -433,13 +444,17 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   try {
     startAt = toUtcDate(dateStr, timeStr, timezone);
   } catch {
-    throw new ValidationError('Validation failed', [
-      {
-        path: 'date',
-        message: 'Invalid date or time for the business timezone',
-        code: 'custom',
-      },
-    ]);
+    throw new ValidationError(
+      'Validation failed',
+      [
+        {
+          path: 'date',
+          message: 'Invalid date or time for the business timezone',
+          code: 'custom',
+        },
+      ],
+      'INVALID_DATE_TIME'
+    );
   }
   const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
 
@@ -493,7 +508,7 @@ function toPublicUpcomingAppointment(
     serviceId?: PopulatedUpcomingService | Types.ObjectId | null;
   },
   timezone: string,
-  canModify: boolean
+  canChange: boolean
 ) {
   const { date, time } = formatPublicAppointmentClock(apt.start, timezone);
   const service =
@@ -507,7 +522,7 @@ function toPublicUpcomingAppointment(
     status: apt.status,
     serviceName: service?.name ?? '',
     serviceId: service?._id?.toString() ?? '',
-    canModify,
+    canChange,
   };
 }
 
@@ -551,7 +566,7 @@ const EMPTY_UPCOMING = { appointment: null, appointments: [] as ReturnType<typeo
 
 // --- GET /api/public/appointments/upcoming
 /**
- * Returns the authenticated customer's upcoming (non-cancelled, future) appointments,
+ * Returns the authenticated customer's upcoming pending and confirmed appointments,
  * sorted soonest-first. `appointment` is the nearest item (or null) for the home preview;
  * `appointments` is the full list for the Upcoming Appointments page.
  * Unauthenticated callers receive empty results (never another customer's data).
@@ -563,14 +578,14 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     return;
   }
   if (!publicCustomer.verified || !publicCustomer.customerId) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
   }
 
   const now = new Date();
   const apts = await Appointment.find({
     customerId: new Types.ObjectId(publicCustomer.customerId),
     businessId: new Types.ObjectId(publicCustomer.businessId),
-    status: { $nin: ['cancelled'] },
+    status: { $in: ['pending', 'confirmed'] },
     start: { $gte: now },
   })
     .sort({ start: 1 })
@@ -593,7 +608,11 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     typeof settings?.businessPhonePublic === 'string' ? settings.businessPhonePublic.trim() : '';
   const businessPhone = fromBusiness || fromSettings || null;
   const appointments = apts.map((apt) =>
-    toPublicUpcomingAppointment(apt, timezone, isInsideCancellationWindow(apt.start, windowHours, now))
+    toPublicUpcomingAppointment(
+      apt,
+      timezone,
+      isInsideCancellationWindow(apt.start, windowHours, now)
+    )
   );
 
   res.json({
@@ -619,7 +638,7 @@ const CLIENT_CANCELLABLE_STATUSES = new Set(['pending', 'confirmed']);
 export async function cancelCustomerAppointment(req: Request, res: Response): Promise<void> {
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
   if (!publicCustomer?.verified || !publicCustomer.customerId) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
   }
 
   const { appointmentId } = req.params as { appointmentId: string };
@@ -634,11 +653,11 @@ export async function cancelCustomerAppointment(req: Request, res: Response): Pr
   });
 
   if (!apt) {
-    throw new NotFoundError('Appointment not found');
+    throw new NotFoundError('Appointment not found', 'APPOINTMENT_NOT_FOUND');
   }
 
   if (!CLIENT_CANCELLABLE_STATUSES.has(apt.status)) {
-    throw new ConflictError('This appointment cannot be cancelled');
+    throw new ConflictError('This appointment cannot be cancelled', 'APPOINTMENT_NOT_CANCELLABLE');
   }
 
   const settings = await ensureBusinessSettings(publicCustomer.businessId);
@@ -733,7 +752,7 @@ async function moveAppointmentInOneTransaction(input: {
 export async function rescheduleCustomerAppointment(req: Request, res: Response): Promise<void> {
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
   if (!publicCustomer?.verified || !publicCustomer.customerId) {
-    throw new UnauthorizedError('Authentication required');
+    throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
   }
 
   const { appointmentId } = req.params as { appointmentId: string };
@@ -744,9 +763,9 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
     customerId: new Types.ObjectId(publicCustomer.customerId),
     businessId: new Types.ObjectId(publicCustomer.businessId),
   });
-  if (!apt) throw new NotFoundError('Appointment not found');
+  if (!apt) throw new NotFoundError('Appointment not found', 'APPOINTMENT_NOT_FOUND');
   if (!CLIENT_CANCELLABLE_STATUSES.has(apt.status)) {
-    throw new ConflictError('This appointment cannot be changed');
+    throw new ConflictError('This appointment cannot be changed', 'APPOINTMENT_NOT_CHANGEABLE');
   }
 
   const settings = await ensureBusinessSettings(publicCustomer.businessId);
@@ -758,19 +777,19 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
     );
   }
   if (!settings.features?.bookingEnabled) {
-    throw new ForbiddenError('Booking is disabled for this business');
+    throw new ForbiddenError('Booking is disabled for this business', 'BOOKING_DISABLED');
   }
 
   const serviceId = apt.serviceId?.toString();
-  if (!serviceId) throw new NotFoundError('Service not found');
+  if (!serviceId) throw new NotFoundError('Service not found', 'SERVICE_NOT_FOUND');
   const service = await Service.findOne({ _id: serviceId, businessId: apt.businessId });
-  if (!service) throw new NotFoundError('Service not found');
+  if (!service) throw new NotFoundError('Service not found', 'SERVICE_NOT_FOUND');
 
   const customer = await Customer.findOne({
     _id: publicCustomer.customerId,
     businessId: apt.businessId,
   });
-  if (!customer) throw new NotFoundError('Customer not found');
+  if (!customer) throw new NotFoundError('Customer not found', 'CUSTOMER_NOT_FOUND');
   await enforcePublicBookingCustomer(req, customer);
 
   const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
@@ -782,9 +801,11 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
   try {
     startAt = toUtcDate(dateStr, timeStr, timezone);
   } catch {
-    throw new ValidationError('Validation failed', [
-      { path: 'date', message: 'Invalid date or time for the business timezone', code: 'custom' },
-    ]);
+    throw new ValidationError(
+      'Validation failed',
+      [{ path: 'date', message: 'Invalid date or time for the business timezone', code: 'custom' }],
+      'INVALID_DATE_TIME'
+    );
   }
   const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
 

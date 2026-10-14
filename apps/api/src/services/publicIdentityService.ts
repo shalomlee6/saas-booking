@@ -42,7 +42,7 @@ export function resolveBirthdayField(value: unknown): BirthdayField {
 function requireMobile(raw: unknown): string {
   const phone = canonicalLocalPhone(typeof raw === 'string' ? raw : '');
   if (!phone) {
-    throw new ValidationError('Enter an Israeli mobile (05 and 8 digits)');
+    throw new ValidationError('Enter an Israeli mobile (05 and 8 digits)', undefined, 'INVALID_PHONE');
   }
   return phone;
 }
@@ -56,7 +56,7 @@ function firstNameOf(customer: { firstName?: string; name?: string }): string {
 
 async function loadBusiness(slug: string) {
   const business = await Business.findOne({ slug: slug.trim() });
-  if (!business) throw new NotFoundError('Business not found');
+  if (!business) throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   return business;
 }
 
@@ -127,7 +127,7 @@ async function sendOtp(businessSlug: string, phone: string): Promise<void> {
     existing.attempts < OTP_MAX_ATTEMPTS &&
     now.getTime() - existing.lastSentAt.getTime() < OTP_RESEND_MS
   ) {
-    throw new HttpError(429, 'Please wait before requesting another code');
+    throw new HttpError(429, 'Please wait before requesting another code', 'OTP_COOLDOWN');
   }
 
   const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
@@ -152,7 +152,7 @@ export async function verifyIdentify(
   existingSessionId?: string
 ): Promise<{ status: 'known' | 'new'; session: PublicCustomer }> {
   if (resolveIdentityMode() !== 'otp') {
-    throw new HttpError(404, 'Not found');
+    throw new HttpError(404, 'Not found', 'OTP_UNAVAILABLE');
   }
   const phone = requireMobile(rawPhone);
   const code = String(rawCode ?? '').trim();
@@ -160,12 +160,12 @@ export async function verifyIdentify(
   const challenge = await OtpChallenge.findOne({ businessSlug: business.slug, phone });
   const now = new Date();
   if (!challenge || challenge.expiresAt.getTime() <= now.getTime() || challenge.attempts >= OTP_MAX_ATTEMPTS) {
-    throw new ValidationError('Invalid code');
+    throw new ValidationError('Invalid code', undefined, 'INVALID_CODE');
   }
   if (challenge.code !== code) {
     const attempts = challenge.attempts + 1;
     await OtpChallenge.updateOne({ _id: challenge._id }, { $set: { attempts } });
-    throw new ValidationError('Invalid code');
+    throw new ValidationError('Invalid code', undefined, 'INVALID_CODE');
   }
 
   await OtpChallenge.deleteOne({ _id: challenge._id });
@@ -183,11 +183,11 @@ export async function verifyIdentify(
 
 function parseBirthday(value: Birthday | undefined, required: boolean): Birthday | undefined {
   if (!value) {
-    if (required) throw new ValidationError('Birthday is required');
+    if (required) throw new ValidationError('Birthday is required', undefined, 'BIRTHDAY_REQUIRED');
     return undefined;
   }
   if (!isRealBirthday(value.day, value.month)) {
-    throw new ValidationError('Birthday is not a real date');
+    throw new ValidationError('Birthday is not a real date', undefined, 'BIRTHDAY_INVALID');
   }
   return { day: value.day, month: value.month };
 }
@@ -198,11 +198,11 @@ export async function completeIdentify(
   routeSlug: string
 ): Promise<void> {
   if (session.slug !== routeSlug) {
-    throw new HttpError(403, 'Business mismatch');
+    throw new HttpError(403, 'Business mismatch', 'BUSINESS_MISMATCH');
   }
   const business = await loadBusiness(session.slug ?? '');
   if (business._id.toString() !== session.businessId) {
-    throw new NotFoundError('Business not found');
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
   }
   const settings = await ensureBusinessSettings(business._id);
   const field = resolveBirthdayField(settings.birthdayField);
@@ -212,7 +212,7 @@ export async function completeIdentify(
 
   if (!customer) {
     const name = input.name?.trim() ?? '';
-    if (!name || name.length > 200) throw new ValidationError('Name is required');
+    if (!name || name.length > 200) throw new ValidationError('Name is required', undefined, 'NAME_REQUIRED');
     const birthday = field === 'hidden' ? undefined : parseBirthday(input.birthday, field === 'required');
     const created = await Customer.create({
       businessId: business._id,
@@ -234,7 +234,7 @@ export async function completeIdentify(
   }
   const name = input.name?.trim();
   if (name) {
-    if (name.length > 200) throw new ValidationError('Name is required');
+    if (name.length > 200) throw new ValidationError('Name is required', undefined, 'NAME_REQUIRED');
     customer.name = name;
     customer.firstName = name.split(/\s+/)[0];
   }

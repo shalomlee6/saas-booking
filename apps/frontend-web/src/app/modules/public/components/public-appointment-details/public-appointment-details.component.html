@@ -52,6 +52,7 @@
       </div>
     </div>
 
+    @if (canChange()) {
     <div class="public-apt-details-edit">
       <p-button
         [label]="'appointments.changeAppointment' | translate"
@@ -63,6 +64,12 @@
         (onClick)="onEdit()"
       />
     </div>
+    } @else if (outsideWindow()) {
+      <p class="public-apt-details-locked" role="status">{{ 'publicErrors.outsideWindow' | translate }}</p>
+      @if (phoneHref(); as href) {
+        <a class="public-apt-details-call" [href]="href">{{ 'appointments.callBusiness' | translate }}</a>
+      }
+    }
 
     @if (canCancel()) {
       <p class="public-apt-details-confirm">{{ 'appointments.cancelConfirmQuestion' | translate }}</p>

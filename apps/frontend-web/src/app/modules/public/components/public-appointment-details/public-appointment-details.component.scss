@@ -46,6 +46,25 @@
   display: inline-block;
 }
 
+.public-apt-details-locked {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: $pl-text-body;
+  text-align: start;
+}
+
+.public-apt-details-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  width: 100%;
+  box-sizing: border-box;
+  text-decoration: none;
+  @include pl-btn-primary;
+}
+
 .public-apt-details-confirm {
   margin: 0;
   font-size: 0.9375rem;

@@ -83,6 +83,7 @@ export function buildServiceTableConfig(
     {
       id: 'bookings',
       header: t('services.columnBookings'),
+      headerHint: t('services.columnBookingsHint'),
       visibility: 'default',
       showOnSmallScreen: true,
       align: 'end',

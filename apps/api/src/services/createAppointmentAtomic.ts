@@ -5,6 +5,7 @@ import { Service } from '../models/Service';
 import type { AppointmentSource, AppointmentStatus } from '../dto/enums';
 import { AppointmentError } from './appointmentErrors';
 import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
+import { isFutureSlotStart } from './publicBookingTime';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 
 export type { AppointmentSource };
@@ -121,10 +122,8 @@ export async function createAppointmentAtomic(
     throw new AppointmentError(400, 'start must be before end');
   }
 
-  const now = Date.now();
-  const PAST_GRACE_MS = 60 * 1000;
-  if (start.getTime() < now - PAST_GRACE_MS) {
-    throw new AppointmentError(400, 'start must not be in the past');
+  if (!isFutureSlotStart(start, new Date())) {
+    throw new AppointmentError(409, 'start must not be in the past', 'START_IN_PAST');
   }
 
   if (requireCustomerId && !payload.customerId) {
@@ -141,7 +140,7 @@ export async function createAppointmentAtomic(
     const service = await serviceQuery;
 
     if (!service) {
-      throw new AppointmentError(404, 'Service not found');
+      throw new AppointmentError(404, 'Service not found', 'SERVICE_NOT_FOUND');
     }
 
     if (payload.customerId && validateCustomerOwnership) {
@@ -154,7 +153,7 @@ export async function createAppointmentAtomic(
       }
       const customer = await customerQuery.lean();
       if (!customer) {
-        throw new AppointmentError(404, 'Customer not found');
+        throw new AppointmentError(404, 'Customer not found', 'CUSTOMER_NOT_FOUND');
       }
     }
 
