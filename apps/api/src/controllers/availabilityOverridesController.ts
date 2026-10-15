@@ -39,8 +39,8 @@ export async function getOverrides(req: AuthRequest, res: Response): Promise<voi
       .sort({ date: 1 })
       .lean();
     res.json(list.map((doc) => ({
-      id: (doc as any)._id.toString(),
-      businessId: (doc as any).businessId.toString(),
+      id: doc._id.toString(),
+      businessId: doc.businessId.toString(),
       date: doc.date,
       type: doc.type,
       ranges: doc.ranges ?? [],
@@ -75,7 +75,7 @@ export async function postOverride(req: AuthRequest, res: Response): Promise<voi
       res.status(400).json({ message: 'type must be "closed" or "custom"' });
       return;
     }
-    let rangesNormalized: Array<{ start: string; end: string }> = [];
+    const rangesNormalized: Array<{ start: string; end: string }> = [];
     if (type === 'closed') {
       if (Array.isArray(ranges) && ranges.length > 0) {
         res.status(400).json({ message: 'type "closed" must have empty ranges' });

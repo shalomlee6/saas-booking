@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs';
 import { Types } from 'mongoose';
 import { User } from '../models/User';
 import { Business } from '../models/Business';
-import { BusinessSettings } from '../models/BusinessSettings';
 import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';

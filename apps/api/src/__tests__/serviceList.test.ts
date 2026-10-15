@@ -2,7 +2,7 @@ import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import { buildTestApp } from './helpers/testApp';
 import { dbConnect, dbDisconnect, dbClear } from './helpers/db';
-import { seedOwner, seedService, seedBusinessSettings, signTestToken } from './helpers/seed';
+import { seedOwner, seedBusinessSettings, signTestToken } from './helpers/seed';
 import { Service } from '../models/Service';
 import { Appointment } from '../models/Appointment';
 import { User } from '../models/User';

@@ -69,8 +69,7 @@ phone number formats and local SMS/OTP norms are native assumptions, not edge ca
 Confirmed built and working (as of this session):
 - Multi-tenant data isolation, per-business custom domain routing to a canonical
   `/b/:slug` path.
-- Admin: appointment calendar (day/week + mobile 3-day agenda), customer list with
-  bulk-delete (blocked server-side when a customer has appointment history), customer
+- Admin: appointment calendar (day/week + mobile 3-day agenda), customer list, customer
   "Client Card" (notes, preferred time, allergies, tags, per-service duration/price
   overrides, auto-derived stats and insights), services catalog, working hours + one-off
   exceptions, business theme + landing-page content settings.
@@ -79,9 +78,9 @@ Confirmed built and working (as of this session):
   login, an upcoming-appointments view, appointment cancellation.
 - Bilingual UI (Hebrew default, English toggle) with the whole document direction
   (`<html dir>`) switching at the shell level, not per page.
-- Customer OTP/SMS auth exists in code but is **not production-ready**: Twilio
-  credentials are not configured for production, and a dev-only OTP bypass code is
-  currently enabled.
+- Public identity is OTP or phone mode (`IDENTITY_MODE`). Production SMS is TextMe,
+  which is not implemented yet and throws until it is. There is no Twilio client and
+  no OTP bypass flag.
 
 Explicitly not yet built (roadmap, confirmed from prior product discussion, not to be
 treated as present): a cross-business customer "Handoff Network," a "Boki Community"

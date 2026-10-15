@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ApiService } from '../../../../core/api/api.service';
-import { ThemeService } from '../../../../core/config/theme.service';
+import { ThemeService, type BusinessUi } from '../../../../core/config/theme.service';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService, type AppLanguage } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
@@ -43,9 +43,9 @@ export class BusinessThemeSettingsComponent {
     this.saving.set(true);
     this.error.set(null);
     const value = this.form.getRawValue();
-    this.api.patch<{ ui: unknown }>('business/ui', value).subscribe({
+    this.api.patch<{ ui: BusinessUi }>('business/ui', value).subscribe({
       next: (res) => {
-        this.theme.applyBusinessUi(res.ui as any);
+        this.theme.applyBusinessUi(res.ui);
         this.saving.set(false);
       },
       error: (err) => {

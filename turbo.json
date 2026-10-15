@@ -12,11 +12,11 @@
       "outputs": []
     },
     "typeCheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "lint"],
       "outputs": []
     },
     "test": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "lint"],
       "outputs": [],
       "cache": false
     }

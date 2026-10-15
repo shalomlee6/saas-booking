@@ -69,8 +69,7 @@ export const appConfig: ApplicationConfig = {
     MessageService,
     provideStore(),
     provideState(appointmentsFeatureKey, appointmentsReducer),
-    // Customers and services use injectable signal-based stores (customers.store.ts,
-    // services.store.ts), not NgRx — no effects to register there.
+    // Services use an injectable signal store (services.store.ts), not NgRx.
     provideEffects({
       loadAppointments$,
       createAppointment$

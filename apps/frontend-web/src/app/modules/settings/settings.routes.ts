@@ -23,13 +23,6 @@ export const SETTINGS_ROUTES: Routes = [
       ),
   },
   {
-    path: 'working-hours/:dayKey',
-    loadComponent: () =>
-      import('./pages/working-hours-edit/working-hours-edit.component').then(
-        (m) => m.WorkingHoursEditComponent
-      ),
-  },
-  {
     path: 'account',
     loadComponent: () =>
       import('./pages/business-account-settings/business-account-settings.component').then(

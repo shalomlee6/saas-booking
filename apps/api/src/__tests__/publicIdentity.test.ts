@@ -184,13 +184,12 @@ describe('PUBLIC CLIENT IDENTITY', () => {
       warnings.push(args.map((part) => String(part)).join(' '));
     };
     const phone = '0505555555';
-    let startStatus = 0;
     try {
       const { business } = await seedOwner();
       const start = await request(app)
         .post(`/api/public/businesses/${business.slug}/identify/start`)
         .send({ phone });
-      startStatus = start.status;
+      expect(start.status).toBe(200);
       const code = await otpCode(business.slug, phone);
       expect(provider instanceof LogSmsProvider).toBe(true);
       expect(calls.length).toBe(1);
@@ -199,7 +198,6 @@ describe('PUBLIC CLIENT IDENTITY', () => {
     } finally {
       console.warn = previousWarn;
     }
-    expect(startStatus).toBe(200);
   });
 
   it('refuses the log SMS provider in production and leaves TextMe unconfigured', async () => {

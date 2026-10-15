@@ -9,7 +9,7 @@ import { connectDB } from '../config/db';
 import { migrateNoShowResets } from '../services/customerNoShows';
 
 function assertLocalMongo(uri: string): void {
-  let hostname = '';
+  let hostname: string;
   try {
     hostname = new URL(uri).hostname.toLowerCase().replace(/^\[|\]$/g, '');
   } catch {

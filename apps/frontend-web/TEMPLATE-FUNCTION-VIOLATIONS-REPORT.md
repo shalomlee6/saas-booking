@@ -46,18 +46,7 @@
 
 ---
 
-## 3. apps/frontend-web/src/app/modules/settings/pages/working-hours-edit/working-hours-edit.component.html
-
-| Line/snippet | Called | Issue | Severity | Recommended fix |
-|--------------|--------|--------|----------|-----------------|
-| `{{ dayLabel() }}` | `dayLabel()` | This is a **computed** — allowed. | — | No change. |
-| `@for (k of otherDays(); track k)` | `otherDays()` | This is a **computed** — allowed. | — | No change. |
-| `{{ k.charAt(0).toUpperCase() + k.slice(1) }}` | `k.charAt`, `k.slice` | Inline string methods in template (formatting). | Low | Precompute labels in component: e.g. `otherDaysWithLabels = computed(() => this.otherDays().map(k => ({ key: k, label: k.charAt(0).toUpperCase() + k.slice(1) })))` and use `item.label`. Or use a pure pipe. |
-| `@for (item of displaySlots(); track item.index)` | `displaySlots()` | This is a **computed** — allowed. | — | No change. |
-
----
-
-## 4. apps/frontend-web/src/app/modules/dashboard/pages/dashboard/dashboard.component.html
+## 3. apps/frontend-web/src/app/modules/dashboard/pages/dashboard/dashboard.component.html
 
 | Line/snippet | Called | Issue | Severity | Recommended fix |
 |--------------|--------|--------|----------|-----------------|
@@ -65,11 +54,11 @@
 
 ---
 
-## 5. Other component templates
+## 4. Other component templates
 
 - **working-hours-list.component.html** — Uses only signals and computeds (`editDayHeader()`, `overrideHeader()`, `minuteOptionsList()`, `editDayGeneralError()`, `editDayErrorsByIndex()`, `hasEditDayErrorsSignal()`, `overrideConflictWarningText()`, `overrideRangeVms()`, etc.). **No violations** (all are signal/computed reads).
 - **customer-book-page.component.html** — Uses `business()`, `services()`, `selectedService()`, `slots()`, `canShowSlots()`, etc.; these are signals/computeds. **No violations** identified.
-- **customer-login, working-hours-settings, business-theme-settings, services-list, service-form, customers-list, customer-form, login, appointment-form, business-ui-editor, business-customers, appointment-create-overlay** — Template calls are either signal/computed reads (e.g. `error()`, `loading()`, `saving()`) or event handlers. **No violations** identified for this rule.
+- **customer-login, business-theme-settings, services-list, service-form, customers-list, customer-form, login, appointment-form, business-ui-editor, business-customers, appointment-create-overlay** — Template calls are either signal/computed reads (e.g. `error()`, `loading()`, `saving()`) or event handlers. **No violations** identified for this rule.
 
 ---
 
@@ -79,10 +68,9 @@
 |------|------|--------|-----|
 | appointments-list.component.html | 12 | 2 | 0 |
 | layout.component.html | 0 | 8+ | 1 |
-| working-hours-edit.component.html | 0 | 0 | 1 |
 | dashboard.component.html | 0 | 0 | 1 |
 
-**Total:** 12 High, 10+ Medium, 2 Low (approximate).
+**Total:** 12 High, 10+ Medium, 1 Low (approximate).
 
 ---
 
@@ -91,7 +79,7 @@
 No code has been changed. After review, you can approve fixes:
 
 1. **High severity only** (appointments-list: precomputed view models and computeds for day/slot/block/display data).
-2. **High + Medium** (above + layout: convert arrow functions and service usage to signals/computeds; optionally working-hours-edit and dashboard).
+2. **High + Medium** (above + layout: convert arrow functions and service usage to signals/computeds, and dashboard).
 3. **Specific files only** (e.g. “only appointments-list” or “only layout”).
 
 Reply with the chosen option (or list specific files) to proceed with safe, incremental refactors.

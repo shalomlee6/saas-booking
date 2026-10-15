@@ -69,22 +69,20 @@ export class PublicLandingGalleryComponent {
       }>('settings/me/settings')
       .subscribe({
         next: (s) => {
-          let base: PublicLandingGalleryItem[] = [];
-          if (s.landingGalleryItems && s.landingGalleryItems.length > 0) {
-            base = s.landingGalleryItems.map((g) => ({
-              id: g.id,
-              imageUrl: g.imageUrl,
-              title: g.title ?? '',
-              type: g.type === 'product' ? 'product' : 'service',
-            }));
-          } else {
-            base = (s.portfolioImages ?? []).map((u, i) => ({
-              id: `legacy-${i}`,
-              imageUrl: u,
-              title: '',
-              type: 'service' as const,
-            }));
-          }
+          const base: PublicLandingGalleryItem[] =
+            s.landingGalleryItems && s.landingGalleryItems.length > 0
+              ? s.landingGalleryItems.map((g) => ({
+                  id: g.id,
+                  imageUrl: g.imageUrl,
+                  title: g.title ?? '',
+                  type: g.type === 'product' ? 'product' : 'service',
+                }))
+              : (s.portfolioImages ?? []).map((u, i) => ({
+                  id: `legacy-${i}`,
+                  imageUrl: u,
+                  title: '',
+                  type: 'service' as const,
+                }));
           const newItem: PublicLandingGalleryItem = {
             id: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `g-${Date.now()}`,
             imageUrl: url,

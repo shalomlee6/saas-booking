@@ -253,11 +253,15 @@ export async function createPublicAppointment(req: Request, res: Response) {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    let decoded: any;
+    let decoded: jwt.JwtPayload;
     try {
       const env = validateEnv();
-      decoded = jwt.verify(token, env.JWT_SECRET);
-    } catch (err) {
+      const verified = jwt.verify(token, env.JWT_SECRET);
+      if (typeof verified === 'string') {
+        return res.status(403).json({ message: 'Invalid token role' });
+      }
+      decoded = verified;
+    } catch {
       return res.status(401).json({ message: 'Invalid token' });
     }
 

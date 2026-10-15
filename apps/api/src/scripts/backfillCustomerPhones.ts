@@ -24,7 +24,7 @@ import { Customer } from '../models/Customer';
 import { canonicalLocalPhone } from '../listQuery/search';
 
 function assertLocalMongo(uri: string): void {
-  let hostname = '';
+  let hostname: string;
   try {
     hostname = new URL(uri).hostname.toLowerCase().replace(/^\[|\]$/g, '');
   } catch {

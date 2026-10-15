@@ -313,8 +313,6 @@ export async function getPublicServices(req: Request, res: Response): Promise<vo
 }
 
 // Re-export for tests or callers that imported from the controller.
-export { getAvailabilityForBusiness } from '../services/publicAvailabilityService';
-
 // --- GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD
 export async function getAvailability(req: Request, res: Response): Promise<void> {
   const { slug } = req.params as { slug: string };
@@ -376,6 +374,12 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
 }
 
 // --- POST /api/public/appointments
+/**
+ * `date` (YYYY-MM-DD) and `time` (HH:mm) are wall-clock in the business timezone
+ * (`settings.localization.timezone`, default Asia/Jerusalem), then converted to UTC with Luxon.
+ * A slot returned by availability for that date and time is the same instant.
+ * Owner create uses ISO strings with an explicit offset and stores that instant as-is.
+ */
 export async function createPublicAppointment(req: Request, res: Response): Promise<void> {
   const body = req.body as {
     slug?: string;

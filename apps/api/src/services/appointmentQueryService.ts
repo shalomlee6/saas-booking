@@ -12,6 +12,12 @@ import { NotFoundError } from '../errors/httpErrors';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 import { isFutureSlotStart } from './publicBookingTime';
 
+function readPopulatedName(value: unknown): string {
+  if (typeof value !== 'object' || value === null || value instanceof Types.ObjectId) return '';
+  const name = (value as Record<string, unknown>)['name'];
+  return typeof name === 'string' ? name : '';
+}
+
 /** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
   const [h, m] = timeStr.split(':').map(Number);
@@ -56,7 +62,7 @@ export async function computeOwnerAvailableSlots(
 
   // Precedence: this customer+service override > this customer's general default > service catalog default.
   const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
-  let durationMinutes =
+  const durationMinutes =
     override?.durationOverrideMinutes ??
     customer.defaultTreatmentDurationMinutes ??
     service.durationMinutes ??
@@ -172,14 +178,16 @@ export async function listAppointmentsForCustomer(
     .limit(CUSTOMER_HISTORY_LIMIT)
     .lean();
 
-  return appointments.map((apt: any) => ({
-    appointmentId: apt._id.toString(),
-    start: toIsoUtcString(apt.start),
-    end: toIsoUtcString(apt.end),
-    status: apt.status,
-    price: apt.price,
-    durationMinutes: apt.durationMinutes,
-    serviceName: apt.serviceId?.name ?? '',
-    notes: apt.notes ?? null,
-  }));
+  return appointments.map((apt) => {
+    return {
+      appointmentId: apt._id.toString(),
+      start: toIsoUtcString(apt.start),
+      end: toIsoUtcString(apt.end),
+      status: apt.status,
+      price: apt.price,
+      durationMinutes: apt.durationMinutes,
+      serviceName: readPopulatedName(apt.serviceId),
+      notes: apt.notes ?? null,
+    };
+  });
 }

@@ -78,11 +78,6 @@ export function signStaffToken(actor: StaffTokenActor, extra?: Record<string, un
   return jwt.sign(buildStaffPayload(actor, extra), env.JWT_SECRET, { expiresIn: ttl });
 }
 
-/** @deprecated use signStaffToken — kept only so any stray external caller doesn't break. */
-export function signStaffSessionToken(actor: StaffTokenActor): string {
-  return signStaffToken(actor);
-}
-
 /**
  * Impersonation token — always carries the acting super-admin's OWN `userId`
  * and `pwv`, never the impersonated business owner's. This is a deliberate

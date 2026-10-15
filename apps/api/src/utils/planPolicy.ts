@@ -1,5 +1,4 @@
 import { Types } from 'mongoose';
-import { User } from '../models/User';
 import { Service } from '../models/Service';
 import { BusinessSettings } from '../models/BusinessSettings';
 import { Business } from '../models/Business';
@@ -68,18 +67,6 @@ export async function assertCanCreateService(businessId: Types.ObjectId): Promis
   const count = await Service.countDocuments({ businessId });
   if (count >= maxServices) {
     const err = new Error(planUpgradeMessage(plan, 'Service limit reached'));
-    (err as Error & { status: number }).status = 403;
-    throw err;
-  }
-}
-
-export async function assertCanCreateStaffUser(businessId: Types.ObjectId): Promise<void> {
-  const plan = await loadPlanForBusiness(businessId);
-  const { maxStaff } = limitsFor(plan);
-  if (maxStaff == null) return;
-  const count = await User.countDocuments({ businessId, role: 'staff' });
-  if (count >= maxStaff) {
-    const err = new Error(planUpgradeMessage(plan, 'Staff seat limit reached'));
     (err as Error & { status: number }).status = 403;
     throw err;
   }

@@ -1,4 +1,4 @@
-import mongoose, { Types, type ClientSession } from 'mongoose';
+import mongoose, { Types, type ClientSession, type FilterQuery } from 'mongoose';
 import { Appointment, type IAppointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
@@ -7,6 +7,14 @@ import { AppointmentError } from './appointmentErrors';
 import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
 import { isFutureSlotStart } from './publicBookingTime';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
+
+function isStandaloneTransactionError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const message = 'message' in error && error.message != null ? String(error.message) : '';
+  const codeName =
+    'codeName' in error && typeof error.codeName === 'string' ? error.codeName : undefined;
+  return codeName === 'IllegalOperation' || message.includes('Transaction numbers are only allowed');
+}
 
 export type { AppointmentSource };
 export { AppointmentError } from './appointmentErrors';
@@ -64,7 +72,7 @@ export async function assertNoOverlap(
   excludeAppointmentId?: Types.ObjectId | string,
   session?: ClientSession
 ): Promise<void> {
-  const overlapQuery: any = {
+  const overlapQuery: FilterQuery<IAppointment> = {
     businessId,
     status: { $in: ['confirmed', 'pending'] },
     start: { $lt: end },
@@ -242,15 +250,9 @@ export async function createAppointmentAtomic(
       }
 
       return created;
-    } catch (e: any) {
-      const msg = String(e?.message ?? '');
-      const codeName = e?.codeName as string | undefined;
-      const isTxnUnsupported =
-        codeName === 'IllegalOperation' ||
-        msg.includes('Transaction numbers are only allowed');
-
-      if (!isTxnUnsupported) {
-        throw e;
+    } catch (error: unknown) {
+      if (!isStandaloneTransactionError(error)) {
+        throw error;
       }
 
       if (process.env.NODE_ENV === 'production') {
@@ -314,15 +316,9 @@ export async function updateAppointmentAtomic(
         updated = await runUpdate(session);
       });
       return updated;
-    } catch (e: any) {
-      const msg = String(e?.message ?? '');
-      const codeName = e?.codeName as string | undefined;
-      const isTxnUnsupported =
-        codeName === 'IllegalOperation' ||
-        msg.includes('Transaction numbers are only allowed');
-
-      if (!isTxnUnsupported) {
-        throw e;
+    } catch (error: unknown) {
+      if (!isStandaloneTransactionError(error)) {
+        throw error;
       }
 
       if (process.env.NODE_ENV === 'production') {

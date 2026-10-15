@@ -428,28 +428,6 @@ export class PublicApiService {
     );
   }
 
-  /** GET /api/public/businesses/:slug/availability?serviceId=...&date=YYYY-MM-DD (legacy slug-based) */
-  getAvailability(
-    slug: string,
-    serviceId: string,
-    date: string
-  ): Observable<AvailabilityResponse> {
-    if (environment.mockPublicApi) {
-      const offer = mockOffer();
-      const mock: AvailabilityResponse = {
-        date,
-        slots: ['09:00', '11:00', '12:30', '14:00', '15:00', '16:00'],
-        durationMinutes: offer.durationMinutes,
-        price: offer.price,
-      };
-      return of(mock).pipe(delay(350));
-    }
-    const params = new URLSearchParams({ serviceId, date });
-    return this.api.get<AvailabilityResponse>(
-      `public/businesses/${encodeURIComponent(slug)}/availability?${params}`
-    );
-  }
-
   /** GET /api/public/availability?businessId=...&serviceId=...&date=YYYY-MM-DD — real availability from backend */
   getAvailabilityByBusinessId(
     businessId: string,

@@ -18,7 +18,7 @@ export class LogSmsProvider implements SmsProvider {
 
 /** Production provider placeholder. Implemented when TextMe credentials exist. */
 export class TextMeSmsProvider implements SmsProvider {
-  async send(_phone: string, _text: string): Promise<void> {
+  async send(): Promise<void> {
     throw new Error('not configured');
   }
 }

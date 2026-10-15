@@ -1569,7 +1569,6 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   }
 
   if (isPublicAppointmentsPost(req)) {
-    const body = req.body as Record<string, unknown>;
     const id = createMockId();
     return from([
       new HttpResponse({

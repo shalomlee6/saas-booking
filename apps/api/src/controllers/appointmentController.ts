@@ -28,8 +28,57 @@ function requireBusinessId(req: AuthRequest): string {
 /** Inclusive calendar days after `start` covered by [start, end) when end = addDays(start, span + 1). */
 const DEFAULT_LIST_SPAN_DAYS = 30;
 
-function startOfLocalDay(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+type PopulatedRef = {
+  id?: string;
+  name?: string;
+  phone?: string;
+  price?: number;
+  durationMinutes?: number;
+  colorHex?: string;
+  textColorHex?: string;
+  preferredTimeOfDay?: string | null;
+};
+
+function readString(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readNumber(record: Record<string, unknown>, key: string): number | undefined {
+  const value = record[key];
+  return typeof value === 'number' ? value : undefined;
+}
+
+function hasOwnName(value: unknown): boolean {
+  return typeof value === 'object' && value !== null && 'name' in value;
+}
+
+/** Populated mongoose ref → plain fields. An unpopulated ObjectId has none of these. */
+function readPopulatedRef(value: unknown): PopulatedRef | null {
+  if (typeof value !== 'object' || value === null || value instanceof Types.ObjectId) return null;
+  const record = value as Record<string, unknown>;
+  const id = record['_id'];
+  const idString =
+    typeof id === 'object' && id !== null && 'toString' in id && typeof id.toString === 'function'
+      ? id.toString()
+      : undefined;
+  const preferences = record['preferences'];
+  let preferredTimeOfDay: string | null | undefined;
+  if (typeof preferences === 'object' && preferences !== null) {
+    const bucket = (preferences as Record<string, unknown>)['preferredTimeOfDay'];
+    if (typeof bucket === 'string') preferredTimeOfDay = bucket;
+    else if (bucket === null) preferredTimeOfDay = null;
+  }
+  return {
+    id: idString,
+    name: readString(record, 'name'),
+    phone: readString(record, 'phone'),
+    price: readNumber(record, 'price'),
+    durationMinutes: readNumber(record, 'durationMinutes'),
+    colorHex: readString(record, 'colorHex'),
+    textColorHex: readString(record, 'textColorHex'),
+    preferredTimeOfDay,
+  };
 }
 
 function addCalendarDays(base: Date, days: number): Date {
@@ -87,9 +136,9 @@ export async function getAppointmentsList(req: AuthRequest, res: Response): Prom
     .sort({ start: 1 })
     .lean();
 
-  const dtoArray = appointments.map((apt: any) => {
-    const customer = apt.customerId;
-    const service = apt.serviceId;
+  const dtoArray = appointments.map((apt) => {
+    const customer = readPopulatedRef(apt.customerId);
+    const service = readPopulatedRef(apt.serviceId);
     const price = apt.price ?? service?.price ?? undefined;
     const durationMinutes = apt.durationMinutes ?? service?.durationMinutes ?? undefined;
     return {
@@ -102,7 +151,7 @@ export async function getAppointmentsList(req: AuthRequest, res: Response): Prom
       serviceName: service?.name ?? '',
       customerName: customer?.name ?? apt.customerName ?? 'לקוחה',
       customerPhone: customer?.phone ?? apt.customerPhone ?? null,
-      customerPreferredTimeOfDay: customer?.preferences?.preferredTimeOfDay ?? null,
+      customerPreferredTimeOfDay: customer?.preferredTimeOfDay ?? null,
     };
   });
 
@@ -201,7 +250,7 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
     }
   }
 
-  let nextStart = body.start !== undefined ? new Date(body.start) : existing.start;
+  const nextStart = body.start !== undefined ? new Date(body.start) : existing.start;
   let nextEnd = body.end !== undefined ? new Date(body.end) : existing.end;
 
   const serviceIdChanged =
@@ -302,30 +351,24 @@ export async function getBusinessAppointmentsForWeek(req: AuthRequest, res: Resp
     .sort({ start: 1 });
 
   const dtoArray = appointments.map((apt) => {
-    const customerPopulated =
-      apt.customerId && typeof apt.customerId === 'object' && 'name' in apt.customerId
-        ? (apt.customerId as any)
-        : null;
-    const servicePopulated =
-      apt.serviceId && typeof apt.serviceId === 'object' && 'name' in apt.serviceId
-        ? (apt.serviceId as any)
-        : null;
+    const customerPopulated = hasOwnName(apt.customerId) ? readPopulatedRef(apt.customerId) : null;
+    const servicePopulated = hasOwnName(apt.serviceId) ? readPopulatedRef(apt.serviceId) : null;
 
     return {
       _id: apt._id.toString(),
       start: toIsoUtcString(apt.start),
       end: toIsoUtcString(apt.end),
       status: apt.status,
-      customer: customerPopulated
+      customer: customerPopulated?.id
         ? {
-            _id: customerPopulated._id.toString(),
+            _id: customerPopulated.id,
             name: customerPopulated.name,
             phone: customerPopulated.phone,
           }
         : null,
-      service: servicePopulated
+      service: servicePopulated?.id
         ? {
-            _id: servicePopulated._id.toString(),
+            _id: servicePopulated.id,
             name: servicePopulated.name,
             colorHex: servicePopulated.colorHex,
             textColorHex: servicePopulated.textColorHex,

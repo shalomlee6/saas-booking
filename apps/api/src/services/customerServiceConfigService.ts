@@ -12,6 +12,10 @@ export interface CustomerServiceConfigInput {
   notes?: string;
 }
 
+function isDuplicateKeyError(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
+}
+
 export interface CustomerServiceConfigUpdateInput {
   durationOverrideMinutes?: number | null;
   priceOverride?: number | null;
@@ -55,14 +59,14 @@ export async function createCustomerServiceConfigForTenant(
       priceOverride: input.priceOverride,
       notes: input.notes,
     });
-  } catch (e: any) {
-    if (e?.code === 11000) {
+  } catch (error: unknown) {
+    if (isDuplicateKeyError(error)) {
       throw new ConflictError(
         'A service override already exists for this customer and service',
         'DUPLICATE_CUSTOMER_SERVICE_CONFIG'
       );
     }
-    throw e;
+    throw error;
   }
 }
 

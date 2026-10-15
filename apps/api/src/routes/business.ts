@@ -60,8 +60,7 @@ businessRouter.patch(
       return res.status(404).json({ message: 'Business not found' });
     }
     const currentUi = business.ui && typeof business.ui === 'object' ? business.ui : {};
-    const merged = { ...currentUi, ...result.ui };
-    business.ui = merged as any;
+    business.ui = normalizeBusinessUi({ ...currentUi, ...result.ui });
     await business.save();
 
     // A super-admin editing a real business's theme while impersonating is a
