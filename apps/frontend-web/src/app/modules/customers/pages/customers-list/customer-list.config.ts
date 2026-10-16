@@ -32,7 +32,6 @@ export interface CustomerListConfigInput {
   onExcuseAllNoShows: (row: CustomerListRow, reason?: string) => void;
   onCreate: () => void;
   onBulkSetActive: (rows: CustomerListRow[], isActive: boolean) => void;
-  onOpenSettings?: () => void;
 }
 
 function dateText(value: string | null | undefined): string {
@@ -274,17 +273,7 @@ export function buildCustomerTableConfig(
       total === 1
         ? t('customers.countOne')
         : `${new Intl.NumberFormat(locale).format(total)} ${t('customers.countSuffix')}`,
-    headerActions:
-      owner && input.onOpenSettings
-        ? [
-            {
-              id: 'settings',
-              label: t('customers.noShowSettings'),
-              icon: 'pi pi-cog',
-              run: input.onOpenSettings,
-            },
-          ]
-        : [],
+    headerActions: [],
     empty: {
       icon: 'pi pi-users',
       title: t('customers.emptyTitle'),

@@ -112,6 +112,7 @@ function isCustomersGet(req: HttpRequest<unknown>): boolean {
 }
 
 function isCustomerSingleGet(req: HttpRequest<unknown>): boolean {
+  if (req.url.includes('customers/birthday-field')) return false;
   return req.method === 'GET' && /\/api\/customers\/[^/?]+\/?(\?.*)?$/.test(req.url);
 }
 
@@ -1603,6 +1604,54 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         status: 200,
         body: { workingHours: mockBusinessSettings?.workingHours ?? buildDefaultWorkingHours() },
       }),
+    ]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('settings/me/booking-rules')) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          booking: {
+            enabled: true,
+            minLeadMinutes: 60,
+            maxAdvanceDays: 60,
+            bufferMinutes: 0,
+            onlineDefaultStatus: 'confirmed',
+            maxActiveAppointmentsPerClient: null,
+            clientCanCancelOnline: true,
+            cancellationWindowHours: 24,
+          },
+          reliability: {
+            noShow: { enabled: true, threshold: 3 },
+            lateCancellation: { enabled: false, threshold: 3 },
+            lateArrival: { enabled: false, threshold: 3 },
+            lookback: '12months',
+          },
+          clientPolicy: {
+            he: 'אפשר לקבוע תור לפחות 60 דקות מראש. אפשר לקבוע עד 60 ימים קדימה. אפשר לבטל תור אונליין עד 24 שעות לפני התור. אין הגבלה על מספר התורים העתידיים. חסימה אוטומטית אחרי 3 אי-הגעות ב-12 החודשים האחרונים.',
+            en: 'Book at least 60 minutes ahead. You can book up to 60 days ahead. You can cancel online until 24 hours before the visit. There is no limit on upcoming appointments. Online booking is blocked after 3 no-shows in the last 12 months.',
+          },
+        },
+      }),
+    ]);
+  }
+
+  if ((req.method === 'PUT' || req.method === 'POST') && (req.url.includes('settings/me/booking-rules') || req.url.includes('settings/me/reliability'))) {
+    return from([new HttpResponse({ status: 200, body: req.body })]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('customers/birthday-field')) {
+    return from([new HttpResponse({ status: 200, body: { birthdayField: 'required' } })]);
+  }
+
+  if (req.method === 'PUT' && req.url.includes('customers/birthday-field')) {
+    return from([new HttpResponse({ status: 200, body: req.body })]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('/active-limit')) {
+    return from([
+      new HttpResponse({ status: 200, body: { activeCount: 0, limit: null, atOrAboveLimit: false } }),
     ]);
   }
 

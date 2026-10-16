@@ -29,6 +29,14 @@ import {
   isInsideCancellationWindow,
   resolveCancellationWindowHours,
 } from '../services/publicBookingPolicy';
+import {
+  assertPublicSlotWindow,
+  assertUnderActiveLimit,
+  buildClientPolicyText,
+  resolveOnlineBookingRules,
+  ruleErrorForRequest,
+} from '../services/bookingRules';
+import { resolveReliabilityPolicy } from '../services/customerNoShows';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -134,6 +142,19 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
     openingHours,
     welcomeMessage: welcome,
     cancellationNoticeHe: CANCELLATION_NOTICE_HE,
+    onlineBooking: resolveOnlineBookingRules(settings),
+    clientPolicy: {
+      he: buildClientPolicyText(
+        resolveOnlineBookingRules(settings),
+        resolveReliabilityPolicy(settings),
+        'he'
+      ),
+      en: buildClientPolicyText(
+        resolveOnlineBookingRules(settings),
+        resolveReliabilityPolicy(settings),
+        'en'
+      ),
+    },
     landing: {
       tagline,
       coverImageUrl,
@@ -432,6 +453,7 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
   if (!settings.features?.bookingEnabled) {
     throw new ForbiddenError('Booking is disabled for this business', 'BOOKING_DISABLED');
   }
+  const bookingRules = resolveOnlineBookingRules(settings);
 
   const service = await Service.findOne({ _id: serviceId, businessId });
   if (!service) {
@@ -461,6 +483,9 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
     );
   }
   const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
+  const timezoneForRules = settings.localization?.timezone ?? 'Asia/Jerusalem';
+  assertPublicSlotWindow(req, bookingRules, dateStr, startAt, timezoneForRules);
+  await assertUnderActiveLimit(req, businessId.toString(), customerId.toString(), bookingRules);
 
   const appointment = await createAppointmentAtomic(
     {
@@ -469,6 +494,7 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
       start: startAt,
       end: endAt,
       source: 'client-online',
+      status: bookingRules.onlineDefaultStatus,
       customerId,
       customerName: resolvedCustomerName,
       customerPhone: resolvedCustomerPhone,
@@ -665,6 +691,10 @@ export async function cancelCustomerAppointment(req: Request, res: Response): Pr
   }
 
   const settings = await ensureBusinessSettings(publicCustomer.businessId);
+  const bookingRules = resolveOnlineBookingRules(settings);
+  if (!bookingRules.clientCanCancelOnline) {
+    throw ruleErrorForRequest(req, 'ONLINE_CANCEL_DISABLED');
+  }
   const windowHours = resolveCancellationWindowHours(settings.cancellationWindowHours);
   if (!isInsideCancellationWindow(apt.start, windowHours)) {
     throw new ConflictError(
@@ -692,6 +722,7 @@ async function moveAppointmentInOneTransaction(input: {
   customerName: string;
   customerPhone?: string;
   price?: number;
+  status?: 'confirmed' | 'pending';
   rescheduledFrom: Types.ObjectId;
   originalId: Types.ObjectId;
 }): Promise<IAppointment> {
@@ -707,6 +738,7 @@ async function moveAppointmentInOneTransaction(input: {
         customerName: input.customerName,
         customerPhone: input.customerPhone,
         price: input.price,
+        status: input.status,
         rescheduledFrom: input.rescheduledFrom,
       },
       { requireCustomerId: true, excludeAppointmentId: input.originalId, session }
@@ -812,6 +844,15 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
     );
   }
   const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
+  const bookingRules = resolveOnlineBookingRules(settings);
+  assertPublicSlotWindow(req, bookingRules, dateStr, startAt, timezone);
+  await assertUnderActiveLimit(
+    req,
+    apt.businessId.toString(),
+    customer._id.toString(),
+    bookingRules,
+    apt._id.toString()
+  );
 
   const created = await moveAppointmentInOneTransaction({
     businessId: apt.businessId,
@@ -823,6 +864,7 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
     customerName: customer.name ?? '',
     customerPhone: customer.phone ?? undefined,
     price,
+    status: apt.status === 'pending' ? 'pending' : 'confirmed',
     rescheduledFrom: apt._id,
     originalId: apt._id,
   });

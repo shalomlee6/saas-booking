@@ -113,6 +113,9 @@ export const appointmentPatchBodySchema = z
     price: z.number().min(0).optional(),
     status: appointmentStatusZod.optional(),
     notes: z.union([z.string().max(10_000), z.literal('')]).optional(),
+    lateCancellation: z.boolean().optional(),
+    lateArrival: z.boolean().optional(),
+    lateArrivalMinutes: z.number().int().min(0).max(24 * 60).nullable().optional(),
   })
   .strip()
   .superRefine((data, ctx) => {

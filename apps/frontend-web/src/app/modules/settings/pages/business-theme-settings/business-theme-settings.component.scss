@@ -1,168 +1,236 @@
-.business-theme-settings-page {
+/* Layout, rows, inputs and segmented control come from the shared settings-section.scss. */
+
+.theme-segment-button {
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.business-theme-settings-title {
-  margin: 0;
-  font-size: 1.5rem;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.business-theme-settings-subtitle {
-  margin: 0;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-block-size: 2.25rem;
+  padding: 0 0.875rem;
+  border: 0;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
   font-size: 0.875rem;
-  color: var(--text-muted);
+  font-weight: 600;
+  cursor: pointer;
 }
 
-.business-theme-settings-card {
-  max-width: 400px;
+.theme-segment-button-active {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg, 12px);
-  padding: 1.25rem;
+  color: var(--color-primary-ink);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--text-primary) 25%, transparent);
 }
 
-.business-theme-settings-card-title {
-  margin: 0 0 0.25rem;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
+.theme-segment-button:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
 }
 
-.business-theme-settings-card-subtitle {
-  margin: 0 0 1rem;
-  font-size: 0.8125rem;
-  color: var(--text-muted);
+/* ─── Color rows ─────────────────────────────────────────────────────────── */
+
+.theme-color-row {
+  grid-template-areas:
+    'text control'
+    'presets presets'
+    'warning warning';
 }
 
-// ─── Language toggle ────────────────────────────────────────────────────────
-.language-toggle {
-  display: inline-flex;
-  gap: 0.25rem;
-  padding: 0.25rem;
+.theme-color-row .settings-row-text {
+  grid-area: text;
+}
+
+.theme-color-row .settings-row-control {
+  grid-area: control;
+}
+
+.theme-color-picker {
+  flex: 0 0 auto;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  padding: 0.1875rem;
+  border: 1px solid var(--border-color-strong, var(--border-color));
+  border-radius: var(--radius-md);
   background: var(--bg-app);
-  border-radius: var(--radius-md, 8px);
-}
-
-.language-toggle-btn {
-  padding: 0.5rem 1.25rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-sm, 6px);
   cursor: pointer;
-  transition: background 0.12s ease, color 0.12s ease;
 }
 
-.language-toggle-btn:hover {
-  color: var(--text-primary);
-}
-
-.language-toggle-btn--active {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-.language-toggle-btn--active:hover {
-  color: #fff;
-}
-
-.language-toggle-btn:focus-visible {
+.theme-color-picker:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
-.business-theme-settings-form {
+.theme-hex-input {
+  inline-size: 7.5rem;
+  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+}
+
+.theme-presets {
+  grid-area: presets;
   display: flex;
-  flex-direction: column;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.625rem;
 }
 
-.business-theme-settings-field {
+.theme-preset {
+  inline-size: 1.75rem;
+  block-size: 1.75rem;
+  padding: 0;
+  border: 2px solid var(--bg-card);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--text-primary) 40%, transparent);
+  cursor: pointer;
+}
+
+.theme-preset-active {
+  box-shadow:
+    0 0 0 2px var(--bg-card),
+    0 0 0 4px var(--text-primary);
+}
+
+.theme-preset:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+
+.theme-warning {
+  grid-area: warning;
   display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.business-theme-settings-field label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.business-theme-settings-input {
-  padding: 0.5rem 0.75rem;
-  font-size: 0.875rem;
-  color: var(--text-primary);
-  background: var(--bg-app);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  outline: none;
-}
-
-.business-theme-settings-input:focus {
-  border-color: var(--color-primary);
-}
-
-.business-theme-settings-error {
+  align-items: flex-start;
+  gap: 0.5rem;
   margin: 0;
-  font-size: 0.875rem;
-  color: #dc2626;
-}
-
-.business-theme-settings-warning {
-  margin: 0.35rem 0 0;
-  font-size: 0.875rem;
-  color: #92400e;
-}
-
-.business-theme-settings-actions {
-  display: flex;
-  gap: 0.75rem;
-}
-
-.business-theme-settings-btn {
-  padding: 0.5rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 600;
-  border-radius: var(--radius-md, 8px);
-  border: 1px solid transparent;
-  cursor: pointer;
-  text-decoration: none;
-  transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
-}
-
-.business-theme-settings-btn-primary {
-  background: var(--color-primary);
-  color: #fff;
-}
-
-.business-theme-settings-btn-primary:hover:not(:disabled) {
-  background: var(--color-primary-hover, var(--color-primary));
-}
-
-.business-theme-settings-btn-primary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.business-theme-settings-btn-ghost {
-  background: transparent;
-  color: var(--text-secondary, var(--text-muted));
-  border-color: var(--border-color);
-}
-
-.business-theme-settings-btn-ghost:hover {
-  background: var(--bg-app);
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, #d97706 12%, var(--bg-card));
   color: var(--text-primary);
+  font-size: 0.8125rem;
+  line-height: 1.45;
 }
 
-.business-theme-settings-btn:focus-visible {
-  outline: 2px solid var(--color-primary);
-  outline-offset: 2px;
+.theme-warning i {
+  margin-block-start: 0.125rem;
+  color: #b45309;
+}
+
+@media (max-width: 599px) {
+  .theme-color-row {
+    grid-template-areas:
+      'text'
+      'control'
+      'presets'
+      'warning';
+  }
+
+  .theme-hex-input {
+    flex: 1 1 auto;
+    inline-size: auto;
+  }
+}
+
+/* ─── Preview ────────────────────────────────────────────────────────────── */
+
+.theme-preview-hint {
+  margin: 0;
+  padding: 0 1.25rem 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.8125rem;
+}
+
+.theme-preview {
+  display: flex;
+  min-block-size: 9.5rem;
+  margin: 0 1.25rem 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: #f4f6fb;
+  --pv-card: #ffffff;
+  --pv-line: #d9deea;
+}
+
+.theme-preview-dark {
+  background: #0d0d0f;
+  --pv-card: #1a1b20;
+  --pv-line: #3a3d49;
+}
+
+.theme-preview-sidebar {
+  display: flex;
+  flex: 0 0 22%;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--pv-sidebar);
+}
+
+.theme-preview-dot {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: 6px;
+  background: var(--pv-primary);
+}
+
+.theme-preview-line {
+  display: block;
+  block-size: 0.5rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--pv-on-sidebar) 30%, transparent);
+}
+
+.theme-preview-line-active {
+  background: color-mix(in srgb, var(--pv-on-sidebar) 80%, transparent);
+}
+
+.theme-preview-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.theme-preview-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.theme-preview-title {
+  inline-size: 28%;
+  block-size: 0.625rem;
+  border-radius: 4px;
+  background: var(--pv-line);
+}
+
+.theme-preview-button {
+  padding: 0.3125rem 0.75rem;
+  border-radius: 6px;
+  background: var(--pv-primary);
+  color: var(--pv-on-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.theme-preview-cards {
+  display: grid;
+  flex: 1 1 auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.theme-preview-card {
+  display: block;
+  border: 1px solid var(--pv-line);
+  border-radius: 6px;
+  background: var(--pv-card);
+}
+
+.theme-preview-card-accent {
+  border-color: var(--pv-primary);
+  background: color-mix(in srgb, var(--pv-primary) 14%, var(--pv-card));
 }

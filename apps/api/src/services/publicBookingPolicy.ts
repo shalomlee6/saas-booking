@@ -3,12 +3,7 @@ import type { ICustomer } from '../models/Customer';
 import { HttpError } from '../errors/httpErrors';
 import { recordAudit } from '../utils/recordAudit';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
-import {
-  countCustomerNoShows,
-  normalizeBookingOverride,
-  resolveBookingBlock,
-  resolveNoShowPolicy,
-} from './customerNoShows';
+import { evaluateBookingBlock } from './customerNoShows';
 
 export const ONLINE_BOOKING_UNAVAILABLE = {
   he: 'לא ניתן לקבוע תור אונליין. נא ליצור קשר עם העסק.',
@@ -58,9 +53,12 @@ export function publicPhoneLookupKeys(canonical: string, rawInput: string): stri
 export async function enforcePublicBookingCustomer(req: Request, customer: ICustomer): Promise<void> {
   const businessId = customer.businessId.toString();
   const settings = await ensureBusinessSettings(businessId);
-  const policy = resolveNoShowPolicy(settings);
-  const noShowCount = await countCustomerNoShows(businessId, customer._id.toString());
-  const block = resolveBookingBlock(normalizeBookingOverride(customer.bookingOverride), policy, noShowCount);
+  const { block } = await evaluateBookingBlock(
+    businessId,
+    customer._id.toString(),
+    customer.bookingOverride,
+    settings
+  );
   if (block.blocked) {
     throw new HttpError(
       403,

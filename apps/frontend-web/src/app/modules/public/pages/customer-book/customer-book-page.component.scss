@@ -549,6 +549,14 @@
   text-align: center;
 }
 
+.book-policy {
+  margin: 0 0 1rem;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--book-text-soft);
+  overflow-wrap: anywhere;
+}
+
 .book-notice-state {
   display: flex;
   flex-direction: column;

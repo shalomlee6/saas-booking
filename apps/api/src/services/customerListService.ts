@@ -5,10 +5,10 @@ import { ForbiddenError } from '../errors/httpErrors';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import {
   bookingBlockedExpression,
-  noShowCountAggregationExpression,
-  resolveNoShowPolicy,
+  reliabilityCountExpressions,
+  resolveReliabilityPolicy,
   type BookingOverride,
-  type NoShowPolicy,
+  type ReliabilityPolicy,
 } from './customerNoShows';
 import {
   andFilters,
@@ -76,7 +76,8 @@ function hourBucket(hour: Record<string, unknown>): Record<string, unknown> {
   };
 }
 
-function metricStages(now: Date, timezone: string, policy: NoShowPolicy): Record<string, unknown>[] {
+function metricStages(now: Date, timezone: string, policy: ReliabilityPolicy): Record<string, unknown>[] {
+  const counts = reliabilityCountExpressions(policy, now);
   const completed = {
     $filter: {
       input: '$appointments',
@@ -100,7 +101,19 @@ function metricStages(now: Date, timezone: string, policy: NoShowPolicy): Record
               },
             },
           },
-          { $project: { status: 1, start: 1, price: 1, serviceId: 1, noShowExcused: 1 } },
+          {
+            $project: {
+              status: 1,
+              start: 1,
+              price: 1,
+              serviceId: 1,
+              noShowExcused: 1,
+              lateCancellation: 1,
+              lateCancellationExcused: 1,
+              lateArrival: 1,
+              lateArrivalExcused: 1,
+            },
+          },
         ],
         as: 'appointments',
       },
@@ -143,7 +156,9 @@ function metricStages(now: Date, timezone: string, policy: NoShowPolicy): Record
             },
           },
         },
-        noShowCount: noShowCountAggregationExpression(),
+        noShowCount: counts.noShowCount,
+        lateCancellationCount: counts.lateCancellationCount,
+        lateArrivalCount: counts.lateArrivalCount,
         preferredServiceId: {
           $let: {
             vars: {
@@ -357,7 +372,7 @@ async function prepare(businessId: string, query: CustomersPagedQuery, owner: bo
   const now = new Date();
   const metricFilter = afterMetricsMatch(query, timezone, now);
   const beforeFacet = [
-    ...metricStages(now, timezone, resolveNoShowPolicy(settings)),
+    ...metricStages(now, timezone, resolveReliabilityPolicy(settings)),
     ...(Object.keys(metricFilter).length > 0 ? [{ $match: metricFilter }] : []),
     projectRow(),
   ];

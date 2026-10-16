@@ -1,44 +1,4 @@
 <section class="customers-page">
-  <p-dialog
-    [header]="'customers.noShowSettings' | translate"
-    [visible]="policyOpen()"
-    (visibleChange)="policyOpen.set($event)"
-    [modal]="true"
-    [style]="{ width: '24rem' }"
-  >
-    <form class="customers-policy-form" (ngSubmit)="saveNoShowSettings()">
-      <label class="customers-policy-field">
-        <input
-          type="checkbox"
-          name="enabled"
-          [ngModel]="policyEnabled()"
-          (ngModelChange)="policyEnabled.set($event)"
-        />
-        {{ 'customers.noShowPolicyEnabled' | translate }}
-      </label>
-      <label class="customers-policy-field">
-        {{ 'customers.noShowThreshold' | translate }}
-        <input
-          class="customers-policy-threshold"
-          type="number"
-          name="threshold"
-          min="1"
-          max="20"
-          step="1"
-          [ngModel]="policyThreshold()"
-          (ngModelChange)="onPolicyThreshold($event)"
-        />
-      </label>
-      <div class="customers-policy-actions">
-        <button type="button" class="customers-policy-cancel" (click)="policyOpen.set(false)">
-          {{ 'common.cancel' | translate }}
-        </button>
-        <button type="submit" class="customers-policy-save" [disabled]="policySaving()">
-          {{ 'common.save' | translate }}
-        </button>
-      </div>
-    </form>
-  </p-dialog>
   <app-data-management-table
     [config]="tableConfig()"
     [load]="loadPage"

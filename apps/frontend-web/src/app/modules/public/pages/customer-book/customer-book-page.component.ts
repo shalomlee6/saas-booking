@@ -137,6 +137,21 @@ export class CustomerBookPageComponent implements OnInit {
 
   // ── Derived computeds ─────────────────────────────────────────────────────
   readonly minDate = this.minDateForCalendar.asReadonly();
+  readonly bookingLimitReached = signal(false);
+  readonly bookingClosed = computed(() => this.business()?.onlineBooking?.enabled === false);
+  readonly maxDate = computed(() => {
+    const base = this.minDate();
+    const days = this.business()?.onlineBooking?.maxAdvanceDays ?? 60;
+    const max = new Date(base);
+    max.setDate(max.getDate() + days);
+    return max;
+  });
+  readonly policyText = computed(() => {
+    const policy = this.business()?.clientPolicy;
+    if (!policy) return '';
+    return this.language.language() === 'en' ? policy.en : policy.he;
+  });
+  readonly contactPhone = computed(() => this.business()?.landing?.phone ?? '');
   readonly isLoggedIn = computed(() => this.session.readyToBook(this.slug()));
 
   readonly loadingStep1 = computed(
@@ -348,14 +363,7 @@ export class CustomerBookPageComponent implements OnInit {
       .subscribe(({ slug, result }) => {
         if (result.kind === 'ok') {
           this.session.applyMe(slug, result.profile);
-          if (this.session.readyToBook(slug)) {
-            this.skippedIdentify.set(true);
-            this.currentStep.set(3);
-            return;
-          }
-          this.skippedIdentify.set(false);
-          this.identifyEntry.set(result.profile.hasCustomer ? 'birthday' : 'profile');
-          this.currentStep.set(2);
+          this.continueAfterIdentity(slug, result.profile.hasCustomer ? 'birthday' : 'profile');
           return;
         }
         this.session.clearSession(slug);
@@ -366,8 +374,32 @@ export class CustomerBookPageComponent implements OnInit {
   }
 
   onIdentified(): void {
+    if (this.session.bookingLimitReached()) {
+      this.bookingLimitReached.set(true);
+      this.currentStep.set(2);
+      return;
+    }
+    this.bookingLimitReached.set(false);
     this.skippedIdentify.set(false);
     this.currentStep.set(3);
+  }
+
+  private continueAfterIdentity(slug: string, entry: 'phone' | 'birthday' | 'profile'): void {
+    if (this.session.bookingLimitReached()) {
+      this.bookingLimitReached.set(true);
+      this.skippedIdentify.set(false);
+      this.currentStep.set(2);
+      return;
+    }
+    this.bookingLimitReached.set(false);
+    if (this.session.readyToBook(slug)) {
+      this.skippedIdentify.set(true);
+      this.currentStep.set(3);
+      return;
+    }
+    this.skippedIdentify.set(false);
+    this.identifyEntry.set(entry);
+    this.currentStep.set(2);
   }
 
   onDateSelect(): void {

@@ -2,17 +2,7 @@
 .wh-page {
   min-height: 100%;
   background: var(--bg-app, #f5f6f8);
-  max-width: 720px;
-  margin-inline: auto;
   box-sizing: border-box;
-}
-
-.wh-page-title {
-  margin: 0 0 1.5rem;
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--text-primary, #1a1a1a);
-  text-align: start;
 }
 
 // ─── Tabs ─────────────────────────────────────────────────────────────────────
@@ -120,6 +110,12 @@
 
 .wh-edit-btn {
   min-height: 36px;
+}
+
+:host ::ng-deep .wh-edit-btn.p-button,
+:host ::ng-deep .wh-edit-btn .p-button-label,
+:host ::ng-deep .wh-edit-btn .p-button-icon {
+  color: var(--color-primary-ink, #4338ca);
 }
 
 // ─── Calendar card (Tab 2) ────────────────────────────────────────────────────
@@ -489,7 +485,7 @@
 
 .wh-inline-message-warn {
   background: color-mix(in srgb, #f59e0b 12%, transparent);
-  color: #92400e;
+  color: var(--text-primary, #92400e);
   border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
 }
 
@@ -504,7 +500,7 @@
   align-items: center;
   gap: 0.5rem;
   background: color-mix(in srgb, #f59e0b 12%, transparent);
-  color: #92400e;
+  color: var(--text-primary, #92400e);
   border: 1px solid color-mix(in srgb, #f59e0b 30%, transparent);
   padding: 0.75rem;
   border-radius: 8px;
@@ -717,11 +713,6 @@
   .wh-page {
     
     max-width: 100%;
-  }
-
-  .wh-page-title {
-    font-size: 1.25rem;
-    margin-bottom: 1.25rem;
   }
 
   .wh-day-card {

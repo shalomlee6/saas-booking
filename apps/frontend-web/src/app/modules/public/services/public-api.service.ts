@@ -138,6 +138,11 @@ export interface PublicBusinessForBooking {
   openingHours: Record<string, { open: string; close: string } | null>;
   media: { photos: string[]; videoUrl?: string };
   cancellationNoticeHe: string;
+  onlineBooking?: {
+    enabled: boolean;
+    maxAdvanceDays: number;
+  };
+  clientPolicy?: { he: string; en: string };
   /** From GET /api/public/businesses/:slug — used for public booking date keys. */
   localization?: {
     timezone?: string;

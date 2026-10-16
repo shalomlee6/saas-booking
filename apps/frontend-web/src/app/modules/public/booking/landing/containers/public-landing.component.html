@@ -159,6 +159,7 @@
 <app-public-appointment-details
   [appointment]="detailsApt()"
   [businessPhone]="businessPhone() || bookingBusiness()?.landing?.phone || null"
+  [policyText]="clientPolicyText()"
   (closed)="detailsApt.set(null)"
   (cancelled)="onAppointmentCancelled()"
   (edit)="onEditAppointment()"

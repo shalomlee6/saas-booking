@@ -20,10 +20,11 @@ import type {
   BookingOverride,
   NoShowControl,
   NoShowControlAppointment,
+  ReliabilityKind,
 } from '../../model/no-show-control';
 
 type NoShowDialog =
-  | { kind: 'excuse' | 'unexcuse'; appointmentId: string }
+  | { kind: 'excuse' | 'unexcuse'; appointmentId: string; eventKind: ReliabilityKind }
   | { kind: 'excuse-all' }
   | { kind: 'override'; override: BookingOverride };
 
@@ -446,12 +447,13 @@ export class CustomerDetailsComponent implements OnInit {
     return label === key ? action : label;
   }
 
-  requestExcuse(item: NoShowControlAppointment): void {
+  requestExcuse(item: NoShowControlAppointment, eventKind: ReliabilityKind = 'no_show'): void {
     this.noShowReason.set('');
     this.noShowError.set(null);
     this.pendingNoShow.set({
       kind: item.excused ? 'unexcuse' : 'excuse',
       appointmentId: item.id,
+      eventKind,
     });
   }
 
@@ -514,7 +516,8 @@ export class CustomerDetailsComponent implements OnInit {
               this.customerId,
               pending.appointmentId,
               pending.kind === 'excuse',
-              reason
+              reason,
+              pending.eventKind
             );
     request.subscribe({
       next: (control) => {

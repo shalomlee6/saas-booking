@@ -11,6 +11,22 @@ export interface NoShowPolicy {
   threshold: number;
 }
 
+export type ReliabilityKind = 'no_show' | 'late_cancellation' | 'late_arrival';
+export type Lookback = '12months' | 'all';
+
+export interface ReliabilityPolicy {
+  noShow: NoShowPolicy;
+  lateCancellation: NoShowPolicy;
+  lateArrival: NoShowPolicy;
+  lookback: Lookback;
+}
+
+export interface ReliabilityCounts {
+  noShow: number;
+  lateCancellation: number;
+  lateArrival: number;
+}
+
 export type BookingOverride = 'auto' | 'allow' | 'block';
 export type BlockReason = 'threshold' | 'manual' | 'allowed' | 'clear';
 
@@ -19,6 +35,10 @@ const DEFAULT_POLICY: NoShowPolicy = { enabled: true, threshold: 3 };
 const CONTROL_ACTIONS = [
   'appointment.no_show_excused',
   'appointment.no_show_unexcused',
+  'appointment.late_cancellation_excused',
+  'appointment.late_cancellation_unexcused',
+  'appointment.late_arrival_excused',
+  'appointment.late_arrival_unexcused',
   'customer.no_shows_excused',
   'customer.booking_override_updated',
 ] as const;
@@ -51,21 +71,62 @@ export function normalizeBookingOverride(value: unknown): BookingOverride {
   return value === 'allow' || value === 'block' ? value : 'auto';
 }
 
+function resolveCounter(
+  raw: { enabled?: boolean; threshold?: number } | null | undefined,
+  defaultEnabled: boolean
+): NoShowPolicy {
+  const threshold = raw?.threshold;
+  const thresholdOk =
+    typeof threshold === 'number' && Number.isInteger(threshold) && threshold >= 1 && threshold <= 20;
+  return {
+    enabled: typeof raw?.enabled === 'boolean' ? raw.enabled : defaultEnabled,
+    threshold: thresholdOk ? threshold : DEFAULT_POLICY.threshold,
+  };
+}
+
+/** No-show keeps its existing default. The new counters stay off until an owner enables them. */
+export function resolveReliabilityPolicy(
+  source: {
+    noShowPolicy?: { enabled?: boolean; threshold?: number } | null;
+    reliability?: {
+      lateCancellation?: { enabled?: boolean; threshold?: number } | null;
+      lateArrival?: { enabled?: boolean; threshold?: number } | null;
+      lookback?: string | null;
+    } | null;
+  } | null | undefined
+): ReliabilityPolicy {
+  return {
+    noShow: resolveNoShowPolicy(source),
+    lateCancellation: resolveCounter(source?.reliability?.lateCancellation, false),
+    lateArrival: resolveCounter(source?.reliability?.lateArrival, false),
+    lookback: source?.reliability?.lookback === 'all' ? 'all' : '12months',
+  };
+}
+
+export function lookbackCutoff(lookback: Lookback, now = new Date()): Date | null {
+  if (lookback === 'all') return null;
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - 12);
+  return cutoff;
+}
+
 /**
  * One rule for every caller.
  * `allow` is never blocked. `block` is always blocked.
- * `auto` is blocked only when the policy is on and the canonical count reaches the threshold.
+ * `auto` is blocked when any enabled counter reaches its threshold inside the lookback.
  */
 export function resolveBookingBlock(
   override: BookingOverride,
-  policy: NoShowPolicy,
-  noShowCount: number
+  policy: ReliabilityPolicy,
+  counts: ReliabilityCounts
 ): BookingBlock {
   if (override === 'allow') return { blocked: false, reason: 'allowed' };
   if (override === 'block') return { blocked: true, reason: 'manual' };
-  if (policy.enabled && noShowCount >= policy.threshold) {
-    return { blocked: true, reason: 'threshold' };
-  }
+  const hit =
+    (policy.noShow.enabled && counts.noShow >= policy.noShow.threshold) ||
+    (policy.lateCancellation.enabled && counts.lateCancellation >= policy.lateCancellation.threshold) ||
+    (policy.lateArrival.enabled && counts.lateArrival >= policy.lateArrival.threshold);
+  if (hit) return { blocked: true, reason: 'threshold' };
   return { blocked: false, reason: 'clear' };
 }
 
@@ -89,10 +150,52 @@ export function noShowCountAggregationExpression(): Record<string, unknown> {
   };
 }
 
-/** Aggregation expression. Reads the stored override and the already-computed `$noShowCount`. */
-export function bookingBlockedExpression(policy: NoShowPolicy): Record<string, unknown> {
+function eventCountExpression(conds: Record<string, unknown>[], cutoff: Date | null): Record<string, unknown> {
+  const parts = [...conds];
+  if (cutoff) parts.push({ $gte: ['$$a.start', cutoff] });
+  return {
+    $size: {
+      $filter: {
+        input: '$appointments',
+        as: 'a',
+        cond: { $and: parts },
+      },
+    },
+  };
+}
+
+export function reliabilityCountExpressions(policy: ReliabilityPolicy, now = new Date()): {
+  noShowCount: Record<string, unknown>;
+  lateCancellationCount: Record<string, unknown>;
+  lateArrivalCount: Record<string, unknown>;
+} {
+  const cutoff = lookbackCutoff(policy.lookback, now);
+  return {
+    noShowCount: eventCountExpression(
+      [{ $eq: ['$$a.status', 'no_show'] }, { $ne: ['$$a.noShowExcused', true] }],
+      cutoff
+    ),
+    lateCancellationCount: eventCountExpression(
+      [{ $eq: ['$$a.lateCancellation', true] }, { $ne: ['$$a.lateCancellationExcused', true] }],
+      cutoff
+    ),
+    lateArrivalCount: eventCountExpression(
+      [{ $eq: ['$$a.lateArrival', true] }, { $ne: ['$$a.lateArrivalExcused', true] }],
+      cutoff
+    ),
+  };
+}
+
+/** Aggregation expression. Reads the stored override and the already-computed counts. */
+export function bookingBlockedExpression(policy: ReliabilityPolicy): Record<string, unknown> {
   const override = { $ifNull: ['$bookingOverride', 'auto'] };
-  const byThreshold = policy.enabled ? { $gte: ['$noShowCount', policy.threshold] } : false;
+  const hits: Record<string, unknown>[] = [];
+  if (policy.noShow.enabled) hits.push({ $gte: ['$noShowCount', policy.noShow.threshold] });
+  if (policy.lateCancellation.enabled) {
+    hits.push({ $gte: ['$lateCancellationCount', policy.lateCancellation.threshold] });
+  }
+  if (policy.lateArrival.enabled) hits.push({ $gte: ['$lateArrivalCount', policy.lateArrival.threshold] });
+  const byThreshold = hits.length === 0 ? false : hits.length === 1 ? hits[0] : { $or: hits };
   return {
     $switch: {
       branches: [
@@ -101,6 +204,41 @@ export function bookingBlockedExpression(policy: NoShowPolicy): Record<string, u
       ],
       default: byThreshold,
     },
+  };
+}
+
+export async function countReliability(
+  businessId: string,
+  customerId: string,
+  policy: ReliabilityPolicy,
+  now = new Date()
+): Promise<ReliabilityCounts> {
+  const cutoff = lookbackCutoff(policy.lookback, now);
+  const base: Record<string, unknown> = {
+    businessId,
+    customerId,
+    ...(cutoff ? { start: { $gte: cutoff } } : {}),
+  };
+  const [noShow, lateCancellation, lateArrival] = await Promise.all([
+    Appointment.countDocuments({ ...base, ...noShowAppointmentFilter() }),
+    Appointment.countDocuments({ ...base, lateCancellation: true, lateCancellationExcused: { $ne: true } }),
+    Appointment.countDocuments({ ...base, lateArrival: true, lateArrivalExcused: { $ne: true } }),
+  ]);
+  return { noShow, lateCancellation, lateArrival };
+}
+
+export async function evaluateBookingBlock(
+  businessId: string,
+  customerId: string,
+  override: unknown,
+  settings: Parameters<typeof resolveReliabilityPolicy>[0]
+): Promise<{ block: BookingBlock; counts: ReliabilityCounts; policy: ReliabilityPolicy }> {
+  const policy = resolveReliabilityPolicy(settings);
+  const counts = await countReliability(businessId, customerId, policy);
+  return {
+    policy,
+    counts,
+    block: resolveBookingBlock(normalizeBookingOverride(override), policy, counts),
   };
 }
 
@@ -142,6 +280,7 @@ export interface NoShowControlAppointment {
   start: Date;
   serviceName: string;
   excused: boolean;
+  minutes?: number;
   excusedAt?: Date;
   excusedReason?: string;
 }
@@ -154,11 +293,16 @@ export interface NoShowControlHistoryEntry {
 
 export interface NoShowControl {
   noShowCount: number;
+  lateCancellationCount: number;
+  lateArrivalCount: number;
   blocked: boolean;
   blockReason: BlockReason;
   bookingOverride: BookingOverride;
   policy: NoShowPolicy;
+  reliability: ReliabilityPolicy;
   noShows: NoShowControlAppointment[];
+  lateCancellations: NoShowControlAppointment[];
+  lateArrivals: NoShowControlAppointment[];
   history: NoShowControlHistoryEntry[];
 }
 
@@ -169,33 +313,71 @@ async function loadCustomer(businessId: string, customerId: string) {
   return customer;
 }
 
-export async function readNoShowControl(businessId: string, customerId: string): Promise<NoShowControl> {
-  const customer = await loadCustomer(businessId, customerId);
-  const settings = await ensureBusinessSettings(businessId);
-  const policy = resolveNoShowPolicy(settings);
-  const override = normalizeBookingOverride(customer.bookingOverride);
-  const noShowCount = await countCustomerNoShows(businessId, customerId);
-  const block = resolveBookingBlock(override, policy, noShowCount);
-  const rows = await Appointment.aggregate<{
+async function reliabilityRows(
+  customer: { businessId: Types.ObjectId; _id: Types.ObjectId },
+  match: Record<string, unknown>,
+  excusedField: 'noShowExcused' | 'lateCancellationExcused' | 'lateArrivalExcused'
+) {
+  return Appointment.aggregate<{
     _id: Types.ObjectId;
     start: Date;
-    noShowExcused?: boolean;
+    excused?: boolean;
     excusedAt?: Date;
     excusedReason?: string;
     serviceName?: string;
+    lateArrivalMinutes?: number;
   }>([
-    { $match: { businessId: customer.businessId, customerId: customer._id, status: 'no_show' } },
+    { $match: { businessId: customer.businessId, customerId: customer._id, ...match } },
     { $sort: { start: -1 } },
     { $lookup: { from: 'services', localField: 'serviceId', foreignField: '_id', as: 'service' } },
     {
       $project: {
         start: 1,
-        noShowExcused: 1,
+        excused: { $eq: [`$${excusedField}`, true] },
         excusedAt: 1,
         excusedReason: 1,
+        lateArrivalMinutes: 1,
         serviceName: { $ifNull: [{ $arrayElemAt: ['$service.name', 0] }, ''] },
       },
     },
+  ]);
+}
+
+function mapReliabilityRows(
+  rows: {
+    _id: Types.ObjectId;
+    start: Date;
+    excused?: boolean;
+    excusedAt?: Date;
+    excusedReason?: string;
+    serviceName?: string;
+    lateArrivalMinutes?: number;
+  }[]
+): NoShowControlAppointment[] {
+  return rows.map((row) => ({
+    id: row._id.toString(),
+    start: row.start,
+    serviceName: row.serviceName ?? '',
+    excused: row.excused === true,
+    ...(typeof row.lateArrivalMinutes === 'number' ? { minutes: row.lateArrivalMinutes } : {}),
+    ...(row.excusedAt ? { excusedAt: row.excusedAt } : {}),
+    ...(row.excusedReason ? { excusedReason: row.excusedReason } : {}),
+  }));
+}
+
+export async function readNoShowControl(businessId: string, customerId: string): Promise<NoShowControl> {
+  const customer = await loadCustomer(businessId, customerId);
+  const settings = await ensureBusinessSettings(businessId);
+  const evaluated = await evaluateBookingBlock(
+    businessId,
+    customerId,
+    customer.bookingOverride,
+    settings
+  );
+  const [noShowRows, lateCancelRows, lateArrivalRows] = await Promise.all([
+    reliabilityRows(customer, { status: 'no_show' }, 'noShowExcused'),
+    reliabilityRows(customer, { lateCancellation: true }, 'lateCancellationExcused'),
+    reliabilityRows(customer, { lateArrival: true }, 'lateArrivalExcused'),
   ]);
   const history = await AuditLog.find({
     action: { $in: [...CONTROL_ACTIONS] },
@@ -207,19 +389,17 @@ export async function readNoShowControl(businessId: string, customerId: string):
     .lean();
 
   return {
-    noShowCount,
-    blocked: block.blocked,
-    blockReason: block.reason,
-    bookingOverride: override,
-    policy,
-    noShows: rows.map((row) => ({
-      id: row._id.toString(),
-      start: row.start,
-      serviceName: row.serviceName ?? '',
-      excused: row.noShowExcused === true,
-      ...(row.excusedAt ? { excusedAt: row.excusedAt } : {}),
-      ...(row.excusedReason ? { excusedReason: row.excusedReason } : {}),
-    })),
+    noShowCount: evaluated.counts.noShow,
+    lateCancellationCount: evaluated.counts.lateCancellation,
+    lateArrivalCount: evaluated.counts.lateArrival,
+    blocked: evaluated.block.blocked,
+    blockReason: evaluated.block.reason,
+    bookingOverride: normalizeBookingOverride(customer.bookingOverride),
+    policy: evaluated.policy.noShow,
+    reliability: evaluated.policy,
+    noShows: mapReliabilityRows(noShowRows),
+    lateCancellations: mapReliabilityRows(lateCancelRows),
+    lateArrivals: mapReliabilityRows(lateArrivalRows),
     history: history.map((entry) => {
       const reason = entry.metadata?.reason;
       return {
@@ -231,13 +411,29 @@ export async function readNoShowControl(businessId: string, customerId: string):
   };
 }
 
+function excuseField(kind: ReliabilityKind): 'noShowExcused' | 'lateCancellationExcused' | 'lateArrivalExcused' {
+  if (kind === 'late_cancellation') return 'lateCancellationExcused';
+  if (kind === 'late_arrival') return 'lateArrivalExcused';
+  return 'noShowExcused';
+}
+
+function kindApplies(
+  appointment: { status: string; lateCancellation?: boolean; lateArrival?: boolean },
+  kind: ReliabilityKind
+): boolean {
+  if (kind === 'no_show') return appointment.status === 'no_show';
+  if (kind === 'late_cancellation') return appointment.lateCancellation === true;
+  return appointment.lateArrival === true;
+}
+
 export async function setNoShowExcused(
   businessId: string,
   customerId: string,
   appointmentId: string,
   excused: boolean,
   reason: string | undefined,
-  actor: NoShowActor
+  actor: NoShowActor,
+  kind: ReliabilityKind = 'no_show'
 ): Promise<NoShowControl> {
   const customer = await loadCustomer(businessId, customerId);
   if (!Types.ObjectId.isValid(appointmentId)) throw new NotFoundError('Appointment not found');
@@ -247,17 +443,18 @@ export async function setNoShowExcused(
     customerId: customer._id,
   });
   if (!appointment) throw new NotFoundError('Appointment not found');
-  if (appointment.status !== 'no_show') {
-    throw new ValidationError('Only a no-show appointment can be excused');
+  if (!kindApplies(appointment, kind)) {
+    throw new ValidationError('This appointment cannot be excused for that event');
   }
-  const already = appointment.noShowExcused === true;
+  const field = excuseField(kind);
+  const already = appointment[field] === true;
   if (already !== excused) {
     if (excused) {
       await Appointment.updateOne(
         { _id: appointment._id },
         {
           $set: {
-            noShowExcused: true,
+            [field]: true,
             excusedAt: new Date(),
             ...(reason ? { excusedReason: reason } : {}),
           },
@@ -267,18 +464,25 @@ export async function setNoShowExcused(
     } else {
       await Appointment.updateOne(
         { _id: appointment._id },
-        { $set: { noShowExcused: false }, $unset: { excusedAt: '', excusedReason: '' } }
+        { $set: { [field]: false }, $unset: { excusedAt: '', excusedReason: '' } }
       );
     }
+    const actionBase =
+      kind === 'late_cancellation'
+        ? 'appointment.late_cancellation'
+        : kind === 'late_arrival'
+          ? 'appointment.late_arrival'
+          : 'appointment.no_show';
     await recordAudit({
       actorUserId: actor.userId,
       actorEmail: actor.email,
-      action: excused ? 'appointment.no_show_excused' : 'appointment.no_show_unexcused',
+      action: excused ? `${actionBase}_excused` : `${actionBase}_unexcused`,
       entity: 'Appointment',
       entityId: appointmentId,
       metadata: {
         businessId,
         customerId,
+        kind,
         ...(reason ? { reason } : {}),
       },
     });
@@ -293,22 +497,40 @@ export async function excuseAllNoShows(
   actor: NoShowActor
 ): Promise<NoShowControl & { excused: number }> {
   const customer = await loadCustomer(businessId, customerId);
-  const result = await Appointment.updateMany(
-    {
-      businessId: customer.businessId,
-      customerId: customer._id,
-      status: 'no_show',
-      noShowExcused: { $ne: true },
-    },
-    {
-      $set: {
-        noShowExcused: true,
-        excusedAt: new Date(),
-        ...(reason ? { excusedReason: reason } : {}),
+  const excuseSet = {
+    excusedAt: new Date(),
+    ...(reason ? { excusedReason: reason } : {}),
+  };
+  const [noShows, lateCancels, lateArrivals] = await Promise.all([
+    Appointment.updateMany(
+      {
+        businessId: customer.businessId,
+        customerId: customer._id,
+        status: 'no_show',
+        noShowExcused: { $ne: true },
       },
-    }
-  );
-  const excused = result.modifiedCount;
+      { $set: { ...excuseSet, noShowExcused: true } }
+    ),
+    Appointment.updateMany(
+      {
+        businessId: customer.businessId,
+        customerId: customer._id,
+        lateCancellation: true,
+        lateCancellationExcused: { $ne: true },
+      },
+      { $set: { ...excuseSet, lateCancellationExcused: true } }
+    ),
+    Appointment.updateMany(
+      {
+        businessId: customer.businessId,
+        customerId: customer._id,
+        lateArrival: true,
+        lateArrivalExcused: { $ne: true },
+      },
+      { $set: { ...excuseSet, lateArrivalExcused: true } }
+    ),
+  ]);
+  const excused = noShows.modifiedCount + lateCancels.modifiedCount + lateArrivals.modifiedCount;
   if (excused > 0) {
     await recordAudit({
       actorUserId: actor.userId,

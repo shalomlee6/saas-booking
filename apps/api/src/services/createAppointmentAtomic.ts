@@ -7,6 +7,7 @@ import { AppointmentError } from './appointmentErrors';
 import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
 import { isFutureSlotStart } from './publicBookingTime';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
+import { readBufferMinutes } from './bookingRules';
 
 function isStandaloneTransactionError(error: unknown): boolean {
   if (typeof error !== 'object' || error === null) return false;
@@ -72,11 +73,12 @@ export async function assertNoOverlap(
   excludeAppointmentId?: Types.ObjectId | string,
   session?: ClientSession
 ): Promise<void> {
+  const bufferMs = (await readBufferMinutes(businessId)) * 60 * 1000;
   const overlapQuery: FilterQuery<IAppointment> = {
     businessId,
     status: { $in: ['confirmed', 'pending'] },
-    start: { $lt: end },
-    end: { $gt: start },
+    start: { $lt: new Date(end.getTime() + bufferMs) },
+    end: { $gt: new Date(start.getTime() - bufferMs) },
   };
 
   if (excludeAppointmentId) {

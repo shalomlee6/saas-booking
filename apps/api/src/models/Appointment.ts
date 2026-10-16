@@ -30,6 +30,13 @@ export interface IAppointment extends Document {
   rescheduledFrom?: Types.ObjectId;
   /** Excused no-shows stay `no_show` but drop out of the canonical count. */
   noShowExcused?: boolean;
+  /** Owner cancelled inside the cancellation window and left the flag on. */
+  lateCancellation?: boolean;
+  lateCancellationExcused?: boolean;
+  /** Owner marked a completed visit as a late arrival. */
+  lateArrival?: boolean;
+  lateArrivalMinutes?: number;
+  lateArrivalExcused?: boolean;
   excusedAt?: Date;
   excusedReason?: string;
   createdAt: Date;
@@ -76,6 +83,11 @@ const AppointmentSchema = new Schema<IAppointment>(
     rescheduledTo: { type: Schema.Types.ObjectId, ref: 'Appointment' },
     rescheduledFrom: { type: Schema.Types.ObjectId, ref: 'Appointment' },
     noShowExcused: { type: Boolean, default: false },
+    lateCancellation: { type: Boolean, default: false },
+    lateCancellationExcused: { type: Boolean, default: false },
+    lateArrival: { type: Boolean, default: false },
+    lateArrivalMinutes: { type: Number, min: 0, max: 24 * 60 },
+    lateArrivalExcused: { type: Boolean, default: false },
     excusedAt: Date,
     excusedReason: { type: String, maxlength: 500 },
   },

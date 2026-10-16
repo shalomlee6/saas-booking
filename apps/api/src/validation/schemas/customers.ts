@@ -139,6 +139,7 @@ export const excuseNoShowBodySchema = z
   .object({
     excused: z.boolean(),
     reason: optionalReason,
+    kind: z.enum(['no_show', 'late_cancellation', 'late_arrival']).optional(),
   })
   .strict();
 

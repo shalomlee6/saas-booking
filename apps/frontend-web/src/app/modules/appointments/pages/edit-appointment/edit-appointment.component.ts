@@ -20,6 +20,7 @@ import { AppointmentsApiService } from '../../services/appointments-api.service'
 import { CustomersApiService } from '../../../customers/services/customers-api.service';
 import { ServicesApiService } from '../../../services/services/services-api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { ApiService } from '../../../../core/api/api.service';
 import type { Customer } from '../../../customers/model/customer';
 import type { Service } from '../../../services/model/service';
 import {
@@ -73,6 +74,7 @@ export class EditAppointmentComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly customersApi = inject(CustomersApiService);
+  private readonly api = inject(ApiService);
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
@@ -81,6 +83,9 @@ export class EditAppointmentComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly noShowLimitWarning = signal(false);
+  readonly activeLimitWarning = signal(false);
+  readonly lateCancellation = signal(false);
+  readonly cancellationWindowHours = signal(24);
   readonly saving = signal(false);
   readonly confirmingCancel = signal(false);
   readonly cancelling = signal(false);
@@ -101,9 +106,15 @@ export class EditAppointmentComponent implements OnInit {
     price: [null as number | null],
     status: ['confirmed', Validators.required],
     notes: [''],
+    lateArrival: [false],
+    lateArrivalMinutes: [null as number | null],
   });
 
   ngOnInit(): void {
+    this.api.get<{ booking: { cancellationWindowHours: number } }>('settings/me/booking-rules').subscribe({
+      next: (body) => this.cancellationWindowHours.set(body.booking.cancellationWindowHours),
+      error: () => this.cancellationWindowHours.set(24),
+    });
     this.form
       .get('customerId')
       ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
@@ -166,11 +177,16 @@ export class EditAppointmentComponent implements OnInit {
   private refreshNoShowWarning(customerId: string): void {
     if (!customerId) {
       this.noShowLimitWarning.set(false);
+      this.activeLimitWarning.set(false);
       return;
     }
     this.customersApi.getById(customerId).subscribe({
       next: (customer) => this.noShowLimitWarning.set(customer.blocked === true),
       error: () => this.noShowLimitWarning.set(false),
+    });
+    this.customersApi.getActiveLimit(customerId).subscribe({
+      next: (limit) => this.activeLimitWarning.set(limit.atOrAboveLimit),
+      error: () => this.activeLimitWarning.set(false),
     });
   }
 
@@ -226,6 +242,9 @@ export class EditAppointmentComponent implements OnInit {
 
   requestCancelAppointment(): void {
     if (this.cancelling() || this.saving()) return;
+    const start = this.detail ? new Date(this.detail.start).getTime() : 0;
+    const inside = start - Date.now() < this.cancellationWindowHours() * 60 * 60 * 1000;
+    this.lateCancellation.set(inside);
     this.confirmingCancel.set(true);
   }
 
@@ -237,7 +256,7 @@ export class EditAppointmentComponent implements OnInit {
   confirmCancelAppointment(): void {
     if (!this.appointmentId || this.cancelling()) return;
     this.cancelling.set(true);
-    this.appointmentsApi.cancel(this.appointmentId).subscribe({
+    this.appointmentsApi.cancel(this.appointmentId, this.lateCancellation()).subscribe({
       next: () => {
         this.cancelling.set(false);
         this.confirmingCancel.set(false);
@@ -275,6 +294,8 @@ export class EditAppointmentComponent implements OnInit {
       price: number | null;
       status: string;
       notes: string;
+      lateArrival: boolean;
+      lateArrivalMinutes: number | null;
     };
 
     const dateKey = toDateKey(v.date, tz);
@@ -314,6 +335,12 @@ export class EditAppointmentComponent implements OnInit {
         price: v.price ?? undefined,
         status: v.status,
         notes: v.notes?.trim() || '',
+        ...(v.status === 'completed'
+          ? {
+              lateArrival: !!v.lateArrival,
+              lateArrivalMinutes: v.lateArrival ? Number(v.lateArrivalMinutes) || 0 : null,
+            }
+          : {}),
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({

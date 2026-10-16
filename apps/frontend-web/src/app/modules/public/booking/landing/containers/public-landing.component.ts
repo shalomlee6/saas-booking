@@ -580,6 +580,13 @@ export class PublicLandingComponent implements OnInit {
   goToBook(serviceId?: string): void {
     const slug = this.businessSlug();
     if (!slug) return;
+    if (this.bookingBusiness()?.onlineBooking?.enabled === false) {
+      const phone = this.businessPhone() || this.bookingBusiness()?.landing?.phone;
+      if (phone) {
+        window.location.href = `tel:${phone}`;
+        return;
+      }
+    }
     if (serviceId) {
       this.router.navigate(['/b', slug, 'book'], {
         queryParams: { service: serviceId },
@@ -587,6 +594,12 @@ export class PublicLandingComponent implements OnInit {
     } else {
       this.router.navigate(['/b', slug, 'book']);
     }
+  }
+
+  clientPolicyText(): string {
+    const policy = this.bookingBusiness()?.clientPolicy;
+    if (!policy) return '';
+    return this.language.language() === 'en' ? policy.en : policy.he;
   }
 
   goToUpcoming(): void {

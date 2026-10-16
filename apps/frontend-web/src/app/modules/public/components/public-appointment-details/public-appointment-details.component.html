@@ -51,6 +51,9 @@
         <i class="pi pi-clock" aria-hidden="true"></i>
         <span class="public-apt-details-time">{{ apt.time }}</span>
       </div>
+      @if (policyText()) {
+        <p class="public-apt-details-policy">{{ policyText() }}</p>
+      }
     </div>
 
     @if (canChange()) {

@@ -685,6 +685,7 @@ describe('PUBLIC BOOKING', () => {
         {
           $set: {
             'localization.timezone': 'Asia/Jerusalem',
+            'onlineBooking.minLeadMinutes': 0,
             openingHours: {
               slotStepMinutes: 30,
               days: [0, 1, 2, 3, 4, 5, 6].map((day) => ({

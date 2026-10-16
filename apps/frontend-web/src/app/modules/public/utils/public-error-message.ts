@@ -29,6 +29,11 @@ const PUBLIC_ERROR_KEYS: Record<string, string> = {
   OUTSIDE_HOURS: 'publicErrors.outsideHours',
   START_IN_PAST: 'publicErrors.startInPast',
   VALIDATION_FAILED: 'publicErrors.validationFailed',
+  MAX_ACTIVE_APPOINTMENTS: 'publicErrors.maxActiveAppointments',
+  TOO_SOON: 'publicErrors.tooSoon',
+  TOO_FAR: 'publicErrors.tooFar',
+  ONLINE_BOOKING_DISABLED: 'publicErrors.onlineBookingDisabled',
+  ONLINE_CANCEL_DISABLED: 'publicErrors.onlineCancelDisabled',
 };
 
 export function publicErrorTranslationKey(err: unknown): string {

@@ -54,6 +54,7 @@ describe('AppointmentFormComponent', () => {
           useValue: {
             getList: () => of([CUSTOMER]),
             getById: () => of({ ...CUSTOMER, blocked }),
+            getActiveLimit: () => of({ activeCount: 0, limit: null, atOrAboveLimit: false }),
           },
         },
         { provide: ServicesApiService, useValue: { list: () => of([SERVICE]) } },

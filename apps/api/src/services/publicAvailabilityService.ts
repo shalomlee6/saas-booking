@@ -8,6 +8,12 @@ import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { buildSlotsFromMergedRanges, isFutureSlotStart } from './publicBookingTime';
 import { ForbiddenError, NotFoundError } from '../errors/httpErrors';
+import {
+  isBeforeLead,
+  isBeyondMaxAdvance,
+  rangesOverlapWithBuffer,
+  resolveOnlineBookingRules,
+} from './bookingRules';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
 
 /**
@@ -31,13 +37,20 @@ export async function getAvailabilityForBusiness(
   if (!settings.features?.bookingEnabled) {
     throw new ForbiddenError('Booking is disabled for this business');
   }
+  const rules = resolveOnlineBookingRules(settings);
+  const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
+  if (!rules.enabled) {
+    throw new ForbiddenError('Online booking is closed', 'ONLINE_BOOKING_DISABLED');
+  }
+  if (isBeyondMaxAdvance(dateStr, rules.maxAdvanceDays, timezone, now)) {
+    throw new ForbiddenError('That date is too far ahead', 'TOO_FAR');
+  }
 
   const service = await Service.findOne({ _id: serviceId, businessId });
   if (!service) {
     throw new NotFoundError('Service not found');
   }
 
-  const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
   const openingHours = settings.openingHours?.days?.length
     ? settings.openingHours!
     : defaultOpeningHours;
@@ -47,11 +60,12 @@ export async function getAvailabilityForBusiness(
   const dayStartUtcDate = dayStart.toUTC().toJSDate();
   const dayEndUtcDate = dayEnd.toUTC().toJSDate();
 
+  const bufferMs = rules.bufferMinutes * 60 * 1000;
   const existingRows = await Appointment.find({
     businessId,
     status: { $in: ['confirmed', 'pending'] },
-    start: { $lt: dayEndUtcDate },
-    end: { $gt: dayStartUtcDate },
+    start: { $lt: new Date(dayEndUtcDate.getTime() + bufferMs) },
+    end: { $gt: new Date(dayStartUtcDate.getTime() - bufferMs) },
   })
     .select('start end status')
     .lean();
@@ -95,6 +109,7 @@ export async function getAvailabilityForBusiness(
 
     const slotStart = slotStartLocal.toJSDate();
     if (!isFutureSlotStart(slotStart, now)) continue;
+    if (isBeforeLead(slotStart, rules.minLeadMinutes, now)) continue;
 
     const slotStartMs = slotStart.getTime();
     const slotEndMs = slotStartLocal.plus({ minutes: durationMinutes }).toUTC().toMillis();
@@ -104,7 +119,7 @@ export async function getAvailabilityForBusiness(
     for (const apt of existing as { start: Date; end: Date }[]) {
       const apptStartMs = DateTime.fromJSDate(apt.start).toUTC().toMillis();
       const apptEndMs = DateTime.fromJSDate(apt.end).toUTC().toMillis();
-      if (slotStartMs < apptEndMs && slotEndMs > apptStartMs) {
+      if (rangesOverlapWithBuffer(slotStartMs, slotEndMs, apptStartMs, apptEndMs, bufferMs)) {
         overlaps = true;
         break;
       }

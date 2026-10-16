@@ -89,8 +89,11 @@ export class AppointmentsApiService {
   }
 
   /** Soft-cancel: PATCH status to cancelled (preferred over DELETE). */
-  cancel(id: string): Observable<Appointment> {
-    return this.patchAppointment(id, { status: 'cancelled' });
+  cancel(id: string, lateCancellation?: boolean): Observable<Appointment> {
+    return this.patchAppointment(id, {
+      status: 'cancelled',
+      ...(lateCancellation !== undefined ? { lateCancellation } : {}),
+    });
   }
 }
 
@@ -118,4 +121,7 @@ export interface PatchAppointmentBody {
   price?: number;
   status?: string;
   notes?: string;
+  lateCancellation?: boolean;
+  lateArrival?: boolean;
+  lateArrivalMinutes?: number | null;
 }

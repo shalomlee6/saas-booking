@@ -113,26 +113,11 @@ describe('customer list config', () => {
     expect(last?.secondary?.({ ...row, lastVisit: null })).toBe('');
   });
 
-  it('builds the header: title, singular and plural counts, and an owner-only settings action', () => {
+  it('builds the header: title, singular and plural counts, and the create action', () => {
     expect(config.title).toBe('customers.title');
     expect(config.countLabel?.(1)).toBe('customers.countOne');
     expect(config.countLabel?.(142)).toBe('142 customers.countSuffix');
     expect(config.headerActions?.length ?? 0).toBe(0);
-    const withSettings = buildCustomerTableConfig({
-      t: (key) => key,
-      locale: 'en',
-      owner: true,
-      services: [],
-      onView: () => undefined,
-      onEdit: () => undefined,
-      onBook: () => undefined,
-      onSetActive: () => undefined,
-      onExcuseAllNoShows: () => undefined,
-      onCreate: () => undefined,
-      onBulkSetActive: () => undefined,
-      onOpenSettings: () => undefined,
-    });
-    expect(withSettings.headerActions?.map((action) => action.id)).toEqual(['settings']);
-    expect(withSettings.primaryAction?.icon).toBe('pi pi-plus');
+    expect(config.primaryAction?.icon).toBe('pi pi-plus');
   });
 });

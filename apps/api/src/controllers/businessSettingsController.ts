@@ -11,6 +11,13 @@ import {
   updateBusinessSettingsPartial,
 } from '../services/businessSettingsService';
 import { settingsDocToClientJson } from '../utils/publicUploadUrl';
+import { recordAudit } from '../utils/recordAudit';
+import {
+  readOwnerBookingSettings,
+  saveOwnerBookingRules,
+  saveOwnerReliability,
+} from '../services/bookingSettingsService';
+import type { BookingRulesBody, ReliabilityBody } from '../validation/schemas/bookingSettings';
 
 export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<void> {
   if (!req.businessSettings) {
@@ -61,4 +68,44 @@ export async function updateMyBusinessSettings(req: AuthRequest, res: Response):
   }
 
   res.json(settingsDocToClientJson(updated));
+}
+
+export async function getOwnerBookingSettings(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = getEffectiveBusinessId(req);
+  if (!businessId) throw new ValidationError('Business ID not found');
+  res.json(await readOwnerBookingSettings(businessId));
+}
+
+export async function putOwnerBookingRules(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = getEffectiveBusinessId(req);
+  if (!businessId) throw new ValidationError('Business ID not found');
+  const result = await saveOwnerBookingRules(businessId, req.body as BookingRulesBody);
+  if (result.changed) {
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'business.settings_updated',
+      entity: 'BusinessSettings',
+      entityId: result.settingsId,
+      metadata: { businessId, section: 'booking', before: result.previous, after: result.current },
+    });
+  }
+  res.json(await readOwnerBookingSettings(businessId));
+}
+
+export async function putOwnerReliability(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = getEffectiveBusinessId(req);
+  if (!businessId) throw new ValidationError('Business ID not found');
+  const result = await saveOwnerReliability(businessId, req.body as ReliabilityBody);
+  if (result.changed) {
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'business.settings_updated',
+      entity: 'BusinessSettings',
+      entityId: result.settingsId,
+      metadata: { businessId, section: 'reliability', before: result.previous, after: result.current },
+    });
+  }
+  res.json(await readOwnerBookingSettings(businessId));
 }

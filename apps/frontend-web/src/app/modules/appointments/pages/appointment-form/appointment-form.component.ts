@@ -77,6 +77,7 @@ export class AppointmentFormComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly noShowLimitWarning = signal(false);
+  readonly activeLimitWarning = signal(false);
   readonly saving = signal(false);
   readonly allCustomers = signal<Customer[]>([]);
   readonly filteredCustomers = signal<Customer[]>([]);
@@ -142,11 +143,16 @@ export class AppointmentFormComponent implements OnInit {
   private refreshNoShowWarning(customerId: string): void {
     if (!customerId) {
       this.noShowLimitWarning.set(false);
+      this.activeLimitWarning.set(false);
       return;
     }
     this.customersApi.getById(customerId).subscribe({
       next: (customer) => this.noShowLimitWarning.set(customer.blocked === true),
       error: () => this.noShowLimitWarning.set(false),
+    });
+    this.customersApi.getActiveLimit(customerId).subscribe({
+      next: (limit) => this.activeLimitWarning.set(limit.atOrAboveLimit),
+      error: () => this.activeLimitWarning.set(false),
     });
   }
 

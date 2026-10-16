@@ -12,12 +12,8 @@ import {
   savePublicClientBinding,
 } from '../utils/publicCustomerSession';
 import type { PublicCustomer } from '../types/publicCustomer';
-import {
-  countCustomerNoShows,
-  normalizeBookingOverride,
-  resolveBookingBlock,
-  resolveNoShowPolicy,
-} from './customerNoShows';
+import { evaluateBookingBlock } from './customerNoShows';
+import { countActiveUpcoming, resolveOnlineBookingRules } from './bookingRules';
 import { isRealBirthday, type Birthday } from './birthday';
 import { getSmsProvider } from './smsProvider';
 
@@ -91,11 +87,11 @@ export async function startIdentify(
   const customer = await findCustomer(business._id, phone);
   if (customer) {
     const settings = await ensureBusinessSettings(business._id);
-    const count = await countCustomerNoShows(business._id.toString(), customer._id.toString());
-    const block = resolveBookingBlock(
-      normalizeBookingOverride(customer.bookingOverride),
-      resolveNoShowPolicy(settings),
-      count
+    const { block } = await evaluateBookingBlock(
+      business._id.toString(),
+      customer._id.toString(),
+      customer.bookingOverride,
+      settings
     );
     if (block.blocked) return { status: 'blocked' };
   }
@@ -245,6 +241,7 @@ export async function readSessionProfile(session: PublicCustomer): Promise<{
   verified: boolean;
   hasCustomer: boolean;
   needsBirthday: boolean;
+  bookingLimitReached: boolean;
   firstName?: string;
 }> {
   const settings = await ensureBusinessSettings(session.businessId);
@@ -255,10 +252,23 @@ export async function readSessionProfile(session: PublicCustomer): Promise<{
   const missing = !customer?.birthday?.day || !customer?.birthday?.month;
   const hasCustomer = !!customer;
   const needsBirthday = field === 'required' && (!customer || missing);
+  const rules = resolveOnlineBookingRules(settings);
+  const activeCount =
+    customer && rules.maxActiveAppointmentsPerClient != null
+      ? await countActiveUpcoming(session.businessId, customer._id.toString())
+      : 0;
+  const bookingLimitReached =
+    rules.maxActiveAppointmentsPerClient != null && activeCount >= rules.maxActiveAppointmentsPerClient;
   if (!session.verified || !customer) {
-    return { verified: session.verified, hasCustomer, needsBirthday };
+    return { verified: session.verified, hasCustomer, needsBirthday, bookingLimitReached };
   }
-  return { verified: true, hasCustomer, needsBirthday, firstName: firstNameOf(customer) };
+  return {
+    verified: true,
+    hasCustomer,
+    needsBirthday,
+    bookingLimitReached,
+    firstName: firstNameOf(customer),
+  };
 }
 
 export async function saveBirthdayField(

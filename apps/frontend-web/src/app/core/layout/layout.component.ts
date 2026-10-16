@@ -37,9 +37,8 @@ function pageTitleKeyFromUrl(url: string): string {
   if (path.startsWith('/appointments')) return 'navigation.appointments';
   if (path.startsWith('/services')) return 'navigation.services';
   if (path.startsWith('/customers')) return 'navigation.customers';
-  if (path.startsWith('/settings/theme')) return 'navigation.theme';
   if (path.startsWith('/settings/landing')) return 'navigation.landingPage';
-  if (path.startsWith('/settings/working-hours')) return 'navigation.workingHours';
+  if (path.startsWith('/settings')) return 'navigation.settings';
   if (path.startsWith('/settings/account')) return 'navigation.account';
   if (path.startsWith('/preview')) return 'navigation.previewSite';
   return '';

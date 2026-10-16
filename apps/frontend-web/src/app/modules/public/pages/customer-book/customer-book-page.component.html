@@ -1,4 +1,12 @@
 <div class="book-flow">
+  @if (bookingClosed()) {
+    <div class="book-step">
+      <p class="book-notice-title">{{ 'publicBook.bookingClosed' | translate }}</p>
+      @if (contactPhone()) {
+        <a class="book-text-btn" [href]="'tel:' + contactPhone()">{{ 'publicBook.contactCta' | translate }}</a>
+      }
+    </div>
+  } @else {
 
   <!-- ── Header: back arrow + centered step title ────────────────────────── -->
   <header class="book-flow-header">
@@ -105,11 +113,17 @@
     <!-- ═══ STEP 2: Date + Time (combined) ════════════════════════════════════ -->
     @if (currentStep() === 2) {
       <div class="book-step">
+        @if (bookingLimitReached()) {
+          <div class="book-notice-state" role="alert">
+            <p class="book-notice-title">{{ 'publicErrors.maxActiveAppointments' | translate }}</p>
+          </div>
+        } @else {
         <app-public-identify
           [slug]="slug()"
           [entry]="identifyEntry()"
           (completed)="onIdentified()"
         />
+        }
       </div>
     }
 
@@ -128,6 +142,7 @@
             [(ngModel)]="selectedDateValue"
             [inline]="true"
             [minDate]="minDate()"
+            [maxDate]="maxDate()"
             [showIcon]="false"
             (onSelect)="onDateSelect()"
             dateFormat="dd/mm/yy"
@@ -194,6 +209,9 @@
     @if (currentStep() === 4) {
       <div class="book-step">
         <p class="book-step-hint">{{ 'publicBook.confirmHint' | translate }}</p>
+        @if (policyText()) {
+          <p class="book-policy">{{ policyText() }}</p>
+        }
         @if (rescheduleMove(); as move) {
           <p class="book-reschedule-move">{{ 'publicBook.moveSummary' | translate: move }}</p>
         }
@@ -262,7 +280,5 @@
     }
 
   </div><!-- /book-flow-body -->
-
-
-
+  }
 </div>

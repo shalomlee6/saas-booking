@@ -140,7 +140,7 @@
       <section class="customers-card cd-section" [attr.aria-label]="'customerCard.noShowSection' | translate">
         <div class="cd-section-header">
           <h2 class="cd-section-title">{{ 'customerCard.noShowSection' | translate }}</h2>
-          @if (owner() && control.noShowCount > 0) {
+          @if (owner() && (control.noShowCount > 0 || (control.lateCancellationCount ?? 0) > 0 || (control.lateArrivalCount ?? 0) > 0)) {
             <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" (click)="requestExcuseAll()">
               {{ 'customerCard.noShowExcuseAll' | translate }}
             </button>
@@ -148,6 +148,8 @@
         </div>
         <div class="cd-noshow-summary">
           <span>{{ 'customerCard.noShowCount' | translate: { count: control.noShowCount } }}</span>
+          <span>{{ 'customerCard.lateCancelCount' | translate: { count: control.lateCancellationCount ?? 0 } }}</span>
+          <span>{{ 'customerCard.lateArrivalCount' | translate: { count: control.lateArrivalCount ?? 0 } }}</span>
           <span>{{ noShowStateLabel(control) }}</span>
           @if (noShowReasonLabel(control)) {
             <span>{{ noShowReasonLabel(control) }}</span>
@@ -170,7 +172,7 @@
         } @else {
           <p class="cd-noshow-state">{{ overrideLabel(control.bookingOverride) }}</p>
         }
-        @if (control.noShows.length === 0) {
+        @if (control.noShows.length === 0 && (control.lateCancellations?.length ?? 0) === 0 && (control.lateArrivals?.length ?? 0) === 0) {
           <p class="cd-noshow-state">{{ 'customerCard.noShowEmpty' | translate }}</p>
         } @else {
           <ul class="cd-noshow-list">
@@ -194,6 +196,37 @@
               </li>
             }
           </ul>
+          @for (item of control.lateCancellations ?? []; track item.id) {
+            <div class="cd-noshow-item">
+              <span class="cd-noshow-meta">
+                <span>{{ 'customerCard.reliabilityKindLateCancel' | translate }}</span>
+                <span>{{ formatDate(item.start) }}</span>
+                <span>{{ (item.excused ? 'customerCard.noShowExcused' : 'customerCard.noShowCounted') | translate }}</span>
+              </span>
+              @if (owner()) {
+                <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" [disabled]="noShowSaving()" (click)="requestExcuse(item, 'late_cancellation')">
+                  {{ (item.excused ? 'customerCard.noShowUnexcuse' : 'customerCard.noShowExcuse') | translate }}
+                </button>
+              }
+            </div>
+          }
+          @for (item of control.lateArrivals ?? []; track item.id) {
+            <div class="cd-noshow-item">
+              <span class="cd-noshow-meta">
+                <span>{{ 'customerCard.reliabilityKindLateArrival' | translate }}</span>
+                <span>{{ formatDate(item.start) }}</span>
+                @if (item.minutes) {
+                  <span>{{ item.minutes }}</span>
+                }
+                <span>{{ (item.excused ? 'customerCard.noShowExcused' : 'customerCard.noShowCounted') | translate }}</span>
+              </span>
+              @if (owner()) {
+                <button type="button" class="customers-btn customers-btn-ghost customers-btn-sm" [disabled]="noShowSaving()" (click)="requestExcuse(item, 'late_arrival')">
+                  {{ (item.excused ? 'customerCard.noShowUnexcuse' : 'customerCard.noShowExcuse') | translate }}
+                </button>
+              }
+            </div>
+          }
         }
         <div>
           <h3 class="cd-section-title">{{ 'customerCard.noShowHistory' | translate }}</h3>

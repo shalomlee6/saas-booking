@@ -417,6 +417,58 @@ test.describe('Keyboard navigation — public booking', () => {
     expect(outlineWidth).not.toBe('0px');
   });
 
+  test.describe('owner settings sections', () => {
+    test.setTimeout(240_000);
+    const sections = ['design', 'hours', 'booking', 'reliability', 'customers', 'policy'] as const;
+    const modes = [
+      { name: 'he light desktop', lang: 'he', dark: false, width: 1280, height: 900 },
+      { name: 'he dark desktop', lang: 'he', dark: true, width: 1280, height: 900 },
+      { name: 'en light tablet', lang: 'en', dark: false, width: 768, height: 1024 },
+      { name: 'he light mobile', lang: 'he', dark: false, width: 390, height: 844 },
+      { name: 'he dark mobile', lang: 'he', dark: true, width: 390, height: 844 },
+    ] as const;
+
+    async function setDark(page: import('@playwright/test').Page, dark: boolean) {
+      await page.evaluate((isDark) => {
+        document.documentElement.classList.toggle('theme-dark', isDark);
+        document.querySelector('.layout')?.classList.toggle('theme-dark', isDark);
+      }, dark);
+      await page.waitForTimeout(300);
+    }
+
+    for (const mode of modes) {
+      test(`${mode.name} have no axe violations`, async ({ page }) => {
+        await loginAsOwner(page);
+        await page.evaluate((value) => localStorage.setItem('sb_lang', value), mode.lang);
+        await page.setViewportSize({ width: mode.width, height: mode.height });
+        for (const id of sections) {
+          await page.goto(`/settings/${id}`, { waitUntil: 'domcontentloaded' });
+          await page.locator('.settings-shell').waitFor({ timeout: 30_000 });
+          await setDark(page, mode.dark);
+          const results = await runAxe(page, `/settings/${id} ${mode.name}`);
+          expect(results.violations, `/settings/${id} ${mode.name}`).toHaveLength(0);
+        }
+      });
+    }
+
+    test('unsaved and warning states have no axe violations', async ({ page }) => {
+      await loginAsOwner(page);
+      await page.evaluate(() => localStorage.setItem('sb_lang', 'he'));
+
+      await page.goto('/settings/booking', { waitUntil: 'domcontentloaded' });
+      await page.locator('#booking-buffer').selectOption({ index: 2 });
+      await expect(page.locator('app-settings-save-bar button')).toBeEnabled();
+      const booking = await runAxe(page, '/settings/booking unsaved');
+      expect(booking.violations).toHaveLength(0);
+
+      await page.goto('/settings/design', { waitUntil: 'domcontentloaded' });
+      await page.locator('#primaryColor').fill('#FFFF00');
+      await expect(page.locator('#primaryContrastWarning')).toBeVisible();
+      const design = await runAxe(page, '/settings/design contrast warning');
+      expect(design.violations).toHaveLength(0);
+    });
+  });
+
   test('booking/CTA button on /b/demo-salon is reachable via keyboard', async ({ page }) => {
     await page.goto('/b/demo-salon', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('#main-content', { timeout: 60_000 });

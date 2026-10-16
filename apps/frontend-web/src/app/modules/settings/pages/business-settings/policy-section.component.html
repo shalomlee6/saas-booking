@@ -1,0 +1,10 @@
+<section class="settings-section">
+  @if (error()) {
+    <p class="settings-error" role="alert">{{ error() }}</p>
+  } @else {
+    <div class="settings-card">
+      <p class="settings-policy">{{ text() }}</p>
+    </div>
+    <p class="settings-row-hint">{{ 'settings.policyHint' | translate }}</p>
+  }
+</section>

@@ -5,6 +5,7 @@ export interface PublicClientProfile {
   verified: boolean;
   hasCustomer: boolean;
   needsBirthday: boolean;
+  bookingLimitReached?: boolean;
   firstName?: string;
 }
 

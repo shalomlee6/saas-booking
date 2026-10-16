@@ -43,6 +43,10 @@ export class PublicSessionService {
     this.customerIdSignal.set(customerId);
   }
 
+  bookingLimitReached(): boolean {
+    return this.profileSignal()?.bookingLimitReached === true;
+  }
+
   readyToBook(slug: string): boolean {
     if (this.slugSignal() !== slug) return false;
     return readyToBook(this.profileSignal());

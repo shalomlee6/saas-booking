@@ -100,15 +100,15 @@
           <span class="layout-sidebar-section-label" aria-hidden="true">{{ 'navigation.settingsSection' | translate }}</span>
 
           <a
-            routerLink="/settings/theme"
+            routerLink="/settings"
             routerLinkActive="layout-sidebar-link-active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [routerLinkActiveOptions]="{ exact: false }"
             class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.theme' | translate) : null"
+            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.settings' | translate) : null"
             (click)="closeMobileMenu()"
           >
-            <i class="layout-sidebar-link-icon pi pi-palette" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">{{ 'navigation.theme' | translate }}</span>
+            <i class="layout-sidebar-link-icon pi pi-cog" aria-hidden="true"></i>
+            <span class="layout-sidebar-link-text">{{ 'navigation.settings' | translate }}</span>
           </a>
 
           <a
@@ -121,17 +121,6 @@
           >
             <i class="layout-sidebar-link-icon pi pi-megaphone" aria-hidden="true"></i>
             <span class="layout-sidebar-link-text">{{ 'navigation.landingPage' | translate }}</span>
-          </a>
-
-          <a
-            routerLink="/settings/working-hours"
-            routerLinkActive="layout-sidebar-link-active"
-            class="layout-sidebar-link"
-            [attr.aria-label]="isSidebarCollapsed() ? ('navigation.workingHours' | translate) : null"
-            (click)="closeMobileMenu()"
-          >
-            <i class="layout-sidebar-link-icon pi pi-clock" aria-hidden="true"></i>
-            <span class="layout-sidebar-link-text">{{ 'navigation.workingHours' | translate }}</span>
           </a>
 
           @if (business()?.slug) {

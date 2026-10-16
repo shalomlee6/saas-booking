@@ -1,11 +1,14 @@
 export type BookingOverride = 'auto' | 'allow' | 'block';
 export type BlockReason = 'threshold' | 'manual' | 'allowed' | 'clear';
 
+export type ReliabilityKind = 'no_show' | 'late_cancellation' | 'late_arrival';
+
 export interface NoShowControlAppointment {
   id: string;
   start: string;
   serviceName: string;
   excused: boolean;
+  minutes?: number;
   excusedAt?: string;
   excusedReason?: string;
 }
@@ -18,6 +21,10 @@ export interface NoShowControlHistoryEntry {
 
 export interface NoShowControl {
   noShowCount: number;
+  lateCancellationCount?: number;
+  lateArrivalCount?: number;
+  lateCancellations?: NoShowControlAppointment[];
+  lateArrivals?: NoShowControlAppointment[];
   blocked: boolean;
   blockReason: BlockReason;
   bookingOverride: BookingOverride;

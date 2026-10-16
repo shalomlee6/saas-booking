@@ -29,6 +29,7 @@ import {
   getCustomerAppointmentHistory,
   getCustomerCardStats,
   listCustomers,
+  getActiveAppointmentLimit,
   getNoShowControl,
   excuseCustomerNoShows,
   excuseCustomerNoShow,
@@ -114,6 +115,12 @@ customersRouter.put(
   validateParams(customerIdParamsSchema),
   validateBody(customerUpdateBodySchema),
   asyncHandler((req: AuthRequest, res) => updateCustomer(req, res))
+);
+
+customersRouter.get(
+  '/:id/active-limit',
+  validateParams(customerIdParamsSchema),
+  asyncHandler((req: AuthRequest, res) => getActiveAppointmentLimit(req, res))
 );
 
 customersRouter.get(

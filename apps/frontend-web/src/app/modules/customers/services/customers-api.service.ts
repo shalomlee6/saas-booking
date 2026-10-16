@@ -49,12 +49,18 @@ export class CustomersApiService {
     id: string,
     appointmentId: string,
     excused: boolean,
-    reason?: string
+    reason?: string,
+    kind: 'no_show' | 'late_cancellation' | 'late_arrival' = 'no_show'
   ): Observable<NoShowControl> {
     return this.api.post<NoShowControl>(`customers/${id}/no-shows/${appointmentId}`, {
       excused,
+      kind,
       ...(reason ? { reason } : {}),
     });
+  }
+
+  getActiveLimit(id: string): Observable<{ activeCount: number; limit: number | null; atOrAboveLimit: boolean }> {
+    return this.api.get(`customers/${id}/active-limit`);
   }
 
   setBookingOverride(id: string, override: BookingOverride, reason?: string): Observable<NoShowControl> {

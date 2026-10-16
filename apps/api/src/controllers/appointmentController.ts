@@ -16,6 +16,7 @@ import { getServiceOverrideForCustomer } from '../services/customerServiceConfig
 import { listAppointmentsPage, type AppointmentsPagedQuery } from '../services/appointmentListService';
 import { defaultAppointmentWindow } from '../listQuery/dateRange';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { isInsideCancellationWindow, resolveCancellationWindowHours } from '../services/publicBookingPolicy';
 
 function requireBusinessId(req: AuthRequest): string {
   const businessId = getEffectiveBusinessId(req);
@@ -223,6 +224,9 @@ type PatchBody = {
   price?: number;
   status?: string;
   notes?: string;
+  lateCancellation?: boolean;
+  lateArrival?: boolean;
+  lateArrivalMinutes?: number | null;
 };
 
 /** PATCH /api/appointments/:id — update fields; recalc end when start or service changes and end omitted. */
@@ -311,6 +315,28 @@ export async function patchAppointmentById(req: AuthRequest, res: Response): Pro
   }
   if (body.notes !== undefined) {
     update.notes = body.notes === '' ? undefined : body.notes;
+  }
+  const nextStatus = (update.status as string | undefined) ?? existing.status;
+  if (body.lateCancellation !== undefined && nextStatus !== 'cancelled') {
+    throw new ValidationError('A late cancellation applies only when the appointment is cancelled');
+  }
+  if (nextStatus === 'cancelled' && existing.status !== 'cancelled') {
+    const settings = await ensureBusinessSettings(businessId);
+    const windowHours = resolveCancellationWindowHours(settings.cancellationWindowHours);
+    const insideWindow = !isInsideCancellationWindow(existing.start, windowHours);
+    update.lateCancellation = body.lateCancellation !== undefined ? body.lateCancellation : insideWindow;
+  } else if (body.lateCancellation !== undefined) {
+    update.lateCancellation = body.lateCancellation;
+  }
+  if (body.lateArrival !== undefined || body.lateArrivalMinutes !== undefined) {
+    if (nextStatus !== 'completed') {
+      throw new ValidationError('A late arrival applies only to a completed appointment');
+    }
+    if (body.lateArrival !== undefined) update.lateArrival = body.lateArrival;
+    if (body.lateArrival === false) update.lateArrivalMinutes = undefined;
+    else if (body.lateArrivalMinutes !== undefined && body.lateArrivalMinutes !== null) {
+      update.lateArrivalMinutes = body.lateArrivalMinutes;
+    }
   }
 
   const appointment = await updateAppointmentAtomic({

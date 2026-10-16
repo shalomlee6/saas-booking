@@ -71,6 +71,7 @@
 <app-public-appointment-details
   [appointment]="selected()"
   [businessPhone]="businessPhone()"
+  [policyText]="policyText()"
   (closed)="selected.set(null)"
   (cancelled)="loadAppointments()"
   (edit)="onEdit($event)"

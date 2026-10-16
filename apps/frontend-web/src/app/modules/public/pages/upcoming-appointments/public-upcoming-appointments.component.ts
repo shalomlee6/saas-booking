@@ -37,6 +37,12 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
   readonly appointments = signal<UpcomingAppointment[]>([]);
   readonly timezone = signal(DEFAULT_PUBLIC_TIMEZONE);
   readonly businessPhone = signal<string | null>(null);
+  readonly clientPolicy = signal<{ he: string; en: string } | null>(null);
+  readonly policyText = computed(() => {
+    const policy = this.clientPolicy();
+    if (!policy) return '';
+    return this.language.language() === 'en' ? policy.en : policy.he;
+  });
   readonly selected = signal<UpcomingAppointment | null>(null);
   readonly identifyFirst = signal(false);
 
@@ -71,6 +77,7 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
         if (tz) this.timezone.set(tz);
         const phone = biz.landing?.phone?.trim();
         if (phone) this.businessPhone.set(phone);
+        this.clientPolicy.set(biz.clientPolicy ?? null);
       });
   }
 

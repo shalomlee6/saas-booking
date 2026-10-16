@@ -1,0 +1,87 @@
+<form class="settings-section" (ngSubmit)="save()">
+  @if (error()) {
+    <p class="settings-error" role="alert">{{ error() }}</p>
+  }
+
+  @for (counter of counters; track counter.key) {
+    <section class="settings-card" [attr.aria-labelledby]="'reliability-' + counter.key + '-title'">
+      <h3 class="settings-card-title" [id]="'reliability-' + counter.key + '-title'">{{ counter.label | translate }}</h3>
+
+      <div class="settings-row settings-row-switch">
+        <div class="settings-row-text">
+          <label class="settings-row-label" [for]="'reliability-' + counter.key + '-enabled'">
+            {{ 'settings.reliabilityEnabled' | translate }}
+          </label>
+          <span class="settings-row-hint" [id]="'reliability-' + counter.key + '-enabled-hint'">
+            {{ 'settings.reliabilityEnabledHint' | translate }}
+          </span>
+        </div>
+        <div class="settings-row-control">
+          <input
+            class="settings-switch"
+            type="checkbox"
+            role="switch"
+            [id]="'reliability-' + counter.key + '-enabled'"
+            [name]="counter.key + 'Enabled'"
+            [attr.aria-describedby]="'reliability-' + counter.key + '-enabled-hint'"
+            [ngModel]="rules()[counter.key].enabled"
+            (ngModelChange)="patchCounter(counter.key, { enabled: $event })"
+          />
+        </div>
+      </div>
+
+      <div class="settings-row">
+        <div class="settings-row-text">
+          <label class="settings-row-label" [for]="'reliability-' + counter.key + '-threshold'">
+            {{ 'settings.reliabilityThreshold' | translate }}
+          </label>
+          <span class="settings-row-hint" [id]="'reliability-' + counter.key + '-threshold-hint'">
+            {{ 'settings.reliabilityThresholdHint' | translate }}
+          </span>
+        </div>
+        <div class="settings-row-control">
+          <input
+            class="settings-input settings-input-short"
+            type="number"
+            min="1"
+            max="20"
+            [id]="'reliability-' + counter.key + '-threshold'"
+            [name]="counter.key + 'Threshold'"
+            [attr.aria-describedby]="'reliability-' + counter.key + '-threshold-hint'"
+            [ngModel]="rules()[counter.key].threshold"
+            (ngModelChange)="patchCounter(counter.key, { threshold: +$event })"
+          />
+          <span class="settings-unit" aria-hidden="true">{{ 'settings.unitTimes' | translate }}</span>
+        </div>
+      </div>
+    </section>
+  }
+
+  <section class="settings-card" aria-labelledby="reliability-lookback-label">
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label" id="reliability-lookback-label">{{ 'settings.reliabilityLookback' | translate }}</span>
+        <span class="settings-row-hint" id="reliability-lookback-hint">{{ 'settings.reliabilityLookbackHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <div
+          class="settings-segment"
+          role="radiogroup"
+          aria-labelledby="reliability-lookback-label"
+          aria-describedby="reliability-lookback-hint"
+        >
+          <label class="settings-segment-option">
+            <input type="radio" name="lookback" value="12months" [ngModel]="rules().lookback" (ngModelChange)="setLookback($event)" />
+            <span>{{ 'settings.lookbackYear' | translate }}</span>
+          </label>
+          <label class="settings-segment-option">
+            <input type="radio" name="lookback" value="all" [ngModel]="rules().lookback" (ngModelChange)="setLookback($event)" />
+            <span>{{ 'settings.lookbackAll' | translate }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <app-settings-save-bar [dirty]="dirty()" [saving]="saving()" />
+</form>

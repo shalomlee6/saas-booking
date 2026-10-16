@@ -1,11 +1,8 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
-import { DialogModule } from 'primeng/dialog';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
-import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { DataManagementTableComponent } from '../../../../shared/data-management/data-management-table.component';
 import type { DataListQuery } from '../../../../shared/data-management/entity-data-management-config';
 import type { CustomerListRow } from '../../model/customer-list-row';
@@ -16,7 +13,7 @@ import { buildCustomerTableConfig } from './customer-list.config';
 @Component({
   selector: 'app-customers-list',
   standalone: true,
-  imports: [TranslatePipe, FormsModule, DialogModule, DataManagementTableComponent],
+  imports: [DataManagementTableComponent],
   templateUrl: './customers-list.component.html',
   styleUrl: './customers-list.component.scss',
 })
@@ -29,10 +26,6 @@ export class CustomersListComponent implements OnInit {
   readonly language = inject(LanguageService);
 
   readonly reloadNonce = signal(0);
-  readonly policyOpen = signal(false);
-  readonly policyEnabled = signal(true);
-  readonly policyThreshold = signal(3);
-  readonly policySaving = signal(false);
   private readonly services = signal<{ id: string; name: string }[]>([]);
 
   readonly loadPage = (query: DataListQuery) => this.api.listPage(query);
@@ -57,7 +50,6 @@ export class CustomersListComponent implements OnInit {
       onExcuseAllNoShows: (row, reason) => this.excuseAllNoShows(row, reason),
       onCreate: () => void this.router.navigate(['/customers', 'new']),
       onBulkSetActive: (rows, isActive) => this.setManyActive(rows.map((row) => row._id), isActive),
-      onOpenSettings: () => this.openNoShowSettings(),
     });
   });
 
@@ -86,62 +78,6 @@ export class CustomersListComponent implements OnInit {
           severity: 'error',
           summary: this.language.t('common.error'),
           detail: this.language.t('customers.exportFailed'),
-        });
-      },
-    });
-  }
-
-  openNoShowSettings(): void {
-    this.api.getNoShowPolicy().subscribe({
-      next: (policy) => {
-        this.policyEnabled.set(policy.enabled);
-        this.policyThreshold.set(policy.threshold);
-        this.policyOpen.set(true);
-      },
-      error: () => {
-        this.messages.add({
-          severity: 'error',
-          summary: this.language.t('common.error'),
-          detail: this.language.t('customers.noShowPolicyFailed'),
-        });
-      },
-    });
-  }
-
-  onPolicyThreshold(value: number | string | null): void {
-    const next = Number(value);
-    this.policyThreshold.set(Number.isFinite(next) ? next : 0);
-  }
-
-  saveNoShowSettings(): void {
-    const threshold = Number(this.policyThreshold());
-    if (!Number.isInteger(threshold) || threshold < 1 || threshold > 20) {
-      this.messages.add({
-        severity: 'error',
-        summary: this.language.t('common.error'),
-        detail: this.language.t('customers.noShowPolicyFailed'),
-      });
-      return;
-    }
-    this.policySaving.set(true);
-    this.api.updateNoShowPolicy({ enabled: this.policyEnabled(), threshold }).subscribe({
-      next: (policy) => {
-        this.policySaving.set(false);
-        this.policyEnabled.set(policy.enabled);
-        this.policyThreshold.set(policy.threshold);
-        this.policyOpen.set(false);
-        this.reloadNonce.update((value) => value + 1);
-        this.messages.add({
-          severity: 'success',
-          summary: this.language.t('customers.noShowPolicySaved'),
-        });
-      },
-      error: () => {
-        this.policySaving.set(false);
-        this.messages.add({
-          severity: 'error',
-          summary: this.language.t('common.error'),
-          detail: this.language.t('customers.noShowPolicyFailed'),
         });
       },
     });

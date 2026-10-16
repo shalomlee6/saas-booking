@@ -46,6 +46,7 @@ export class PublicAppointmentDetailsComponent implements OnInit {
   readonly language = inject(LanguageService);
 
   readonly appointment = input<UpcomingAppointment | null>(null);
+  readonly policyText = input<string>('');
   readonly businessPhone = input<string | null>(null);
 
   readonly closed = output<void>();

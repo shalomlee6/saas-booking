@@ -7,6 +7,7 @@ import { defaultOpeningHours } from '../models/BusinessSettings';
 import { Service } from '../models/Service';
 import { toIsoUtcString } from '../dto/datetime';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { rangesOverlapWithBuffer, resolveOnlineBookingRules } from './bookingRules';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { NotFoundError } from '../errors/httpErrors';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
@@ -87,15 +88,24 @@ export async function computeOwnerAvailableSlots(
   const startOfWeek = weekStartDt.toJSDate();
   const endOfWeek = weekStartDt.plus({ days: 7 }).toJSDate();
 
+  const bufferMs = resolveOnlineBookingRules(settings).bufferMinutes * 60 * 1000;
   const appointments = await Appointment.find({
     businessId,
-    start: { $lt: endOfWeek },
-    end: { $gt: startOfWeek },
+    start: { $lt: new Date(endOfWeek.getTime() + bufferMs) },
+    end: { $gt: new Date(startOfWeek.getTime() - bufferMs) },
     status: { $ne: 'cancelled' },
   });
 
   const isSlotOccupied = (slotStart: Date, slotEnd: Date): boolean =>
-    appointments.some((apt) => apt.start < slotEnd && apt.end > slotStart);
+    appointments.some((apt) =>
+      rangesOverlapWithBuffer(
+        slotStart.getTime(),
+        slotEnd.getTime(),
+        apt.start.getTime(),
+        apt.end.getTime(),
+        bufferMs
+      )
+    );
 
   const availableSlots: { start: string; end: string }[] = [];
 

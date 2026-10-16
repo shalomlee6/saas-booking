@@ -22,19 +22,18 @@ import {
 import { listAppointmentsForCustomer } from '../services/appointmentQueryService';
 import { computeCustomerInsights, computeCustomerStats } from '../services/customerStatsService';
 import {
-  countCustomerNoShows,
   excuseAllNoShows,
   normalizeBookingOverride,
   readNoShowControl,
   readNoShowPolicy,
-  resolveBookingBlock,
-  resolveNoShowPolicy,
+  evaluateBookingBlock,
   saveNoShowPolicy,
   setBookingOverride,
   setNoShowExcused,
   type BookingOverride,
 } from '../services/customerNoShows';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { countActiveUpcoming, resolveOnlineBookingRules } from '../services/bookingRules';
 
 export async function listCustomers(req: AuthRequest, res: Response): Promise<void> {
   const businessId = req.effectiveBusinessId!;
@@ -86,6 +85,21 @@ function actorOf(req: AuthRequest) {
   return { userId: req.user?.userId, email: req.user?.email };
 }
 
+export async function getActiveAppointmentLimit(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = req.effectiveBusinessId!;
+  const customer = await getCustomerForTenant(businessId, req.params.id);
+  if (!customer) throw new NotFoundError('Customer not found');
+  const settings = await ensureBusinessSettings(businessId);
+  const rules = resolveOnlineBookingRules(settings);
+  const activeCount = await countActiveUpcoming(businessId, customer._id.toString());
+  const limit = rules.maxActiveAppointmentsPerClient;
+  res.json({
+    activeCount,
+    limit,
+    atOrAboveLimit: limit != null && activeCount >= limit,
+  });
+}
+
 export async function getNoShowControl(req: AuthRequest, res: Response): Promise<void> {
   const control = await readNoShowControl(req.effectiveBusinessId!, req.params.id);
   res.json(control);
@@ -98,14 +112,19 @@ export async function excuseCustomerNoShows(req: AuthRequest, res: Response): Pr
 }
 
 export async function excuseCustomerNoShow(req: AuthRequest, res: Response): Promise<void> {
-  const { excused, reason } = req.body as { excused: boolean; reason?: string };
+  const { excused, reason, kind } = req.body as {
+    excused: boolean;
+    reason?: string;
+    kind?: 'no_show' | 'late_cancellation' | 'late_arrival';
+  };
   const control = await setNoShowExcused(
     req.effectiveBusinessId!,
     req.params.id,
     req.params.appointmentId,
     excused,
     reason,
-    actorOf(req)
+    actorOf(req),
+    kind ?? 'no_show'
   );
   res.json(control);
 }
@@ -144,17 +163,17 @@ export async function getCustomer(req: AuthRequest, res: Response): Promise<void
     throw new NotFoundError('Customer not found');
   }
   const settings = await ensureBusinessSettings(businessId);
-  const noShowCount = await countCustomerNoShows(businessId, customer._id.toString());
-  const block = resolveBookingBlock(
-    normalizeBookingOverride(customer.bookingOverride),
-    resolveNoShowPolicy(settings),
-    noShowCount
+  const evaluated = await evaluateBookingBlock(
+    businessId,
+    customer._id.toString(),
+    customer.bookingOverride,
+    settings
   );
   res.json({
     ...customer.toObject(),
-    noShowCount,
-    blocked: block.blocked,
-    blockReason: block.reason,
+    noShowCount: evaluated.counts.noShow,
+    blocked: evaluated.block.blocked,
+    blockReason: evaluated.block.reason,
     bookingOverride: normalizeBookingOverride(customer.bookingOverride),
   });
 }

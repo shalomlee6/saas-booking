@@ -33,6 +33,14 @@
   overflow-wrap: anywhere;
 }
 
+.public-apt-details-policy {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: $pl-text-body;
+  overflow-wrap: anywhere;
+}
+
 .public-apt-details-row .pi {
   color: $pl-primary;
   font-size: 0.875rem;
