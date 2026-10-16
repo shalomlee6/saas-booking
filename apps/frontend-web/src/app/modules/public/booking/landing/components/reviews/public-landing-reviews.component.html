@@ -1,5 +1,5 @@
 <section class="pl-rev" aria-labelledby="pl-rev-title">
-  <h2 id="pl-rev-title" class="pl-rev__title">מה הלקוחות אומרות</h2>
+  <h2 id="pl-rev-title" class="pl-rev__title">{{ 'publicLanding.reviewsTitle' | translate }}</h2>
   <ul class="pl-rev__scroll">
     @for (r of rows(); track r.date + r.customerName + r.text) {
       <li class="pl-rev__card">

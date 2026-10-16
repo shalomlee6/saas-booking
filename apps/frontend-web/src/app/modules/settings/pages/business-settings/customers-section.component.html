@@ -1,0 +1,37 @@
+<form class="settings-section" (ngSubmit)="save()">
+  @if (error()) {
+    <p class="settings-error" role="alert">{{ error() }}</p>
+  }
+
+  <section class="settings-card" aria-labelledby="customers-birthday-label">
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label" id="customers-birthday-label">{{ 'settings.birthdayFieldLabel' | translate }}</span>
+        <span class="settings-row-hint" id="customers-birthday-hint">{{ 'settings.birthdayHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <div
+          class="settings-segment"
+          role="radiogroup"
+          aria-labelledby="customers-birthday-label"
+          aria-describedby="customers-birthday-hint"
+        >
+          <label class="settings-segment-option">
+            <input type="radio" name="birthday" value="required" [ngModel]="birthdayField()" (ngModelChange)="birthdayField.set($event)" />
+            <span>{{ 'settings.birthdayRequired' | translate }}</span>
+          </label>
+          <label class="settings-segment-option">
+            <input type="radio" name="birthday" value="optional" [ngModel]="birthdayField()" (ngModelChange)="birthdayField.set($event)" />
+            <span>{{ 'settings.birthdayOptional' | translate }}</span>
+          </label>
+          <label class="settings-segment-option">
+            <input type="radio" name="birthday" value="hidden" [ngModel]="birthdayField()" (ngModelChange)="birthdayField.set($event)" />
+            <span>{{ 'settings.birthdayHidden' | translate }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <app-settings-save-bar [dirty]="dirty()" [saving]="saving()" />
+</form>

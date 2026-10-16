@@ -1,19 +1,22 @@
 import {
   Component,
-  inject,
+  DestroyRef,
+  ElementRef,
   OnInit,
   computed,
+  effect,
+  inject,
   signal,
-  DestroyRef,
+  untracked,
+  viewChild,
 } from '@angular/core';
 import { DOCUMENT } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SkeletonModule } from 'primeng/skeleton';
-import { Subject, EMPTY, fromEvent, interval, filter, switchMap, catchError } from 'rxjs';
+import { Subject, EMPTY, fromEvent, interval, filter, map, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   PublicApiService,
@@ -22,48 +25,45 @@ import {
 } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { HoldToConfirmButtonComponent } from './hold-to-confirm-button.component';
-import {
-  formatParsedErrorForUi,
-  friendlyPublicBookingError,
-  parseHttpClientError,
-} from '../../../../shared/utils/http-field-errors.util';
+import { PublicIdentifyComponent } from '../../components/public-identify/public-identify.component';
+import { publicErrorTranslationKey } from '../../utils/public-error-message';
 import {
   buildPublicCreateAppointmentBody,
-  toDateKeyInBusinessTimezone,
+  calendarDayInTimezone,
+  dateKeyFromPicker,
+  DEFAULT_PUBLIC_TIMEZONE,
 } from '../../dto/public-booking-dto.adapter';
-import { AuthService } from '../../../../core/auth/auth.service';
+import { LanguageService } from '../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
-/** 3-step flow: 1=service, 2=date+time, 3=confirm */
-type BookStep = 1 | 2 | 3;
+/** 1 service, 2 identify, 3 date/time, 4 confirm. Identify is skipped for a known device. */
+type BookStep = 1 | 2 | 3 | 4;
 
-const STEP_TITLES: Record<BookStep, string> = {
-  1: 'בחרי שירות',
-  2: 'תאריך ושעה',
-  3: 'אישור התור',
+const STEP_TITLE_KEYS: Record<BookStep, string> = {
+  1: 'publicBook.serviceTitle',
+  2: 'publicBook.identifyTitle',
+  3: 'publicBook.dateTitle',
+  4: 'publicBook.confirmTitle',
 };
 
-const STEP_NAV_LABELS: Record<BookStep, string> = {
-  1: 'שירות',
-  2: 'תאריך ושעה',
-  3: 'אישור',
+const STEP_NAV_KEYS: Record<BookStep, string> = {
+  1: 'publicBook.serviceNav',
+  2: 'publicBook.identifyNav',
+  3: 'publicBook.dateNav',
+  4: 'publicBook.confirmNav',
 };
-
-/** Local calendar day at 00:00 — used for minDate and midnight refresh. */
-function startOfDay(d: Date): Date {
-  const out = new Date(d);
-  out.setHours(0, 0, 0, 0);
-  return out;
-}
 
 @Component({
   selector: 'app-customer-book-page',
   standalone: true,
   imports: [
     FormsModule,
+    TranslatePipe,
     ButtonModule,
     DatePickerModule,
     HoldToConfirmButtonComponent,
+    PublicIdentifyComponent,
     SkeletonModule,
   ],
   templateUrl: './customer-book-page.component.html',
@@ -73,9 +73,8 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly publicApi = inject(PublicApiService);
-  private readonly messageService = inject(MessageService);
   private readonly session = inject(PublicSessionService);
-  private readonly auth = inject(AuthService);
+  readonly language = inject(LanguageService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly doc = inject(DOCUMENT);
 
@@ -84,10 +83,15 @@ export class CustomerBookPageComponent implements OnInit {
     businessId: string;
     serviceId: string;
     dateStr: string;
+    excludeAppointmentId?: string;
   }>();
 
-  /** Refreshed on visibility, timer, and init so “today” advances after midnight. */
-  private readonly minDateForCalendar = signal<Date>(startOfDay(new Date()));
+  /** Refreshed on visibility, timer, and init so “today” is the business calendar day. */
+  private readonly minDateForCalendar = signal<Date>(
+    calendarDayInTimezone(new Date(), DEFAULT_PUBLIC_TIMEZONE)
+  );
+  /** Latest service tap wins; a slower session response cannot move the step. */
+  private readonly sessionCheckTrigger = new Subject<void>();
 
   // ── Data signals ───────────────────────────────────────────────────────────
   readonly business = signal<PublicBusinessForBooking | null>(null);
@@ -96,15 +100,12 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDate = signal<Date | null>(null);
   readonly slots = signal<string[]>([]);
   readonly selectedSlot = signal<string | null>(null);
-  /** Guest-only: customer full name. */
-  readonly guestName = signal('');
-  /** Guest-only: customer phone (required). Digits only, capped at 10 — see onGuestPhoneInput(). */
-  readonly guestPhone = signal('');
-
-  /** Strips non-digits and caps at 10 as the user types — matches Israeli local mobile format. */
-  onGuestPhoneInput(value: string): void {
-    this.guestPhone.set(value.replace(/\D/g, '').slice(0, 10));
-  }
+  readonly offer = signal<{ durationMinutes: number; price: number } | null>(null);
+  readonly skippedIdentify = signal(false);
+  readonly rescheduleId = signal<string | null>(null);
+  readonly rescheduleFrom = signal<{ date: string; time: string } | null>(null);
+  readonly identifyEntry = signal<'phone' | 'birthday' | 'profile'>('phone');
+  private readonly stepHeading = viewChild<ElementRef<HTMLElement>>('stepHeading');
 
   // ── Loading / error signals ────────────────────────────────────────────────
   readonly loadingBusiness = signal(true);
@@ -116,25 +117,42 @@ export class CustomerBookPageComponent implements OnInit {
   readonly submitting = signal(false);
   readonly step1LoadError = signal<string | null>(null);
   readonly submitError = signal<string | null>(null);
+  /** Shown on the time step after a taken slot, once the refreshed list arrives. */
+  private slotNotice: string | null = null;
 
   // ── Step navigation ────────────────────────────────────────────────────────
   readonly currentStep = signal<BookStep>(1);
   /**
-   * Toggled off then on after a non-fatal booking error to destroy and
-   * recreate the hold-to-confirm component so the progress ring resets.
+   * Toggled off then on after a non-fatal booking error so the confirm
+   * button is recreated in a clean state.
    */
   readonly showHoldButton = signal(true);
 
   // ── Progress indicator data ─────────────────────────────────────────────────
-  readonly bookSteps: readonly BookStep[] = [1, 2, 3];
-  readonly stepNavLabels = STEP_NAV_LABELS;
+  readonly bookSteps: readonly BookStep[] = [1, 2, 3, 4];
+  readonly stepNavKeys = STEP_NAV_KEYS;
 
   // ── Route ─────────────────────────────────────────────────────────────────
   readonly slug = computed(() => readBusinessSlugFromPathFromRoot(this.route));
 
   // ── Derived computeds ─────────────────────────────────────────────────────
   readonly minDate = this.minDateForCalendar.asReadonly();
-  readonly isLoggedIn = computed(() => this.session.hasSessionFor(this.slug()));
+  readonly bookingLimitReached = signal(false);
+  readonly bookingClosed = computed(() => this.business()?.onlineBooking?.enabled === false);
+  readonly maxDate = computed(() => {
+    const base = this.minDate();
+    const days = this.business()?.onlineBooking?.maxAdvanceDays ?? 60;
+    const max = new Date(base);
+    max.setDate(max.getDate() + days);
+    return max;
+  });
+  readonly policyText = computed(() => {
+    const policy = this.business()?.clientPolicy;
+    if (!policy) return '';
+    return this.language.language() === 'en' ? policy.en : policy.he;
+  });
+  readonly contactPhone = computed(() => this.business()?.landing?.phone ?? '');
+  readonly isLoggedIn = computed(() => this.session.readyToBook(this.slug()));
 
   readonly loadingStep1 = computed(
     () => this.loadingBusiness() || this.loadingServices()
@@ -143,9 +161,7 @@ export class CustomerBookPageComponent implements OnInit {
   readonly selectedDateStr = computed(() => {
     const d = this.selectedDate();
     if (!d) return '';
-    const tz =
-      this.business()?.localization?.timezone ?? this.auth.businessTimezone();
-    return toDateKeyInBusinessTimezone(d, tz);
+    return dateKeyFromPicker(d);
   });
 
   readonly formattedBookingDate = computed(() => {
@@ -158,16 +174,20 @@ export class CustomerBookPageComponent implements OnInit {
     });
   });
 
-  readonly stepTitle = computed(() => STEP_TITLES[this.currentStep()]);
-  readonly progressPercent = computed(() => (this.currentStep() / 3) * 100);
+  readonly rescheduleMove = computed(() => {
+    const from = this.rescheduleFrom();
+    const toDate = this.formattedBookingDate();
+    const toTime = this.selectedSlot();
+    if (!this.rescheduleId() || !from || !toDate || !toTime) return null;
+    return {
+      from: `${this.formatVisitDate(from.date)} ${from.time}`,
+      to: `${toDate} ${toTime}`,
+    };
+  });
 
-  /** Used only for the hold-to-confirm disabled state on step 3. */
-  readonly canConfirm = computed(
-    () =>
-      !this.submitting() &&
-      (this.isLoggedIn() ||
-        (this.guestName().trim().length > 0 && this.guestPhone().length === 10))
-  );
+  readonly stepTitle = computed(() => this.language.t(STEP_TITLE_KEYS[this.currentStep()]));
+  readonly progressPercent = computed(() => (this.currentStep() / 4) * 100);
+  readonly canConfirm = computed(() => !this.submitting());
 
   // ── Two-way binding shim for p-datePicker [(ngModel)] ──────────────────────
   get selectedDateValue(): Date | null {
@@ -177,15 +197,47 @@ export class CustomerBookPageComponent implements OnInit {
     this.selectedDate.set(v);
   }
 
+  constructor() {
+    effect(() => {
+      const step = this.currentStep();
+      untracked(() => {
+        queueMicrotask(() => this.stepHeading()?.nativeElement.focus());
+        if (step === 3) {
+          // PrimeNG only tabs to "today", and its fallback selector misses this
+          // version's calendar markup when today is disabled. Put the first
+          // open day in the tab order, then give the step heading focus back.
+          setTimeout(() => {
+            this.ensureDatepickerTabStop();
+            this.stepHeading()?.nativeElement.focus();
+          }, 50);
+        }
+      });
+    });
+    effect(() => {
+      const epoch = this.session.flowEpoch();
+      if (epoch === 0) return;
+      untracked(() => this.resetToStart());
+    });
+  }
+
+  private ensureDatepickerTabStop(): void {
+    const root = this.doc.querySelector('.book-date-picker');
+    if (!root) return;
+    const days = Array.from(root.querySelectorAll<HTMLElement>('span.p-datepicker-day:not(.p-disabled)'));
+    if (days.length === 0 || days.some((day) => day.tabIndex === 0)) return;
+    days[0].tabIndex = 0;
+  }
+
   ngOnInit(): void {
     this.wireSlotsLoadPipeline();
+    this.wireSessionCheck();
     this.wireMinDateRefresh();
 
     const slug = this.slug();
     if (!slug) {
       this.loadingBusiness.set(false);
       this.loadingServices.set(false);
-      this.showError('חסר מזהה עסק');
+      this.step1LoadError.set(this.language.t('publicErrors.unknown'));
       return;
     }
     this.loadBusiness(slug);
@@ -207,7 +259,8 @@ export class CustomerBookPageComponent implements OnInit {
             .getAvailabilityByBusinessId(
               params.businessId,
               params.serviceId,
-              params.dateStr
+              params.dateStr,
+              params.excludeAppointmentId
             )
             .pipe(
               catchError((err: unknown) => {
@@ -217,10 +270,9 @@ export class CustomerBookPageComponent implements OnInit {
                 }
                 this.loadingSlots.set(false);
                 this.slotsError.set(true);
-                this.slotsErrorDetail.set(
-                  formatParsedErrorForUi(parseHttpClientError(err)) ??
-                    'שגיאה בטעינת השעות'
-                );
+                const notice = this.slotNotice;
+                this.slotNotice = null;
+                this.slotsErrorDetail.set(notice ?? this.language.t(publicErrorTranslationKey(err)));
                 return EMPTY;
               })
             );
@@ -229,27 +281,39 @@ export class CustomerBookPageComponent implements OnInit {
       )
       .subscribe((res) => {
         this.slots.set(res.slots);
+        if (typeof res.durationMinutes === 'number' && typeof res.price === 'number') {
+          this.offer.set({ durationMinutes: res.durationMinutes, price: res.price });
+        }
         this.selectedSlot.set(null);
-        this.slotsErrorDetail.set(null);
+        const notice = this.slotNotice;
+        this.slotNotice = null;
+        if (notice) {
+          this.slotsError.set(true);
+          this.slotsErrorDetail.set(notice);
+        } else {
+          this.slotsErrorDetail.set(null);
+        }
         this.loadingSlots.set(false);
       });
   }
 
-  /** Keeps calendar “today” correct across midnight and when returning to the tab. */
+  /** Keeps calendar “today” on the business calendar across midnight and when returning to the tab. */
+  private refreshMinDate(): void {
+    const tz = this.business()?.localization?.timezone || DEFAULT_PUBLIC_TIMEZONE;
+    this.minDateForCalendar.set(calendarDayInTimezone(new Date(), tz));
+  }
+
   private wireMinDateRefresh(): void {
-    const bump = (): void => {
-      this.minDateForCalendar.set(startOfDay(new Date()));
-    };
-    bump();
+    this.refreshMinDate();
     fromEvent(this.doc, 'visibilitychange')
       .pipe(
         filter(() => this.doc.visibilityState === 'visible'),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => bump());
+      .subscribe(() => this.refreshMinDate());
     interval(60_000)
       .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => bump());
+      .subscribe(() => this.refreshMinDate());
   }
 
 
@@ -259,9 +323,13 @@ export class CustomerBookPageComponent implements OnInit {
     const step = this.currentStep();
     if (step <= 1) {
       this.goToHome();
-    } else {
-      this.currentStep.set((step - 1) as BookStep);
+      return;
     }
+    if (step === 3 && this.skippedIdentify()) {
+      this.currentStep.set(1);
+      return;
+    }
+    this.currentStep.set((step - 1) as BookStep);
   }
 
   // ── Selection handlers — auto-advance ──────────────────────────────────────
@@ -277,8 +345,61 @@ export class CustomerBookPageComponent implements OnInit {
       this.slotsErrorDetail.set(null);
     }
     this.selectedService.set(svc);
-    // Brief pause so the card selection animation is visible, then advance.
-    setTimeout(() => this.currentStep.set(2), 320);
+    if (!this.slug()) return;
+    this.sessionCheckTrigger.next();
+  }
+
+  /** Drops an in-flight session read when the visitor picks another service or leaves. */
+  private wireSessionCheck(): void {
+    this.sessionCheckTrigger
+      .pipe(
+        switchMap(() => {
+          const slug = this.slug();
+          if (!slug) return EMPTY;
+          return this.publicApi.getSessionMe(slug).pipe(map((result) => ({ slug, result })));
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ slug, result }) => {
+        if (result.kind === 'ok') {
+          this.session.applyMe(slug, result.profile);
+          this.continueAfterIdentity(slug, result.profile.hasCustomer ? 'birthday' : 'profile');
+          return;
+        }
+        this.session.clearSession(slug);
+        this.skippedIdentify.set(false);
+        this.identifyEntry.set('phone');
+        this.currentStep.set(2);
+      });
+  }
+
+  onIdentified(): void {
+    if (this.session.bookingLimitReached()) {
+      this.bookingLimitReached.set(true);
+      this.currentStep.set(2);
+      return;
+    }
+    this.bookingLimitReached.set(false);
+    this.skippedIdentify.set(false);
+    this.currentStep.set(3);
+  }
+
+  private continueAfterIdentity(slug: string, entry: 'phone' | 'birthday' | 'profile'): void {
+    if (this.session.bookingLimitReached()) {
+      this.bookingLimitReached.set(true);
+      this.skippedIdentify.set(false);
+      this.currentStep.set(2);
+      return;
+    }
+    this.bookingLimitReached.set(false);
+    if (this.session.readyToBook(slug)) {
+      this.skippedIdentify.set(true);
+      this.currentStep.set(3);
+      return;
+    }
+    this.skippedIdentify.set(false);
+    this.identifyEntry.set(entry);
+    this.currentStep.set(2);
   }
 
   onDateSelect(): void {
@@ -298,7 +419,7 @@ export class CustomerBookPageComponent implements OnInit {
     this.submitError.set(null);
     this.selectedSlot.set(slot);
     // Brief pause so the pill selection animation is visible, then advance.
-    setTimeout(() => this.currentStep.set(3), 320);
+    setTimeout(() => this.currentStep.set(4), 320);
   }
 
   // ── Step-2 helpers ─────────────────────────────────────────────────────────
@@ -328,12 +449,7 @@ export class CustomerBookPageComponent implements OnInit {
     const svc = this.selectedService();
     const dateStr = this.selectedDateStr();
     const time = this.selectedSlot();
-    const loggedIn = this.isLoggedIn();
-    const name = this.guestName().trim();
-    const phone = this.guestPhone().replace(/\D/g, '');
-
     if (!b || !svc || !dateStr || !time) return;
-    if (!loggedIn && (!name || !phone)) return;
 
     this.submitting.set(true);
     this.submitError.set(null);
@@ -343,22 +459,17 @@ export class CustomerBookPageComponent implements OnInit {
       serviceId: svc.id,
       date: dateStr,
       time,
-      customerName: !loggedIn ? name : undefined,
-      customerPhone: !loggedIn ? phone : undefined,
     });
+    const movingId = this.rescheduleId();
+    const request = movingId
+      ? this.publicApi.rescheduleAppointment(movingId, dateStr, time)
+      : this.publicApi.createAppointment(body);
 
-    this.publicApi.createAppointment(body).subscribe({
+    request.subscribe({
       next: (res) => {
         this.submitting.set(false);
         const slug = this.slug();
-        if (res.token && res.customerId && slug) {
-          this.session.setSession(
-            res.token,
-            slug,
-            res.customerId,
-            res.customerName ?? name
-          );
-        }
+        if (res.customerId) this.session.rememberCustomerId(res.customerId);
         if (slug) {
           this.router.navigate(['/b', slug], {
             state: {
@@ -381,25 +492,17 @@ export class CustomerBookPageComponent implements OnInit {
         if (this.handleUnauthorizedPublicSession(err)) {
           return;
         }
+        const msg = this.language.t(publicErrorTranslationKey(err));
         if (err?.status === 409 && err?.error?.code === 'SLOT_TAKEN') {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'תפוס',
-            detail: 'התור נתפס, בחרי שעה אחרת',
-            life: 5000,
-          });
-          // Return to date+time step and refresh the slot grid.
-          this.currentStep.set(2);
+          this.slotNotice = msg;
+          this.currentStep.set(3);
           const b2 = this.business();
           const svc2 = this.selectedService();
           if (b2 && svc2 && dateStr) {
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
         } else {
-          const msg = friendlyPublicBookingError(err);
           this.submitError.set(msg);
-          this.showError(msg);
-          // Destroy and recreate hold-to-confirm so the ring resets.
           this.showHoldButton.set(false);
           setTimeout(() => this.showHoldButton.set(true), 50);
         }
@@ -424,6 +527,26 @@ export class CustomerBookPageComponent implements OnInit {
 
   /** Pre-select service when opening e.g. `/b/:slug/book?service=:id` from the landing page. */
   private applyPresetServiceFromQuery(services: PublicService[]): void {
+    const reschedule = this.route.snapshot.queryParamMap.get('reschedule');
+    if (reschedule) {
+      this.publicApi.getUpcomingAppointment().pipe(takeUntilDestroyed(this.destroyRef)).subscribe((res) => {
+        const list = res.appointments ?? (res.appointment ? [res.appointment] : []);
+        const match = list.find((row) => row.id === reschedule);
+        if (!match?.canChange) {
+          this.rescheduleId.set(null);
+          this.rescheduleFrom.set(null);
+          void this.router.navigate([], {
+            relativeTo: this.route,
+            queryParams: { reschedule: null },
+            queryParamsHandling: 'merge',
+            replaceUrl: true,
+          });
+          return;
+        }
+        this.rescheduleId.set(reschedule);
+        this.rescheduleFrom.set({ date: match.date, time: match.time });
+      });
+    }
     const id = this.route.snapshot.queryParamMap.get('service');
     if (!id) return;
     const match = services.find((s) => s.id === id);
@@ -437,13 +560,13 @@ export class CustomerBookPageComponent implements OnInit {
     this.publicApi.getBusinessForBooking(slug).subscribe({
       next: (data) => {
         this.business.set(data);
+        this.refreshMinDate();
         this.step1LoadError.set(null);
         this.loadingBusiness.set(false);
       },
       error: (err) => {
         this.loadingBusiness.set(false);
-        this.step1LoadError.set(err?.error?.message ?? 'שגיאה בטעינת העסק');
-        this.showError(err?.error?.message ?? 'שגיאה בטעינת העסק');
+        this.step1LoadError.set(this.language.t(publicErrorTranslationKey(err)));
       },
     });
   }
@@ -459,14 +582,14 @@ export class CustomerBookPageComponent implements OnInit {
       },
       error: (err) => {
         this.loadingServices.set(false);
-        this.step1LoadError.set(err?.error?.message ?? 'שגיאה בטעינת השירותים');
-        this.showError(err?.error?.message ?? 'שגיאה בטעינת השירותים');
+        this.step1LoadError.set(this.language.t(publicErrorTranslationKey(err)));
       },
     });
   }
 
   private loadSlots(businessId: string, serviceId: string, dateStr: string): void {
-    this.loadSlotsTrigger.next({ businessId, serviceId, dateStr });
+    const excludeAppointmentId = this.rescheduleId() ?? undefined;
+    this.loadSlotsTrigger.next({ businessId, serviceId, dateStr, excludeAppointmentId });
   }
 
   /**
@@ -482,18 +605,35 @@ export class CustomerBookPageComponent implements OnInit {
     const slug = this.slug();
     if (slug) {
       this.session.clearSession(slug);
-      this.showError('ההתחברות פגה, יש להתחבר מחדש');
-      void this.router.navigate(['/b', slug, 'login']);
+      this.skippedIdentify.set(false);
+      this.identifyEntry.set('phone');
+      this.currentStep.set(2);
     }
     return true;
   }
 
-  private showError(message: string): void {
-    this.messageService.add({
-      severity: 'error',
-      summary: 'שגיאה',
-      detail: message,
-      life: 5000,
+  private resetToStart(): void {
+    this.currentStep.set(1);
+    this.selectedService.set(null);
+    this.selectedDate.set(null);
+    this.selectedSlot.set(null);
+    this.slots.set([]);
+    this.offer.set(null);
+    this.skippedIdentify.set(false);
+    this.identifyEntry.set('phone');
+    this.rescheduleId.set(null);
+    this.rescheduleFrom.set(null);
+    this.submitError.set(null);
+  }
+
+  private formatVisitDate(dateStr: string): string {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    if (!year || !month || !day) return dateStr;
+    return new Date(year, month - 1, day).toLocaleDateString('he-IL', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
     });
   }
+
 }

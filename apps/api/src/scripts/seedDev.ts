@@ -163,12 +163,10 @@ async function main(): Promise<void> {
   console.log('\nStaff (same business as the owner above)');
   console.log(`  email:    ${STAFF_EMAIL}`);
   console.log(`  password: ${STAFF_PASSWORD}`);
-  console.log('\nCustomer (public site, OTP login — no password)');
+  console.log('\nCustomer (public site — phone identity, OTP only when IDENTITY_MODE=otp)');
   console.log(`  phone:    ${CUSTOMER_PHONE}`);
   console.log(`  site:     /b/${OWNER_BUSINESS_SLUG}`);
-  console.log(
-    '  OTP code: 123456 — requires PUBLIC_DEV_OTP_BYPASS=true in .env (never set this in production)'
-  );
+  console.log('  OTP:      written to the API log in development. There is no fixed bypass code.');
   console.log('');
 
   await mongoose.disconnect();

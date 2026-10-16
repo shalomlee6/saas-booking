@@ -7,9 +7,17 @@ import { defaultOpeningHours } from '../models/BusinessSettings';
 import { Service } from '../models/Service';
 import { toIsoUtcString } from '../dto/datetime';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { rangesOverlapWithBuffer, resolveOnlineBookingRules } from './bookingRules';
 import { applyOpeningHoursWithOverrides } from '../utils/applyOpeningHoursWithOverrides';
 import { NotFoundError } from '../errors/httpErrors';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
+import { isFutureSlotStart } from './publicBookingTime';
+
+function readPopulatedName(value: unknown): string {
+  if (typeof value !== 'object' || value === null || value instanceof Types.ObjectId) return '';
+  const name = (value as Record<string, unknown>)['name'];
+  return typeof name === 'string' ? name : '';
+}
 
 /** Convert a YYYY-MM-DD + HH:mm pair in the given timezone to a UTC Date. */
 function slotToUtcDate(dateStr: string, timeStr: string, timezone: string): Date {
@@ -55,7 +63,7 @@ export async function computeOwnerAvailableSlots(
 
   // Precedence: this customer+service override > this customer's general default > service catalog default.
   const override = await getServiceOverrideForCustomer(businessId, customerId, serviceId);
-  let durationMinutes =
+  const durationMinutes =
     override?.durationOverrideMinutes ??
     customer.defaultTreatmentDurationMinutes ??
     service.durationMinutes ??
@@ -80,15 +88,24 @@ export async function computeOwnerAvailableSlots(
   const startOfWeek = weekStartDt.toJSDate();
   const endOfWeek = weekStartDt.plus({ days: 7 }).toJSDate();
 
+  const bufferMs = resolveOnlineBookingRules(settings).bufferMinutes * 60 * 1000;
   const appointments = await Appointment.find({
     businessId,
-    start: { $lt: endOfWeek },
-    end: { $gt: startOfWeek },
+    start: { $lt: new Date(endOfWeek.getTime() + bufferMs) },
+    end: { $gt: new Date(startOfWeek.getTime() - bufferMs) },
     status: { $ne: 'cancelled' },
   });
 
   const isSlotOccupied = (slotStart: Date, slotEnd: Date): boolean =>
-    appointments.some((apt) => apt.start < slotEnd && apt.end > slotStart);
+    appointments.some((apt) =>
+      rangesOverlapWithBuffer(
+        slotStart.getTime(),
+        slotEnd.getTime(),
+        apt.start.getTime(),
+        apt.end.getTime(),
+        bufferMs
+      )
+    );
 
   const availableSlots: { start: string; end: string }[] = [];
 
@@ -129,7 +146,7 @@ export async function computeOwnerAvailableSlots(
         const slotStart = slotToUtcDate(dateStr, timeStr, timezone);
         const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60 * 1000);
 
-        if (!isSlotOccupied(slotStart, slotEnd)) {
+        if (!isSlotOccupied(slotStart, slotEnd) && isFutureSlotStart(slotStart, new Date())) {
           availableSlots.push({
             start: toIsoUtcString(slotStart),
             end: toIsoUtcString(slotEnd),
@@ -171,14 +188,16 @@ export async function listAppointmentsForCustomer(
     .limit(CUSTOMER_HISTORY_LIMIT)
     .lean();
 
-  return appointments.map((apt: any) => ({
-    appointmentId: apt._id.toString(),
-    start: toIsoUtcString(apt.start),
-    end: toIsoUtcString(apt.end),
-    status: apt.status,
-    price: apt.price,
-    durationMinutes: apt.durationMinutes,
-    serviceName: apt.serviceId?.name ?? '',
-    notes: apt.notes ?? null,
-  }));
+  return appointments.map((apt) => {
+    return {
+      appointmentId: apt._id.toString(),
+      start: toIsoUtcString(apt.start),
+      end: toIsoUtcString(apt.end),
+      status: apt.status,
+      price: apt.price,
+      durationMinutes: apt.durationMinutes,
+      serviceName: readPopulatedName(apt.serviceId),
+      notes: apt.notes ?? null,
+    };
+  });
 }

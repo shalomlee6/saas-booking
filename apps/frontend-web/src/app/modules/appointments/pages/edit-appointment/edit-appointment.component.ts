@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import {
   FormBuilder,
@@ -7,6 +7,7 @@ import {
   Validators,
 } from '@angular/forms';
 import { forkJoin, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
@@ -19,6 +20,7 @@ import { AppointmentsApiService } from '../../services/appointments-api.service'
 import { CustomersApiService } from '../../../customers/services/customers-api.service';
 import { ServicesApiService } from '../../../services/services/services-api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { ApiService } from '../../../../core/api/api.service';
 import type { Customer } from '../../../customers/model/customer';
 import type { Service } from '../../../services/model/service';
 import {
@@ -29,6 +31,24 @@ import {
 import type { AppointmentDetailDto } from '../../services/appointments-api.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+
+/** Mirrors `ALLOWED_NEXT` in appointmentStatusPolicy.ts. Identity is always listed so the current value stays selected. */
+const STATUS_NEXT: Record<string, readonly string[]> = {
+  pending: ['confirmed', 'cancelled'],
+  confirmed: ['completed', 'cancelled', 'no_show'],
+  completed: ['no_show'],
+  no_show: ['completed'],
+  cancelled: [],
+};
+
+function statusChoices(
+  current: string,
+  label: (key: string) => string
+): { label: string; value: string }[] {
+  const next = STATUS_NEXT[current] ?? [];
+  const values = [current, ...next.filter((value) => value !== current)];
+  return values.map((value) => ({ value, label: label(`status.${value}`) }));
+}
 
 @Component({
   selector: 'app-edit-appointment',
@@ -54,23 +74,25 @@ export class EditAppointmentComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly appointmentsApi = inject(AppointmentsApiService);
   private readonly customersApi = inject(CustomersApiService);
+  private readonly api = inject(ApiService);
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
 
   readonly loading = signal(true);
+  readonly noShowLimitWarning = signal(false);
+  readonly activeLimitWarning = signal(false);
+  readonly lateCancellation = signal(false);
+  readonly cancellationWindowHours = signal(24);
   readonly saving = signal(false);
   readonly confirmingCancel = signal(false);
   readonly cancelling = signal(false);
   readonly customers = signal<Customer[]>([]);
   readonly services = signal<Service[]>([]);
-  readonly statusOptions: { label: string; value: string }[] = [
-    { label: this.language.t('status.confirmed'), value: 'confirmed' },
-    { label: this.language.t('status.pending'), value: 'pending' },
-    { label: this.language.t('status.completed'), value: 'completed' },
-    { label: this.language.t('status.cancelled'), value: 'cancelled' },
-  ];
+  /** Current status plus the moves the policy allows from it. */
+  readonly statusOptions = signal<{ label: string; value: string }[]>([]);
 
   appointmentId = '';
   private detail: AppointmentDetailDto | null = null;
@@ -84,9 +106,19 @@ export class EditAppointmentComponent implements OnInit {
     price: [null as number | null],
     status: ['confirmed', Validators.required],
     notes: [''],
+    lateArrival: [false],
+    lateArrivalMinutes: [null as number | null],
   });
 
   ngOnInit(): void {
+    this.api.get<{ booking: { cancellationWindowHours: number } }>('settings/me/booking-rules').subscribe({
+      next: (body) => this.cancellationWindowHours.set(body.booking.cancellationWindowHours),
+      error: () => this.cancellationWindowHours.set(24),
+    });
+    this.form
+      .get('customerId')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((customerId: string) => this.refreshNoShowWarning(customerId));
     const id = this.route.snapshot.paramMap.get('id');
     if (!id) {
       this.router.navigate(['/appointments']);
@@ -105,8 +137,11 @@ export class EditAppointmentComponent implements OnInit {
       .subscribe({
         next: ({ detail, services, customers }) => {
           this.detail = detail;
-          this.services.set(services);
-          this.customers.set(customers);
+          this.setServiceOptions(services, detail.serviceId);
+          const selectedId = detail.customerId;
+          this.customers.set(
+            customers.filter((customer) => customer.isActive !== false || customer._id === selectedId)
+          );
           this.patchFormFromDetail(detail);
         },
         error: () => {
@@ -118,6 +153,41 @@ export class EditAppointmentComponent implements OnInit {
           this.router.navigate(['/appointments']);
         },
       });
+  }
+
+  /** Active services only. The appointment's current service stays even when inactive. */
+  private setServiceOptions(services: Service[], selectedId: string | undefined): void {
+    const active = services.filter((service) => service.isActive !== false);
+    if (!selectedId || active.some((service) => service._id === selectedId)) {
+      this.services.set(active);
+      return;
+    }
+    const current = services.find((service) => service._id === selectedId);
+    if (current) {
+      this.services.set([...active, current]);
+      return;
+    }
+    this.services.set(active);
+    this.servicesApi.getById(selectedId).subscribe({
+      next: (service) => this.services.set([...active, service]),
+      error: () => undefined,
+    });
+  }
+
+  private refreshNoShowWarning(customerId: string): void {
+    if (!customerId) {
+      this.noShowLimitWarning.set(false);
+      this.activeLimitWarning.set(false);
+      return;
+    }
+    this.customersApi.getById(customerId).subscribe({
+      next: (customer) => this.noShowLimitWarning.set(customer.blocked === true),
+      error: () => this.noShowLimitWarning.set(false),
+    });
+    this.customersApi.getActiveLimit(customerId).subscribe({
+      next: (limit) => this.activeLimitWarning.set(limit.atOrAboveLimit),
+      error: () => this.activeLimitWarning.set(false),
+    });
   }
 
   /** Build wall-clock date + time Date objects from ISO range in business TZ. */
@@ -147,6 +217,7 @@ export class EditAppointmentComponent implements OnInit {
       status: d.status,
       notes: d.notes ?? '',
     });
+    this.statusOptions.set(statusChoices(d.status, (key) => this.language.t(key)));
   }
 
   onServiceChange(): void {
@@ -171,6 +242,9 @@ export class EditAppointmentComponent implements OnInit {
 
   requestCancelAppointment(): void {
     if (this.cancelling() || this.saving()) return;
+    const start = this.detail ? new Date(this.detail.start).getTime() : 0;
+    const inside = start - Date.now() < this.cancellationWindowHours() * 60 * 60 * 1000;
+    this.lateCancellation.set(inside);
     this.confirmingCancel.set(true);
   }
 
@@ -182,7 +256,7 @@ export class EditAppointmentComponent implements OnInit {
   confirmCancelAppointment(): void {
     if (!this.appointmentId || this.cancelling()) return;
     this.cancelling.set(true);
-    this.appointmentsApi.cancel(this.appointmentId).subscribe({
+    this.appointmentsApi.cancel(this.appointmentId, this.lateCancellation()).subscribe({
       next: () => {
         this.cancelling.set(false);
         this.confirmingCancel.set(false);
@@ -220,6 +294,8 @@ export class EditAppointmentComponent implements OnInit {
       price: number | null;
       status: string;
       notes: string;
+      lateArrival: boolean;
+      lateArrivalMinutes: number | null;
     };
 
     const dateKey = toDateKey(v.date, tz);
@@ -259,6 +335,12 @@ export class EditAppointmentComponent implements OnInit {
         price: v.price ?? undefined,
         status: v.status,
         notes: v.notes?.trim() || '',
+        ...(v.status === 'completed'
+          ? {
+              lateArrival: !!v.lateArrival,
+              lateArrivalMinutes: v.lateArrival ? Number(v.lateArrivalMinutes) || 0 : null,
+            }
+          : {}),
       })
       .pipe(finalize(() => this.saving.set(false)))
       .subscribe({

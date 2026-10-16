@@ -1,4 +1,12 @@
-<div class="book-flow" dir="rtl">
+<div class="book-flow">
+  @if (bookingClosed()) {
+    <div class="book-step">
+      <p class="book-notice-title">{{ 'publicBook.bookingClosed' | translate }}</p>
+      @if (contactPhone()) {
+        <a class="book-text-btn" [href]="'tel:' + contactPhone()">{{ 'publicBook.contactCta' | translate }}</a>
+      }
+    </div>
+  } @else {
 
   <!-- ── Header: back arrow + centered step title ────────────────────────── -->
   <header class="book-flow-header">
@@ -6,16 +14,16 @@
       type="button"
       class="book-flow-back"
       (click)="goStepBack()"
-      [attr.aria-label]="currentStep() === 1 ? 'חזרה לדף הבית' : 'חזרה לשלב הקודם'"
+      [attr.aria-label]="currentStep() === 1 ? ('publicBook.backHome' | translate) : ('publicBook.backStep' | translate)"
     >
-      <i class="pi pi-arrow-right" aria-hidden="true"></i>
+      <i [class]="language.isRtl ? 'pi pi-arrow-right' : 'pi pi-arrow-left'" aria-hidden="true"></i>
     </button>
-    <span class="book-flow-step-title">{{ stepTitle() }}</span>
+    <h1 #stepHeading class="book-flow-step-title" tabindex="-1">{{ stepTitle() }}</h1>
     <div class="book-flow-header-spacer" aria-hidden="true"></div>
   </header>
 
   <!-- ── Progress: 3 labeled dots ────────────────────────────────────────── -->
-  <nav class="book-progress-steps" aria-label="שלבי תהליך הזמנה">
+  <nav class="book-progress-steps" [attr.aria-label]="'publicBook.stepsLabel' | translate">
     @for (s of bookSteps; track s) {
       <div
         class="book-progress-step"
@@ -29,9 +37,9 @@
             <span>{{ s }}</span>
           }
         </div>
-        <span class="book-progress-step-label">{{ stepNavLabels[s] }}</span>
+        <span class="book-progress-step-label">{{ stepNavKeys[s] | translate }}</span>
       </div>
-      @if (s < 3) {
+      @if (s < 4) {
         <div
           class="book-progress-connector"
           [class.is-done]="currentStep() > s"
@@ -47,7 +55,7 @@
     <!-- ═══ STEP 1: Service selection ════════════════════════════════════════ -->
     @if (currentStep() === 1) {
       <div class="book-step">
-        <p class="book-step-hint">טפי על השירות הרצוי להמשיך</p>
+        <p class="book-step-hint">{{ 'publicBook.serviceHint' | translate }}</p>
 
         @if (loadingStep1()) {
           <div class="book-service-list">
@@ -57,24 +65,23 @@
           </div>
         } @else if (step1LoadError(); as loadErr) {
           <div class="book-notice-state book-notice-state-error" role="alert">
-            <p class="book-notice-title">לא ניתן לטעון את פרטי ההזמנה</p>
+            <p class="book-notice-title">{{ 'publicBook.loadError' | translate }}</p>
             <p class="book-notice-detail">{{ loadErr }}</p>
             <button type="button" class="book-text-btn" (click)="retryInitialLoad()">
               <i class="pi pi-refresh" aria-hidden="true"></i>
-              נסי שוב
+              {{ 'common.retry' | translate }}
             </button>
           </div>
         } @else if (services().length === 0) {
           <div class="book-empty-state">
             <i class="pi pi-calendar book-empty-icon" aria-hidden="true"></i>
-            <p>אין שירותים זמינים כרגע</p>
+            <p>{{ 'publicBook.emptyServices' | translate }}</p>
           </div>
         } @else {
-          <div class="book-service-list" role="list">
+          <div class="book-service-list">
             @for (svc of services(); track svc.id) {
               <button
                 type="button"
-                role="listitem"
                 class="book-service-card"
                 [class.book-service-card--selected]="selectedService()?.id === svc.id"
                 [attr.aria-pressed]="selectedService()?.id === svc.id"
@@ -87,7 +94,7 @@
                   <span class="book-service-name">{{ svc.nameHe }}</span>
                   <span class="book-service-meta">
                     <i class="pi pi-clock" aria-hidden="true"></i>
-                    {{ svc.durationMinutes }} דק׳
+                    {{ 'publicBook.durationMinutes' | translate: { count: svc.durationMinutes } }}
                     @if (svc.price != null && svc.price > 0) {
                       &middot; {{ svc.price }} ₪
                     }
@@ -106,7 +113,28 @@
     <!-- ═══ STEP 2: Date + Time (combined) ════════════════════════════════════ -->
     @if (currentStep() === 2) {
       <div class="book-step">
-        <p class="book-step-hint">בחרי תאריך שנוח לך</p>
+        @if (bookingLimitReached()) {
+          <div class="book-notice-state" role="alert">
+            <p class="book-notice-title">{{ 'publicErrors.maxActiveAppointments' | translate }}</p>
+          </div>
+        } @else {
+        <app-public-identify
+          [slug]="slug()"
+          [entry]="identifyEntry()"
+          (completed)="onIdentified()"
+        />
+        }
+      </div>
+    }
+
+    @if (currentStep() === 3) {
+      <div class="book-step">
+        <p class="book-step-hint">{{ 'publicBook.dateHint' | translate }}</p>
+        @if (offer(); as currentOffer) {
+          <p class="book-offer" data-testid="book-offer">
+            {{ 'publicBook.offer' | translate: { duration: currentOffer.durationMinutes, price: currentOffer.price } }}
+          </p>
+        }
 
         <!-- Calendar card -->
         <div class="book-date-card">
@@ -114,6 +142,7 @@
             [(ngModel)]="selectedDateValue"
             [inline]="true"
             [minDate]="minDate()"
+            [maxDate]="maxDate()"
             [showIcon]="false"
             (onSelect)="onDateSelect()"
             dateFormat="dd/mm/yy"
@@ -125,38 +154,38 @@
         @if (selectedDate()) {
           <div class="book-slots-section">
             <div class="book-slots-header">
-              <span class="book-slots-label">שעות פנויות</span>
+              <span class="book-slots-label">{{ 'publicBook.slotsLabel' | translate }}</span>
               <span class="book-slots-date-badge">{{ formattedBookingDate() }}</span>
             </div>
 
             @if (loadingSlots()) {
               <div class="book-slots-grid" aria-busy="true" aria-live="polite">
-                <span class="book-slots-loading-hint">טוענת שעות…</span>
+                <span class="book-slots-loading-hint">{{ 'publicBook.slotsLoading' | translate }}</span>
                 @for (i of [1, 2, 3, 4, 5, 6]; track i) {
                   <p-skeleton width="100%" height="52px" borderRadius="9999px" />
                 }
               </div>
             } @else if (slotsError()) {
               <div class="book-notice-state book-notice-state-error" role="alert">
-                <p class="book-notice-title">לא ניתן לטעון שעות</p>
+                <p class="book-notice-title">{{ 'publicBook.slotsError' | translate }}</p>
                 @if (slotsErrorDetail(); as errDetail) {
                   <p class="book-notice-detail">{{ errDetail }}</p>
                 }
                 <button type="button" class="book-text-btn" (click)="retryLoadSlots()">
                   <i class="pi pi-refresh" aria-hidden="true"></i>
-                  נסי שוב
+                  {{ 'common.retry' | translate }}
                 </button>
               </div>
             } @else if (slots().length === 0) {
               <div class="book-notice-state book-notice-state-empty">
-                <p class="book-notice-title">אין שעות פנויות ביום הזה</p>
-                <p class="book-notice-detail">נסי יום אחר או חזרי מאוחר יותר.</p>
+                <p class="book-notice-title">{{ 'publicBook.slotsEmpty' | translate }}</p>
+                <p class="book-notice-detail">{{ 'publicBook.slotsEmptyHint' | translate }}</p>
                 <button type="button" class="book-text-btn" (click)="goToDateStep()">
-                  בחרי תאריך אחר
+                  {{ 'publicBook.pickAnotherDate' | translate }}
                 </button>
               </div>
             } @else {
-              <div class="book-slots-grid" role="listbox" aria-label="שעות פנויות">
+              <div class="book-slots-grid" role="listbox" [attr.aria-label]="'publicBook.slotsLabel' | translate">
                 @for (slot of slots(); track slot) {
                   <button
                     type="button"
@@ -177,9 +206,15 @@
     }
 
     <!-- ═══ STEP 3: Confirmation ══════════════════════════════════════════════ -->
-    @if (currentStep() === 3) {
+    @if (currentStep() === 4) {
       <div class="book-step">
-        <p class="book-step-hint">הכל נראה טוב? לחצי לאישור התור</p>
+        <p class="book-step-hint">{{ 'publicBook.confirmHint' | translate }}</p>
+        @if (policyText()) {
+          <p class="book-policy">{{ policyText() }}</p>
+        }
+        @if (rescheduleMove(); as move) {
+          <p class="book-reschedule-move">{{ 'publicBook.moveSummary' | translate: move }}</p>
+        }
 
         <!-- Summary card with icons -->
         <div class="book-summary-card">
@@ -188,7 +223,7 @@
               <i class="pi pi-palette" aria-hidden="true"></i>
             </div>
             <div class="book-summary-content">
-              <span class="book-summary-label">שירות</span>
+              <span class="book-summary-label">{{ 'publicBook.serviceNav' | translate }}</span>
               <span class="book-summary-value">{{ selectedService()?.nameHe }}</span>
             </div>
           </div>
@@ -198,7 +233,7 @@
               <i class="pi pi-calendar" aria-hidden="true"></i>
             </div>
             <div class="book-summary-content">
-              <span class="book-summary-label">תאריך</span>
+              <span class="book-summary-label">{{ 'common.date' | translate }}</span>
               <span class="book-summary-value">{{ formattedBookingDate() }}</span>
             </div>
           </div>
@@ -208,68 +243,27 @@
               <i class="pi pi-clock" aria-hidden="true"></i>
             </div>
             <div class="book-summary-content">
-              <span class="book-summary-label">שעה</span>
+              <span class="book-summary-label">{{ 'publicBook.summaryTime' | translate }}</span>
               <span class="book-summary-value book-summary-time">{{ selectedSlot() }}</span>
             </div>
           </div>
         </div>
 
         <!-- Duration note -->
-        @if (selectedService(); as svc) {
-          @if (svc.durationMinutes) {
-            <p class="book-reassurance-note">
-              <i class="pi pi-info-circle" aria-hidden="true"></i>
-              משך הטיפול: {{ svc.durationMinutes }} דקות · ביטול חינם עד 24 שעות מראש
-            </p>
-          }
-        }
-
-        <!-- Guest details — only for unauthenticated customers -->
-        @if (!isLoggedIn()) {
-          <div class="book-guest-section">
-            <h3 class="book-guest-title">פרטייך</h3>
-            <div class="book-field">
-              <label class="book-field-label" for="guestName">
-                שם מלא <span class="book-field-required" aria-hidden="true">*</span>
-              </label>
-              <input
-                id="guestName"
-                type="text"
-                class="book-field-input"
-                placeholder="הכנסי את שמך"
-                [ngModel]="guestName()"
-                (ngModelChange)="guestName.set($event)"
-                maxlength="200"
-                autocomplete="name"
-                dir="rtl"
-              />
-            </div>
-            <div class="book-field">
-              <label class="book-field-label" for="guestPhone">
-                טלפון <span class="book-field-required" aria-hidden="true">*</span>
-              </label>
-              <input
-                id="guestPhone"
-                type="tel"
-                class="book-field-input"
-                placeholder="מספר טלפון"
-                [ngModel]="guestPhone()"
-                (ngModelChange)="onGuestPhoneInput($event)"
-                autocomplete="tel"
-                inputmode="numeric"
-                maxlength="10"
-              />
-            </div>
-          </div>
+        @if (offer(); as currentOffer) {
+          <p class="book-reassurance-note">
+            <i class="pi pi-info-circle" aria-hidden="true"></i>
+            {{ 'publicBook.offer' | translate: { duration: currentOffer.durationMinutes, price: currentOffer.price } }}
+          </p>
         }
       </div>
 
         <!-- ── Sticky button container — ONLY on confirmation step ───────────────────────── -->
-      @if (currentStep() === 3) {
+      @if (currentStep() === 4) {
         <div class="book-flow-footer">
           @if (submitError(); as submitErr) {
             <div class="book-notice-state book-notice-state-error" role="alert">
-              <p class="book-notice-title">לא הצלחנו להשלים את ההזמנה</p>
+              <p class="book-notice-title">{{ 'publicBook.submitError' | translate }}</p>
               <p class="book-notice-detail">{{ submitErr }}</p>
             </div>
           }
@@ -277,8 +271,6 @@
             <div class="book-hold-wrap">
               <app-hold-to-confirm-button
                 [disabled]="submitting() || !canConfirm()"
-                [durationMs]="2000"
-                [successState]="false"
                 (confirm)="confirmBooking()"
               />
             </div>
@@ -288,7 +280,5 @@
     }
 
   </div><!-- /book-flow-body -->
-
-
-
+  }
 </div>

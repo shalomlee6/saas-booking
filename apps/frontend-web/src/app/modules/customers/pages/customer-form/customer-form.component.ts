@@ -43,7 +43,7 @@ export class CustomerFormComponent {
   constructor() {
     this.form = this.fb.group({
       name: ['', [Validators.required]],
-      phone: ['', [Validators.required, Validators.pattern(/^\d{10}$/)]],
+      phone: ['', [Validators.required, Validators.pattern(/^05\d{8}$/)]],
       email: [''],
       notes: [''],
       preferredTimeOfDay: [''],

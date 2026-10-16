@@ -36,7 +36,7 @@ export class CustomerSitePreviewComponent {
   readonly iframeSrc = computed<SafeResourceUrl | null>(() => {
     const slug = this.slug();
     const origin = this.doc.defaultView?.location?.origin ?? '';
-    const url = slug ? `${origin}/b/${encodeURIComponent(slug)}/login` : null;
+    const url = slug ? `${origin}/b/${encodeURIComponent(slug)}` : null;
     return url ? this.sanitizer.bypassSecurityTrustResourceUrl(url) : null;
   });
 

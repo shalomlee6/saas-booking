@@ -163,7 +163,7 @@ export async function createAdminBusiness(req: AuthRequest, res: Response): Prom
 }
 
 // POST /api/admin/impersonate
-export async function adminImpersonate(req: AuthRequest, res: Response): Promise<any> {
+export async function adminImpersonate(req: AuthRequest, res: Response): Promise<Response> {
   try {
     const { businessId } = req.body;
 
@@ -217,13 +217,13 @@ export async function adminImpersonate(req: AuthRequest, res: Response): Promise
       String(businessId)
     );
 
-    res.json({
+    return res.json({
       token,
       impersonatingBusinessId: businessId,
     });
   } catch (err) {
     logger.error('admin_impersonate_failed', { error: err instanceof Error ? err.message : String(err) });
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }
 
@@ -252,7 +252,7 @@ export async function adminStopImpersonate(req: AuthRequest, res: Response): Pro
 }
 
 // PATCH /api/admin/businesses/:id/ui – super admin updates any business UI
-export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Promise<any> {
+export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Promise<Response> {
   try {
     const businessId = req.params.id;
     if (!Types.ObjectId.isValid(String(businessId))) {
@@ -298,8 +298,7 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
 
     if (hasUiFields) {
       const currentUi = business.ui && typeof business.ui === 'object' ? business.ui : {};
-      const merged = { ...currentUi, ...result.ui };
-      business.ui = merged as any;
+      business.ui = normalizeBusinessUi({ ...currentUi, ...result.ui });
       await business.save();
     }
 
@@ -318,6 +317,6 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
     logger.error('admin_patch_business_ui_failed', {
       error: err instanceof Error ? err.message : String(err),
     });
-    res.status(500).json({ message: 'Internal server error' });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 }

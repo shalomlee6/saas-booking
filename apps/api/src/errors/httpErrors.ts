@@ -21,15 +21,15 @@ export class HttpError extends Error {
 
 /** 400 — optional structured field errors (same shape as Zod validation responses). */
 export class ValidationError extends HttpError {
-  constructor(message: string = 'Validation failed', fieldErrors?: FieldError[]) {
-    super(400, message, undefined, fieldErrors);
+  constructor(message: string = 'Validation failed', fieldErrors?: FieldError[], code?: string) {
+    super(400, message, code, fieldErrors);
   }
 }
 
 /** 404 */
 export class NotFoundError extends HttpError {
-  constructor(message: string = 'Not found') {
-    super(404, message);
+  constructor(message: string = 'Not found', code?: string) {
+    super(404, message, code);
   }
 }
 
@@ -42,14 +42,14 @@ export class ConflictError extends HttpError {
 
 /** 403 */
 export class ForbiddenError extends HttpError {
-  constructor(message: string = 'Forbidden') {
-    super(403, message);
+  constructor(message: string = 'Forbidden', code?: string) {
+    super(403, message, code);
   }
 }
 
 /** 401 */
 export class UnauthorizedError extends HttpError {
-  constructor(message: string = 'Not authenticated') {
-    super(401, message);
+  constructor(message: string = 'Not authenticated', code?: string) {
+    super(401, message, code);
   }
 }

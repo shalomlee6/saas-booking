@@ -1,0 +1,195 @@
+<form class="settings-section" (ngSubmit)="save()">
+  @if (error()) {
+    <p class="settings-error" role="alert">{{ error() }}</p>
+  }
+
+  <section class="settings-card" aria-labelledby="booking-rules-title">
+    <h3 class="settings-card-title" id="booking-rules-title">{{ 'settings.bookingRulesCardTitle' | translate }}</h3>
+
+    <div class="settings-row settings-row-switch">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-enabled">{{ 'settings.bookingEnabled' | translate }}</label>
+        <span class="settings-row-hint" id="booking-enabled-hint">{{ 'settings.bookingEnabledHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <input
+          id="booking-enabled"
+          class="settings-switch"
+          type="checkbox"
+          role="switch"
+          name="enabled"
+          aria-describedby="booking-enabled-hint"
+          [ngModel]="rules().enabled"
+          (ngModelChange)="patch({ enabled: $event })"
+        />
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-lead">{{ 'settings.leadLabel' | translate }}</label>
+        <span class="settings-row-hint" id="booking-lead-hint">{{ 'settings.leadHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <select
+          id="booking-lead"
+          class="settings-input"
+          name="lead"
+          aria-describedby="booking-lead-hint"
+          [ngModel]="rules().minLeadMinutes"
+          (ngModelChange)="patch({ minLeadMinutes: +$event })"
+        >
+          @for (minutes of leadOptions; track minutes) {
+            <option [ngValue]="minutes">{{ 'settings.minutesOption' | translate: { count: minutes } }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-advance">{{ 'settings.advanceLabel' | translate }}</label>
+        <span class="settings-row-hint" id="booking-advance-hint">{{ 'settings.advanceHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <input
+          id="booking-advance"
+          class="settings-input settings-input-short"
+          type="number"
+          min="7"
+          max="365"
+          name="advance"
+          aria-describedby="booking-advance-hint"
+          [ngModel]="rules().maxAdvanceDays"
+          (ngModelChange)="patch({ maxAdvanceDays: +$event })"
+        />
+        <span class="settings-unit" aria-hidden="true">{{ 'settings.unitDays' | translate }}</span>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-buffer">{{ 'settings.bufferLabel' | translate }}</label>
+        <span class="settings-row-hint" id="booking-buffer-hint">{{ 'settings.bufferHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <select
+          id="booking-buffer"
+          class="settings-input"
+          name="buffer"
+          aria-describedby="booking-buffer-hint"
+          [ngModel]="rules().bufferMinutes"
+          (ngModelChange)="patch({ bufferMinutes: +$event })"
+        >
+          @for (minutes of bufferOptions; track minutes) {
+            <option [ngValue]="minutes">{{ 'settings.minutesOption' | translate: { count: minutes } }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label" id="booking-status-label">{{ 'settings.statusLabel' | translate }}</span>
+        <span class="settings-row-hint" id="booking-status-hint">{{ 'settings.statusHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <div
+          class="settings-segment"
+          role="radiogroup"
+          aria-labelledby="booking-status-label"
+          aria-describedby="booking-status-hint"
+        >
+          <label class="settings-segment-option">
+            <input
+              type="radio"
+              name="status"
+              value="confirmed"
+              [ngModel]="rules().onlineDefaultStatus"
+              (ngModelChange)="patch({ onlineDefaultStatus: $event })"
+            />
+            <span>{{ 'settings.statusConfirmed' | translate }}</span>
+          </label>
+          <label class="settings-segment-option">
+            <input
+              type="radio"
+              name="status"
+              value="pending"
+              [ngModel]="rules().onlineDefaultStatus"
+              (ngModelChange)="patch({ onlineDefaultStatus: $event })"
+            />
+            <span>{{ 'settings.statusPending' | translate }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-cap">{{ 'settings.activeCapLabel' | translate }}</label>
+        <span class="settings-row-hint" id="booking-cap-hint">{{ 'settings.activeCapHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <select
+          id="booking-cap"
+          class="settings-input"
+          name="cap"
+          aria-describedby="booking-cap-hint"
+          [ngModel]="rules().maxActiveAppointmentsPerClient"
+          (ngModelChange)="patch({ maxActiveAppointmentsPerClient: $event === 'null' || $event === null ? null : +$event })"
+        >
+          <option [ngValue]="null">{{ 'settings.activeCapUnlimited' | translate }}</option>
+          @for (cap of capOptions; track cap) {
+            <option [ngValue]="cap">{{ cap }}</option>
+          }
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings-card" aria-labelledby="booking-cancel-title">
+    <h3 class="settings-card-title" id="booking-cancel-title">{{ 'settings.cancellationCardTitle' | translate }}</h3>
+
+    <div class="settings-row settings-row-switch">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-cancel">{{ 'settings.cancelOnlineLabel' | translate }}</label>
+        <span class="settings-row-hint" id="booking-cancel-hint">{{ 'settings.cancelOnlineHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <input
+          id="booking-cancel"
+          class="settings-switch"
+          type="checkbox"
+          role="switch"
+          name="cancel"
+          aria-describedby="booking-cancel-hint"
+          [ngModel]="rules().clientCanCancelOnline"
+          (ngModelChange)="patch({ clientCanCancelOnline: $event })"
+        />
+      </div>
+    </div>
+
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <label class="settings-row-label" for="booking-window">{{ 'settings.windowLabel' | translate }}</label>
+        <span class="settings-row-hint" id="booking-window-hint">{{ 'settings.windowHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <input
+          id="booking-window"
+          class="settings-input settings-input-short"
+          type="number"
+          min="0"
+          max="720"
+          name="window"
+          aria-describedby="booking-window-hint"
+          [ngModel]="rules().cancellationWindowHours"
+          (ngModelChange)="patch({ cancellationWindowHours: +$event })"
+        />
+        <span class="settings-unit" aria-hidden="true">{{ 'settings.unitHours' | translate }}</span>
+      </div>
+    </div>
+  </section>
+
+  <app-settings-save-bar [dirty]="dirty()" [saving]="saving()" />
+</form>

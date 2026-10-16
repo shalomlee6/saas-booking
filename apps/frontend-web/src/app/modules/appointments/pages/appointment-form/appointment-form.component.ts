@@ -1,5 +1,5 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import {
   FormBuilder,
   FormGroup,
@@ -9,10 +9,10 @@ import {
   type AbstractControl,
 } from '@angular/forms';
 import { forkJoin, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MessageService } from 'primeng/api';
-import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
-import { InputNumberModule } from 'primeng/inputnumber';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 import { TextareaModule } from 'primeng/textarea';
 import { AutoCompleteModule } from 'primeng/autocomplete';
@@ -47,9 +47,9 @@ const endAfterStartValidator: ValidatorFn = (
   standalone: true,
   imports: [
     ReactiveFormsModule,
-    ButtonModule,
+    RouterLink,
     DatePickerModule,
-    InputNumberModule,
+    InputTextModule,
     SelectModule,
     TextareaModule,
     AutoCompleteModule,
@@ -67,9 +67,17 @@ export class AppointmentFormComponent implements OnInit {
   private readonly servicesApi = inject(ServicesApiService);
   private readonly auth = inject(AuthService);
   private readonly messageService = inject(MessageService);
+  private readonly destroyRef = inject(DestroyRef);
   readonly language = inject(LanguageService);
 
+  readonly skeletonRows = [0, 1, 2, 3];
+  readonly backIcon = computed(() =>
+    this.language.language() === 'he' ? 'pi pi-arrow-right' : 'pi pi-arrow-left'
+  );
+
   readonly loading = signal(true);
+  readonly noShowLimitWarning = signal(false);
+  readonly activeLimitWarning = signal(false);
   readonly saving = signal(false);
   readonly allCustomers = signal<Customer[]>([]);
   readonly filteredCustomers = signal<Customer[]>([]);
@@ -98,6 +106,12 @@ export class AppointmentFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.form
+      .get('customer')
+      ?.valueChanges.pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((value: Customer | null) => {
+        this.refreshNoShowWarning(value && typeof value === 'object' ? value._id : '');
+      });
     forkJoin({
       customers: this.customersApi.getList(),
       services: this.servicesApi.list(),
@@ -105,13 +119,15 @@ export class AppointmentFormComponent implements OnInit {
       .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: ({ customers, services }) => {
-          const normalized = customers.map((c) => ({
-            ...c,
-            fullName: c.fullName ?? c.name,
-          }));
+          const normalized = customers
+            .filter((c) => c.isActive !== false)
+            .map((c) => ({
+              ...c,
+              fullName: c.fullName ?? c.name,
+            }));
           this.allCustomers.set(normalized);
           this.filteredCustomers.set(normalized);
-          this.services.set(services);
+          this.services.set(services.filter((service) => service.isActive !== false));
           this.applyQueryPrefill();
         },
         error: () => {
@@ -124,8 +140,29 @@ export class AppointmentFormComponent implements OnInit {
       });
   }
 
+  private refreshNoShowWarning(customerId: string): void {
+    if (!customerId) {
+      this.noShowLimitWarning.set(false);
+      this.activeLimitWarning.set(false);
+      return;
+    }
+    this.customersApi.getById(customerId).subscribe({
+      next: (customer) => this.noShowLimitWarning.set(customer.blocked === true),
+      error: () => this.noShowLimitWarning.set(false),
+    });
+    this.customersApi.getActiveLimit(customerId).subscribe({
+      next: (limit) => this.activeLimitWarning.set(limit.atOrAboveLimit),
+      error: () => this.activeLimitWarning.set(false),
+    });
+  }
+
   private applyQueryPrefill(): void {
     const params = this.route.snapshot.queryParamMap;
+    const customerId = params.get('customerId');
+    if (customerId) {
+      const match = this.allCustomers().find((customer) => customer._id === customerId);
+      if (match) this.form.patchValue({ customer: match });
+    }
     const date = params.get('date');
     const time = params.get('time');
     if (!date || !time) return;

@@ -28,6 +28,8 @@ yarn-error.log
 !.vscode/extensions.json
 .history/*
 
+/playwright-screenshots
+
 # Miscellaneous
 /.angular/cache
 .sass-cache/
@@ -42,3 +44,4 @@ __screenshots__/
 .DS_Store
 Thumbs.db
 .env
+

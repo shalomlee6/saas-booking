@@ -230,7 +230,7 @@ export function validateEnv(): Env {
     console.warn(`⚠️ BASE_URL not set — using ${DEFAULT_DEV_BASE_URL} for local development.`);
   }
 
-  let MONGO_URI =
+  const MONGO_URI =
     process.env.MONGO_URI !== undefined && process.env.MONGO_URI.trim() !== ''
       ? process.env.MONGO_URI.trim()
       : DEFAULT_DEV_MONGO;
@@ -238,7 +238,7 @@ export function validateEnv(): Env {
     console.warn(`⚠️ MONGO_URI not set — using default ${DEFAULT_DEV_MONGO}`);
   }
 
-  let JWT_SECRET =
+  const JWT_SECRET =
     process.env.JWT_SECRET !== undefined && process.env.JWT_SECRET.trim() !== ''
       ? process.env.JWT_SECRET.trim()
       : DEFAULT_DEV_JWT;

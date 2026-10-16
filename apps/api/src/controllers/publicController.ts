@@ -6,6 +6,8 @@ import { Customer } from '../models/Customer';
 import { Appointment } from '../models/Appointment';
 import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
 import { AppointmentError } from '../services/appointmentErrors';
+import { HttpError } from '../errors/httpErrors';
+import { enforcePublicBookingCustomer } from '../services/publicBookingPolicy';
 import { defaultOpeningHours } from '../models/BusinessSettings';
 import jwt from 'jsonwebtoken';
 import { validateEnv } from '../config/env';
@@ -251,11 +253,15 @@ export async function createPublicAppointment(req: Request, res: Response) {
       return res.status(401).json({ message: 'No token provided' });
     }
 
-    let decoded: any;
+    let decoded: jwt.JwtPayload;
     try {
       const env = validateEnv();
-      decoded = jwt.verify(token, env.JWT_SECRET);
-    } catch (err) {
+      const verified = jwt.verify(token, env.JWT_SECRET);
+      if (typeof verified === 'string') {
+        return res.status(403).json({ message: 'Invalid token role' });
+      }
+      decoded = verified;
+    } catch {
       return res.status(401).json({ message: 'Invalid token' });
     }
 
@@ -289,6 +295,7 @@ export async function createPublicAppointment(req: Request, res: Response) {
     const endDate = new Date(end);
 
     try {
+      await enforcePublicBookingCustomer(req, customer);
       const appointment = await createAppointmentAtomic(
         {
           businessId,
@@ -306,7 +313,7 @@ export async function createPublicAppointment(req: Request, res: Response) {
         status: appointment.status,
       });
     } catch (e) {
-      if (e instanceof AppointmentError) {
+      if (e instanceof AppointmentError || e instanceof HttpError) {
         const body: Record<string, unknown> = { message: e.message };
         if (e.code) body.code = e.code;
         return res.status(e.status).json(body);

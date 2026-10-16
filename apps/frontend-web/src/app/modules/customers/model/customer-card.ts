@@ -29,7 +29,7 @@ export interface CustomerStats {
   totalAppointments: number;
   completedVisits: number;
   cancellations: number;
-  /** Heuristic proxy (no explicit `no_show` status exists) — see API's customerStatsService. */
+  /** Unexcused `no_show` appointments. */
   noShows: number;
   isNewCustomer: boolean;
   lastAppointment: CustomerAppointmentSummary | null;

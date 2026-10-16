@@ -7,7 +7,7 @@
     <div class="pl-page__error" role="alert">{{ err }}</div>
   } @else if (loadingPageData() && !bookingBusiness()) {
     <div class="pl-page__boot" aria-busy="true">
-      <p class="pl-page__boot-text">טוענת את דף הנחיתה…</p>
+      <p class="pl-page__boot-text">{{ 'publicLanding.loading' | translate }}</p>
     </div>
   } @else {
     @if (sectionVisibility().hero) {
@@ -26,7 +26,7 @@
         <p class="pl-hero-intro__desc pl-intro-text pl-intro-text--2">{{ landingHeroDescription() }}</p>
       }
       <p-button
-        label="קביעת תור"
+        [label]="'publicLanding.book' | translate"
         icon="pi pi-calendar-plus"
         iconPos="right"
         styleClass="pl-hero-intro__cta"
@@ -39,18 +39,21 @@
       <div class="pl-welcome-inner">
         <div class="pl-greeting">
           <h2 class="pl-greeting__title pl-intro-text pl-intro-text--3">{{ greetingTitle() }}</h2>
-          <p class="pl-greeting__sub pl-intro-text pl-intro-text--4">{{ greetingSub }}</p>
+          <p class="pl-greeting__sub pl-intro-text pl-intro-text--4">{{ greetingSub() }}</p>
         </div>
 
-        <app-public-landing-next-appointment
-          [loading]="loadingUpcoming()"
-          [apt]="displayApt()"
-          [error]="upcomingError()"
-          [staffLine]="''"
-          (book)="goToBook()"
-          (open)="goToUpcoming()"
-          (edit)="openAppointmentDetails()"
-        />
+        @if (showClientAppointments()) {
+          <app-public-landing-next-appointment
+            [loading]="loadingUpcoming()"
+            [apt]="displayApt()"
+            [error]="upcomingError()"
+            [staffLine]="''"
+            [timezone]="businessTimezone()"
+            (book)="goToBook()"
+            (open)="goToUpcoming()"
+            (edit)="openAppointmentDetails()"
+          />
+        }
       </div>
     </div>
 
@@ -121,18 +124,18 @@
 
   <nav
     class="pl-sticky-bar pl-intro-bar"
-    aria-label="פעולות מהירות"
+    [attr.aria-label]="'publicLanding.quickActions' | translate"
     [class.pl-sticky-bar--hidden]="!!pageLoadError()"
   >
     @if (stickyPhoneHref(); as tel) {
       <a class="pl-sticky-bar__btn pl-sticky-bar__btn--call" [href]="tel">
         <span aria-hidden="true">📞</span>
-        התקשרי
+        {{ 'publicLanding.call' | translate }}
       </a>
     } @else {
       <span class="pl-sticky-bar__btn pl-sticky-bar__btn--disabled" aria-disabled="true">
         <span aria-hidden="true">📞</span>
-        התקשרי
+        {{ 'publicLanding.call' | translate }}
       </span>
     }
     @if (stickyWhatsappHref(); as wa) {
@@ -143,18 +146,20 @@
         rel="noopener noreferrer"
       >
         <span aria-hidden="true">💬</span>
-        וואטסאפ
+        {{ 'publicLanding.whatsapp' | translate }}
       </a>
     }
     <button type="button" class="pl-sticky-bar__btn pl-sticky-bar__btn--book" (click)="goToBook()">
       <span aria-hidden="true">📅</span>
-      קביעת תור
+      {{ 'publicLanding.book' | translate }}
     </button>
   </nav>
 </div>
 
 <app-public-appointment-details
   [appointment]="detailsApt()"
+  [businessPhone]="businessPhone() || bookingBusiness()?.landing?.phone || null"
+  [policyText]="clientPolicyText()"
   (closed)="detailsApt.set(null)"
   (cancelled)="onAppointmentCancelled()"
   (edit)="onEditAppointment()"

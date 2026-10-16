@@ -3,6 +3,7 @@ import { ButtonModule } from 'primeng/button';
 import { TagModule } from 'primeng/tag';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { daysUntilCalendarDate, DEFAULT_PUBLIC_TIMEZONE } from '../../dto/public-booking-dto.adapter';
 import type { UpcomingAppointment } from '../../services/public-api.service';
 
 const EDITABLE_STATUSES = new Set(['confirmed', 'pending']);
@@ -31,6 +32,8 @@ export class PublicAppointmentCardComponent {
   readonly apt = input.required<UpcomingAppointment>();
   readonly staffLine = input('');
   readonly clickable = input(false);
+  /** IANA zone from the public business payload. Countdown uses this calendar, not the browser's. */
+  readonly timezone = input(DEFAULT_PUBLIC_TIMEZONE);
 
   readonly open = output<void>();
   readonly edit = output<void>();
@@ -59,16 +62,9 @@ export class PublicAppointmentCardComponent {
     });
   });
 
-  readonly daysUntil = computed(() => {
-    const parts = this.apt().date.split('-').map(Number);
-    if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return null;
-    const [y, m, d] = parts;
-    const target = new Date(y, m - 1, d);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    target.setHours(0, 0, 0, 0);
-    return Math.round((target.getTime() - today.getTime()) / 86400000);
-  });
+  readonly daysUntil = computed(() =>
+    daysUntilCalendarDate(this.apt().date, new Date(), this.timezone() || DEFAULT_PUBLIC_TIMEZONE)
+  );
 
   readonly countdownLabel = computed(() => {
     this.language.language();

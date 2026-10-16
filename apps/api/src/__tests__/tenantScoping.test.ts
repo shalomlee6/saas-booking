@@ -1,7 +1,7 @@
 import request from 'supertest';
 import { buildTestApp } from './helpers/testApp';
 import { dbConnect, dbDisconnect, dbClear } from './helpers/db';
-import { seedOwner, seedCustomer, seedService, seedBusinessSettings } from './helpers/seed';
+import { seedOwner, seedCustomer, seedService } from './helpers/seed';
 
 const app = buildTestApp();
 

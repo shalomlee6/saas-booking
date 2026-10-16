@@ -1,8 +1,70 @@
 import { z } from 'zod';
 import { mongoObjectIdString } from '../primitives';
 import { timeOfDayBucketZod } from '../../dto/enums';
+import {
+  createEntityListQuerySchema,
+  optionalQueryNumber,
+  optionalQueryString,
+  optionalYyyyMmDd,
+} from '../../listQuery/schema';
+
+/** Sort fields the paged customers list accepts. Metric fields are owner-only at request time. */
+export const CUSTOMER_LIST_SORT_FIELDS = [
+  'name',
+  'phone',
+  'createdAt',
+  'totalVisits',
+  'totalRevenue',
+  'averageVisitValue',
+  'lastVisit',
+  'nextAppointment',
+  'noShowCount',
+] as const;
+
+export const CUSTOMER_METRIC_SORT_FIELDS = [
+  'totalVisits',
+  'totalRevenue',
+  'averageVisitValue',
+  'lastVisit',
+  'nextAppointment',
+  'noShowCount',
+] as const;
+
+export const customersPagedQuerySchema = createEntityListQuerySchema({
+  defaultSort: 'name',
+  sortableFields: CUSTOMER_LIST_SORT_FIELDS,
+  rangePairs: [
+    { min: 'visitsMin', max: 'visitsMax' },
+    { min: 'revenueMin', max: 'revenueMax' },
+    { min: 'createdFrom', max: 'createdTo' },
+  ],
+  filters: {
+    status: optionalQueryString().pipe(z.enum(['all', 'active', 'inactive']).optional()),
+    blocked: optionalQueryString().pipe(z.enum(['true', 'false']).optional()),
+    customerType: optionalQueryString().pipe(z.enum(['new', 'returning']).optional()),
+    activity: optionalQueryString().pipe(
+      z.enum(['noVisits', 'noUpcoming', 'lastVisitOver30', 'lastVisitOver60', 'lastVisitOver90']).optional()
+    ),
+    visitsMin: optionalQueryNumber(),
+    visitsMax: optionalQueryNumber(),
+    revenueMin: optionalQueryNumber(),
+    revenueMax: optionalQueryNumber(),
+    preferredTime: optionalQueryString().pipe(timeOfDayBucketZod.optional()),
+    preferredService: optionalQueryString().pipe(mongoObjectIdString.optional()),
+    createdFrom: optionalYyyyMmDd(),
+    createdTo: optionalYyyyMmDd(),
+  },
+});
 
 const optionalEmail = z.union([z.string().email(), z.literal('')]).optional();
+
+const optionalBirthdayBody = z
+  .object({
+    day: z.number().int(),
+    month: z.number().int(),
+  })
+  .strict()
+  .optional();
 
 const customerPreferencesBodySchema = z
   .object({
@@ -19,6 +81,7 @@ export const customerCreateBodySchema = z
     phone: z.string().min(1).max(40).trim(),
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
+    birthday: optionalBirthdayBody,
     preferences: customerPreferencesBodySchema.optional(),
     isActive: z.boolean().optional(),
   })
@@ -30,6 +93,7 @@ export const customerUpdateBodySchema = z
     phone: z.string().min(1).max(40).trim().optional(),
     email: optionalEmail,
     notes: z.string().max(10_000).optional(),
+    birthday: optionalBirthdayBody.nullable(),
     preferences: customerPreferencesBodySchema.optional(),
     isActive: z.boolean().optional(),
   })
@@ -44,16 +108,52 @@ export const customerIdParamsSchema = z
   })
   .strict();
 
-export const customersBulkDeleteBodySchema = z
-  .object({
-    ids: z.array(mongoObjectIdString).min(1).max(200),
-  })
-  .strict();
-
 export const customersBulkStatusBodySchema = z
   .object({
     ids: z.array(mongoObjectIdString).min(1).max(200),
     isActive: z.boolean(),
+  })
+  .strict();
+
+export const noShowPolicyBodySchema = z
+  .object({
+    enabled: z.boolean(),
+    threshold: z.number().int().min(1).max(20),
+  })
+  .strict();
+
+const optionalReason = z
+  .string()
+  .trim()
+  .max(500)
+  .optional()
+  .transform((value) => (value ? value : undefined));
+
+export const excuseAllNoShowsBodySchema = z
+  .object({
+    reason: optionalReason,
+  })
+  .strict();
+
+export const excuseNoShowBodySchema = z
+  .object({
+    excused: z.boolean(),
+    reason: optionalReason,
+    kind: z.enum(['no_show', 'late_cancellation', 'late_arrival']).optional(),
+  })
+  .strict();
+
+export const bookingOverrideBodySchema = z
+  .object({
+    override: z.enum(['auto', 'allow', 'block']),
+    reason: optionalReason,
+  })
+  .strict();
+
+export const noShowAppointmentParamsSchema = z
+  .object({
+    id: mongoObjectIdString,
+    appointmentId: mongoObjectIdString,
   })
   .strict();
 

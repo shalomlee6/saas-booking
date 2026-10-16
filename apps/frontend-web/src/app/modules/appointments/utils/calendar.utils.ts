@@ -151,7 +151,8 @@ export function asDate(v: unknown): Date | null {
   if (v instanceof Date) {
     return isNaN(v.getTime()) ? null : v;
   }
-  const d = new Date(v as any);
+  if (typeof v !== 'string' && typeof v !== 'number') return null;
+  const d = new Date(v);
   return isNaN(d.getTime()) ? null : d;
 }
 
@@ -196,8 +197,7 @@ export function groupAppointmentsByDay(
   const endKey = toDateKey(new Date(weekEnd.getTime() - 1), timezone);
 
   for (const apt of appointments) {
-    const startVal = (apt as any).start ?? (apt as any).startTime;
-    const startDate = asDate(startVal);
+    const startDate = asDate(apt.start);
     if (!startDate) continue;
     const key = toDateKey(startDate, timezone);
     if (key < startKey || key > endKey) continue;
@@ -233,8 +233,8 @@ export function getAppointmentBlockLayout(
   dayStart: Date,
   timezone: string
 ): AppointmentBlockLayout | null {
-  const start = asDate((appointment as any).start ?? (appointment as any).startTime);
-  const end = asDate((appointment as any).end ?? (appointment as any).endTime);
+  const start = asDate(appointment.start);
+  const end = asDate(appointment.end);
   if (!start || !end) {
     return null;
   }

@@ -1,11 +1,21 @@
-import mongoose, { Types, type ClientSession } from 'mongoose';
+import mongoose, { Types, type ClientSession, type FilterQuery } from 'mongoose';
 import { Appointment, type IAppointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { Service } from '../models/Service';
 import type { AppointmentSource, AppointmentStatus } from '../dto/enums';
 import { AppointmentError } from './appointmentErrors';
 import { assertAppointmentWithinSchedule } from './appointmentScheduleRules';
+import { isFutureSlotStart } from './publicBookingTime';
 import { getServiceOverrideForCustomer } from './customerServiceConfigService';
+import { readBufferMinutes } from './bookingRules';
+
+function isStandaloneTransactionError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const message = 'message' in error && error.message != null ? String(error.message) : '';
+  const codeName =
+    'codeName' in error && typeof error.codeName === 'string' ? error.codeName : undefined;
+  return codeName === 'IllegalOperation' || message.includes('Transaction numbers are only allowed');
+}
 
 export type { AppointmentSource };
 export { AppointmentError } from './appointmentErrors';
@@ -28,6 +38,8 @@ export interface CreateAppointmentPayload {
   price?: number;
   /** Defaults to `confirmed` when omitted or invalid. */
   status?: AppointmentStatus;
+  /** The visit this one replaces, stored on the new row. */
+  rescheduledFrom?: Types.ObjectId | string;
 }
 
 export interface CreateAppointmentOptions {
@@ -37,6 +49,8 @@ export interface CreateAppointmentOptions {
   validateCustomerOwnership?: boolean;
   /** When updating an appointment, exclude this id from overlap check */
   excludeAppointmentId?: Types.ObjectId | string;
+  /** Join an existing transaction instead of starting one. */
+  session?: ClientSession;
 }
 
 export interface UpdateAppointmentAtomicInput {
@@ -59,11 +73,12 @@ export async function assertNoOverlap(
   excludeAppointmentId?: Types.ObjectId | string,
   session?: ClientSession
 ): Promise<void> {
-  const overlapQuery: any = {
+  const bufferMs = (await readBufferMinutes(businessId)) * 60 * 1000;
+  const overlapQuery: FilterQuery<IAppointment> = {
     businessId,
     status: { $in: ['confirmed', 'pending'] },
-    start: { $lt: end },
-    end: { $gt: start },
+    start: { $lt: new Date(end.getTime() + bufferMs) },
+    end: { $gt: new Date(start.getTime() - bufferMs) },
   };
 
   if (excludeAppointmentId) {
@@ -117,10 +132,8 @@ export async function createAppointmentAtomic(
     throw new AppointmentError(400, 'start must be before end');
   }
 
-  const now = Date.now();
-  const PAST_GRACE_MS = 60 * 1000;
-  if (start.getTime() < now - PAST_GRACE_MS) {
-    throw new AppointmentError(400, 'start must not be in the past');
+  if (!isFutureSlotStart(start, new Date())) {
+    throw new AppointmentError(409, 'start must not be in the past', 'START_IN_PAST');
   }
 
   if (requireCustomerId && !payload.customerId) {
@@ -137,7 +150,7 @@ export async function createAppointmentAtomic(
     const service = await serviceQuery;
 
     if (!service) {
-      throw new AppointmentError(404, 'Service not found');
+      throw new AppointmentError(404, 'Service not found', 'SERVICE_NOT_FOUND');
     }
 
     if (payload.customerId && validateCustomerOwnership) {
@@ -150,7 +163,7 @@ export async function createAppointmentAtomic(
       }
       const customer = await customerQuery.lean();
       if (!customer) {
-        throw new AppointmentError(404, 'Customer not found');
+        throw new AppointmentError(404, 'Customer not found', 'CUSTOMER_NOT_FOUND');
       }
     }
 
@@ -194,6 +207,7 @@ export async function createAppointmentAtomic(
             status: resolvedStatus,
             source,
             notes: payload.notes,
+            rescheduledFrom: payload.rescheduledFrom,
           },
         ],
         { session }
@@ -214,10 +228,15 @@ export async function createAppointmentAtomic(
       status: resolvedStatus,
       source,
       notes: payload.notes,
+      rescheduledFrom: payload.rescheduledFrom,
     });
 
     return created;
   };
+
+  if (options.session) {
+    return runCreate(options.session);
+  }
 
   const session = await mongoose.startSession();
   try {
@@ -233,15 +252,9 @@ export async function createAppointmentAtomic(
       }
 
       return created;
-    } catch (e: any) {
-      const msg = String(e?.message ?? '');
-      const codeName = e?.codeName as string | undefined;
-      const isTxnUnsupported =
-        codeName === 'IllegalOperation' ||
-        msg.includes('Transaction numbers are only allowed');
-
-      if (!isTxnUnsupported) {
-        throw e;
+    } catch (error: unknown) {
+      if (!isStandaloneTransactionError(error)) {
+        throw error;
       }
 
       if (process.env.NODE_ENV === 'production') {
@@ -305,15 +318,9 @@ export async function updateAppointmentAtomic(
         updated = await runUpdate(session);
       });
       return updated;
-    } catch (e: any) {
-      const msg = String(e?.message ?? '');
-      const codeName = e?.codeName as string | undefined;
-      const isTxnUnsupported =
-        codeName === 'IllegalOperation' ||
-        msg.includes('Transaction numbers are only allowed');
-
-      if (!isTxnUnsupported) {
-        throw e;
+    } catch (error: unknown) {
+      if (!isStandaloneTransactionError(error)) {
+        throw error;
       }
 
       if (process.env.NODE_ENV === 'production') {

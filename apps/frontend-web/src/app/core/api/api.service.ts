@@ -41,6 +41,14 @@ export class ApiService {
     return has ? params : undefined;
   }
 
+  getText(path: string, query?: ApiQueryParams): Observable<string> {
+    return this.http.get(this.buildUrl(path), {
+      withCredentials: true,
+      params: this.toHttpParams(query),
+      responseType: 'text',
+    });
+  }
+
   get<T>(path: string, query?: ApiQueryParams): Observable<T> {
     return this.http.get<T>(this.buildUrl(path), {
       withCredentials: true,

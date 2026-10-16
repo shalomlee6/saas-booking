@@ -19,6 +19,8 @@ export interface Insights {
   inactiveCustomersCount: number;
   topCustomers: { name: string; total: number }[];
   appointmentsCount: number;
+  /** Completed visits in the period. Denominator for average revenue per appointment. */
+  completedAppointmentsCount: number;
   period: InsightsPeriod;
 }
 
@@ -29,6 +31,7 @@ interface InsightsApiResponse {
   inactiveCustomersCount: number;
   topCustomers: { name?: string; total: number }[];
   appointmentsCount?: number;
+  completedAppointmentsCount?: number;
   period?: InsightsPeriod;
 }
 
@@ -70,6 +73,7 @@ export class GrowthBrainService {
               total: c.total ?? 0,
             })),
             appointmentsCount: res.appointmentsCount ?? 0,
+            completedAppointmentsCount: res.completedAppointmentsCount ?? 0,
             period: (res.period as InsightsPeriod) ?? period,
           }))
         )

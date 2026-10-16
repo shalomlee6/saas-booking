@@ -9,7 +9,7 @@ const DEFAULT_UI: IBusinessUi = {
   dashboardLayout: 'classic',
 };
 
-export function normalizeBusinessUi(ui?: IBusinessUi | null): IBusinessUi {
+export function normalizeBusinessUi(ui?: Partial<IBusinessUi> | null): IBusinessUi {
   if (!ui || typeof ui !== 'object') {
     return { ...DEFAULT_UI };
   }
@@ -29,40 +29,51 @@ export function isValidHex(color: string): boolean {
   return typeof color === 'string' && HEX_REGEX.test(color);
 }
 
-export function validateBusinessUiBody(body: any): { valid: boolean; message?: string; ui?: Partial<IBusinessUi> } {
+export function validateBusinessUiBody(body: Record<string, unknown>): {
+  valid: boolean;
+  message?: string;
+  ui?: Partial<IBusinessUi>;
+} {
   const ui: Partial<IBusinessUi> = {};
-  if (body.themeMode !== undefined) {
-    if (body.themeMode !== 'light' && body.themeMode !== 'dark') {
-      return { valid: false, message: 'themeMode must be "light" or "dark"' };
-    }
-    ui.themeMode = body.themeMode;
+  const themeMode = body['themeMode'];
+  if (themeMode === 'light' || themeMode === 'dark') {
+    ui.themeMode = themeMode;
+  } else if (themeMode !== undefined) {
+    return { valid: false, message: 'themeMode must be "light" or "dark"' };
   }
-  if (body.primaryColor !== undefined) {
-    if (!isValidHex(body.primaryColor)) {
+  const primaryColor = body['primaryColor'];
+  if (primaryColor !== undefined) {
+    if (typeof primaryColor !== 'string' || !isValidHex(primaryColor)) {
       return { valid: false, message: 'primaryColor must be a hex color (e.g. #3787F6)' };
     }
-    ui.primaryColor = body.primaryColor;
+    ui.primaryColor = primaryColor;
   }
-  if (body.sidebarColor !== undefined) {
-    if (!isValidHex(body.sidebarColor)) {
+  const sidebarColor = body['sidebarColor'];
+  if (sidebarColor !== undefined) {
+    if (typeof sidebarColor !== 'string' || !isValidHex(sidebarColor)) {
       return { valid: false, message: 'sidebarColor must be a hex color' };
     }
-    ui.sidebarColor = body.sidebarColor;
+    ui.sidebarColor = sidebarColor;
   }
-  if (body.backgroundColor !== undefined) {
-    if (body.backgroundColor !== '' && !isValidHex(body.backgroundColor)) {
+  const backgroundColor = body['backgroundColor'];
+  if (backgroundColor !== undefined) {
+    if (
+      typeof backgroundColor !== 'string' ||
+      (backgroundColor !== '' && !isValidHex(backgroundColor))
+    ) {
       return { valid: false, message: 'backgroundColor must be a hex color or empty' };
     }
-    ui.backgroundColor = body.backgroundColor;
+    ui.backgroundColor = backgroundColor;
   }
-  if (body.logoUrl !== undefined) {
-    ui.logoUrl = typeof body.logoUrl === 'string' ? body.logoUrl : '';
+  const logoUrl = body['logoUrl'];
+  if (logoUrl !== undefined) {
+    ui.logoUrl = typeof logoUrl === 'string' ? logoUrl : '';
   }
-  if (body.dashboardLayout !== undefined) {
-    if (body.dashboardLayout !== 'classic' && body.dashboardLayout !== 'compact') {
-      return { valid: false, message: 'dashboardLayout must be "classic" or "compact"' };
-    }
-    ui.dashboardLayout = body.dashboardLayout;
+  const dashboardLayout = body['dashboardLayout'];
+  if (dashboardLayout === 'classic' || dashboardLayout === 'compact') {
+    ui.dashboardLayout = dashboardLayout;
+  } else if (dashboardLayout !== undefined) {
+    return { valid: false, message: 'dashboardLayout must be "classic" or "compact"' };
   }
   return { valid: true, ui };
 }

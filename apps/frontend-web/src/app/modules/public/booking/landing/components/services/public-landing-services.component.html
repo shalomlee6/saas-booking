@@ -1,5 +1,5 @@
 <section class="pl-svc" aria-labelledby="pl-svc-title">
-  <h2 id="pl-svc-title" class="pl-svc__title pl-intro-text pl-intro-text--5">השירותים שלנו</h2>
+  <h2 id="pl-svc-title" class="pl-svc__title pl-intro-text pl-intro-text--5">{{ 'publicLanding.servicesTitle' | translate }}</h2>
   <ul class="pl-svc__scroll">
     @for (s of cards(); track s.id) {
       <li class="pl-svc__card">
@@ -8,12 +8,12 @@
         @if (s.description?.trim()) {
           <p class="pl-svc__desc">{{ s.description }}</p>
         }
-        <p class="pl-svc__meta">{{ s.durationMinutes }} דקות</p>
+        <p class="pl-svc__meta">{{ 'publicLanding.durationMinutes' | translate: { count: s.durationMinutes } }}</p>
         @if (s.price != null) {
           <p class="pl-svc__price">{{ s.price | currency: 'ILS' : 'symbol' : '1.0-0' }}</p>
         }
         <p-button
-          label="הזמיני"
+          [label]="'publicLanding.bookService' | translate"
           icon="pi pi-arrow-left"
           iconPos="right"
           styleClass="pl-svc__btn"

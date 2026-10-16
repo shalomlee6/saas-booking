@@ -165,12 +165,125 @@ describe('CUSTOMER STATS — rule-based insights', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.stats.recentCancellations).toBe(2);
+    expect(res.body.stats.cancellations).toBe(2);
     expect(
       res.body.insights.some((i: { code: string }) => i.code === 'FREQUENT_CANCELLATIONS')
     ).toBe(true);
   });
 
-  it('counts a past appointment left pending/confirmed as a no-show (heuristic)', async () => {
+  it('flags an upcoming visit when the customer has an unexcused no-show', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const customer = await Customer.create({ businessId: business._id, name: 'Risky', phone: '555' });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(3),
+      end: new Date(daysAgo(3).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysFromNow(2),
+      end: new Date(daysFromNow(2).getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'owner',
+    });
+
+    const flagged = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(flagged.status).toBe(200);
+    expect(flagged.body.stats.noShows).toBe(1);
+    expect(
+      flagged.body.insights.some((insight: { code: string }) => insight.code === 'HAS_UPCOMING_NO_SHOW_RISK')
+    ).toBe(true);
+
+    const excused = await Customer.create({ businessId: business._id, name: 'Excused', phone: '556' });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: excused._id,
+      serviceId: service._id,
+      start: daysAgo(4),
+      end: new Date(daysAgo(4).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      noShowExcused: true,
+      source: 'owner',
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: excused._id,
+      serviceId: service._id,
+      start: daysFromNow(3),
+      end: new Date(daysFromNow(3).getTime() + 60 * 60 * 1000),
+      status: 'pending',
+      source: 'owner',
+    });
+    const excusedRes = await request(app)
+      .get(`/api/customers/${excused._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(excusedRes.body.stats.noShows).toBe(0);
+    expect(
+      excusedRes.body.insights.some((insight: { code: string }) => insight.code === 'HAS_UPCOMING_NO_SHOW_RISK')
+    ).toBe(false);
+
+    const quiet = await Customer.create({ businessId: business._id, name: 'Quiet', phone: '557' });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: quiet._id,
+      serviceId: service._id,
+      start: daysAgo(2),
+      end: new Date(daysAgo(2).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
+    const quietRes = await request(app)
+      .get(`/api/customers/${quiet._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(quietRes.body.stats.noShows).toBe(1);
+    expect(quietRes.body.stats.nextAppointment).toBeNull();
+    expect(
+      quietRes.body.insights.some((insight: { code: string }) => insight.code === 'HAS_UPCOMING_NO_SHOW_RISK')
+    ).toBe(false);
+  });
+
+  it('does not count a rescheduled cancellation toward cancellation insights', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const customer = await Customer.create({ businessId: business._id, name: 'Mover', phone: '446' });
+
+    for (let i = 0; i < 2; i++) {
+      await Appointment.create({
+        businessId: business._id,
+        customerId: customer._id,
+        serviceId: service._id,
+        start: daysFromNow(5 + i),
+        end: new Date(daysFromNow(5 + i).getTime() + 60 * 60 * 1000),
+        status: 'cancelled',
+        cancellationReason: 'rescheduled',
+        source: 'client-online',
+      });
+    }
+
+    const res = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.stats.cancellations).toBe(0);
+    expect(res.body.stats.recentCancellations).toBe(0);
+    expect(
+      res.body.insights.some((i: { code: string }) => i.code === 'FREQUENT_CANCELLATIONS')
+    ).toBe(false);
+  });
+
+  it('counts status no_show and does not treat a past pending appointment as one', async () => {
     const { business, token } = await seedOwner();
     await seedBusinessSettings(business._id);
     const service = await seedService(business._id);
@@ -186,6 +299,15 @@ describe('CUSTOMER STATS — rule-based insights', () => {
       status: 'pending',
       source: 'owner',
     });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(3),
+      end: new Date(daysAgo(3).getTime() + 30 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
 
     const res = await request(app)
       .get(`/api/customers/${customer._id.toString()}/stats`)
@@ -193,6 +315,7 @@ describe('CUSTOMER STATS — rule-based insights', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.stats.noShows).toBe(1);
+    expect(res.body.stats.completedVisits).toBe(0);
   });
 
   it('reports the soonest upcoming appointment as nextAppointment', async () => {
@@ -281,5 +404,89 @@ describe('CUSTOMER APPOINTMENT HISTORY', () => {
     // Sorted most-recent-first: the upcoming one (further in the future) comes before the past one.
     expect(new Date(res.body[0].start).getTime()).toBe(upcoming.getTime());
     expect(new Date(res.body[1].start).getTime()).toBe(past.getTime());
+  });
+});
+
+describe('CUSTOMER STATS — canonical visit metrics', () => {
+  it('treats one completed visit as New and two as Returning', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const customer = await Customer.create({ businessId: business._id, name: 'Boundary', phone: '777' });
+
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(10),
+      end: new Date(daysAgo(10).getTime() + 60 * 60 * 1000),
+      status: 'completed',
+      source: 'owner',
+      price: 80,
+    });
+
+    const one = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(one.status).toBe(200);
+    expect(one.body.stats.completedVisits).toBe(1);
+    expect(one.body.stats.isNewCustomer).toBe(true);
+    expect(one.body.stats.totalRevenue).toBe(80);
+    expect(one.body.stats.averageSpend).toBe(80);
+
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(3),
+      end: new Date(daysAgo(3).getTime() + 60 * 60 * 1000),
+      status: 'completed',
+      source: 'owner',
+      price: 20,
+    });
+
+    const two = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(two.body.stats.completedVisits).toBe(2);
+    expect(two.body.stats.isNewCustomer).toBe(false);
+    expect(two.body.stats.totalRevenue).toBe(100);
+    expect(two.body.stats.averageSpend).toBe(50);
+  });
+
+  it('ignores excused no-shows', async () => {
+    const { business, token } = await seedOwner();
+    await seedBusinessSettings(business._id);
+    const service = await seedService(business._id);
+    const customer = await Customer.create({
+      businessId: business._id,
+      name: 'Reset',
+      phone: '888',
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(10),
+      end: new Date(daysAgo(10).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+      noShowExcused: true,
+    });
+    await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: daysAgo(1),
+      end: new Date(daysAgo(1).getTime() + 60 * 60 * 1000),
+      status: 'no_show',
+      source: 'owner',
+    });
+
+    const res = await request(app)
+      .get(`/api/customers/${customer._id.toString()}/stats`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.stats.noShows).toBe(1);
   });
 });

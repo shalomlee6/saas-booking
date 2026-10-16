@@ -342,11 +342,10 @@ export class BusinessLandingSettingsComponent implements OnInit {
         this.galleryItems.set(galleryFromSettings(settings));
 
         this.servicesCatalog.set(services);
-        const order =
-          settings.landingServiceOrder && settings.landingServiceOrder.length > 0
-            ? [...settings.landingServiceOrder]
-            : services.map((s) => s.id);
-        this.serviceOrderIds.set(order);
+        const catalogIds = services.map((service) => service.id);
+        const saved = (settings.landingServiceOrder ?? []).filter((id) => catalogIds.includes(id));
+        const extras = catalogIds.filter((id) => !saved.includes(id));
+        this.serviceOrderIds.set(saved.length ? [...extras, ...saved] : catalogIds);
 
         const vis = settings.landingSectionVisibility ?? landing.sections;
         this.secHero.set(vis?.hero !== false);

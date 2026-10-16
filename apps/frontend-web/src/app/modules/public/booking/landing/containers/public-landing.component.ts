@@ -13,7 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
-import { forkJoin, distinctUntilChanged, map } from 'rxjs';
+import { EMPTY, Subject, catchError, distinctUntilChanged, forkJoin, map, switchMap } from 'rxjs';
 import {
   PublicApiService,
   type PublicBusinessForBooking,
@@ -38,8 +38,9 @@ import { PublicLandingReviewsComponent } from '../components/reviews/public-land
 import { PublicLandingBookingCtaComponent } from '../components/booking-cta/public-landing-booking-cta.component';
 import { PlRevealDirective } from '../directives/pl-reveal.directive';
 import { resolvePublicAssetUrl } from '../../../../../shared/utils/public-asset-url';
+import { LanguageService } from '../../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../../core/i18n/translate.pipe';
 
-const DEFAULT_TAGLINE = 'יופי מקצועי, תוצאות מושלמות';
 
 /** sessionStorage key prefix for the once-per-session page-load intro animation, scoped per tenant slug. */
 const ENTRANCE_SEEN_KEY_PREFIX = 'boki:landingEntranceSeen:';
@@ -103,6 +104,7 @@ const STAGE_FADE_MS = 400;
     PublicLandingBookingCtaComponent,
     PlRevealDirective,
     ButtonModule,
+    TranslatePipe,
   ],
   templateUrl: './public-landing.component.html',
   styleUrl: './public-landing.component.scss',
@@ -116,6 +118,7 @@ export class PublicLandingComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  private readonly language = inject(LanguageService);
 
   constructor() {
     let prevCustomerId: string | null | undefined;
@@ -176,10 +179,12 @@ export class PublicLandingComponent implements OnInit {
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
-    return name ? `שלום, ${name}, ברוכות הבאות` : 'שלום, ברוכות הבאות';
+    return name
+      ? this.language.t('publicLanding.greetingNamed', { name })
+      : this.language.t('publicLanding.greetingAnon');
   });
 
-  readonly greetingSub = 'בואי נקבע תור בקלות ובמהירות';
+  readonly greetingSub = computed(() => this.language.t('publicLanding.greetingSub'));
 
   readonly loadingPageData = signal(true);
   readonly pageLoadError = signal<string | null>(null);
@@ -187,7 +192,7 @@ export class PublicLandingComponent implements OnInit {
   readonly servicesList = signal<PublicService[]>([]);
 
   readonly landingTagline = computed(
-    () => this.bookingBusiness()?.landing?.tagline?.trim() || DEFAULT_TAGLINE
+    () => this.bookingBusiness()?.landing?.tagline?.trim() || this.language.t('publicLanding.defaultTagline')
   );
 
   readonly landingHeroDescription = computed(
@@ -238,6 +243,9 @@ export class PublicLandingComponent implements OnInit {
   readonly heroImageRight = computed(() => this.heroPhotoPair()[1]);
 
   readonly businessDisplayName = computed(() => this.bookingBusiness()?.name ?? '');
+  readonly businessTimezone = computed(
+    () => this.bookingBusiness()?.localization?.timezone || 'Asia/Jerusalem'
+  );
 
   readonly landingPhone = computed(() => this.bookingBusiness()?.landing?.phone ?? null);
 
@@ -325,10 +333,15 @@ export class PublicLandingComponent implements OnInit {
     return digits.length > 0 ? `https://wa.me/${digits}` : null;
   });
 
+  private readonly upcomingTrigger = new Subject<boolean>();
+
   readonly loadingUpcoming = signal(false);
   readonly upcomingApt = signal<UpcomingAppointment | null>(null);
+  readonly businessPhone = signal<string | null>(null);
   readonly upcomingError = signal(false);
   readonly justBookedApt = signal<UpcomingAppointment | null>(null);
+
+  readonly showClientAppointments = computed(() => this.session.hasSessionFor(this.businessSlug()));
 
   readonly displayApt = computed(
     () => this.upcomingApt() ?? this.justBookedApt()
@@ -339,68 +352,82 @@ export class PublicLandingComponent implements OnInit {
   ngOnInit(): void {
     this.auth.init().pipe(takeUntilDestroyed(this.destroyRef)).subscribe();
 
+    this.upcomingTrigger
+      .pipe(
+        switchMap((load) => {
+          if (!load) return EMPTY;
+          return this.publicApi.getUpcomingAppointment().pipe(
+            catchError(() => {
+              this.upcomingError.set(true);
+              this.loadingUpcoming.set(false);
+              return EMPTY;
+            })
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((res) => {
+        this.upcomingApt.set(res.appointment);
+        if (res.businessPhone) this.businessPhone.set(res.businessPhone);
+        this.loadingUpcoming.set(false);
+      });
+
     this.route.parent!.paramMap
       .pipe(
         map((p) => p.get('slug') ?? ''),
         distinctUntilChanged(),
+        switchMap((slug) => {
+          this.businessSlug.set(slug);
+          const forceIntro = this.route.snapshot.queryParamMap.get('intro') === '1';
+          this.playIntro.set(shouldPlayEntranceAnimation(slug, forceIntro));
+          if (!slug) {
+            this.loadingPageData.set(false);
+            this.pageLoadError.set(this.language.t('publicLanding.missingSlug'));
+            return EMPTY;
+          }
+
+          this.consumeBookedHistoryState();
+          if (this.session.hasSessionFor(slug)) {
+            this.loadUpcoming();
+          } else {
+            this.upcomingTrigger.next(false);
+            this.upcomingApt.set(null);
+            this.upcomingError.set(false);
+            this.loadingUpcoming.set(false);
+          }
+
+          this.bookingBusiness.set(null);
+          this.servicesList.set([]);
+          this.loadingPageData.set(true);
+          this.pageLoadError.set(null);
+          return forkJoin({
+            biz: this.publicApi.getBusinessForBooking(slug),
+            svc: this.publicApi.getServices(slug),
+          }).pipe(
+            catchError((err: { error?: { message?: string } }) => {
+              this.pageLoadError.set(err?.error?.message ?? this.language.t('publicLanding.loadFailed'));
+              this.loadingPageData.set(false);
+              return EMPTY;
+            })
+          );
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe((slug) => {
-        this.businessSlug.set(slug);
-        const forceIntro = this.route.snapshot.queryParamMap.get('intro') === '1';
-        this.playIntro.set(shouldPlayEntranceAnimation(slug, forceIntro));
-        if (!slug) {
-          this.loadingPageData.set(false);
-          this.pageLoadError.set('חסר מזהה עסק');
-          return;
-        }
-
-        this.consumeBookedHistoryState();
-        this.reloadLandingData(slug);
-
-        if (this.session.hasSessionFor(slug)) {
-          this.loadUpcoming();
-        } else {
-          this.upcomingApt.set(null);
-          this.upcomingError.set(false);
-          this.loadingUpcoming.set(false);
-        }
-      });
-
-    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => {
-      this.scrollToLandingFragment(id);
-    });
-  }
-
-  private reloadLandingData(slug: string): void {
-    this.bookingBusiness.set(null);
-    this.servicesList.set([]);
-    this.loadingPageData.set(true);
-    this.pageLoadError.set(null);
-    forkJoin({
-      biz: this.publicApi.getBusinessForBooking(slug),
-      svc: this.publicApi.getServices(slug),
-    }).subscribe({
-      next: ({ biz, svc }) => {
+      .subscribe(({ biz, svc }) => {
         this.bookingBusiness.set(biz);
         this.servicesList.set(svc);
         this.loadingPageData.set(false);
         this.scrollToLandingFragment(this.route.snapshot.fragment);
-        // Start the intro's clock only once the hero/sheet are actually
-        // about to render — not back when the slug first resolved, while
-        // the page was still showing the loading spinner. requestAnimationFrame
-        // waits for the loading→loaded change to actually paint first.
         if (this.playIntro()) {
           requestAnimationFrame(() => {
             this.introActive.set(true);
             this.beginIntroStage();
           });
         }
-      },
-      error: (err: { error?: { message?: string } }) => {
-        this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
-        this.loadingPageData.set(false);
-      },
+      });
+
+    this.route.fragment.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((id) => {
+      this.scrollToLandingFragment(id);
     });
   }
 
@@ -421,8 +448,8 @@ export class PublicLandingComponent implements OnInit {
    * sequence is done, or immediately if the user interrupts it. Also wires
    * up the "tap or key press skips the intro" behavior — both live here
    * since they share the same lifecycle. Must only be called once the
-   * intro's actual content has rendered (see the caller in
-   * `reloadLandingData`) — starting it earlier would burn the sequence's
+   * intro's actual content has rendered (the slug subscription calls it
+   * after landing data arrives) — starting it earlier would burn the sequence's
    * timers against a loading spinner with nothing yet on screen to animate.
    */
   private beginIntroStage(): void {
@@ -514,14 +541,14 @@ export class PublicLandingComponent implements OnInit {
     const stateCustomerId = (state['customerId'] as string | null | undefined) ?? null;
     const identityMatch = stateCustomerId === currentCustomerId;
 
-    if (aptData && identityMatch) {
+    if (aptData && identityMatch && this.session.hasSessionFor(slug)) {
       this.justBookedApt.set(aptData);
     }
 
     this.messageService.add({
       severity: 'success',
-      summary: 'התור נקבע!',
-      detail: 'התור שלך אושר בהצלחה',
+      summary: this.language.t('publicLanding.bookedSummary'),
+      detail: this.language.t('publicLanding.bookedDetail'),
       life: 5000,
     });
 
@@ -533,16 +560,7 @@ export class PublicLandingComponent implements OnInit {
   loadUpcoming(): void {
     this.loadingUpcoming.set(true);
     this.upcomingError.set(false);
-    this.publicApi.getUpcomingAppointment().subscribe({
-      next: (res) => {
-        this.upcomingApt.set(res.appointment);
-        this.loadingUpcoming.set(false);
-      },
-      error: () => {
-        this.upcomingError.set(true);
-        this.loadingUpcoming.set(false);
-      },
-    });
+    this.upcomingTrigger.next(true);
   }
 
   openAppointmentDetails(): void {
@@ -562,6 +580,13 @@ export class PublicLandingComponent implements OnInit {
   goToBook(serviceId?: string): void {
     const slug = this.businessSlug();
     if (!slug) return;
+    if (this.bookingBusiness()?.onlineBooking?.enabled === false) {
+      const phone = this.businessPhone() || this.bookingBusiness()?.landing?.phone;
+      if (phone) {
+        window.location.href = `tel:${phone}`;
+        return;
+      }
+    }
     if (serviceId) {
       this.router.navigate(['/b', slug, 'book'], {
         queryParams: { service: serviceId },
@@ -569,6 +594,12 @@ export class PublicLandingComponent implements OnInit {
     } else {
       this.router.navigate(['/b', slug, 'book']);
     }
+  }
+
+  clientPolicyText(): string {
+    const policy = this.bookingBusiness()?.clientPolicy;
+    if (!policy) return '';
+    return this.language.language() === 'en' ? policy.en : policy.he;
   }
 
   goToUpcoming(): void {
@@ -579,6 +610,10 @@ export class PublicLandingComponent implements OnInit {
   onEditAppointment(): void {
     const apt = this.detailsApt() ?? this.displayApt();
     this.detailsApt.set(null);
-    this.goToBook(apt?.serviceId);
+    const slug = this.businessSlug();
+    if (!slug || !apt?.serviceId || apt.canChange !== true) return;
+    void this.router.navigate(['/b', slug, 'book'], {
+      queryParams: { service: apt.serviceId, reschedule: apt.id },
+    });
   }
 }

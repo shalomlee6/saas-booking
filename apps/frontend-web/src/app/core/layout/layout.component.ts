@@ -7,11 +7,13 @@ import {
   OnDestroy,
   HostListener,
   effect,
+  DestroyRef,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { NavigationEnd, Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, filter, map, of, startWith } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Store } from '@ngrx/store';
 import { AuthService } from '../auth/auth.service';
 import { ThemeService } from '../config/theme.service';
@@ -25,7 +27,8 @@ import { ButtonModule } from 'primeng/button';
 import { LanguageService } from '../i18n/language.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 
-const BREAKPOINT_PX = 768;
+/** Matches `$breakpoint` in layout.component.scss. Below this, the sidebar is a drawer. */
+export const LAYOUT_SIDEBAR_BREAKPOINT_PX = 1024;
 
 /** Translation-key namespace for the topbar's page title, derived from the current route. */
 function pageTitleKeyFromUrl(url: string): string {
@@ -34,9 +37,8 @@ function pageTitleKeyFromUrl(url: string): string {
   if (path.startsWith('/appointments')) return 'navigation.appointments';
   if (path.startsWith('/services')) return 'navigation.services';
   if (path.startsWith('/customers')) return 'navigation.customers';
-  if (path.startsWith('/settings/theme')) return 'navigation.theme';
   if (path.startsWith('/settings/landing')) return 'navigation.landingPage';
-  if (path.startsWith('/settings/working-hours')) return 'navigation.workingHours';
+  if (path.startsWith('/settings')) return 'navigation.settings';
   if (path.startsWith('/settings/account')) return 'navigation.account';
   if (path.startsWith('/preview')) return 'navigation.previewSite';
   return '';
@@ -64,6 +66,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   private readonly store = inject(Store);
   private readonly growthBrain = inject(GrowthBrainService);
   private readonly appointmentsApi = inject(AppointmentsApiService);
+  private readonly destroyRef = inject(DestroyRef);
 
   private readonly _titleSync = effect(() => {
     const name = this.auth.business()?.name?.trim();
@@ -168,18 +171,27 @@ export class LayoutComponent implements OnInit, OnDestroy {
   readonly isMobileMenuOpen = signal(false);
   /** Desktop: sidebar collapsed (72px). Mobile: unused. */
   readonly isSidebarCollapsed = signal(false);
-  /** True when viewport width < 1024px. */
+  /** True when the sidebar is off-canvas and the topbar menu button is shown. */
   readonly isMobile = signal(false);
 
   private resizeListener = (): void => {
     const w = this.doc.defaultView?.innerWidth ?? 0;
-    this.isMobile.set(w < BREAKPOINT_PX);
-    if (w >= BREAKPOINT_PX) this.isMobileMenuOpen.set(false);
+    this.isMobile.set(w < LAYOUT_SIDEBAR_BREAKPOINT_PX);
+    if (w >= LAYOUT_SIDEBAR_BREAKPOINT_PX) {
+      this.isMobileMenuOpen.set(false);
+      this.doc.body.classList.remove('layout-drawer-open');
+    }
   };
 
   ngOnInit(): void {
     this.resizeListener();
     this.doc.defaultView?.addEventListener('resize', this.resizeListener);
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() => this.closeMobileMenu());
   }
 
   ngOnDestroy(): void {
@@ -189,27 +201,56 @@ export class LayoutComponent implements OnInit, OnDestroy {
 
   @HostListener('document:keydown.escape')
   onEscape(): void {
-    if (this.isMobile() && this.isMobileMenuOpen()) {
-      this.isMobileMenuOpen.set(false);
-      this.doc.body.classList.remove('layout-drawer-open');
+    if (this.isMobile() && this.isMobileMenuOpen()) this.closeMobileMenu();
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  onDrawerTab(event: KeyboardEvent): void {
+    if (event.key !== 'Tab' || !this.isMobile() || !this.isMobileMenuOpen()) return;
+    const root = this.doc.querySelector('.layout-sidebar');
+    if (!root) return;
+    const items = focusableIn(root);
+    if (!items.length) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    const active = this.doc.activeElement;
+    if (event.shiftKey && (active === first || !root.contains(active))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (active === last || !root.contains(active))) {
+      event.preventDefault();
+      first.focus();
     }
   }
 
   toggleSidebar(): void {
     if (this.isMobile()) {
-      const open = !this.isMobileMenuOpen();
-      this.isMobileMenuOpen.set(open);
-      this.doc.body.classList.toggle('layout-drawer-open', open);
+      if (this.isMobileMenuOpen()) this.closeMobileMenu();
+      else this.openMobileMenu();
     } else {
       this.isSidebarCollapsed.update((v) => !v);
     }
   }
 
+  openMobileMenu(): void {
+    this.isMobileMenuOpen.set(true);
+    this.doc.body.classList.add('layout-drawer-open');
+    queueMicrotask(() => focusableIn(this.doc.querySelector('.layout-sidebar'))[0]?.focus());
+  }
+
   closeMobileMenu(): void {
-    if (this.isMobileMenuOpen()) {
-      this.isMobileMenuOpen.set(false);
-      this.doc.body.classList.remove('layout-drawer-open');
-    }
+    if (!this.isMobileMenuOpen()) return;
+    this.isMobileMenuOpen.set(false);
+    this.doc.body.classList.remove('layout-drawer-open');
+    queueMicrotask(() => {
+      const button = this.doc.querySelector<HTMLElement>('.layout-topbar-menu-btn');
+      button?.focus();
+    });
+  }
+
+  onSidebarNavigate(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('a')) this.closeMobileMenu();
   }
 
   readonly menuAriaLabel = computed<string>(() => {
@@ -227,7 +268,7 @@ export class LayoutComponent implements OnInit, OnDestroy {
   /** URL for the public customer site (open in new tab). */
   readonly customerSiteUrl = computed<string>(() => {
     const slug = this.auth.business()?.slug;
-    return slug ? `/b/${encodeURIComponent(slug)}/login` : '#';
+    return slug ? `/b/${encodeURIComponent(slug)}` : '#';
   });
 
   readonly linkOptsExact = LINK_OPTS_EXACT;
@@ -254,4 +295,11 @@ export class LayoutComponent implements OnInit, OnDestroy {
     };
     this.adminApi.stopImpersonation().subscribe({ next: finish, error: finish });
   }
+}
+
+function focusableIn(root: Element | null): HTMLElement[] {
+  if (!root) return [];
+  return [...root.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')].filter(
+    (el) => !el.hasAttribute('disabled') && el.tabIndex >= 0
+  );
 }

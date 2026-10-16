@@ -8,7 +8,7 @@
 >
   <div class="sa-layout-sidebar-backdrop" (click)="closeMobileMenu()" aria-hidden="true"></div>
 
-  <div class="sa-layout-sidebar">
+  <aside class="sa-layout-sidebar" aria-label="Admin console">
     <div class="sa-layout-sidebar-header">
       <div class="sa-layout-logo-mark" aria-hidden="true">A</div>
       <div class="sa-layout-brand">
@@ -17,8 +17,8 @@
       </div>
     </div>
 
-    <aside class="sa-layout-sidebar-body" aria-label="Admin navigation">
-      <nav class="sa-layout-nav">
+    <div class="sa-layout-sidebar-body">
+      <nav class="sa-layout-nav" aria-label="Admin navigation">
         <a
           routerLink="/super-admin/dashboard"
           routerLinkActive="sa-layout-link-active"
@@ -88,7 +88,7 @@
           <span>System settings</span>
         </a>
       </nav>
-    </aside>
+    </div>
 
     <div class="sa-layout-sidebar-footer">
       <button type="button" class="sa-layout-logout" (click)="onLogout()">
@@ -96,7 +96,7 @@
         <span>Logout</span>
       </button>
     </div>
-  </div>
+  </aside>
 
   <div class="sa-layout-shell">
     <header class="sa-layout-topbar">
@@ -105,7 +105,7 @@
         [rounded]="false"
         [text]="true"
         severity="secondary"
-        [attr.aria-label]="menuAriaLabel()"
+        [ariaLabel]="menuAriaLabel()"
         [attr.aria-expanded]="isMobile() ? isMobileMenuOpen() : null"
         (onClick)="toggleSidebar()"
         styleClass="sa-layout-menu-btn"

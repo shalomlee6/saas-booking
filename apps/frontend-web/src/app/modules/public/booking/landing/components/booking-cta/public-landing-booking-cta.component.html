@@ -1,8 +1,8 @@
-<section class="pl-cta" aria-label="קביעת תור">
-  <h2 class="pl-cta__title">מוכנה לטיפול הבא שלך?</h2>
-  <p class="pl-cta__sub">קביעת תור פשוטה, מהירה ובלחיצה אחת</p>
+<section class="pl-cta" [attr.aria-label]="'publicLanding.book' | translate">
+  <h2 class="pl-cta__title">{{ 'publicLanding.ctaTitle' | translate }}</h2>
+  <p class="pl-cta__sub">{{ 'publicLanding.ctaSub' | translate }}</p>
   <p-button
-    label="קביעי תור עכשיו"
+    [label]="'publicLanding.ctaBook' | translate"
     icon="pi pi-calendar-plus"
     iconPos="right"
     styleClass="pl-cta__btn"
@@ -10,13 +10,13 @@
   />
   <div class="pl-cta__links">
     @if (phoneHref(); as href) {
-      <a class="pl-cta__link" [href]="href">התקשרי: {{ phone() }}</a>
+      <a class="pl-cta__link" [href]="href">{{ 'publicLanding.callWithPhone' | translate: { phone: phone() ?? '' } }}</a>
     }
     @if (whatsappHref(); as wa) {
-      <a class="pl-cta__link" [href]="wa" target="_blank" rel="noopener noreferrer">וואטסאפ</a>
+      <a class="pl-cta__link" [href]="wa" target="_blank" rel="noopener noreferrer">{{ 'publicLanding.whatsapp' | translate }}</a>
     }
     @if (emailHref(); as em) {
-      <a class="pl-cta__link" [href]="em">אימייל</a>
+      <a class="pl-cta__link" [href]="em">{{ 'common.email' | translate }}</a>
     }
     @if (location(); as loc) {
       @if (loc.trim()) {

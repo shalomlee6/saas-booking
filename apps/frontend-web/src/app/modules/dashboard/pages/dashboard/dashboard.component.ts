@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChildren } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -18,13 +18,35 @@ import {
 } from '../../services/growth-brain.service';
 
 const VIP_THRESHOLD = 500;
-const CANCELLED_STATUSES = new Set(['cancelled', 'canceled']);
+const NEXT_ROW_SKIPPED = new Set(['cancelled', 'canceled', 'completed', 'done', 'no_show']);
+
+/** The next agenda row is the soonest visit that has not ended and is still pending or confirmed. */
+export function nextAgendaAppointmentId(
+  list: { _id: string; end: Date; status?: string | null }[],
+  nowMs: number
+): string | null {
+  return (
+    list.find(
+      (appointment) =>
+        appointment.end.getTime() > nowMs &&
+        !NEXT_ROW_SKIPPED.has((appointment.status ?? '').toLowerCase())
+    )?._id ?? null
+  );
+}
 
 const PERIOD_LABEL_KEYS: Record<InsightsPeriod, string> = {
   week: 'dashboard.periodLabelWeek',
   month: 'dashboard.periodLabelMonth',
   year: 'dashboard.periodLabelYear',
 };
+
+const PERIOD_TAB_KEYS: Record<InsightsPeriod, string> = {
+  week: 'dashboard.periodWeek',
+  month: 'dashboard.periodMonth',
+  year: 'dashboard.periodYear',
+};
+
+const PERIODS: readonly InsightsPeriod[] = ['week', 'month', 'year'];
 
 type StatusTone = 'success' | 'warn' | 'neutral' | 'danger';
 
@@ -36,6 +58,7 @@ const STATUS_KEYS: Record<string, string> = {
   done: 'status.completed',
   cancelled: 'status.cancelled',
   canceled: 'status.cancelled',
+  no_show: 'status.no_show',
 };
 
 const STATUS_TONES: Record<string, StatusTone> = {
@@ -45,6 +68,7 @@ const STATUS_TONES: Record<string, StatusTone> = {
   done: 'success',
   cancelled: 'danger',
   canceled: 'danger',
+  no_show: 'warn',
 };
 
 function statusLabel(status: string | undefined, language: LanguageService): string {
@@ -108,6 +132,9 @@ export class DashboardComponent {
   readonly appointments$ = this.appointmentsApi.appointments$;
   readonly insights$ = this.growthBrain.insights$;
   readonly selectedPeriod = this.growthBrain.selectedPeriod;
+  readonly periods = PERIODS;
+  readonly periodTabKeys = PERIOD_TAB_KEYS;
+  private readonly periodTabButtons = viewChildren<ElementRef<HTMLButtonElement>>('periodTab');
   readonly periodLabel = computed(() => this.language.t(PERIOD_LABEL_KEYS[this.selectedPeriod()] ?? ''));
   readonly vipThreshold = VIP_THRESHOLD;
 
@@ -145,12 +172,7 @@ export class DashboardComponent {
 
   readonly todayAgendaState$ = combineLatest([this.todayAppointments$, this.language$]).pipe(
     map(([list]): AgendaState => {
-      const nextId =
-        list.find(
-          (a) =>
-            a.end.getTime() > this.now.getTime() &&
-            !CANCELLED_STATUSES.has((a.status ?? '').toLowerCase())
-        )?._id ?? null;
+      const nextId = nextAgendaAppointmentId(list, this.now.getTime());
 
       const rows: AgendaRow[] = list.map((a) => ({
         apt: a,
@@ -174,7 +196,9 @@ export class DashboardComponent {
   );
 
   readonly avgPerAppointment$ = this.insights$.pipe(
-    map((i) => (i.appointmentsCount > 0 ? i.totalRevenue / i.appointmentsCount : 0)),
+    map((i) =>
+      i.completedAppointmentsCount > 0 ? i.totalRevenue / i.completedAppointmentsCount : 0
+    ),
     catchError(() => of(0))
   );
 
@@ -276,6 +300,25 @@ export class DashboardComponent {
 
   setPeriod(p: InsightsPeriod): void {
     this.growthBrain.setPeriod(p);
+  }
+
+  periodTabId(period: InsightsPeriod): string {
+    return `dashboard-period-${period}`;
+  }
+
+  onPeriodKeydown(event: KeyboardEvent): void {
+    const index = PERIODS.indexOf(this.selectedPeriod());
+    const rtl = this.language.isRtl;
+    let next: number;
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = PERIODS.length - 1;
+    else if (event.key === 'ArrowRight') next = index + (rtl ? -1 : 1);
+    else if (event.key === 'ArrowLeft') next = index + (rtl ? 1 : -1);
+    else return;
+    event.preventDefault();
+    const period = PERIODS[(next + PERIODS.length) % PERIODS.length];
+    this.setPeriod(period);
+    queueMicrotask(() => this.periodTabButtons()[PERIODS.indexOf(period)]?.nativeElement.focus());
   }
 
   retryInsights(): void {

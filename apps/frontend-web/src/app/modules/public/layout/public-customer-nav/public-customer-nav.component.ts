@@ -18,7 +18,7 @@ import { PublicApiService } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
-export type PublicNavItemId = 'home' | 'upcoming' | 'location' | 'settings';
+export type PublicNavItemId = 'home' | 'upcoming' | 'location' | 'settings' | 'accessibility';
 
 @Component({
   selector: 'app-public-customer-nav',
@@ -60,6 +60,9 @@ export class PublicCustomerNavComponent implements OnDestroy {
     if (path === `${base}/settings` || path.startsWith(`${base}/settings/`)) {
       return 'settings';
     }
+    if (path === `${base}/accessibility` || path.startsWith(`${base}/accessibility/`)) {
+      return 'accessibility';
+    }
     if (path === `${base}/upcoming` || path.startsWith(`${base}/upcoming/`)) {
       return 'upcoming';
     }
@@ -69,6 +72,8 @@ export class PublicCustomerNavComponent implements OnDestroy {
     }
     return null;
   });
+
+  readonly showMyAppointments = computed(() => this.session.identityMode() === 'otp');
 
   readonly menuAriaLabel = computed(() =>
     this.menuOpen()
@@ -113,15 +118,21 @@ export class PublicCustomerNavComponent implements OnDestroy {
     this.closeMenu();
   }
 
-  onLogout(): void {
+  onSwitchUser(): void {
     const slug = this.slug();
-    // Best-effort: clears the server-side httpOnly cookie so it can't keep authenticating
-    // requests as this customer after the client-side session is gone.
-    this.publicApi.logoutPublicCustomer().subscribe({ next: () => {}, error: () => {} });
-    this.session.clearSession(slug || undefined);
     this.closeMenu();
-    if (slug) {
-      void this.router.navigate(['/b', slug]);
+    const done = (): void => {
+      if (slug) this.session.clearSession(slug);
+      else this.session.clearSession();
+      this.session.bumpFlow();
+      if (slug) {
+        void this.router.navigate(['/b', slug, 'book'], { queryParams: { restart: Date.now() } });
+      }
+    };
+    if (!slug) {
+      done();
+      return;
     }
+    this.publicApi.logoutPublicCustomer(slug).subscribe({ next: done, error: done });
   }
 }

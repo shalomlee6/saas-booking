@@ -1,10 +1,46 @@
 import { z } from 'zod';
-import { appointmentStatusZod } from '../../dto/enums';
+import { appointmentStatusZod, timeOfDayBucketZod } from '../../dto/enums';
+import {
+  createEntityListQuerySchema,
+  optionalQueryNumber,
+  optionalQueryString,
+  optionalYyyyMmDd,
+} from '../../listQuery/schema';
 import {
   iso8601CalendarDayOrInstant,
   iso8601DateTimeWithOffset,
   mongoObjectIdString,
 } from '../primitives';
+
+/** Sort fields the paged appointments list accepts. */
+export const APPOINTMENT_LIST_SORT_FIELDS = [
+  'start',
+  'price',
+  'duration',
+  'customerName',
+  'status',
+  'serviceName',
+] as const;
+
+export const appointmentsPagedQuerySchema = createEntityListQuerySchema({
+  defaultSort: 'start',
+  sortableFields: APPOINTMENT_LIST_SORT_FIELDS,
+  rangePairs: [
+    { min: 'priceMin', max: 'priceMax' },
+    { min: 'startFrom', max: 'startTo' },
+  ],
+  filters: {
+    status: optionalQueryString().pipe(appointmentStatusZod.optional()),
+    queue: optionalQueryString().pipe(z.enum(['pending', 'unmarked']).optional()),
+    service: optionalQueryString().pipe(mongoObjectIdString.optional()),
+    source: optionalQueryString().pipe(z.enum(['owner', 'client-online']).optional()),
+    priceMin: optionalQueryNumber(),
+    priceMax: optionalQueryNumber(),
+    timeOfDay: optionalQueryString().pipe(timeOfDayBucketZod.optional()),
+    startFrom: optionalYyyyMmDd(),
+    startTo: optionalYyyyMmDd(),
+  },
+});
 
 /** Unknown keys stripped (not rejected) for forward-compatible clients. */
 export const appointmentCreateBodySchema = z
@@ -77,6 +113,9 @@ export const appointmentPatchBodySchema = z
     price: z.number().min(0).optional(),
     status: appointmentStatusZod.optional(),
     notes: z.union([z.string().max(10_000), z.literal('')]).optional(),
+    lateCancellation: z.boolean().optional(),
+    lateArrival: z.boolean().optional(),
+    lateArrivalMinutes: z.number().int().min(0).max(24 * 60).nullable().optional(),
   })
   .strip()
   .superRefine((data, ctx) => {

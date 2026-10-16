@@ -1,0 +1,51 @@
+.service-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 40rem;
+}
+
+.service-details-back,
+.service-details-edit {
+  color: var(--color-primary);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.service-details-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.service-details-title {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.service-details-description {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.service-details-facts {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.service-details-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.service-details-facts dt {
+  color: var(--text-secondary);
+}
+
+.service-details-facts dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

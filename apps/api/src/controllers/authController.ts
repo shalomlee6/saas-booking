@@ -2,7 +2,8 @@ import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
-import { Business } from '../models/Business';
+import { Business, type IBusinessUi } from '../models/Business';
+import type { IBusinessSettings } from '../models/BusinessSettings';
 import { resolveBusinessIdFromReq } from '../utils/resolveBusinessId';
 import { normalizeBusinessUi } from '../utils/businessUi';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
@@ -31,8 +32,23 @@ export async function getMe(req: AuthRequest, res: Response) {
         : undefined
       : resolveBusinessIdFromReq(req) ?? user.businessId?.toString();
 
-    let business: any = null;
-    let businessSettings: any = null;
+    let business: {
+      _id: string;
+      name: string;
+      slug: string;
+      ui: IBusinessUi;
+      ownerEmail: string | null;
+    } | null = null;
+    let businessSettings: {
+      theme: {
+        colors: IBusinessSettings['theme']['colors'];
+        preset?: IBusinessSettings['theme']['preset'];
+        defaultMode?: IBusinessSettings['theme']['defaultMode'];
+        logoUrl: IBusinessSettings['theme']['logoUrl'];
+        fontFamily: IBusinessSettings['theme']['fontFamily'];
+      } | null;
+      localization: { timezone: string };
+    } | null = null;
 
     if (effectiveBusinessId) {
       const businessDoc = await Business.findById(effectiveBusinessId);

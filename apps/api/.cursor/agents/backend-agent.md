@@ -33,7 +33,7 @@ and MongoDB. You work exclusively inside `apps/api/src/`.
 9. In production, transaction fallback must fail with 503 — never silently degrade
 10. Temporary passwords must NEVER be logged — only emailed (TODO until email service exists)
 11. test-seed endpoint must be blocked in production (NODE_ENV === 'production' → 404)
-12. OTP bypass (PUBLIC_DEV_OTP_BYPASS) must never be enabled in production
+12. There is no OTP bypass flag. Do not add `PUBLIC_DEV_OTP_BYPASS`
 
 ## Security Checklist (apply to every new route)
 - [ ] auth middleware applied

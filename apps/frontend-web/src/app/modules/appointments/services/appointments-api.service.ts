@@ -8,12 +8,11 @@ import {
   combineLatest,
 } from 'rxjs';
 import { ApiService } from '../../../core/api/api.service';
+import type { DataListPage, DataListQuery } from '../../../shared/data-management/entity-data-management-config';
 import type { Appointment, AppointmentListItem } from '../model/appointment';
+import type { AppointmentListRow } from '../model/appointment-list-row';
 import type { CreateAppointmentDto } from '../dto/create-appointment.dto';
-import {
-  buildUpdateAppointmentDto,
-  mapAppointmentDtoToModel,
-} from '../dto/appointment-dto-adapter';
+import { mapAppointmentDtoToModel } from '../dto/appointment-dto-adapter';
 
 export interface AppointmentsListParams {
   from?: string;
@@ -48,6 +47,18 @@ export class AppointmentsApiService {
     this.tenantContext$.next(this.tenantContext$.value + 1);
   }
 
+  /** Paged list. Sent only when the calendar is in list view. */
+  listPage(query: DataListQuery): Observable<DataListPage<AppointmentListRow>> {
+    return this.api.get<DataListPage<AppointmentListRow>>('appointments', {
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sort: query.sort,
+      order: query.order,
+      ...query.filters,
+    });
+  }
+
   /** GET /api/appointments?from=...&to=... Returns flattened DTO; map to Appointment with start/end as Date for calendar. */
   list(params?: AppointmentsListParams): Observable<Appointment[]> {
     let path = 'appointments';
@@ -67,11 +78,6 @@ export class AppointmentsApiService {
     return this.api.post<Appointment>('appointments', dto);
   }
 
-  /** PUT /api/appointments/:id */
-  update(id: string, body: Partial<{ start: string; end: string; status: string; notes: string }>): Observable<Appointment> {
-    return this.api.put<Appointment>(`appointments/${id}`, buildUpdateAppointmentDto(body));
-  }
-
   /** GET /api/appointments/:id — single appointment for edit screen */
   getById(id: string): Observable<AppointmentDetailDto> {
     return this.api.get<AppointmentDetailDto>(`appointments/${id}`);
@@ -83,8 +89,11 @@ export class AppointmentsApiService {
   }
 
   /** Soft-cancel: PATCH status to cancelled (preferred over DELETE). */
-  cancel(id: string): Observable<Appointment> {
-    return this.patchAppointment(id, { status: 'cancelled' });
+  cancel(id: string, lateCancellation?: boolean): Observable<Appointment> {
+    return this.patchAppointment(id, {
+      status: 'cancelled',
+      ...(lateCancellation !== undefined ? { lateCancellation } : {}),
+    });
   }
 }
 
@@ -112,4 +121,7 @@ export interface PatchAppointmentBody {
   price?: number;
   status?: string;
   notes?: string;
+  lateCancellation?: boolean;
+  lateArrival?: boolean;
+  lateArrivalMinutes?: number | null;
 }

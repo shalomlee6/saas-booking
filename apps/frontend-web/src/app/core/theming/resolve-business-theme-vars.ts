@@ -1,3 +1,4 @@
+import { onContrastColor } from './contrast-color';
 import { resolveThemePreset, type ThemeFamily } from './theme-presets';
 
 export type ThemeMode = 'light' | 'dark';
@@ -39,7 +40,7 @@ export function resolveBusinessThemeVars(
   const family = preset[mode];
   const vars: Record<string, string> = {};
   for (const key of Object.keys(TOKEN_MAP) as (keyof ThemeFamily)[]) {
-    vars[TOKEN_MAP[key]] = family[key];
+    vars[TOKEN_MAP[key]] = key === 'onPrimary' ? onContrastColor(family.primary) : family[key];
   }
   vars[INTRO_STAGE_BG_TOKEN] = INTRO_STAGE_BG[mode];
   return vars;

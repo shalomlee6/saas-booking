@@ -46,7 +46,7 @@ function keyByUserOrIp(req: Request): string {
 
 /** OTP is unauthenticated and inherently per-phone-number — bucket on that, not the caller. */
 function keyByOtpTarget(req: Request): string {
-  const slug = String(req.params?.businessSlug ?? '').trim().toLowerCase();
+  const slug = String(req.params?.businessSlug ?? req.params?.slug ?? '').trim().toLowerCase();
   const phone = String((req.body as { phone?: unknown } | undefined)?.phone ?? '').replace(/\D/g, '');
   if (phone) return `otp:${slug}:${phone}`;
   return `otp-ip:${ipKey(req)}`;

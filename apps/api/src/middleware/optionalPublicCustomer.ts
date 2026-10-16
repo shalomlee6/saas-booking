@@ -1,33 +1,35 @@
 import type { Response, NextFunction } from 'express';
 import type { RequestWithPublicCustomer } from '../types/publicCustomer';
 import {
-  getPublicCustomerJwtFromRequest,
-  renewPublicCustomerSession,
-  verifyPublicCustomerJwt,
+  publicBusinessHint,
+  readPublicSessionId,
+  renewPublicClientSession,
+  setPublicSessionCookie,
 } from '../utils/publicCustomerSession';
 
 export type { PublicCustomer, RequestWithPublicCustomer } from '../types/publicCustomer';
 
 /**
- * Optional auth for public booking: Bearer token or HTTP-only session cookie from verify-otp.
- * If present and valid with role === 'customer', attaches req.publicCustomer. Never 401s.
+ * Optional public session: opaque cookie or Bearer session id.
+ * Renews a live session. Never 401s. Old JWTs are ignored.
  */
 export function optionalPublicCustomer(
   req: RequestWithPublicCustomer,
   res: Response,
   next: NextFunction
 ): void {
-  const token = getPublicCustomerJwtFromRequest(req);
-  if (!token) {
+  const sessionId = readPublicSessionId(req);
+  if (!sessionId) {
     next();
     return;
   }
-  const session = verifyPublicCustomerJwt(token);
-  if (!session) {
-    next();
-    return;
-  }
-  req.publicCustomer = session;
-  renewPublicCustomerSession(res, session);
-  next();
+  void renewPublicClientSession(sessionId, publicBusinessHint(req))
+    .then((session) => {
+      if (session) {
+        req.publicCustomer = session;
+        setPublicSessionCookie(res, session.sessionId);
+      }
+      next();
+    })
+    .catch(next);
 }

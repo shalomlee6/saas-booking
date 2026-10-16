@@ -5,6 +5,8 @@ import { Appointment } from '../models/Appointment';
 import { Customer } from '../models/Customer';
 import { getEffectiveBusinessId } from '../utils/effectiveBusinessId';
 import { assertTenantAnalyticsAllowed } from '../utils/planPolicy';
+import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { insightsPeriodStart } from '../listQuery/dateRange';
 import { logger } from '../utils/logger';
 
 type InsightsPeriod = 'week' | 'month' | 'year';
@@ -13,21 +15,6 @@ function parseInsightsPeriod(query: unknown): InsightsPeriod {
   const p = typeof query === 'string' ? query.toLowerCase() : '';
   if (p === 'week' || p === 'month' || p === 'year') return p;
   return 'month';
-}
-
-/** Start of the current calendar week (Sunday 00:00), month, or year in server local time. */
-function periodStart(period: InsightsPeriod): Date {
-  const now = new Date();
-  if (period === 'year') {
-    return new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
-  }
-  if (period === 'month') {
-    return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-  }
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - d.getDay());
-  return d;
 }
 
 /**
@@ -57,8 +44,16 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       throw planErr;
     }
     const period = parseInsightsPeriod(req.query?.period);
-    const rangeStart = periodStart(period);
-    const matchPeriod = {
+    const settings = await ensureBusinessSettings(businessIdObj);
+    const timezone = settings.localization?.timezone ?? 'Asia/Jerusalem';
+    const rangeStart = insightsPeriodStart(period, timezone);
+    /** Revenue is completed visits only. Pending, confirmed, and no-show are not income. */
+    const revenueMatch = {
+      businessId: businessIdObj,
+      status: 'completed',
+      start: { $gte: rangeStart },
+    };
+    const appointmentsInPeriod = {
       businessId: businessIdObj,
       status: { $ne: 'cancelled' },
       start: { $gte: rangeStart },
@@ -70,19 +65,25 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     const [revenueResult, revenueByServiceResult, revenueByWeekdayResult, appointmentsInWindow, appointmentsCount] =
       await Promise.all([
       Appointment.aggregate([
-        { $match: matchPeriod },
-        { $group: { _id: null, total: { $sum: { $ifNull: ['$price', 0] } } } },
+        { $match: revenueMatch },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: { $ifNull: ['$price', 0] } },
+            count: { $sum: 1 },
+          },
+        },
       ]),
       Appointment.aggregate([
-        { $match: matchPeriod },
+        { $match: revenueMatch },
         { $group: { _id: '$serviceId', total: { $sum: { $ifNull: ['$price', 0] } } } },
         { $lookup: { from: 'services', localField: '_id', foreignField: '_id', as: 'svc' } },
         { $unwind: { path: '$svc', preserveNullAndEmptyArrays: true } },
         { $project: { total: 1, serviceName: { $ifNull: ['$svc.name', ''] } } },
       ]),
       Appointment.aggregate([
-        { $match: matchPeriod },
-        { $project: { weekday: { $dayOfWeek: '$start' }, price: { $ifNull: ['$price', 0] } } },
+        { $match: revenueMatch },
+        { $project: { weekday: { $dayOfWeek: { date: '$start', timezone } }, price: { $ifNull: ['$price', 0] } } },
         { $group: { _id: '$weekday', total: { $sum: '$price' } } },
       ]),
       Appointment.distinct('customerId', {
@@ -91,10 +92,11 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
         status: { $ne: 'cancelled' },
         customerId: { $exists: true, $ne: null },
       }),
-      Appointment.countDocuments(matchPeriod),
+      Appointment.countDocuments(appointmentsInPeriod),
     ]);
 
     const totalRevenue = revenueResult[0]?.total ?? 0;
+    const completedAppointmentsCount = revenueResult[0]?.count ?? 0;
     const revenueByService = revenueByServiceResult.map((r: { serviceName?: string; total: number }) => ({
       serviceName: r.serviceName ?? '',
       total: r.total,
@@ -111,7 +113,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
     const topCustomersAgg = await Appointment.aggregate([
       {
         $match: {
-          ...matchPeriod,
+          ...revenueMatch,
           customerId: { $exists: true, $ne: null },
         },
       },
@@ -134,6 +136,7 @@ export async function getBusinessInsights(req: AuthRequest, res: Response) {
       inactiveCustomersCount,
       topCustomers,
       appointmentsCount,
+      completedAppointmentsCount,
       period,
     });
   } catch (err) {

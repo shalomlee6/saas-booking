@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type NextFunction, type Response } from 'express';
 import { Types } from 'mongoose';
 import { auth, AuthRequest } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
@@ -12,6 +12,7 @@ import {
   appointmentUpdateBodySchema,
   appointmentPatchBodySchema,
   appointmentsListQuerySchema,
+  appointmentsPagedQuerySchema,
   appointmentsWeekQuerySchema,
   availableSlotsQuerySchema,
 } from '../validation/schemas/appointments';
@@ -30,6 +31,7 @@ import {
 } from '../services/createAppointmentAtomic';
 import { appointmentDocumentToResponseDto } from '../dto/appointmentJson';
 import { isAllowedAppointmentStatusTransition } from '../services/appointmentStatusPolicy';
+import type { AppointmentStatus } from '../dto/enums';
 
 export const appointmentsRouter = Router();
 
@@ -49,9 +51,17 @@ appointmentsRouter.get(
   asyncHandler(getAvailableSlots)
 );
 
+function appointmentsListQuery(req: AuthRequest, res: Response, next: NextFunction): void {
+  const raw = req.query.page;
+  const page = Array.isArray(raw) ? raw[0] : raw;
+  const paged = page !== undefined && page !== null && String(page) !== '';
+  (req as AuthRequest & { appointmentListPaged?: boolean }).appointmentListPaged = paged;
+  validateQuery(paged ? appointmentsPagedQuerySchema : appointmentsListQuerySchema)(req, res, next);
+}
+
 appointmentsRouter.get(
   '/',
-  validateQuery(appointmentsListQuerySchema),
+  appointmentsListQuery,
   asyncHandler(getAppointmentsList)
 );
 
@@ -161,7 +171,7 @@ appointmentsRouter.put(
       if (
         !isAllowedAppointmentStatusTransition(
           existing.status,
-          status as 'pending' | 'confirmed' | 'completed' | 'cancelled'
+          status as AppointmentStatus
         )
       ) {
         throw new ConflictError('Invalid appointment status transition');

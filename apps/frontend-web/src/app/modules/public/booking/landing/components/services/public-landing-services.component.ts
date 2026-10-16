@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { CurrencyPipe } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
+import { TranslatePipe } from '../../../../../../core/i18n/translate.pipe';
 import type { PublicService } from '../../../../services/public-api.service';
 
 function serviceEmoji(name: string): string {
@@ -20,7 +21,7 @@ export interface PublicLandingServiceCardView extends PublicService {
   selector: 'app-public-landing-services',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CurrencyPipe, ButtonModule],
+  imports: [CurrencyPipe, ButtonModule, TranslatePipe],
   templateUrl: './public-landing-services.component.html',
   styleUrl: './public-landing-services.component.scss',
 })

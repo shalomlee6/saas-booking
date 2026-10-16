@@ -1,58 +1,191 @@
-<div class="business-theme-settings-page">
-  <h1 class="business-theme-settings-title">{{ 'settings.themeTitle' | translate }}</h1>
-  <p class="business-theme-settings-subtitle">{{ 'settings.themeSubtitle' | translate }}</p>
-
-  <div class="business-theme-settings-card">
-    <h2 class="business-theme-settings-card-title">{{ 'settings.languageCardTitle' | translate }}</h2>
-    <p class="business-theme-settings-card-subtitle">{{ 'settings.languageCardDescription' | translate }}</p>
-    <div class="language-toggle" role="group" [attr.aria-label]="'settings.languageCardTitle' | translate">
-      <button
-        type="button"
-        class="language-toggle-btn"
-        [class.language-toggle-btn--active]="language.language() === 'he'"
-        [attr.aria-pressed]="language.language() === 'he'"
-        (click)="setLanguage('he')"
-      >
-        עברית
-      </button>
-      <button
-        type="button"
-        class="language-toggle-btn"
-        [class.language-toggle-btn--active]="language.language() === 'en'"
-        [attr.aria-pressed]="language.language() === 'en'"
-        (click)="setLanguage('en')"
-      >
-        English
-      </button>
+<div class="settings-section">
+  <section class="settings-card" aria-labelledby="theme-language-label">
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label" id="theme-language-label">{{ 'settings.languageCardTitle' | translate }}</span>
+        <span class="settings-row-hint" id="theme-language-hint">{{ 'settings.languageCardDescription' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <div class="settings-segment" role="group" aria-labelledby="theme-language-label" aria-describedby="theme-language-hint">
+          <button
+            type="button"
+            class="theme-segment-button"
+            [class.theme-segment-button-active]="language.language() === 'he'"
+            [attr.aria-pressed]="language.language() === 'he'"
+            (click)="setLanguage('he')"
+          >
+            עברית
+          </button>
+          <button
+            type="button"
+            class="theme-segment-button"
+            [class.theme-segment-button-active]="language.language() === 'en'"
+            [attr.aria-pressed]="language.language() === 'en'"
+            (click)="setLanguage('en')"
+          >
+            English
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="business-theme-settings-card">
-    <form [formGroup]="form" (ngSubmit)="save()" class="business-theme-settings-form">
-      <div class="business-theme-settings-field">
-        <label for="themeMode">{{ 'settings.themeModeLabel' | translate }}</label>
-        <select id="themeMode" formControlName="themeMode" class="business-theme-settings-input">
-          <option value="light">{{ 'settings.themeModeLight' | translate }}</option>
-          <option value="dark">{{ 'settings.themeModeDark' | translate }}</option>
-        </select>
+  <form [formGroup]="form" (ngSubmit)="save()" class="settings-section">
+    @if (error()) {
+      <p class="settings-error" role="alert">{{ error() }}</p>
+    }
+
+    <section class="settings-card" aria-labelledby="theme-brand-title">
+      <h3 class="settings-card-title" id="theme-brand-title">{{ 'settings.brandColorsTitle' | translate }}</h3>
+
+      <div class="settings-row">
+        <div class="settings-row-text">
+          <span class="settings-row-label" id="theme-mode-label">{{ 'settings.themeModeLabel' | translate }}</span>
+          <span class="settings-row-hint" id="theme-mode-hint">{{ 'settings.themeModeHint' | translate }}</span>
+        </div>
+        <div class="settings-row-control">
+          <div class="settings-segment" role="radiogroup" aria-labelledby="theme-mode-label" aria-describedby="theme-mode-hint">
+            <label class="settings-segment-option">
+              <input type="radio" formControlName="themeMode" value="light" />
+              <span><i class="pi pi-sun" aria-hidden="true"></i>&nbsp;{{ 'settings.themeModeLight' | translate }}</span>
+            </label>
+            <label class="settings-segment-option">
+              <input type="radio" formControlName="themeMode" value="dark" />
+              <span><i class="pi pi-moon" aria-hidden="true"></i>&nbsp;{{ 'settings.themeModeDark' | translate }}</span>
+            </label>
+          </div>
+        </div>
       </div>
-      <div class="business-theme-settings-field">
-        <label for="primaryColor">{{ 'settings.primaryColorLabel' | translate }}</label>
-        <input id="primaryColor" type="text" dir="ltr" formControlName="primaryColor" class="business-theme-settings-input" placeholder="#4F46E5" />
+
+      <div class="settings-row theme-color-row">
+        <div class="settings-row-text">
+          <label class="settings-row-label" id="theme-primary-label" for="primaryColor">{{ 'settings.primaryColorLabel' | translate }}</label>
+          <span class="settings-row-hint" id="theme-primary-hint">{{ 'settings.primaryColorHint' | translate }}</span>
+        </div>
+        <div class="settings-row-control">
+          <span class="sr-only" id="theme-primary-pick">{{ 'settings.pickColor' | translate }}</span>
+          <input
+            type="color"
+            class="theme-color-picker"
+            aria-labelledby="theme-primary-pick theme-primary-label"
+            [value]="primarySwatch()"
+            (input)="onColorInput('primaryColor', $event)"
+          />
+          <input
+            id="primaryColor"
+            type="text"
+            dir="ltr"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+            formControlName="primaryColor"
+            class="settings-input theme-hex-input"
+            placeholder="#4F46E5"
+            [attr.aria-describedby]="primaryContrastFails() ? 'theme-primary-hint primaryContrastWarning' : 'theme-primary-hint'"
+          />
+        </div>
+        <div class="theme-presets" role="group" [attr.aria-label]="'settings.primaryColorLabel' | translate">
+          @for (preset of primaryPresets; track preset) {
+            <button
+              type="button"
+              class="theme-preset"
+              [style.background-color]="preset"
+              [class.theme-preset-active]="primarySwatch().toUpperCase() === preset"
+              [attr.aria-label]="'settings.presetColor' | translate: { color: preset }"
+              [attr.aria-pressed]="primarySwatch().toUpperCase() === preset"
+              (click)="setColor('primaryColor', preset)"
+            ></button>
+          }
+        </div>
+        @if (primaryContrastFails()) {
+          <p id="primaryContrastWarning" class="theme-warning" role="status">
+            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            <span>{{ 'settings.primaryContrastWarning' | translate }}</span>
+          </p>
+        }
       </div>
-      <div class="business-theme-settings-field">
-        <label for="sidebarColor">{{ 'settings.sidebarColorLabel' | translate }}</label>
-        <input id="sidebarColor" type="text" dir="ltr" formControlName="sidebarColor" class="business-theme-settings-input" placeholder="#0F172A" />
+
+      <div class="settings-row theme-color-row">
+        <div class="settings-row-text">
+          <label class="settings-row-label" id="theme-sidebar-label" for="sidebarColor">{{ 'settings.sidebarColorLabel' | translate }}</label>
+          <span class="settings-row-hint" id="theme-sidebar-hint">{{ 'settings.sidebarColorHint' | translate }}</span>
+        </div>
+        <div class="settings-row-control">
+          <span class="sr-only" id="theme-sidebar-pick">{{ 'settings.pickColor' | translate }}</span>
+          <input
+            type="color"
+            class="theme-color-picker"
+            aria-labelledby="theme-sidebar-pick theme-sidebar-label"
+            [value]="sidebarSwatch()"
+            (input)="onColorInput('sidebarColor', $event)"
+          />
+          <input
+            id="sidebarColor"
+            type="text"
+            dir="ltr"
+            maxlength="7"
+            spellcheck="false"
+            autocomplete="off"
+            formControlName="sidebarColor"
+            class="settings-input theme-hex-input"
+            placeholder="#0F172A"
+            [attr.aria-describedby]="sidebarContrastFails() ? 'theme-sidebar-hint sidebarContrastWarning' : 'theme-sidebar-hint'"
+          />
+        </div>
+        <div class="theme-presets" role="group" [attr.aria-label]="'settings.sidebarColorLabel' | translate">
+          @for (preset of sidebarPresets; track preset) {
+            <button
+              type="button"
+              class="theme-preset"
+              [style.background-color]="preset"
+              [class.theme-preset-active]="sidebarSwatch().toUpperCase() === preset"
+              [attr.aria-label]="'settings.presetColor' | translate: { color: preset }"
+              [attr.aria-pressed]="sidebarSwatch().toUpperCase() === preset"
+              (click)="setColor('sidebarColor', preset)"
+            ></button>
+          }
+        </div>
+        @if (sidebarContrastFails()) {
+          <p id="sidebarContrastWarning" class="theme-warning" role="status">
+            <i class="pi pi-exclamation-triangle" aria-hidden="true"></i>
+            <span>{{ 'settings.sidebarContrastWarning' | translate }}</span>
+          </p>
+        }
       </div>
-      @if (error()) {
-        <p class="business-theme-settings-error">{{ error() }}</p>
-      }
-      <div class="business-theme-settings-actions">
-        <button type="submit" class="business-theme-settings-btn business-theme-settings-btn-primary" [disabled]="saving()">
-          {{ saving() ? ('common.saving' | translate) : ('common.save' | translate) }}
-        </button>
-        <a routerLink="/dashboard" class="business-theme-settings-btn business-theme-settings-btn-ghost">{{ 'common.cancel' | translate }}</a>
+    </section>
+
+    <section class="settings-card" aria-labelledby="theme-preview-title">
+      <h3 class="settings-card-title" id="theme-preview-title">{{ 'settings.previewTitle' | translate }}</h3>
+      <p class="theme-preview-hint">{{ 'settings.previewHint' | translate }}</p>
+      <div
+        class="theme-preview"
+        aria-hidden="true"
+        [class.theme-preview-dark]="previewDark()"
+        [style.--pv-primary]="primarySwatch()"
+        [style.--pv-on-primary]="previewPrimaryText()"
+        [style.--pv-sidebar]="sidebarSwatch()"
+        [style.--pv-on-sidebar]="previewSidebarText()"
+      >
+        <div class="theme-preview-sidebar">
+          <span class="theme-preview-dot"></span>
+          <span class="theme-preview-line theme-preview-line-active"></span>
+          <span class="theme-preview-line"></span>
+          <span class="theme-preview-line"></span>
+        </div>
+        <div class="theme-preview-main">
+          <div class="theme-preview-bar">
+            <span class="theme-preview-title"></span>
+            <span class="theme-preview-button">{{ 'settings.previewButton' | translate }}</span>
+          </div>
+          <div class="theme-preview-cards">
+            <span class="theme-preview-card"></span>
+            <span class="theme-preview-card"></span>
+            <span class="theme-preview-card theme-preview-card-accent"></span>
+          </div>
+        </div>
       </div>
-    </form>
-  </div>
+    </section>
+
+    <app-settings-save-bar [dirty]="dirty()" [saving]="saving()" />
+  </form>
 </div>

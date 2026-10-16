@@ -22,7 +22,7 @@ export class DomainTenantService {
     const hostname = raw.startsWith('www.') ? raw.slice(4) : raw;
 
     const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-    const isAdminDomain = hostname === (environment as any).adminDomain;
+    const isAdminDomain = hostname === environment.adminDomain;
 
     if (!isLocalhost && !isAdminDomain) {
       // hostname is now guaranteed to be stripped of "www.", so split('.')[0]

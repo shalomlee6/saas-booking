@@ -70,6 +70,24 @@ test.describe('Accessibility — axe-core scans', () => {
     expect(results.violations).toHaveLength(0);
   });
 
+  test('/b/demo-salon/book has no axe violations', async ({ page }) => {
+    await page.goto('/b/demo-salon/book', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('.book-service-card', { timeout: 60_000 });
+
+    const results = await new AxeBuilder({ page }).analyze();
+    if (results.violations.length > 0) {
+      console.log(`\n── Axe violations on /b/demo-salon/book (${results.violations.length}) ──`);
+      for (const v of results.violations) {
+        console.log(`  [${v.impact ?? 'unknown'}] ${v.id}: ${v.description}`);
+        for (const n of v.nodes.slice(0, 3)) {
+          console.log(`    HTML: ${n.html}`);
+          if (n.failureSummary) console.log(`    Why: ${n.failureSummary}`);
+        }
+      }
+    }
+    expect(results.violations).toHaveLength(0);
+  });
+
   test('/dashboard (owner portal) has no axe violations', async ({ page, context }) => {
     await context.clearCookies();
     await page.addInitScript(() => {
@@ -85,6 +103,227 @@ test.describe('Accessibility — axe-core scans', () => {
     await page.waitForSelector('#main-content', { timeout: 30_000 });
 
     const results = await runAxe(page, '/dashboard');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers (owner portal) has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await loginAsOwner(page);
+    await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.waitForSelector('.customers-page', { timeout: 30_000 });
+
+    const results = await runAxe(page, '/customers');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/services (owner portal) has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await loginAsOwner(page);
+    await page.goto('/services', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.waitForSelector('.services-page', { timeout: 30_000 });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+
+    const results = await runAxe(page, '/services');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/appointments?view=list (owner portal) has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await loginAsOwner(page);
+    await page.goto('/appointments?view=list', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.waitForSelector('.appointments-list-page', { timeout: 30_000 });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+
+    const results = await runAxe(page, '/appointments?view=list');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/super-admin/audit has no axe violations', async ({ page, context }) => {
+    await context.clearCookies();
+    await page.addInitScript(() => {
+      try {
+        localStorage.clear();
+        sessionStorage.removeItem('sb_session_exp_ms');
+      } catch {
+        /* ignore */
+      }
+    });
+
+    await page.goto('/auth/login', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('[data-testid="login-email"]', { timeout: 60_000 });
+    await page.getByTestId('login-email').fill('superadmin@example.com');
+    await page.getByTestId('login-password').fill('password12345');
+    await page.locator('button.login-form-submit').click();
+    await expect(page).toHaveURL(/\/super-admin/, { timeout: 30_000 });
+    await page.goto('/super-admin/audit', { waitUntil: 'domcontentloaded' });
+    await page.waitForSelector('#main-content', { timeout: 30_000 });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+
+    const results = await runAxe(page, '/super-admin/audit');
+    expect(results.violations).toHaveLength(0);
+  });
+});
+
+// ─── /customers states ────────────────────────────────────────────────────────
+
+test.describe('Accessibility — /customers states', () => {
+  test.setTimeout(180_000);
+
+  async function openCustomers(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
+    await page.context().clearCookies();
+    await loginAsOwner(page);
+    await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
+    await page.setViewportSize({ width, height: width >= 640 ? 800 : 844 });
+    await page.goto('/customers', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('dm-search').waitFor({ timeout: 30_000 });
+    await expect(
+      width >= 640 ? page.locator('tbody tr').first() : page.locator('.data-table-card').first()
+    ).toBeVisible({ timeout: 30_000 });
+    await page.waitForTimeout(400);
+  }
+
+  async function setDark(page: import('@playwright/test').Page, dark: boolean) {
+    await page.evaluate((isDark) => {
+      document.documentElement.classList.toggle('theme-dark', isDark);
+      document.querySelector('.layout')?.classList.toggle('theme-dark', isDark);
+    }, dark);
+    await page.waitForTimeout(400);
+  }
+
+  for (const [lang, width] of [
+    ['he', 390],
+    ['en', 1280],
+    ['en', 390],
+  ] as const) {
+    test(`/customers (${lang}, ${width}px) has no axe violations`, async ({ page }) => {
+      await openCustomers(page, lang, width);
+      const results = await runAxe(page, `/customers ${lang} ${width}`);
+      expect(results.violations).toHaveLength(0);
+    });
+  }
+
+  test('/customers dark mode has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await setDark(page, true);
+    const results = await runAxe(page, '/customers dark');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers with the columns menu open has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await page.getByTestId('dm-columns').click();
+    await page.waitForTimeout(200);
+    const results = await runAxe(page, '/customers columns menu');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers with the filters drawer open has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await page.getByTestId('dm-open-filters').click();
+    await page.getByTestId('dm-drawer-apply').waitFor();
+    await page.waitForTimeout(600);
+    const results = await runAxe(page, '/customers filters drawer');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/customers with active filters and no results has no axe violations', async ({ page }) => {
+    await openCustomers(page, 'he', 1280);
+    await page.getByTestId('dm-open-filters').click();
+    await page.getByTestId('dm-filter-customerType').getByRole('button').nth(1).click();
+    await page.getByTestId('dm-drawer-apply').click();
+    await page.getByTestId('dm-search').fill('zzzz-no-match');
+    await expect(page.getByTestId('dm-no-results')).toBeVisible({ timeout: 10_000 });
+    await page.waitForTimeout(400);
+    const results = await runAxe(page, '/customers no results');
+    expect(results.violations).toHaveLength(0);
+  });
+});
+
+// ─── /appointments/new states ─────────────────────────────────────────────────
+
+test.describe('Accessibility — /appointments/new states', () => {
+  test.setTimeout(180_000);
+
+  async function openForm(page: import('@playwright/test').Page, lang: 'he' | 'en', width: number) {
+    await page.context().clearCookies();
+    await loginAsOwner(page);
+    await page.evaluate((value) => localStorage.setItem('sb_lang', value), lang);
+    await page.setViewportSize({ width, height: width >= 1024 ? 800 : 1024 });
+    await page.goto('/appointments/new', { waitUntil: 'domcontentloaded' });
+    await page.locator('#customer-ac').waitFor({ timeout: 30_000 });
+    await page.waitForTimeout(400);
+  }
+
+  for (const [lang, width] of [
+    ['he', 1280],
+    ['he', 768],
+    ['he', 390],
+    ['en', 1280],
+  ] as const) {
+    test(`/appointments/new (${lang}, ${width}px) has no axe violations`, async ({ page }) => {
+      await openForm(page, lang, width);
+      const results = await runAxe(page, `/appointments/new ${lang} ${width}`);
+      expect(results.violations).toHaveLength(0);
+    });
+  }
+
+  test('/appointments/new dark mode has no axe violations', async ({ page }) => {
+    await openForm(page, 'he', 1280);
+    await page.evaluate(() => {
+      document.documentElement.classList.add('theme-dark');
+      document.querySelector('.layout')?.classList.add('theme-dark');
+    });
+    await page.waitForTimeout(400);
+    const results = await runAxe(page, '/appointments/new dark');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/appointments/new with validation errors has no axe violations', async ({ page }) => {
+    await openForm(page, 'he', 1280);
+    await page.locator('#customer-ac').focus();
+    for (let i = 0; i < 14; i++) await page.keyboard.press('Tab');
+    await expect(page.locator('.apt-field-error').first()).toBeVisible();
+    const results = await runAxe(page, '/appointments/new errors');
+    expect(results.violations).toHaveLength(0);
+  });
+
+  test('/appointments/new with the customer suggestions open has no axe violations', async ({ page }) => {
+    await openForm(page, 'he', 1280);
+    await page.locator('.p-autocomplete-dropdown').click();
+    await page.locator('.p-autocomplete-option').first().waitFor();
+    // PrimeNG's suggestions popup is a combobox listbox: focus stays on the input
+    // (aria-activedescendant), so its scroll container is deliberately not focusable.
+    const results = await new AxeBuilder({ page }).disableRules(['scrollable-region-focusable']).analyze();
     expect(results.violations).toHaveLength(0);
   });
 });
@@ -176,6 +415,58 @@ test.describe('Keyboard navigation — public booking', () => {
     // A non-zero outline confirms the :focus-visible ring in styles.scss is applied
     expect(outlineStyle).not.toBe('none');
     expect(outlineWidth).not.toBe('0px');
+  });
+
+  test.describe('owner settings sections', () => {
+    test.setTimeout(240_000);
+    const sections = ['design', 'hours', 'booking', 'reliability', 'customers', 'policy'] as const;
+    const modes = [
+      { name: 'he light desktop', lang: 'he', dark: false, width: 1280, height: 900 },
+      { name: 'he dark desktop', lang: 'he', dark: true, width: 1280, height: 900 },
+      { name: 'en light tablet', lang: 'en', dark: false, width: 768, height: 1024 },
+      { name: 'he light mobile', lang: 'he', dark: false, width: 390, height: 844 },
+      { name: 'he dark mobile', lang: 'he', dark: true, width: 390, height: 844 },
+    ] as const;
+
+    async function setDark(page: import('@playwright/test').Page, dark: boolean) {
+      await page.evaluate((isDark) => {
+        document.documentElement.classList.toggle('theme-dark', isDark);
+        document.querySelector('.layout')?.classList.toggle('theme-dark', isDark);
+      }, dark);
+      await page.waitForTimeout(300);
+    }
+
+    for (const mode of modes) {
+      test(`${mode.name} have no axe violations`, async ({ page }) => {
+        await loginAsOwner(page);
+        await page.evaluate((value) => localStorage.setItem('sb_lang', value), mode.lang);
+        await page.setViewportSize({ width: mode.width, height: mode.height });
+        for (const id of sections) {
+          await page.goto(`/settings/${id}`, { waitUntil: 'domcontentloaded' });
+          await page.locator('.settings-shell').waitFor({ timeout: 30_000 });
+          await setDark(page, mode.dark);
+          const results = await runAxe(page, `/settings/${id} ${mode.name}`);
+          expect(results.violations, `/settings/${id} ${mode.name}`).toHaveLength(0);
+        }
+      });
+    }
+
+    test('unsaved and warning states have no axe violations', async ({ page }) => {
+      await loginAsOwner(page);
+      await page.evaluate(() => localStorage.setItem('sb_lang', 'he'));
+
+      await page.goto('/settings/booking', { waitUntil: 'domcontentloaded' });
+      await page.locator('#booking-buffer').selectOption({ index: 2 });
+      await expect(page.locator('app-settings-save-bar button')).toBeEnabled();
+      const booking = await runAxe(page, '/settings/booking unsaved');
+      expect(booking.violations).toHaveLength(0);
+
+      await page.goto('/settings/design', { waitUntil: 'domcontentloaded' });
+      await page.locator('#primaryColor').fill('#FFFF00');
+      await expect(page.locator('#primaryContrastWarning')).toBeVisible();
+      const design = await runAxe(page, '/settings/design contrast warning');
+      expect(design.violations).toHaveLength(0);
+    });
   });
 
   test('booking/CTA button on /b/demo-salon is reachable via keyboard', async ({ page }) => {

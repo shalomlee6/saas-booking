@@ -86,6 +86,31 @@ export interface IBusinessSettings extends Document {
   landingProducts?: ILandingProduct[];
   /** Display rating when there are no computed reviews yet (1–5). */
   publicRating?: number;
+  /** Online-booking block. Missing on older documents — treated as enabled with threshold 3. */
+  noShowPolicy?: {
+    enabled: boolean;
+    threshold: number;
+  };
+  /** Public identify birthday field. Missing on older documents — treated as required. */
+  birthdayField?: 'required' | 'optional' | 'hidden';
+  /** Hours before the visit that a client may still cancel or reschedule. Missing → 24. */
+  cancellationWindowHours?: number;
+  /** Online booking rules. Missing fields use the product defaults. */
+  onlineBooking?: {
+    enabled?: boolean;
+    minLeadMinutes?: number;
+    maxAdvanceDays?: number;
+    bufferMinutes?: number;
+    onlineDefaultStatus?: 'confirmed' | 'pending';
+    maxActiveAppointmentsPerClient?: number | null;
+    clientCanCancelOnline?: boolean;
+  };
+  /** Extra reliability counters. No-show itself stays on `noShowPolicy`. */
+  reliability?: {
+    lateCancellation?: { enabled?: boolean; threshold?: number };
+    lateArrival?: { enabled?: boolean; threshold?: number };
+    lookback?: '12months' | 'all';
+  };
   /** Public contact phone shown on landing / booking CTA (optional). */
   businessPhonePublic?: string;
   /** Secondary hero / feature image URL for public landing. */
@@ -202,6 +227,32 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       default: [],
     },
     publicRating: { type: Number, min: 1, max: 5, default: 5 },
+    noShowPolicy: {
+      enabled: { type: Boolean, default: true },
+      threshold: { type: Number, default: 3, min: 1, max: 20 },
+    },
+    birthdayField: { type: String, enum: ['required', 'optional', 'hidden'], default: 'required' },
+    cancellationWindowHours: { type: Number, default: 24, min: 0, max: 24 * 30 },
+    onlineBooking: {
+      enabled: { type: Boolean, default: true },
+      minLeadMinutes: { type: Number, default: 60 },
+      maxAdvanceDays: { type: Number, default: 60, min: 7, max: 365 },
+      bufferMinutes: { type: Number, default: 0 },
+      onlineDefaultStatus: { type: String, enum: ['confirmed', 'pending'], default: 'confirmed' },
+      maxActiveAppointmentsPerClient: { type: Number, default: null },
+      clientCanCancelOnline: { type: Boolean, default: true },
+    },
+    reliability: {
+      lateCancellation: {
+        enabled: { type: Boolean, default: false },
+        threshold: { type: Number, default: 3, min: 1, max: 20 },
+      },
+      lateArrival: {
+        enabled: { type: Boolean, default: false },
+        threshold: { type: Number, default: 3, min: 1, max: 20 },
+      },
+      lookback: { type: String, enum: ['12months', 'all'], default: '12months' },
+    },
     businessPhonePublic: { type: String, default: '' },
     localization: {
       language: { type: String, enum: ['he', 'en'], default: 'he' },

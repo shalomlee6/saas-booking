@@ -11,10 +11,12 @@
         aria-hidden="true"
       ></i>
     </button>
-    <h1 class="upcoming-page-title">{{ 'navigation.publicUpcoming' | translate }}</h1>
+    <h1 class="upcoming-page-title">{{ 'navigation.myAppointments' | translate }}</h1>
   </header>
 
-  @if (loading()) {
+  @if (identifyFirst()) {
+    <app-public-identify [slug]="slug()" entry="phone" (completed)="onIdentified()" />
+  } @else if (loading()) {
     <div class="upcoming-page-list" aria-busy="true">
       @for (i of [1, 2, 3]; track i) {
         <div class="upcoming-page-skeleton">
@@ -55,6 +57,7 @@
         <li>
           <app-public-appointment-card
             [apt]="apt"
+            [timezone]="timezone()"
             [clickable]="true"
             (open)="openDetails(apt)"
             (edit)="openDetails(apt)"
@@ -67,6 +70,8 @@
 
 <app-public-appointment-details
   [appointment]="selected()"
+  [businessPhone]="businessPhone()"
+  [policyText]="policyText()"
   (closed)="selected.set(null)"
   (cancelled)="loadAppointments()"
   (edit)="onEdit($event)"

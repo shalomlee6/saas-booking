@@ -6,6 +6,7 @@ export const APPOINTMENT_STATUSES = [
   'confirmed',
   'completed',
   'cancelled',
+  'no_show',
 ] as const;
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 export const appointmentStatusZod = z.enum(APPOINTMENT_STATUSES);

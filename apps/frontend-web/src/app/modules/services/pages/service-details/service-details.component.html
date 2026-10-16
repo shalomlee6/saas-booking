@@ -1,0 +1,31 @@
+<section class="service-details">
+  <a routerLink="/services" class="service-details-back">{{ 'services.title' | translate }}</a>
+
+  @if (loading()) {
+    <p class="service-details-status">{{ 'services.loadingService' | translate }}</p>
+  } @else if (error() || !service()) {
+    <p class="service-details-status">{{ 'services.loadServiceError' | translate }}</p>
+  } @else {
+    <header class="service-details-header">
+      <h1 class="service-details-title">{{ service()!.name }}</h1>
+      <a class="service-details-edit" [routerLink]="['/services', service()!._id, 'edit']">{{ 'common.edit' | translate }}</a>
+    </header>
+    @if (service()!.description) {
+      <p class="service-details-description">{{ service()!.description }}</p>
+    }
+    <dl class="service-details-facts">
+      <div>
+        <dt>{{ 'services.duration' | translate }}</dt>
+        <dd>{{ service()!.durationMinutes }} {{ 'services.minutesSuffix' | translate }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'services.price' | translate }}</dt>
+        <dd>{{ service()!.price != null ? (service()!.price | number: '1.0-2') : '—' }}</dd>
+      </div>
+      <div>
+        <dt>{{ 'services.columnStatus' | translate }}</dt>
+        <dd>{{ (service()!.isActive ? 'services.statusActive' : 'services.statusInactive') | translate }}</dd>
+      </div>
+    </dl>
+  }
+</section>

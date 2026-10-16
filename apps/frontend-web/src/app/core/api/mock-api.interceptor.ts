@@ -63,12 +63,56 @@ function isServicesPut(req: HttpRequest<unknown>): boolean {
   return (req.method === 'PUT' || req.method === 'PATCH') && /\/api\/services\/[^/]+$/.test(req.url);
 }
 
+const MOCK_HE_NAMES = [
+  'נועה כהן',
+  'מאיה לוי',
+  'שירה מזרחי',
+  'תמר ביטון',
+  'יעל אברהם',
+  'דנה פרידמן',
+  'רותם דהן',
+  'ליאור אזולאי',
+  'הילה גולן',
+  'אור שמעוני',
+  'מור אוחיון',
+  'ענבר חדד',
+];
+
+/** Deterministic list-row metrics so the customers table shows realistic variety in the mock. */
+function mockCustomerListRow(customer: Record<string, unknown>, index: number): Record<string, unknown> {
+  const day = 86_400_000;
+  const visits = [0, 1, 3, 7, 12, 24, 2, 5][index % 8];
+  const lastDays = [null, 3, 12, 34, 75, 140, 1, 21][index % 8];
+  const nextDays = [null, null, 2, null, 6, null, 1, null][index % 8];
+  const next = nextDays === null ? null : new Date(Date.now() + nextDays * day);
+  next?.setHours(9 + (index % 8), index % 2 ? 30 : 0, 0, 0);
+  const named = index < MOCK_HE_NAMES.length;
+  return {
+    ...customer,
+    ...(named
+      ? { name: MOCK_HE_NAMES[index], phone: `05${index % 5}-${String(1234000 + index * 137).slice(0, 7)}` }
+      : {}),
+    isActive: index % 7 !== 6 && customer['isActive'] !== false,
+    totalVisits: visits,
+    totalRevenue: visits * (index % 3 === 0 ? 220 : 180),
+    averageVisitValue: visits === 0 ? 0 : index % 3 === 0 ? 220 : 180,
+    lastVisit: lastDays === null ? null : new Date(Date.now() - lastDays * day).toISOString(),
+    nextAppointment: next ? next.toISOString() : null,
+    noShowCount: index % 5 === 2 ? 2 : 0,
+    blocked: index % 11 === 10,
+    customerType: visits > 1 ? 'returning' : 'new',
+    preferredServiceName: '',
+    preferredTimeOfDay: null,
+  };
+}
+
 /** GET /api/customers (list only, no extra path segment). */
 function isCustomersGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/customers\/?(\?.*)?$/.test(req.url);
 }
 
 function isCustomerSingleGet(req: HttpRequest<unknown>): boolean {
+  if (req.url.includes('customers/birthday-field')) return false;
   return req.method === 'GET' && /\/api\/customers\/[^/?]+\/?(\?.*)?$/.test(req.url);
 }
 
@@ -134,11 +178,58 @@ function adminUrlPath(req: HttpRequest<unknown>): string {
 
 function parseUrlQuery(req: HttpRequest<unknown>): URLSearchParams {
   try {
-    return new URL(req.url, 'http://localhost').searchParams;
+    return new URL(req.urlWithParams, 'http://localhost').searchParams;
   } catch {
     const q = req.url.includes('?') ? req.url.split('?')[1] : '';
     return new URLSearchParams(q);
   }
+}
+
+function mockNestedName(value: unknown, key: 'name' | 'phone'): string {
+  if (value && typeof value === 'object' && key in value) {
+    return String((value as Record<string, unknown>)[key] ?? '');
+  }
+  return '';
+}
+
+/** Paged list for `?page=`. Rebases fixture dates into the future so the default upcoming view has rows. */
+function mockPagedAppointments(
+  rows: Record<string, unknown>[],
+  params: URLSearchParams
+): { items: Record<string, unknown>[]; total: number; page: number; limit: number } {
+  const now = Date.now();
+  const prices = [80, 150, 220, 360];
+  const items = rows.map((row, index) => {
+    const duration = Number(row['durationMinutes'] ?? 45);
+    const start = new Date(now + (index + 1) * 60 * 60 * 1000);
+    const end = new Date(start.getTime() + duration * 60 * 1000);
+    const customer = row['customerId'];
+    const service = row['serviceId'];
+    return {
+      _id: String(row['_id'] ?? ''),
+      customerName: mockNestedName(customer, 'name') || String(row['customerName'] ?? ''),
+      customerPhone: mockNestedName(customer, 'phone') || String(row['customerPhone'] ?? ''),
+      customerPreferredTimeOfDay: null,
+      serviceId:
+        service && typeof service === 'object' && '_id' in service
+          ? String((service as { _id: string })._id)
+          : row['serviceId'] != null
+            ? String(row['serviceId'])
+            : null,
+      serviceName: mockNestedName(service, 'name') || String(row['serviceName'] ?? ''),
+      start: start.toISOString(),
+      end: end.toISOString(),
+      duration,
+      price: typeof row['price'] === 'number' ? row['price'] : prices[index % prices.length],
+      status: String(row['status'] ?? 'confirmed'),
+      source: String(row['source'] ?? 'owner'),
+      notes: row['notes'] == null ? '' : String(row['notes']),
+    };
+  });
+  const page = Math.max(1, Number(params.get('page') ?? '1') || 1);
+  const limit = Number(params.get('limit') ?? '25') || 25;
+  const offset = (page - 1) * limit;
+  return { items: items.slice(offset, offset + limit), total: items.length, page, limit };
 }
 
 const MOCK_ADMIN_USER_ROWS: Record<string, unknown>[] = [
@@ -200,24 +291,31 @@ const MOCK_AUDIT_ROWS: Record<string, unknown>[] = [
     action: 'impersonation.start',
     entity: 'Business',
     entityId: 'mock-business-1',
+    metadata: { businessId: 'mock-business-1', impersonatingSuperAdminId: 'mock-super-admin' },
+    impersonatingSuperAdminId: 'mock-super-admin',
+  },
+  {
+    id: 'audit-2',
+    timestamp: new Date(Date.now() - 3600_000).toISOString(),
+    actor: 'system',
+    action: 'appointment.auto_completed',
+    entity: 'Appointment',
+    entityId: 'appt-204',
     metadata: { businessId: 'mock-business-1' },
+  },
+  {
+    id: 'audit-3',
+    timestamp: new Date(Date.now() - 86_400_000).toISOString(),
+    actor: 'owner@example.com',
+    action: 'customer.exported',
+    entity: 'Customer',
+    entityId: 'cust-18',
+    metadata: { rowCount: 42 },
   },
 ];
 
 function isPublicBusinessGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/[^/]+\/business\/?(\?|$)/.test(req.url);
-}
-
-function isPublicRequestOtpPost(req: HttpRequest<unknown>): boolean {
-  return req.method === 'POST' && /\/api\/public\/[^/]+\/auth\/request-otp/.test(req.url);
-}
-
-function isPublicVerifyOtpPost(req: HttpRequest<unknown>): boolean {
-  return req.method === 'POST' && /\/api\/public\/[^/]+\/auth\/verify-otp/.test(req.url);
-}
-
-function isPublicAuthMeGet(req: HttpRequest<unknown>): boolean {
-  return req.method === 'GET' && /\/api\/public\/auth\/me\/?(\?|$)/.test(req.url);
 }
 
 function getPublicSlugFromUrl(url: string): string | null {
@@ -245,6 +343,32 @@ function isPublicBusinessesServicesGet(req: HttpRequest<unknown>): boolean {
 
 function isPublicBusinessesAvailabilityGet(req: HttpRequest<unknown>): boolean {
   return req.method === 'GET' && /\/api\/public\/businesses\/[^/]+\/availability/.test(req.url);
+}
+
+const MOCK_PUBLIC_SLOTS = [
+  '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
+  '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00',
+];
+
+/** Drop starts at or before now on the business's today (Asia/Jerusalem). Other days stay whole. */
+function mockSlotsForDate(dateStr: string): string[] {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+  const today = `${part('year')}-${part('month')}-${part('day')}`;
+  if (dateStr !== today) return MOCK_PUBLIC_SLOTS;
+  const nowMinutes = Number(part('hour')) * 60 + Number(part('minute'));
+  return MOCK_PUBLIC_SLOTS.filter((slot) => {
+    const [hour, minute] = slot.split(':').map(Number);
+    return hour * 60 + minute > nowMinutes;
+  });
 }
 
 function isPublicAppointmentsPost(req: HttpRequest<unknown>): boolean {
@@ -658,6 +782,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
 
   if (isAppointmentsGetList(req)) {
     const imp = getImpersonationFromRequest(req);
+    const params = parseUrlQuery(req);
     return from(loadInitialAppointments()).pipe(
       map((list) => {
         const withIds = withMockBusinessIds(list);
@@ -670,6 +795,9 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         const filtered = imp
           ? merged.filter((a) => String(a['businessId'] ?? '') === imp.impersonatingBusinessId)
           : merged;
+        if (params.has('page')) {
+          return new HttpResponse({ status: 200, body: mockPagedAppointments(filtered, params) });
+        }
         return new HttpResponse({ status: 200, body: filtered });
       })
     );
@@ -724,7 +852,44 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
   // ——— Services ———
   if (isServicesGetList(req)) {
     return from(loadInitialServices()).pipe(
-      map((list) => new HttpResponse({ status: 200, body: [...list] }))
+      map((list) => {
+        const params = parseUrlQuery(req);
+        const page = params.get('page');
+        if (!page) {
+          const active = list.filter((service) => service['isActive'] !== false);
+          return new HttpResponse({ status: 200, body: active.map((service) => ({ ...service })) });
+        }
+        const status = params.get('status') || 'active';
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const filtered = list.filter((service) => {
+          const active = service['isActive'] !== false;
+          if (status === 'active' && !active) return false;
+          if (status === 'inactive' && active) return false;
+          if (!search) return true;
+          const name = String(service['name'] ?? '').toLowerCase();
+          const description = String(service['description'] ?? '').toLowerCase();
+          return name.includes(search) || description.includes(search);
+        });
+        const limit = Number(params.get('limit') || 25);
+        const pageNum = Number(page);
+        const start = (pageNum - 1) * limit;
+        const items = filtered.slice(start, start + limit).map((service) => ({
+          ...service,
+          duration: Number(service['durationMinutes'] ?? 0),
+          bookings: 0,
+          completedBookings: 0,
+          revenue: 0,
+          averageActualPrice: 0,
+          revenuePerHour: 0,
+          lastBooking: null,
+          upcomingAppointments: 0,
+          description: service['description'] ?? '',
+        }));
+        return new HttpResponse({
+          status: 200,
+          body: { items, total: filtered.length, page: pageNum, limit },
+        });
+      })
     );
   }
 
@@ -836,7 +1001,31 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         const filtered = imp
           ? withIds.filter((c) => c.businessId === imp.impersonatingBusinessId)
           : withIds;
-        return new HttpResponse({ status: 200, body: [...filtered] });
+        const params = new URL(req.urlWithParams, 'http://localhost').searchParams;
+        const page = params.get('page');
+        if (!page) {
+          return new HttpResponse({ status: 200, body: [...filtered] });
+        }
+        const limit = Number(params.get('limit') || 25);
+        const pageNum = Number(page);
+        const status = params.get('status') || 'active';
+        const search = (params.get('search') || '').trim().toLowerCase();
+        const enriched = filtered.map((customer, index) => mockCustomerListRow(customer, index));
+        const matched = enriched.filter((customer) => {
+          if (search && !`${customer['name']} ${customer['phone']} ${customer['email'] ?? ''}`.toLowerCase().includes(search)) {
+            return false;
+          }
+          const active = customer['isActive'] !== false;
+          if (status === 'inactive') return !active;
+          if (status === 'all') return true;
+          return active;
+        });
+        const start = (pageNum - 1) * limit;
+        const items = matched.slice(start, start + limit);
+        return new HttpResponse({
+          status: 200,
+          body: { items, total: matched.length, page: pageNum, limit },
+        });
       })
     );
   }
@@ -1204,6 +1393,12 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const page = Math.max(1, parseInt(q.get('page') || '1', 10) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(q.get('limit') || '25', 10) || 25));
     const search = (q.get('search') || '').toLowerCase();
+    const actor = (q.get('actor') || '').toLowerCase();
+    const entity = (q.get('entity') || '').toLowerCase();
+    const actions = (q.get('action') || '')
+      .split(',')
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean);
     let list = [...MOCK_AUDIT_ROWS];
     if (search) {
       list = list.filter(
@@ -1213,13 +1408,33 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
           String(r['entityId']).toLowerCase().includes(search)
       );
     }
+    if (actor) {
+      list = list.filter((r) =>
+        actor === 'system'
+          ? String(r['actor']).toLowerCase() === 'system'
+          : String(r['actor']).toLowerCase() === actor
+      );
+    }
+    if (entity) {
+      list = list.filter((r) => String(r['entity']).toLowerCase() === entity);
+    }
+    if (actions.length > 0) {
+      list = list.filter((r) => actions.includes(String(r['action']).toLowerCase()));
+    }
+    const sort = q.get('sort') || 'timestamp';
+    const direction = q.get('order') === 'asc' ? 1 : -1;
+    list.sort((a, b) => {
+      const left = String(a[sort === 'actor' ? 'actor' : sort === 'action' ? 'action' : 'timestamp']);
+      const right = String(b[sort === 'actor' ? 'actor' : sort === 'action' ? 'action' : 'timestamp']);
+      return left < right ? -direction : left > right ? direction : 0;
+    });
     const total = list.length;
     const start = (page - 1) * limit;
     const items = list.slice(start, start + limit);
     return from([new HttpResponse({ status: 200, body: { items, total, page, limit } })]);
   }
 
-  // ——— Public (customer booking: business by slug, request-otp, verify-otp) ———
+  // ——— Public (customer booking: business by slug) ———
   if (isPublicBusinessGet(req)) {
     const slug = getPublicSlugFromUrl(req.url);
     if (!slug) return next(req);
@@ -1248,80 +1463,6 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         },
       }),
     ]);
-  }
-
-  if (isPublicRequestOtpPost(req)) {
-    const slug = getPublicSlugFromUrl(req.url);
-    if (!slug) return next(req);
-    return from([new HttpResponse({ status: 200, body: { ok: true } })]);
-  }
-
-  if (isPublicVerifyOtpPost(req)) {
-    const slug = getPublicSlugFromUrl(req.url);
-    if (!slug) return next(req);
-    const body = req.body as Record<string, unknown>;
-    const phone = String(body['phone'] ?? '');
-    const mockCustomerId = 'mock-public-customer-' + (phone || createMockId()).slice(-6);
-    const businessId = MOCK_BUSINESSES.find((b) => String(b['slug']) === slug)?.['_id'] ?? 'mock-business-1';
-    const token = btoa(JSON.stringify({ customerId: mockCustomerId, businessId, role: 'client' }));
-    return from([
-      new HttpResponse({
-        status: 200,
-        body: { token, customerId: mockCustomerId, businessId: String(businessId) },
-      }),
-    ]);
-  }
-
-  if (isPublicAuthMeGet(req)) {
-    const auth = req.headers.get('Authorization');
-    if (!auth || !auth.startsWith('Bearer ')) {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Authentication required' },
-        }),
-      ]);
-    }
-    const token = auth.slice(7).trim();
-    if (!token) {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Authentication required' },
-        }),
-      ]);
-    }
-    try {
-      const payload = JSON.parse(atob(token)) as {
-        customerId?: string;
-        businessId?: string;
-      };
-      const customerId = String(payload.customerId ?? 'mock-public-customer');
-      const businessId = String(payload.businessId ?? 'mock-business-1');
-      const known = MOCK_BUSINESSES.find((b) => String(b['_id']) === businessId) as
-        | Record<string, unknown>
-        | undefined;
-      const slug = known ? String(known['slug']) : 'demo-salon';
-      return from([
-        new HttpResponse({
-          status: 200,
-          body: {
-            id: customerId,
-            businessId,
-            slug,
-            name: 'לקוחה דמו',
-            phone: '0500000000',
-          },
-        }),
-      ]);
-    } catch {
-      return from([
-        new HttpResponse({
-          status: 401,
-          body: { message: 'Authentication required' },
-        }),
-      ]);
-    }
   }
 
   // ——— Public booking: GET business (full), GET landing bundle, GET services, GET availability, POST appointments ———
@@ -1424,12 +1565,11 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const serviceId = url.searchParams.get('serviceId') ?? '';
     const dateStr = url.searchParams.get('date') ?? '';
     if (!slug || !serviceId || !dateStr) return next(req);
-    const slots = ['09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'];
+    const slots = mockSlotsForDate(dateStr);
     return from([new HttpResponse({ status: 200, body: { date: dateStr, slots } })]);
   }
 
   if (isPublicAppointmentsPost(req)) {
-    const body = req.body as Record<string, unknown>;
     const id = createMockId();
     return from([
       new HttpResponse({
@@ -1464,6 +1604,54 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         status: 200,
         body: { workingHours: mockBusinessSettings?.workingHours ?? buildDefaultWorkingHours() },
       }),
+    ]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('settings/me/booking-rules')) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: {
+          booking: {
+            enabled: true,
+            minLeadMinutes: 60,
+            maxAdvanceDays: 60,
+            bufferMinutes: 0,
+            onlineDefaultStatus: 'confirmed',
+            maxActiveAppointmentsPerClient: null,
+            clientCanCancelOnline: true,
+            cancellationWindowHours: 24,
+          },
+          reliability: {
+            noShow: { enabled: true, threshold: 3 },
+            lateCancellation: { enabled: false, threshold: 3 },
+            lateArrival: { enabled: false, threshold: 3 },
+            lookback: '12months',
+          },
+          clientPolicy: {
+            he: 'אפשר לקבוע תור לפחות 60 דקות מראש. אפשר לקבוע עד 60 ימים קדימה. אפשר לבטל תור אונליין עד 24 שעות לפני התור. אין הגבלה על מספר התורים העתידיים. חסימה אוטומטית אחרי 3 אי-הגעות ב-12 החודשים האחרונים.',
+            en: 'Book at least 60 minutes ahead. You can book up to 60 days ahead. You can cancel online until 24 hours before the visit. There is no limit on upcoming appointments. Online booking is blocked after 3 no-shows in the last 12 months.',
+          },
+        },
+      }),
+    ]);
+  }
+
+  if ((req.method === 'PUT' || req.method === 'POST') && (req.url.includes('settings/me/booking-rules') || req.url.includes('settings/me/reliability'))) {
+    return from([new HttpResponse({ status: 200, body: req.body })]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('customers/birthday-field')) {
+    return from([new HttpResponse({ status: 200, body: { birthdayField: 'required' } })]);
+  }
+
+  if (req.method === 'PUT' && req.url.includes('customers/birthday-field')) {
+    return from([new HttpResponse({ status: 200, body: req.body })]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('/active-limit')) {
+    return from([
+      new HttpResponse({ status: 200, body: { activeCount: 0, limit: null, atOrAboveLimit: false } }),
     ]);
   }
 

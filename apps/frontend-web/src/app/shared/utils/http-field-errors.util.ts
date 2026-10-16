@@ -123,13 +123,6 @@ const OWNER_ERROR_LABELS_EN: OwnerAppointmentErrorLabels = {
   fallback: 'Something went wrong. Please try again.',
 };
 
-/** Public booking (Hebrew) — maps stable API codes to clearer copy. */
-const PUBLIC_BOOKING_ERROR_BY_CODE: Record<string, string> = {
-  SLOT_TAKEN: 'התור נתפס — בחרי שעה אחרת.',
-  CLOSED_DAY: 'העסק סגור בתאריך זה.',
-  OUTSIDE_HOURS: 'מחוץ לשעות הפעילות.',
-};
-
 /**
  * User-facing message for owner appointment APIs (create overlay, NgRx error).
  * `labels` defaults to English for backward compatibility; pass the active
@@ -149,15 +142,4 @@ export function friendlyOwnerAppointmentError(
     return byCode[p.errorCode];
   }
   return formatParsedErrorForUi(p) ?? labels.fallback;
-}
-
-/**
- * User-facing message for public booking (`POST /api/public/appointments`), Hebrew UI.
- */
-export function friendlyPublicBookingError(err: unknown): string {
-  const p = parseHttpClientError(err);
-  if (p.errorCode && PUBLIC_BOOKING_ERROR_BY_CODE[p.errorCode]) {
-    return PUBLIC_BOOKING_ERROR_BY_CODE[p.errorCode];
-  }
-  return formatParsedErrorForUi(p) ?? 'שגיאה באישור התור';
 }

@@ -18,6 +18,7 @@ function formatZodError(error: ZodError): FieldError[] {
 function sendValidationFailed(res: Response, zodError: ZodError): void {
   res.status(400).json({
     message: 'Validation failed',
+    code: 'VALIDATION_FAILED',
     errors: formatZodError(zodError),
   });
 }

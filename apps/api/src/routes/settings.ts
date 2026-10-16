@@ -2,9 +2,17 @@ import { Router } from 'express';
 import { auth } from '../middleware/auth';
 import { requireBusinessContext } from '../middleware/requireBusinessContext';
 import { requireBackofficeRole } from '../middleware/requireBackofficeRole';
+import { requireOwner } from '../middleware/requireOwner';
 import { validateBody } from '../middleware/validateRequest';
 import { loadBusinessSettings } from '../middleware/businessSettings';
-import { getMyBusinessSettings, updateMyBusinessSettings } from '../controllers/businessSettingsController';
+import {
+  getMyBusinessSettings,
+  getOwnerBookingSettings,
+  putOwnerBookingRules,
+  putOwnerReliability,
+  updateMyBusinessSettings,
+} from '../controllers/businessSettingsController';
+import { bookingRulesBodySchema, reliabilityBodySchema } from '../validation/schemas/bookingSettings';
 import { runLandingImageUpload, postLandingImageUpload } from '../controllers/landingUploadController';
 import { updateBusinessSettingsBodySchema } from '../validation/schemas/businessSettings';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -27,6 +35,33 @@ settingsRouter.put(
   validateBody(updateBusinessSettingsBodySchema),
   loadBusinessSettings,
   asyncHandler(updateMyBusinessSettings)
+);
+
+settingsRouter.get(
+  '/me/booking-rules',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  asyncHandler(getOwnerBookingSettings)
+);
+settingsRouter.put(
+  '/me/booking-rules',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  validateBody(bookingRulesBodySchema),
+  asyncHandler(putOwnerBookingRules)
+);
+settingsRouter.put(
+  '/me/reliability',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  validateBody(reliabilityBodySchema),
+  asyncHandler(putOwnerReliability)
 );
 
 settingsRouter.post(

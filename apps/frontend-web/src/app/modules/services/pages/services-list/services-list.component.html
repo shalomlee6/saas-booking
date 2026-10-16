@@ -1,63 +1,8 @@
-<div class="services-page">
-  <div class="services-page-header">
-    <h1 class="services-page-title">{{ 'services.title' | translate }}</h1>
-    <div class="services-page-actions">
-      <input
-        type="text"
-        class="services-search"
-        [placeholder]="'services.searchPlaceholder' | translate"
-        [ngModel]="searchQuery()"
-        (ngModelChange)="onSearchInput($event)"
-      />
-      <a routerLink="/services/new" class="services-btn services-btn-primary">{{ 'services.newService' | translate }}</a>
-    </div>
-  </div>
-
-  <div class="services-card">
-    @if (error()) {
-      <p class="services-error">
-        {{ error() }}
-        <button type="button" class="services-error-retry" (click)="reload()">{{ 'common.retry' | translate }}</button>
-      </p>
-    }
-
-    @if (loading()) {
-      <div class="services-loading">{{ 'common.loading' | translate }}</div>
-    }
-
-    @if (!loading() && filteredItems().length === 0) {
-      <div class="services-empty">
-        {{ 'services.emptyTitle' | translate }} <a routerLink="/services/new">{{ 'services.addFirst' | translate }}</a>.
-      </div>
-    }
-
-    @if (!loading() && filteredItems().length > 0) {
-      <div class="services-table-wrap">
-        <table class="services-table">
-          <thead>
-            <tr>
-              <th>{{ 'common.name' | translate }}</th>
-              <th>{{ 'services.duration' | translate }}</th>
-              <th>{{ 'common.price' | translate }}</th>
-              <th>{{ 'services.active' | translate }}</th>
-              <th>{{ 'common.actions' | translate }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            @for (service of filteredItems(); track service._id) {
-              <tr>
-                <td>{{ service.name }}</td>
-                <td>{{ service.durationMinutes }} {{ 'services.minutesSuffix' | translate }}</td>
-                <td>{{ service.price != null ? (service.price | number : '1.2-2') : '—' }}</td>
-                <td>{{ (service.isActive ? 'services.yes' : 'services.no') | translate }}</td>
-                <td>
-                  <a [routerLink]="['/services', service._id, 'edit']" class="services-btn services-btn-ghost services-btn-sm">{{ 'common.edit' | translate }}</a>
-                </td>
-              </tr>
-            }
-          </tbody>
-        </table>
-      </div>
-    }
-  </div>
-</div>
+<section class="services-page">
+  <app-data-management-table
+    [config]="tableConfig()"
+    [load]="loadPage"
+    [reloadNonce]="reloadNonce()"
+    (exportRequested)="onExport($event)"
+  />
+</section>

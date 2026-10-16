@@ -1,0 +1,40 @@
+<div class="settings-shell">
+  <header class="settings-hub-header">
+    <h1 class="settings-hub-title">{{ 'settings.hubTitle' | translate }}</h1>
+    <p class="settings-hub-subtitle">{{ 'settings.hubSubtitle' | translate }}</p>
+  </header>
+
+  <nav class="settings-nav" [attr.aria-label]="'settings.hubTitle' | translate">
+    <ul class="settings-nav-list">
+      @for (item of sections; track item.id) {
+        <li>
+          <a
+            class="settings-nav-link"
+            [routerLink]="['/settings', item.id]"
+            routerLinkActive="settings-nav-link-active"
+            ariaCurrentWhenActive="page"
+          >
+            <span class="settings-nav-tile" aria-hidden="true"><i [class]="item.icon"></i></span>
+            <span class="settings-nav-text">
+              <span class="settings-nav-label">{{ item.label | translate }}</span>
+              <span class="settings-nav-hint">{{ item.hint | translate }}</span>
+            </span>
+          </a>
+        </li>
+      }
+    </ul>
+  </nav>
+
+  <div class="settings-detail">
+    @if (current(); as item) {
+      <header class="settings-detail-head">
+        <span class="settings-detail-tile" aria-hidden="true"><i [class]="item.icon"></i></span>
+        <div class="settings-detail-text">
+          <h2 class="settings-detail-title">{{ item.label | translate }}</h2>
+          <p class="settings-detail-lead">{{ item.lead | translate }}</p>
+        </div>
+      </header>
+    }
+    <router-outlet />
+  </div>
+</div>

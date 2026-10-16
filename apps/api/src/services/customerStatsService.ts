@@ -1,6 +1,8 @@
 import { Types } from 'mongoose';
 import { Appointment } from '../models/Appointment';
+import { averageVisitValue, customerTypeFromVisits } from './customerMetrics';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { noShowAppointmentFilter } from './customerNoShows';
 import { toIsoUtcString } from '../dto/datetime';
 import { TIME_OF_DAY_BUCKETS, type TimeOfDayBucket } from '../dto/enums';
 
@@ -31,11 +33,7 @@ export interface CustomerStats {
   totalAppointments: number;
   completedVisits: number;
   cancellations: number;
-  /**
-   * Heuristic proxy, not a hard fact: there is no explicit `no_show` value in
-   * APPOINTMENT_STATUSES, so this counts appointments left `pending`/`confirmed` whose
-   * end time has already passed. A real status value would make this exact.
-   */
+  /** Appointments whose stored status is `no_show`. Past `pending`/`confirmed` are not counted. */
   noShows: number;
   isNewCustomer: boolean;
   lastAppointment: CustomerAppointmentSummary | null;
@@ -66,6 +64,7 @@ interface FacetResult {
   statusCounts: { _id: string; count: number }[];
   noShowCount: { count: number }[];
   recentCancellationCount: { count: number }[];
+  rescheduledCancellationCount: { count: number }[];
   lastAppointment: FacetAppointmentRow[];
   nextAppointment: FacetAppointmentRow[];
   completedStats: { _id: null; count: number; totalRevenue: number; starts: Date[] }[];
@@ -84,7 +83,7 @@ function toSummary(row: FacetAppointmentRow | undefined): CustomerAppointmentSum
 }
 
 /** Maps an hour-of-day (0-23, already in business-local time) to a coarse bucket. */
-function hourToBucket(hour: number): TimeOfDayBucket {
+export function hourToBucket(hour: number): TimeOfDayBucket {
   if (hour >= 5 && hour < 12) return 'morning';
   if (hour >= 12 && hour < 17) return 'afternoon';
   if (hour >= 17 && hour < 22) return 'evening';
@@ -117,6 +116,8 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
   const matchBase: Record<string, unknown> = { businessId };
   if (customerId) matchBase.customerId = customerId;
 
+  const noShowMatch = noShowAppointmentFilter();
+
   const serviceLookupStages = [
     { $lookup: { from: 'services', localField: 'serviceId', foreignField: '_id', as: 'svc' } },
     { $unwind: { path: '$svc', preserveNullAndEmptyArrays: true } },
@@ -128,15 +129,25 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
       $facet: {
         statusCounts: [{ $group: { _id: '$status', count: { $sum: 1 } } }],
         noShowCount: [
-          { $match: { status: { $in: ['pending', 'confirmed'] }, end: { $lt: now } } },
+          { $match: noShowMatch },
           { $count: 'count' },
         ],
         recentCancellationCount: [
-          { $match: { status: 'cancelled', updatedAt: { $gte: recentCutoff } } },
+          {
+            $match: {
+              status: 'cancelled',
+              cancellationReason: { $ne: 'rescheduled' },
+              updatedAt: { $gte: recentCutoff },
+            },
+          },
+          { $count: 'count' },
+        ],
+        rescheduledCancellationCount: [
+          { $match: { status: 'cancelled', cancellationReason: 'rescheduled' } },
           { $count: 'count' },
         ],
         lastAppointment: [
-          { $match: { status: { $ne: 'cancelled' }, start: { $lte: now } } },
+          { $match: { status: 'completed' } },
           { $sort: { start: -1 } },
           { $limit: 1 },
           ...serviceLookupStages,
@@ -180,13 +191,14 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
   const statusCountMap = new Map(facet.statusCounts.map((s) => [s._id, s.count]));
   const totalAppointments = facet.statusCounts.reduce((sum, s) => sum + s.count, 0);
   const completedVisits = statusCountMap.get('completed') ?? 0;
-  const cancellations = statusCountMap.get('cancelled') ?? 0;
+  const rescheduled = facet.rescheduledCancellationCount[0]?.count ?? 0;
+  const cancellations = Math.max(0, (statusCountMap.get('cancelled') ?? 0) - rescheduled);
   const noShows = facet.noShowCount[0]?.count ?? 0;
   const recentCancellations = facet.recentCancellationCount[0]?.count ?? 0;
 
   const completed = facet.completedStats[0];
   const totalRevenue = completed?.totalRevenue ?? 0;
-  const averageSpend = completed && completed.count > 0 ? totalRevenue / completed.count : 0;
+  const averageSpend = averageVisitValue(totalRevenue, completedVisits);
   const visitFrequencyDays = completed ? averageIntervalDays(completed.starts) : null;
 
   let preferredTimeOfDay: TimeOfDayBucket | null = null;
@@ -213,7 +225,7 @@ export async function computeCustomerStats(match: CustomerStatsMatch): Promise<C
     completedVisits,
     cancellations,
     noShows,
-    isNewCustomer: completedVisits === 0,
+    isNewCustomer: customerTypeFromVisits(completedVisits) === 'new',
     lastAppointment: toSummary(facet.lastAppointment[0]),
     nextAppointment: toSummary(facet.nextAppointment[0]),
     visitFrequencyDays,
@@ -251,7 +263,7 @@ const FREQUENT_CANCELLATION_THRESHOLD = 2;
 export function computeCustomerInsights(stats: CustomerStats, now: Date = new Date()): CustomerInsight[] {
   const insights: CustomerInsight[] = [];
 
-  if (stats.isNewCustomer && stats.totalAppointments <= 1) {
+  if (stats.isNewCustomer) {
     insights.push({ code: 'NEW_CUSTOMER', severity: 'info', data: {} });
   }
 
@@ -284,6 +296,14 @@ export function computeCustomerInsights(stats: CustomerStats, now: Date = new Da
       code: 'FREQUENT_CANCELLATIONS',
       severity: 'warning',
       data: { count: stats.recentCancellations, windowDays: RECENT_CANCELLATION_WINDOW_DAYS },
+    });
+  }
+
+  if (stats.noShows >= 1 && stats.nextAppointment) {
+    insights.push({
+      code: 'HAS_UPCOMING_NO_SHOW_RISK',
+      severity: 'warning',
+      data: { noShows: stats.noShows },
     });
   }
 

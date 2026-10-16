@@ -13,6 +13,7 @@ export const publicAvailabilityQuerySchema = z
     businessId: mongoObjectIdString,
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
+    excludeAppointmentId: mongoObjectIdString.optional(),
   })
   .strip();
 
@@ -20,8 +21,42 @@ export const slugAvailabilityQuerySchema = z
   .object({
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
+    excludeAppointmentId: mongoObjectIdString.optional(),
   })
   .strip();
+
+const birthdayBodySchema = z
+  .object({
+    day: z.number().int(),
+    month: z.number().int(),
+  })
+  .strict();
+
+export const identifyStartBodySchema = z
+  .object({
+    phone: z.string().min(1).max(40),
+  })
+  .strict();
+
+export const identifyVerifyBodySchema = z
+  .object({
+    phone: z.string().min(1).max(40),
+    code: z.string().min(1).max(12),
+  })
+  .strict();
+
+export const identifyCompleteBodySchema = z
+  .object({
+    name: z.string().max(200).optional(),
+    birthday: birthdayBodySchema.optional(),
+  })
+  .strict();
+
+export const birthdayFieldBodySchema = z
+  .object({
+    birthdayField: z.enum(['required', 'optional', 'hidden']),
+  })
+  .strict();
 
 export const slugParamsSchema = z
   .object({
@@ -43,11 +78,6 @@ export const publicCreateAppointmentBodySchema = z
     serviceId: mongoObjectIdString,
     date: yyyyMmDd,
     time: hhMm,
-    customerName: z.string().max(200).optional(),
-    customerPhone: z.preprocess(
-      (v) => (v === '' || v === null || v === undefined ? undefined : v),
-      z.string().min(3).max(50).optional()
-    ),
   })
   .strip()
   .superRefine((data, ctx) => {
@@ -67,19 +97,18 @@ export const publicCreateAppointmentBodySchema = z
         message: 'Provide only one of slug or businessId',
       });
     }
-    const name = data.customerName?.trim();
-    if (name && !data.customerPhone) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['customerPhone'],
-        message: 'customerPhone is required',
-      });
-    }
   });
 
 export const publicCancelAppointmentParamsSchema = z
   .object({
     appointmentId: mongoObjectIdString,
+  })
+  .strip();
+
+export const publicRescheduleAppointmentBodySchema = z
+  .object({
+    date: yyyyMmDd,
+    time: hhMm,
   })
   .strip();
 

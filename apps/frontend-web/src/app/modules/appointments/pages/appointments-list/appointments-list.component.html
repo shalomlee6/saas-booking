@@ -1,5 +1,38 @@
 <div class="appointments-page">
 
+  <div class="apt-view-switch">
+    <div class="apt-view-toggle" role="group" [attr.aria-label]="'appointments.viewMode' | translate">
+      <button
+        type="button"
+        class="apt-view-btn"
+        [class.apt-view-btn--active]="viewMode() === 'day'"
+        (click)="setViewMode('day')"
+      >{{ 'appointments.day' | translate }}</button>
+      <button
+        type="button"
+        class="apt-view-btn"
+        [class.apt-view-btn--active]="viewMode() === 'week'"
+        (click)="setViewMode('week')"
+      >{{ 'appointments.week' | translate }}</button>
+      <button
+        type="button"
+        class="apt-view-btn"
+        [class.apt-view-btn--active]="viewMode() === 'list'"
+        (click)="setViewMode('list')"
+      >{{ 'appointments.list' | translate }}</button>
+    </div>
+  </div>
+
+  @if (viewMode() === 'list') {
+    <section class="appointments-list-page">
+      <app-data-management-table
+        [config]="tableConfig()"
+        [load]="loadPage"
+        [reloadNonce]="reloadNonce()"
+      />
+    </section>
+  } @else {
+
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!--  DESKTOP / TABLET VIEW  (≥ 768px)                                      -->
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
@@ -38,20 +71,6 @@
           [ngModel]="vm.searchQuery"
           (ngModelChange)="onSearchInput($event)"
         />
-        <div class="apt-view-toggle">
-          <button
-            type="button"
-            class="apt-view-btn"
-            [class.apt-view-btn--active]="vm.isDayMode"
-            (click)="setViewMode('day')"
-          >{{ 'appointments.day' | translate }}</button>
-          <button
-            type="button"
-            class="apt-view-btn"
-            [class.apt-view-btn--active]="vm.isWeekMode"
-            (click)="setViewMode('week')"
-          >{{ 'appointments.week' | translate }}</button>
-        </div>
         <a routerLink="/appointments/new" class="apt-btn-primary">
           <i class="pi pi-plus" aria-hidden="true"></i>
           {{ 'appointments.newAppointment' | translate }}
@@ -352,6 +371,8 @@
     }
   }
 
+  }
+
 
   <!-- ═══════════════════════════════════════════════════════════════════════ -->
   <!--  APPOINTMENT DETAIL PANEL (shared between desktop & mobile)            -->
@@ -397,6 +418,15 @@
         </div>
         <ng-template pTemplate="footer">
           <div class="appointments-detail-footer">
+            @if (vm.canMarkNoShow) {
+              <p-button
+                [label]="'appointments.markNoShow' | translate"
+                icon="pi pi-user-minus"
+                [outlined]="true"
+                [disabled]="markingNoShow()"
+                (onClick)="onMarkNoShow()"
+              />
+            }
             <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" (onClick)="onEditAppointment()" />
           </div>
         </ng-template>
@@ -438,6 +468,16 @@
             <span class="appointments-detail-value">{{ vm.preferredTimeLabel }}</span>
           </div>
           <div class="appointments-detail-actions">
+            @if (vm.canMarkNoShow) {
+              <p-button
+                [label]="'appointments.markNoShow' | translate"
+                icon="pi pi-user-minus"
+                [outlined]="true"
+                [disabled]="markingNoShow()"
+                (onClick)="onMarkNoShow()"
+                styleClass="appointments-detail-btn"
+              />
+            }
             <p-button [label]="'appointments.editAppointment' | translate" icon="pi pi-pencil" [outlined]="true" (onClick)="onEditAppointment()" styleClass="appointments-detail-btn" />
           </div>
         </div>

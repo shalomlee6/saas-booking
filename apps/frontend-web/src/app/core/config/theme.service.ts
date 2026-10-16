@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { contrastRatio, onContrastColor } from '../theming/contrast-color';
 
 /** From Business.ui (dashboard) */
 export interface BusinessUi {
@@ -88,12 +89,16 @@ export class ThemeService {
     // Derive the rest of the primary family from whichever color actually won
     // above (the business's own, or the platform default) so every token
     // stays the same hue — see `mix()`'s doc comment for why this matters.
+    const subtle = mix(primary, dark ? -0.75 : 0.92);
+    const ink = mix(primary, dark ? 0.7 : -0.35);
     const vars: Record<string, string> = {
       '--color-primary': primary,
       '--color-primary-hover': mix(primary, dark ? 0.25 : -0.12),
-      '--color-primary-subtle': mix(primary, dark ? -0.75 : 0.92),
+      '--color-primary-subtle': subtle,
       '--color-primary-muted': mix(primary, dark ? -0.4 : 0.68),
-      '--color-primary-ink': mix(primary, dark ? 0.7 : -0.35),
+      '--color-primary-ink': (contrastRatio(ink, subtle) ?? 0) >= 4.5 ? ink : onContrastColor(subtle),
+      '--on-primary': onContrastColor(primary),
+      '--p-primary-contrast-color': onContrastColor(primary),
     };
     // Business-configured neutral surfaces are only designed for a light
     // background — reapplying them under dark mode stomps the dark palette's
@@ -102,7 +107,11 @@ export class ThemeService {
     // color carries over into dark mode; sidebar/app background fall through
     // to the dark theme's own class-based defaults (.layout.theme-dark).
     if (this.mode() === 'light') {
-      vars['--bg-sidebar'] = t.sidebarColor && validHex(t.sidebarColor) ? t.sidebarColor : DEFAULTS.sidebarColor;
+      const sidebar = t.sidebarColor && validHex(t.sidebarColor) ? t.sidebarColor : DEFAULTS.sidebarColor;
+      const sidebarInk = onContrastColor(sidebar);
+      vars['--bg-sidebar'] = sidebar;
+      vars['--sidebar-ink'] = sidebarInk;
+      vars['--sidebar-ink-soft'] = sidebarInk;
       vars['--bg-app'] = t.backgroundColor && validHex(t.backgroundColor) ? t.backgroundColor : DEFAULTS.backgroundColor;
     }
     return vars;

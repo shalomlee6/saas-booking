@@ -17,9 +17,16 @@ export interface ICustomer extends Document {
   lastName?: string;
   phone: string;
   email?: string;
+  /** Day and month only. February 29 is allowed because the year is not stored. */
+  birthday?: { day: number; month: number };
   notes?: string;
   /** Missing on older documents — treated as active. */
   isActive?: boolean;
+  /**
+   * `auto` follows the business no-show policy.
+   * `allow` is never blocked. `block` is always blocked.
+   */
+  bookingOverride?: 'auto' | 'allow' | 'block';
   preferences?: ICustomerPreferences;
   defaultTreatmentDurationMinutes?: number;
   createdAt: Date;
@@ -49,8 +56,18 @@ const CustomerSchema = new Schema<ICustomer>(
     lastName: String,
     phone: { type: String, required: true },
     email: String,
+    birthday: {
+      type: new Schema(
+        {
+          day: { type: Number, min: 1, max: 31 },
+          month: { type: Number, min: 1, max: 12 },
+        },
+        { _id: false }
+      ),
+    },
     notes: String,
     isActive: { type: Boolean, default: true },
+    bookingOverride: { type: String, enum: ['auto', 'allow', 'block'], default: 'auto' },
     preferences: CustomerPreferencesSchema,
     defaultTreatmentDurationMinutes: Number,
   },

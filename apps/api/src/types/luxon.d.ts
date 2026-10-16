@@ -1,13 +1,22 @@
 declare module 'luxon' {
   export interface DateTime {
     isValid: boolean;
+    /** 1 = January … 12 = December, in this DateTime's zone. */
+    month: number;
+    /** Calendar day of the month in this DateTime's zone. */
+    day: number;
+    /** Calendar year in this DateTime's zone. */
+    year: number;
+    /** 1 = Monday … 7 = Sunday, in this DateTime's zone. */
     weekday: number;
     toUTC(): DateTime;
     toJSDate(): Date;
-    /** Start of a unit, we only need 'day' here */
-    startOf(unit: 'day'): DateTime;
-    /** Add duration, e.g. { days: 1 } or { minutes: 30 } */
-    plus(duration: { days?: number; minutes?: number }): DateTime;
+    /** Start of a calendar unit in this DateTime's zone. */
+    startOf(unit: 'day' | 'month'): DateTime;
+    /** Subtract a calendar duration. */
+    minus(duration: { days?: number; months?: number }): DateTime;
+    /** Add duration, e.g. { days: 1 }, { months: 1 }, or { minutes: 30 } */
+    plus(duration: { days?: number; months?: number; minutes?: number }): DateTime;
     /** Set specific time components on this DateTime */
     set(values: {
       hour?: number;
@@ -20,6 +29,6 @@ declare module 'luxon' {
   }
   export const DateTime: {
     fromISO(iso: string, opts?: { zone: string }): DateTime;
-    fromJSDate(date: Date): DateTime;
+    fromJSDate(date: Date, opts?: { zone?: string }): DateTime;
   };
 }

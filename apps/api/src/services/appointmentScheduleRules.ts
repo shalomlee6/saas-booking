@@ -65,7 +65,8 @@ export async function assertAppointmentWithinSchedule(
   if (ymdStart !== ymdEnd) {
     throw new AppointmentError(
       400,
-      'Appointment must start and end on the same calendar day in the business timezone'
+      'Appointment must start and end on the same calendar day in the business timezone',
+      'APPOINTMENT_SPANS_DAYS'
     );
   }
 
@@ -89,7 +90,7 @@ export async function assertAppointmentWithinSchedule(
   const startMin = wallClockMinutesInZone(start, timezone);
   const endMin = wallClockMinutesInZone(end, timezone);
   if (endMin <= startMin) {
-    throw new AppointmentError(400, 'Invalid time range in business timezone');
+    throw new AppointmentError(400, 'Invalid time range in business timezone', 'INVALID_DATE_TIME');
   }
 
   const fits = ranges.some((r) => {

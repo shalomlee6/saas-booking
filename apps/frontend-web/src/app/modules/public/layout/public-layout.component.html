@@ -13,11 +13,17 @@
       [class.theme-dark]="theme.mode() === 'dark'"
       [ngStyle]="tenantStyles()"
     >
+      <a class="skip-link" href="#main-content" (click)="skipToMain($event)">{{ 'navigation.skipToContent' | translate }}</a>
       <app-public-customer-nav />
       <main class="public-layout-main" id="main-content" tabindex="-1">
         <h1 class="sr-only">{{ business.name }}</h1>
         <router-outlet />
       </main>
+      <footer class="public-layout-footer">
+        <a class="public-layout-footer-link" [routerLink]="['/b', business.slug, 'accessibility']">
+          {{ 'accessibility.statementLink' | translate }}
+        </a>
+      </footer>
     </div>
   }
 </div>

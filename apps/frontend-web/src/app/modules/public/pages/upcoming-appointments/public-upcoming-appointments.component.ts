@@ -3,13 +3,15 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
 import { SkeletonModule } from 'primeng/skeleton';
-import { distinctUntilChanged, map } from 'rxjs';
+import { EMPTY, catchError, distinctUntilChanged, map, switchMap } from 'rxjs';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { PublicIdentifyComponent } from '../../components/public-identify/public-identify.component';
 import { PublicAppointmentCardComponent } from '../../components/public-appointment-card/public-appointment-card.component';
 import { PublicAppointmentDetailsComponent } from '../../components/public-appointment-details/public-appointment-details.component';
 import { PublicApiService, type UpcomingAppointment } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
+import { DEFAULT_PUBLIC_TIMEZONE } from '../../dto/public-booking-dto.adapter';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 import { sortUpcomingAppointments } from '../../utils/upcoming-appointments.util';
 
@@ -17,7 +19,7 @@ import { sortUpcomingAppointments } from '../../utils/upcoming-appointments.util
   selector: 'app-public-upcoming-appointments',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule, SkeletonModule, TranslatePipe, PublicAppointmentCardComponent, PublicAppointmentDetailsComponent],
+  imports: [ButtonModule, SkeletonModule, TranslatePipe, PublicIdentifyComponent, PublicAppointmentCardComponent, PublicAppointmentDetailsComponent],
   templateUrl: './public-upcoming-appointments.component.html',
   styleUrl: './public-upcoming-appointments.component.scss',
 })
@@ -33,7 +35,16 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal(false);
   readonly appointments = signal<UpcomingAppointment[]>([]);
+  readonly timezone = signal(DEFAULT_PUBLIC_TIMEZONE);
+  readonly businessPhone = signal<string | null>(null);
+  readonly clientPolicy = signal<{ he: string; en: string } | null>(null);
+  readonly policyText = computed(() => {
+    const policy = this.clientPolicy();
+    if (!policy) return '';
+    return this.language.language() === 'en' ? policy.en : policy.he;
+  });
   readonly selected = signal<UpcomingAppointment | null>(null);
+  readonly identifyFirst = signal(false);
 
   constructor() {
     // Re-fetch whenever the logged-in identity changes (login/logout/switching customer)
@@ -54,19 +65,41 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
       .pipe(
         map((p) => p.get('slug') ?? ''),
         distinctUntilChanged(),
+        switchMap((slug) => {
+          this.loadAppointments();
+          if (!slug) return EMPTY;
+          return this.publicApi.getBusinessForBooking(slug).pipe(catchError(() => EMPTY));
+        }),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.loadAppointments());
+      .subscribe((biz) => {
+        const tz = biz.localization?.timezone;
+        if (tz) this.timezone.set(tz);
+        const phone = biz.landing?.phone?.trim();
+        if (phone) this.businessPhone.set(phone);
+        this.clientPolicy.set(biz.clientPolicy ?? null);
+      });
+  }
+
+  onIdentified(): void {
+    this.identifyFirst.set(false);
+    this.loadAppointments();
   }
 
   loadAppointments(): void {
     const slug = this.slug();
+    if (this.session.identityMode() === 'phone') {
+      if (slug) void this.router.navigate(['/b', slug]);
+      return;
+    }
     if (!slug || !this.session.hasSessionFor(slug)) {
       this.appointments.set([]);
       this.error.set(false);
       this.loading.set(false);
+      this.identifyFirst.set(this.session.identityMode() === 'otp');
       return;
     }
+    this.identifyFirst.set(false);
 
     this.loading.set(true);
     this.error.set(false);
@@ -74,6 +107,7 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
       next: (res) => {
         const list = res.appointments ?? (res.appointment ? [res.appointment] : []);
         this.appointments.set(sortUpcomingAppointments(list));
+        if (res.businessPhone) this.businessPhone.set(res.businessPhone);
         this.loading.set(false);
       },
       error: () => {
@@ -100,11 +134,11 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
   onEdit(apt: UpcomingAppointment): void {
     this.selected.set(null);
     const slug = this.slug();
-    if (!slug) return;
+    if (!slug || apt.canChange !== true) return;
     const serviceId = apt.serviceId;
     if (serviceId) {
       void this.router.navigate(['/b', slug, 'book'], {
-        queryParams: { service: serviceId },
+        queryParams: { service: serviceId, reschedule: apt.id },
       });
       return;
     }

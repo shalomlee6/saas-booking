@@ -15,13 +15,8 @@ export const PUBLIC_ROUTES: Routes = [
             (m) => m.PublicLandingComponent
           ),
       },
-      {
-        path: 'login',
-        loadChildren: () =>
-          import('./pages/customer-login/customer-login.routes').then(
-            (m) => m.CUSTOMER_LOGIN_ROUTES
-          ),
-      },
+      { path: 'login', redirectTo: '', pathMatch: 'full' },
+      { path: 'register', redirectTo: '', pathMatch: 'full' },
       {
         path: 'book',
         loadChildren: () =>
@@ -34,6 +29,13 @@ export const PUBLIC_ROUTES: Routes = [
         loadComponent: () =>
           import('./pages/upcoming-appointments/public-upcoming-appointments.component').then(
             (m) => m.PublicUpcomingAppointmentsComponent
+          ),
+      },
+      {
+        path: 'accessibility',
+        loadComponent: () =>
+          import('./pages/accessibility-statement/public-accessibility-statement.component').then(
+            (m) => m.PublicAccessibilityStatementComponent
           ),
       },
       {

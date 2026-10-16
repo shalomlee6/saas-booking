@@ -1,7 +1,24 @@
 import { Customer, type ICustomerPreferences } from '../models/Customer';
-import { Appointment } from '../models/Appointment';
-import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
-import { ConflictError } from '../errors/httpErrors';
+import { ValidationError } from '../errors/httpErrors';
+import { canonicalLocalPhone } from '../listQuery/search';
+import { isRealBirthday, type Birthday } from './birthday';
+
+function optionalBirthday(value: Birthday | null | undefined): Birthday | undefined | null {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  if (!isRealBirthday(value.day, value.month)) {
+    throw new ValidationError('Birthday is not a real date');
+  }
+  return { day: value.day, month: value.month };
+}
+
+function canonicalCustomerPhone(raw: string): string {
+  const phone = canonicalLocalPhone(raw);
+  if (!phone) {
+    throw new ValidationError('Enter an Israeli mobile (05 and 8 digits)');
+  }
+  return phone;
+}
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -54,20 +71,23 @@ export async function createCustomerForTenant(
     phone: string;
     email?: string;
     notes?: string;
+    birthday?: Birthday;
     preferences?: CustomerPreferencesInput;
     isActive?: boolean;
   }
 ) {
   const name = input.name.trim();
-  const phone = input.phone.trim();
+  const phone = canonicalCustomerPhone(input.phone);
   const email = typeof input.email === 'string' ? input.email.trim() : input.email;
   const notes = typeof input.notes === 'string' ? input.notes.trim() : input.notes;
+  const birthday = optionalBirthday(input.birthday);
   return Customer.create({
     businessId,
     name,
     phone,
     email: email === '' ? undefined : email,
     notes,
+    ...(birthday ? { birthday } : {}),
     preferences: input.preferences,
     ...(typeof input.isActive === 'boolean' ? { isActive: input.isActive } : {}),
   });
@@ -85,13 +105,18 @@ export async function updateCustomerForTenant(
     phone?: string;
     email?: string;
     notes?: string;
+    birthday?: Birthday | null;
     preferences?: CustomerPreferencesInput;
     isActive?: boolean;
   }
 ) {
   const update: Record<string, unknown> = {};
+  if (body.birthday !== undefined) {
+    const birthday = optionalBirthday(body.birthday);
+    update.birthday = birthday ?? undefined;
+  }
   if (body.name !== undefined) update.name = body.name.trim();
-  if (body.phone !== undefined) update.phone = body.phone.trim();
+  if (body.phone !== undefined) update.phone = canonicalCustomerPhone(body.phone);
   if (body.email !== undefined) {
     const email = body.email.trim();
     update.email = email === '' ? undefined : email;
@@ -107,28 +132,6 @@ export async function updateCustomerForTenant(
     { $set: update },
     { new: true }
   );
-}
-
-/**
- * Deletes a customer, refusing when they have any appointment history — that history
- * feeds revenue/analytics and must not silently disappear. Their service-config
- * overrides (duration/price overrides) are cleaned up since those are meaningless
- * without the customer they belong to.
- */
-export async function deleteCustomerForTenant(businessId: string, customerId: string) {
-  const appointmentCount = await Appointment.countDocuments({ businessId, customerId });
-  if (appointmentCount > 0) {
-    throw new ConflictError(
-      'This customer has appointment history and cannot be deleted.',
-      'CUSTOMER_HAS_APPOINTMENTS'
-    );
-  }
-
-  const customer = await Customer.findOneAndDelete({ _id: customerId, businessId });
-  if (!customer) return null;
-
-  await CustomerServiceConfig.deleteMany({ businessId, customerId });
-  return customer;
 }
 
 export async function setCustomersActiveForTenant(
