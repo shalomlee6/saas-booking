@@ -1,5 +1,5 @@
 <section class="pl-prod" aria-labelledby="pl-prod-title">
-  <h2 id="pl-prod-title" class="pl-prod__title">הטיפולים המומלצים</h2>
+  <h2 id="pl-prod-title" class="pl-prod__title">{{ 'publicLanding.productsTitle' | translate }}</h2>
   <ul class="pl-prod__scroll">
     @for (p of products(); track p.name + p.price) {
       <li class="pl-prod__card">

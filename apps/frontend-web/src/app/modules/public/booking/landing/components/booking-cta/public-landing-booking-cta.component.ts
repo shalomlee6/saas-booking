@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
 import { ButtonModule } from 'primeng/button';
+import { TranslatePipe } from '../../../../../../core/i18n/translate.pipe';
 
 @Component({
   selector: 'app-public-landing-booking-cta',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [ButtonModule],
+  imports: [ButtonModule, TranslatePipe],
   templateUrl: './public-landing-booking-cta.component.html',
   styleUrl: './public-landing-booking-cta.component.scss',
 })

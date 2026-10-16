@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { DatePipe } from '@angular/common';
+import { TranslatePipe } from '../../../../../../core/i18n/translate.pipe';
 import type { PublicLandingReviewItem } from '../../../../services/public-api.service';
 
 function starRow(rating: number): string {
@@ -15,7 +16,7 @@ export interface PublicLandingReviewRow extends PublicLandingReviewItem {
   selector: 'app-public-landing-reviews',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [DatePipe],
+  imports: [DatePipe, TranslatePipe],
   templateUrl: './public-landing-reviews.component.html',
   styleUrl: './public-landing-reviews.component.scss',
 })

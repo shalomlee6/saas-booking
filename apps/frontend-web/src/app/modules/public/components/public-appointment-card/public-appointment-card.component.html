@@ -1,8 +1,8 @@
 <article
   class="public-apt-card"
   [class.public-apt-card-clickable]="clickable()"
-  [attr.role]="clickable() ? 'link' : undefined"
-  [attr.tabindex]="clickable() ? 0 : null"
+  [attr.role]="clickable() && !canEdit() ? 'link' : undefined"
+  [attr.tabindex]="clickable() && !canEdit() ? 0 : null"
   (click)="onCardClick()"
   (keydown)="onCardKeydown($event)"
 >

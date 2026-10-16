@@ -123,8 +123,8 @@ export class CustomerBookPageComponent implements OnInit {
   // ── Step navigation ────────────────────────────────────────────────────────
   readonly currentStep = signal<BookStep>(1);
   /**
-   * Toggled off then on after a non-fatal booking error to destroy and
-   * recreate the hold-to-confirm component so the progress ring resets.
+   * Toggled off then on after a non-fatal booking error so the confirm
+   * button is recreated in a clean state.
    */
   readonly showHoldButton = signal(true);
 
@@ -184,14 +184,33 @@ export class CustomerBookPageComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      this.currentStep();
-      untracked(() => queueMicrotask(() => this.stepHeading()?.nativeElement.focus()));
+      const step = this.currentStep();
+      untracked(() => {
+        queueMicrotask(() => this.stepHeading()?.nativeElement.focus());
+        if (step === 3) {
+          // PrimeNG only tabs to "today", and its fallback selector misses this
+          // version's calendar markup when today is disabled. Put the first
+          // open day in the tab order, then give the step heading focus back.
+          setTimeout(() => {
+            this.ensureDatepickerTabStop();
+            this.stepHeading()?.nativeElement.focus();
+          }, 50);
+        }
+      });
     });
     effect(() => {
       const epoch = this.session.flowEpoch();
       if (epoch === 0) return;
       untracked(() => this.resetToStart());
     });
+  }
+
+  private ensureDatepickerTabStop(): void {
+    const root = this.doc.querySelector('.book-date-picker');
+    if (!root) return;
+    const days = Array.from(root.querySelectorAll<HTMLElement>('span.p-datepicker-day:not(.p-disabled)'));
+    if (days.length === 0 || days.some((day) => day.tabIndex === 0)) return;
+    days[0].tabIndex = 0;
   }
 
   ngOnInit(): void {

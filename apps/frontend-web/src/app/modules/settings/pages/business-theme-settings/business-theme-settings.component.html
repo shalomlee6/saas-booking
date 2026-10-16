@@ -38,11 +38,17 @@
       </div>
       <div class="business-theme-settings-field">
         <label for="primaryColor">{{ 'settings.primaryColorLabel' | translate }}</label>
-        <input id="primaryColor" type="text" dir="ltr" formControlName="primaryColor" class="business-theme-settings-input" placeholder="#4F46E5" />
+        <input id="primaryColor" type="text" dir="ltr" formControlName="primaryColor" class="business-theme-settings-input" placeholder="#4F46E5" [attr.aria-describedby]="primaryContrastFails() ? 'primaryContrastWarning' : null" />
+        @if (primaryContrastFails()) {
+          <p id="primaryContrastWarning" class="business-theme-settings-warning" role="status">{{ 'settings.primaryContrastWarning' | translate }}</p>
+        }
       </div>
       <div class="business-theme-settings-field">
         <label for="sidebarColor">{{ 'settings.sidebarColorLabel' | translate }}</label>
-        <input id="sidebarColor" type="text" dir="ltr" formControlName="sidebarColor" class="business-theme-settings-input" placeholder="#0F172A" />
+        <input id="sidebarColor" type="text" dir="ltr" formControlName="sidebarColor" class="business-theme-settings-input" placeholder="#0F172A" [attr.aria-describedby]="sidebarContrastFails() ? 'sidebarContrastWarning' : null" />
+        @if (sidebarContrastFails()) {
+          <p id="sidebarContrastWarning" class="business-theme-settings-warning" role="status">{{ 'settings.sidebarContrastWarning' | translate }}</p>
+        }
       </div>
       @if (error()) {
         <p class="business-theme-settings-error">{{ error() }}</p>

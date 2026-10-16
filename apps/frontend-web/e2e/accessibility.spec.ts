@@ -74,11 +74,7 @@ test.describe('Accessibility — axe-core scans', () => {
     await page.goto('/b/demo-salon/book', { waitUntil: 'domcontentloaded' });
     await page.waitForSelector('.book-service-card', { timeout: 60_000 });
 
-    // The pink "boki" wordmark is the known public-header contrast failure,
-    // already reported by the /b/demo-salon scan. This scan covers the booking flow.
-    const results = await new AxeBuilder({ page })
-      .exclude('.public-nav-topbar-title')
-      .analyze();
+    const results = await new AxeBuilder({ page }).analyze();
     if (results.violations.length > 0) {
       console.log(`\n── Axe violations on /b/demo-salon/book (${results.violations.length}) ──`);
       for (const v of results.violations) {

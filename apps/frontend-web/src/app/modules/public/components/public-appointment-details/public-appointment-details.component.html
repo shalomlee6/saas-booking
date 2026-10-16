@@ -8,6 +8,7 @@
       [modal]="true"
       [dismissible]="!cancelling()"
       [closeOnEscape]="!cancelling()"
+      [ariaCloseLabel]="'appointments.close' | translate"
       appendTo="body"
     >
       <ng-template pTemplate="header">

@@ -5,35 +5,37 @@
       <h1 class="dashboard-greeting">{{ greeting() }} ✨</h1>
       <p class="dashboard-subtitle">{{ todaySummaryText$ | async }}</p>
     </div>
-    <div class="dashboard-period-filter" role="tablist" [attr.aria-label]="'dashboard.dataRangeLabel' | translate">
-      <button
-        type="button"
-        class="dashboard-pill"
-        [class.dashboard-pill-active]="selectedPeriod() === 'week'"
-        (click)="setPeriod('week')"
-      >
-        {{ 'dashboard.periodWeek' | translate }}
-      </button>
-      <button
-        type="button"
-        class="dashboard-pill"
-        [class.dashboard-pill-active]="selectedPeriod() === 'month'"
-        (click)="setPeriod('month')"
-      >
-        {{ 'dashboard.periodMonth' | translate }}
-      </button>
-      <button
-        type="button"
-        class="dashboard-pill"
-        [class.dashboard-pill-active]="selectedPeriod() === 'year'"
-        (click)="setPeriod('year')"
-      >
-        {{ 'dashboard.periodYear' | translate }}
-      </button>
+    <div
+      class="dashboard-period-filter"
+      role="tablist"
+      [attr.aria-label]="'dashboard.dataRangeLabel' | translate"
+      (keydown)="onPeriodKeydown($event)"
+    >
+      @for (period of periods; track period) {
+        <button
+          #periodTab
+          type="button"
+          role="tab"
+          class="dashboard-pill"
+          [id]="periodTabId(period)"
+          [class.dashboard-pill-active]="selectedPeriod() === period"
+          [attr.aria-selected]="selectedPeriod() === period"
+          aria-controls="dashboard-period-panel"
+          [attr.tabindex]="selectedPeriod() === period ? 0 : -1"
+          (click)="setPeriod(period)"
+        >
+          {{ periodTabKeys[period] | translate }}
+        </button>
+      }
     </div>
   </div>
 
-  <section class="dashboard-kpis">
+  <section
+    id="dashboard-period-panel"
+    class="dashboard-kpis"
+    role="tabpanel"
+    [attr.aria-labelledby]="periodTabId(selectedPeriod())"
+  >
     @if (insightsState$ | async; as insightsState) {
       @if (insightsState.error) {
         <div class="dashboard-empty">

@@ -1,9 +1,9 @@
 <section class="pl-gal" aria-labelledby="pl-gal-title">
   <div class="pl-gal__head">
-    <h2 id="pl-gal-title" class="pl-gal__title pl-intro-text pl-intro-text--6">העבודות שלנו</h2>
+    <h2 id="pl-gal-title" class="pl-gal__title pl-intro-text pl-intro-text--6">{{ 'publicLanding.galleryTitle' | translate }}</h2>
     @if (isOwner()) {
       <p-button
-        label="הוסיפי תמונה"
+        [label]="'publicLanding.addPhoto' | translate"
         icon="pi pi-plus"
         iconPos="right"
         [outlined]="true"
@@ -14,7 +14,7 @@
   </div>
 
   @if (items().length === 0) {
-    <p class="pl-gal__empty-line">תמונות בקרוב ✨</p>
+    <p class="pl-gal__empty-line">{{ 'publicLanding.galleryEmpty' | translate }}</p>
   } @else {
     <div class="pl-gal__masonry">
       @for (item of items(); track item.id; let idx = $index) {
@@ -25,7 +25,7 @@
         >
           <img
             [src]="displaySrc(item.imageUrl)"
-            [alt]="item.title?.trim() ? item.title! : 'תמונת גלריה ' + (idx + 1)"
+            [alt]="item.title?.trim() ? item.title! : ('publicLanding.galleryAlt' | translate: { n: idx + 1 })"
             loading="lazy"
             decoding="async"
           />
@@ -44,7 +44,7 @@
   [modal]="true"
   [dismissableMask]="true"
   [style]="{ width: '100vw', maxWidth: '100vw', height: '100vh' }"
-  closeAriaLabel="סגירה - תמונה"
+  [closeAriaLabel]="'publicLanding.closePhoto' | translate"
   styleClass="pl-gal__lightbox"
   [contentStyle]="{ padding: 0 }"
 >
@@ -59,17 +59,17 @@
 </p-dialog>
 
 <p-dialog
-  header="הוספת תמונה לגלריה"
+  [header]="'publicLanding.addPhotoTitle' | translate"
   [visible]="addDialogOpen()"
   (visibleChange)="addDialogOpen.set($event)"
   [modal]="true"
   [style]="{ width: '22rem' }"
-  closeAriaLabel="סגירה"
+  [closeAriaLabel]="'publicLanding.close' | translate"
   [dismissableMask]="true"
 >
-  <div class="pl-gal__form" dir="rtl">
+  <div class="pl-gal__form">
     <label class="pl-gal__label">
-      קישור לתמונה (URL)
+      {{ 'publicLanding.photoUrl' | translate }}
       <input
         pInputText
         class="pl-gal__input"
@@ -79,7 +79,7 @@
       />
     </label>
     <p-button
-      label="שמירה"
+      [label]="'common.save' | translate"
       icon="pi pi-check"
       iconPos="right"
       styleClass="pl-gal__save"

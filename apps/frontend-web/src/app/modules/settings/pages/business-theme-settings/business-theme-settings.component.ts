@@ -3,6 +3,7 @@ import { RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { ApiService } from '../../../../core/api/api.service';
 import { ThemeService, type BusinessUi } from '../../../../core/config/theme.service';
+import { failsContrast } from '../../../../core/theming/contrast-color';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService, type AppLanguage } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
@@ -32,6 +33,19 @@ export class BusinessThemeSettingsComponent {
       primaryColor: [business?.ui?.primaryColor ?? '#4F46E5'],
       sidebarColor: [business?.ui?.sidebarColor ?? '#0F172A'],
     });
+  }
+
+  primaryContrastFails(): boolean {
+    const value = String(this.form.get('primaryColor')?.value ?? '');
+    if (!/^#[0-9A-Fa-f]{6}$/.test(value)) return false;
+    const surface = this.form.get('themeMode')?.value === 'dark' ? '#0d0d0f' : '#ffffff';
+    return failsContrast(value, surface);
+  }
+
+  sidebarContrastFails(): boolean {
+    const value = String(this.form.get('sidebarColor')?.value ?? '');
+    if (!/^#[0-9A-Fa-f]{6}$/.test(value)) return false;
+    return failsContrast('#ffffff', value);
   }
 
   setLanguage(lang: AppLanguage): void {

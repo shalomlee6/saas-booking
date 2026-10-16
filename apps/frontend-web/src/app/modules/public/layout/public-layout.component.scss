@@ -21,7 +21,8 @@
 .public-shell {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
+  position: relative;
   min-height: 100vh;
 }
 
@@ -29,4 +30,17 @@
   min-width: 0;
   max-width: 100%;
   min-height: 0;
+}
+
+.public-layout-footer {
+  padding: 1rem 1.25rem 1.5rem;
+  text-align: center;
+}
+
+.public-layout-footer-link {
+  color: var(--text-secondary, #374151);
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }

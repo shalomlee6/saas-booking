@@ -38,8 +38,9 @@ import { PublicLandingReviewsComponent } from '../components/reviews/public-land
 import { PublicLandingBookingCtaComponent } from '../components/booking-cta/public-landing-booking-cta.component';
 import { PlRevealDirective } from '../directives/pl-reveal.directive';
 import { resolvePublicAssetUrl } from '../../../../../shared/utils/public-asset-url';
+import { LanguageService } from '../../../../../core/i18n/language.service';
+import { TranslatePipe } from '../../../../../core/i18n/translate.pipe';
 
-const DEFAULT_TAGLINE = 'יופי מקצועי, תוצאות מושלמות';
 
 /** sessionStorage key prefix for the once-per-session page-load intro animation, scoped per tenant slug. */
 const ENTRANCE_SEEN_KEY_PREFIX = 'boki:landingEntranceSeen:';
@@ -103,6 +104,7 @@ const STAGE_FADE_MS = 400;
     PublicLandingBookingCtaComponent,
     PlRevealDirective,
     ButtonModule,
+    TranslatePipe,
   ],
   templateUrl: './public-landing.component.html',
   styleUrl: './public-landing.component.scss',
@@ -116,6 +118,7 @@ export class PublicLandingComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly document = inject(DOCUMENT);
+  private readonly language = inject(LanguageService);
 
   constructor() {
     let prevCustomerId: string | null | undefined;
@@ -176,10 +179,12 @@ export class PublicLandingComponent implements OnInit {
 
   readonly greetingTitle = computed(() => {
     const name = this.session.customerName();
-    return name ? `שלום, ${name}, ברוכות הבאות` : 'שלום, ברוכות הבאות';
+    return name
+      ? this.language.t('publicLanding.greetingNamed', { name })
+      : this.language.t('publicLanding.greetingAnon');
   });
 
-  readonly greetingSub = 'בואי נקבע תור בקלות ובמהירות';
+  readonly greetingSub = computed(() => this.language.t('publicLanding.greetingSub'));
 
   readonly loadingPageData = signal(true);
   readonly pageLoadError = signal<string | null>(null);
@@ -187,7 +192,7 @@ export class PublicLandingComponent implements OnInit {
   readonly servicesList = signal<PublicService[]>([]);
 
   readonly landingTagline = computed(
-    () => this.bookingBusiness()?.landing?.tagline?.trim() || DEFAULT_TAGLINE
+    () => this.bookingBusiness()?.landing?.tagline?.trim() || this.language.t('publicLanding.defaultTagline')
   );
 
   readonly landingHeroDescription = computed(
@@ -377,7 +382,7 @@ export class PublicLandingComponent implements OnInit {
           this.playIntro.set(shouldPlayEntranceAnimation(slug, forceIntro));
           if (!slug) {
             this.loadingPageData.set(false);
-            this.pageLoadError.set('חסר מזהה עסק');
+            this.pageLoadError.set(this.language.t('publicLanding.missingSlug'));
             return EMPTY;
           }
 
@@ -400,7 +405,7 @@ export class PublicLandingComponent implements OnInit {
             svc: this.publicApi.getServices(slug),
           }).pipe(
             catchError((err: { error?: { message?: string } }) => {
-              this.pageLoadError.set(err?.error?.message ?? 'שגיאה בטעינת העמוד');
+              this.pageLoadError.set(err?.error?.message ?? this.language.t('publicLanding.loadFailed'));
               this.loadingPageData.set(false);
               return EMPTY;
             })
@@ -542,8 +547,8 @@ export class PublicLandingComponent implements OnInit {
 
     this.messageService.add({
       severity: 'success',
-      summary: 'התור נקבע!',
-      detail: 'התור שלך אושר בהצלחה',
+      summary: this.language.t('publicLanding.bookedSummary'),
+      detail: this.language.t('publicLanding.bookedDetail'),
       life: 5000,
     });
 

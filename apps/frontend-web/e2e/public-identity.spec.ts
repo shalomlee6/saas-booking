@@ -226,13 +226,7 @@ test.describe('public client identity', () => {
     await expect(move).toContainText('העברת התור מ-');
     await expect(move).toContainText('11:00');
     await expect(move).toContainText('09:00');
-    const hold = page.locator('app-hold-to-confirm-button');
-    const box = await hold.boundingBox();
-    if (!box) throw new Error('hold button missing');
-    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-    await page.mouse.down();
-    await page.waitForTimeout(2300);
-    await page.mouse.up();
+    await page.getByRole('button', { name: 'אישור התור' }).click();
     await expect(page).toHaveURL(/\/b\/demo-salon\/?$/);
     await expect(page.locator('.public-apt-card')).toHaveCount(1);
     await expect(page.locator('.public-apt-card')).toContainText('09:00');

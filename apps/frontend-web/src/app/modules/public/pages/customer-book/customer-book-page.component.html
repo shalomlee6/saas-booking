@@ -57,17 +57,17 @@
           </div>
         } @else if (step1LoadError(); as loadErr) {
           <div class="book-notice-state book-notice-state-error" role="alert">
-            <p class="book-notice-title">לא ניתן לטעון את פרטי ההזמנה</p>
+            <p class="book-notice-title">{{ 'publicBook.loadError' | translate }}</p>
             <p class="book-notice-detail">{{ loadErr }}</p>
             <button type="button" class="book-text-btn" (click)="retryInitialLoad()">
               <i class="pi pi-refresh" aria-hidden="true"></i>
-              נסי שוב
+              {{ 'common.retry' | translate }}
             </button>
           </div>
         } @else if (services().length === 0) {
           <div class="book-empty-state">
             <i class="pi pi-calendar book-empty-icon" aria-hidden="true"></i>
-            <p>אין שירותים זמינים כרגע</p>
+            <p>{{ 'publicBook.emptyServices' | translate }}</p>
           </div>
         } @else {
           <div class="book-service-list">
@@ -86,7 +86,7 @@
                   <span class="book-service-name">{{ svc.nameHe }}</span>
                   <span class="book-service-meta">
                     <i class="pi pi-clock" aria-hidden="true"></i>
-                    {{ svc.durationMinutes }} דק׳
+                    {{ 'publicBook.durationMinutes' | translate: { count: svc.durationMinutes } }}
                     @if (svc.price != null && svc.price > 0) {
                       &middot; {{ svc.price }} ₪
                     }
@@ -139,38 +139,38 @@
         @if (selectedDate()) {
           <div class="book-slots-section">
             <div class="book-slots-header">
-              <span class="book-slots-label">שעות פנויות</span>
+              <span class="book-slots-label">{{ 'publicBook.slotsLabel' | translate }}</span>
               <span class="book-slots-date-badge">{{ formattedBookingDate() }}</span>
             </div>
 
             @if (loadingSlots()) {
               <div class="book-slots-grid" aria-busy="true" aria-live="polite">
-                <span class="book-slots-loading-hint">טוענת שעות…</span>
+                <span class="book-slots-loading-hint">{{ 'publicBook.slotsLoading' | translate }}</span>
                 @for (i of [1, 2, 3, 4, 5, 6]; track i) {
                   <p-skeleton width="100%" height="52px" borderRadius="9999px" />
                 }
               </div>
             } @else if (slotsError()) {
               <div class="book-notice-state book-notice-state-error" role="alert">
-                <p class="book-notice-title">לא ניתן לטעון שעות</p>
+                <p class="book-notice-title">{{ 'publicBook.slotsError' | translate }}</p>
                 @if (slotsErrorDetail(); as errDetail) {
                   <p class="book-notice-detail">{{ errDetail }}</p>
                 }
                 <button type="button" class="book-text-btn" (click)="retryLoadSlots()">
                   <i class="pi pi-refresh" aria-hidden="true"></i>
-                  נסי שוב
+                  {{ 'common.retry' | translate }}
                 </button>
               </div>
             } @else if (slots().length === 0) {
               <div class="book-notice-state book-notice-state-empty">
-                <p class="book-notice-title">אין שעות פנויות ביום הזה</p>
-                <p class="book-notice-detail">נסי יום אחר או חזרי מאוחר יותר.</p>
+                <p class="book-notice-title">{{ 'publicBook.slotsEmpty' | translate }}</p>
+                <p class="book-notice-detail">{{ 'publicBook.slotsEmptyHint' | translate }}</p>
                 <button type="button" class="book-text-btn" (click)="goToDateStep()">
-                  בחרי תאריך אחר
+                  {{ 'publicBook.pickAnotherDate' | translate }}
                 </button>
               </div>
             } @else {
-              <div class="book-slots-grid" role="listbox" aria-label="שעות פנויות">
+              <div class="book-slots-grid" role="listbox" [attr.aria-label]="'publicBook.slotsLabel' | translate">
                 @for (slot of slots(); track slot) {
                   <button
                     type="button"
@@ -205,7 +205,7 @@
               <i class="pi pi-palette" aria-hidden="true"></i>
             </div>
             <div class="book-summary-content">
-              <span class="book-summary-label">שירות</span>
+              <span class="book-summary-label">{{ 'publicBook.serviceNav' | translate }}</span>
               <span class="book-summary-value">{{ selectedService()?.nameHe }}</span>
             </div>
           </div>
@@ -215,7 +215,7 @@
               <i class="pi pi-calendar" aria-hidden="true"></i>
             </div>
             <div class="book-summary-content">
-              <span class="book-summary-label">תאריך</span>
+              <span class="book-summary-label">{{ 'common.date' | translate }}</span>
               <span class="book-summary-value">{{ formattedBookingDate() }}</span>
             </div>
           </div>
@@ -225,7 +225,7 @@
               <i class="pi pi-clock" aria-hidden="true"></i>
             </div>
             <div class="book-summary-content">
-              <span class="book-summary-label">שעה</span>
+              <span class="book-summary-label">{{ 'publicBook.summaryTime' | translate }}</span>
               <span class="book-summary-value book-summary-time">{{ selectedSlot() }}</span>
             </div>
           </div>
@@ -245,7 +245,7 @@
         <div class="book-flow-footer">
           @if (submitError(); as submitErr) {
             <div class="book-notice-state book-notice-state-error" role="alert">
-              <p class="book-notice-title">לא הצלחנו להשלים את ההזמנה</p>
+              <p class="book-notice-title">{{ 'publicBook.submitError' | translate }}</p>
               <p class="book-notice-detail">{{ submitErr }}</p>
             </div>
           }
@@ -253,8 +253,6 @@
             <div class="book-hold-wrap">
               <app-hold-to-confirm-button
                 [disabled]="submitting() || !canConfirm()"
-                [durationMs]="2000"
-                [successState]="false"
                 (confirm)="confirmBooking()"
               />
             </div>

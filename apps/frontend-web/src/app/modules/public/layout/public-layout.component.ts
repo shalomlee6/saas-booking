@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DOCUMENT, NgStyle } from '@angular/common';
-import { ActivatedRoute, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, RouterLink, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
 import { PublicThemeService } from '../services/public-theme.service';
@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 @Component({
   selector: 'app-public-layout',
   standalone: true,
-  imports: [RouterOutlet, ToastModule, PublicCustomerNavComponent, TranslatePipe, NgStyle],
+  imports: [RouterOutlet, RouterLink, ToastModule, PublicCustomerNavComponent, TranslatePipe, NgStyle],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.scss',
 })
@@ -93,5 +93,16 @@ export class PublicLayoutComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  /**
+   * `<base href="/">` makes a bare `#main-content` href resolve to the site
+   * root. Keep the fragment for the no-JS case and move focus ourselves.
+   */
+  skipToMain(event: Event): void {
+    event.preventDefault();
+    const main = this.document.getElementById('main-content');
+    main?.focus();
+    main?.scrollIntoView();
   }
 }

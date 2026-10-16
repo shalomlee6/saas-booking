@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, computed, inject, signal, viewChildren } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -39,6 +39,14 @@ const PERIOD_LABEL_KEYS: Record<InsightsPeriod, string> = {
   month: 'dashboard.periodLabelMonth',
   year: 'dashboard.periodLabelYear',
 };
+
+const PERIOD_TAB_KEYS: Record<InsightsPeriod, string> = {
+  week: 'dashboard.periodWeek',
+  month: 'dashboard.periodMonth',
+  year: 'dashboard.periodYear',
+};
+
+const PERIODS: readonly InsightsPeriod[] = ['week', 'month', 'year'];
 
 type StatusTone = 'success' | 'warn' | 'neutral' | 'danger';
 
@@ -124,6 +132,9 @@ export class DashboardComponent {
   readonly appointments$ = this.appointmentsApi.appointments$;
   readonly insights$ = this.growthBrain.insights$;
   readonly selectedPeriod = this.growthBrain.selectedPeriod;
+  readonly periods = PERIODS;
+  readonly periodTabKeys = PERIOD_TAB_KEYS;
+  private readonly periodTabButtons = viewChildren<ElementRef<HTMLButtonElement>>('periodTab');
   readonly periodLabel = computed(() => this.language.t(PERIOD_LABEL_KEYS[this.selectedPeriod()] ?? ''));
   readonly vipThreshold = VIP_THRESHOLD;
 
@@ -289,6 +300,25 @@ export class DashboardComponent {
 
   setPeriod(p: InsightsPeriod): void {
     this.growthBrain.setPeriod(p);
+  }
+
+  periodTabId(period: InsightsPeriod): string {
+    return `dashboard-period-${period}`;
+  }
+
+  onPeriodKeydown(event: KeyboardEvent): void {
+    const index = PERIODS.indexOf(this.selectedPeriod());
+    const rtl = this.language.isRtl;
+    let next: number;
+    if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = PERIODS.length - 1;
+    else if (event.key === 'ArrowRight') next = index + (rtl ? -1 : 1);
+    else if (event.key === 'ArrowLeft') next = index + (rtl ? 1 : -1);
+    else return;
+    event.preventDefault();
+    const period = PERIODS[(next + PERIODS.length) % PERIODS.length];
+    this.setPeriod(period);
+    queueMicrotask(() => this.periodTabButtons()[PERIODS.indexOf(period)]?.nativeElement.focus());
   }
 
   retryInsights(): void {

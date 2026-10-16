@@ -40,7 +40,7 @@
   margin: 0 0 0.35rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: $pl-primary;
+  color: $pl-ink;
 }
 
 .public-apt-row {
@@ -84,7 +84,7 @@
 
 ::ng-deep .public-apt-tag.p-tag-success {
   background: $pl-primary-pale;
-  color: $pl-primary;
+  color: $pl-ink;
   border: none;
   border-radius: 50px;
   font-weight: 500;

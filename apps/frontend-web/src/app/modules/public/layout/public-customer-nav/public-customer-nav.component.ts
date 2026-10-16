@@ -18,7 +18,7 @@ import { PublicApiService } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
 
-export type PublicNavItemId = 'home' | 'upcoming' | 'location' | 'settings';
+export type PublicNavItemId = 'home' | 'upcoming' | 'location' | 'settings' | 'accessibility';
 
 @Component({
   selector: 'app-public-customer-nav',
@@ -59,6 +59,9 @@ export class PublicCustomerNavComponent implements OnDestroy {
     const base = `/b/${slug}`;
     if (path === `${base}/settings` || path.startsWith(`${base}/settings/`)) {
       return 'settings';
+    }
+    if (path === `${base}/accessibility` || path.startsWith(`${base}/accessibility/`)) {
+      return 'accessibility';
     }
     if (path === `${base}/upcoming` || path.startsWith(`${base}/upcoming/`)) {
       return 'upcoming';

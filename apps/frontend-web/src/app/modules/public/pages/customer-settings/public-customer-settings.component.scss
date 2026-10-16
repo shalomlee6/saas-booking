@@ -66,9 +66,9 @@
 
 .public-settings-lang-btn-active {
   background: var(--color-primary);
-  color: #fff;
+  color: var(--on-primary, #111827);
 }
 
 .public-settings-lang-btn-active:hover {
-  color: #fff;
+  color: var(--on-primary, #111827);
 }

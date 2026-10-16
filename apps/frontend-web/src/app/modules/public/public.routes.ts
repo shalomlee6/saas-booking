@@ -32,6 +32,13 @@ export const PUBLIC_ROUTES: Routes = [
           ),
       },
       {
+        path: 'accessibility',
+        loadComponent: () =>
+          import('./pages/accessibility-statement/public-accessibility-statement.component').then(
+            (m) => m.PublicAccessibilityStatementComponent
+          ),
+      },
+      {
         path: 'settings',
         loadComponent: () =>
           import('./pages/customer-settings/public-customer-settings.component').then(

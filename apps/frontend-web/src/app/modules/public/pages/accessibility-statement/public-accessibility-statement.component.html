@@ -1,0 +1,25 @@
+<article class="public-a11y">
+  <h1 class="public-a11y-title">{{ 'accessibility.statementTitle' | translate }}</h1>
+  <p class="public-a11y-lead">{{ 'accessibility.level' | translate }}</p>
+
+  <h2 class="public-a11y-heading">{{ 'accessibility.adaptedTitle' | translate }}</h2>
+  <p>{{ 'accessibility.adapted' | translate }}</p>
+
+  <h2 class="public-a11y-heading">{{ 'accessibility.limitsTitle' | translate }}</h2>
+  <p>{{ 'accessibility.limits' | translate }}</p>
+
+  <h2 class="public-a11y-heading">{{ 'accessibility.contactTitle' | translate }}</h2>
+  @if (phoneHref(); as tel) {
+    <p>
+      <a class="public-a11y-contact" [href]="tel">{{ phone() }}</a>
+    </p>
+  }
+  @if (email(); as mail) {
+    <p>
+      <a class="public-a11y-contact" [href]="'mailto:' + mail">{{ mail }}</a>
+    </p>
+  }
+  @if (loaded() && !phone() && !email()) {
+    <p>{{ 'accessibility.contactMissing' | translate }}</p>
+  }
+</article>

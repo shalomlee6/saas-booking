@@ -198,7 +198,7 @@
   --color-primary-subtle: #fef1f4;
   --color-primary-muted:  #fbc7d3;
   --color-primary-ink:    #96263d;
-  --on-primary:           #ffffff;
+  --on-primary:           #111827;
 
   --bg-app:               #f5f5f7;
   --bg-card:              #ffffff;
@@ -212,7 +212,7 @@
 
   --text-primary:         #111827;
   --text-secondary:       #374151;
-  --text-muted:           #6b7280;
+  --text-muted:           #4b5563;
   --text-placeholder:     #9ca3af;
 
   --border-color:         #e5e7eb;
@@ -404,12 +404,13 @@ body.public-nav-lock { overflow: hidden; }
   z-index: 9999;
   padding: 0.5rem 1rem;
   background: var(--color-primary);
-  color: #fff;
+  color: var(--on-primary, #111827);
   font-weight: 600;
   font-size: 0.875rem;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   text-decoration: none;
-  &:focus { top: 0; }
+  &:focus,
+  &:focus-visible { top: 0; }
 }
 
 // ─── PrimeNG overrides ────────────────────────────────────────────────────────
@@ -431,6 +432,18 @@ body.public-nav-lock { overflow: hidden; }
 .p-dialog .p-dialog-header { border-bottom: 1px solid var(--border-color); }
 .p-dialog .p-dialog-footer  { border-top: 1px solid var(--border-color); }
 .p-dialog-mask { background: rgba(0,0,0,0.4); }
+
+// Disabled calendar days are text, so they still need 4.5:1. PrimeNG fades them
+// with opacity, which drops the composited gray below the ratio.
+.public-shell.theme-light .p-datepicker-day.p-disabled {
+  opacity: 1;
+  color: #4b5563;
+}
+
+.public-shell.theme-dark .p-datepicker-day.p-disabled {
+  opacity: 1;
+  color: #d1d5db;
+}
 
 .p-drawer {
   background: var(--bg-card);
