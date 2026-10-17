@@ -37,6 +37,10 @@ import {
   ruleErrorForRequest,
 } from '../services/bookingRules';
 import { resolveReliabilityPolicy } from '../services/customerNoShows';
+import {
+  sessionOwnsAppointment,
+  visibleUpcomingFilter,
+} from '../services/publicAppointmentVisibility';
 
 const CANCELLATION_NOTICE_HE = 'יש להודיע מראש על ביטול התור';
 
@@ -499,6 +503,7 @@ export async function createPublicAppointment(req: Request, res: Response): Prom
       customerName: resolvedCustomerName,
       customerPhone: resolvedCustomerPhone,
       price,
+      createdBySessionId: publicCustomer.sessionId,
     },
     { requireCustomerId: false }
   );
@@ -561,14 +566,15 @@ async function ownedAppointmentId(
   businessId: string,
   rawId: string | undefined
 ): Promise<string | undefined> {
-  if (!rawId || !publicCustomer?.verified || !publicCustomer.customerId) return undefined;
+  if (!rawId || !publicCustomer?.customerId) return undefined;
   if (publicCustomer.businessId !== businessId) return undefined;
   const apt = await Appointment.findOne({
     _id: rawId,
     customerId: new Types.ObjectId(publicCustomer.customerId),
     businessId: new Types.ObjectId(businessId),
-  }).select('_id');
-  return apt ? apt._id.toString() : undefined;
+  }).select('_id customerId businessId createdBySessionId');
+  if (!apt || !sessionOwnsAppointment(publicCustomer, apt)) return undefined;
+  return apt._id.toString();
 }
 
 async function customerAudit(
@@ -607,17 +613,13 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
     res.json(EMPTY_UPCOMING);
     return;
   }
-  if (!publicCustomer.verified || !publicCustomer.customerId) {
-    throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
-  }
-
   const now = new Date();
-  const apts = await Appointment.find({
-    customerId: new Types.ObjectId(publicCustomer.customerId),
-    businessId: new Types.ObjectId(publicCustomer.businessId),
-    status: { $in: ['pending', 'confirmed'] },
-    start: { $gte: now },
-  })
+  const filter = visibleUpcomingFilter(publicCustomer, now);
+  if (!filter) {
+    res.json(EMPTY_UPCOMING);
+    return;
+  }
+  const apts = await Appointment.find(filter)
     .sort({ start: 1 })
     .populate<{ serviceId: PopulatedUpcomingService }>('serviceId', 'name')
     .lean();
@@ -667,7 +669,7 @@ export async function getUpcomingCustomerAppointment(req: Request, res: Response
 const CLIENT_CANCELLABLE_STATUSES = new Set(['pending', 'confirmed']);
 export async function cancelCustomerAppointment(req: Request, res: Response): Promise<void> {
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  if (!publicCustomer?.verified || !publicCustomer.customerId) {
+  if (!publicCustomer?.customerId) {
     throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
   }
 
@@ -682,7 +684,7 @@ export async function cancelCustomerAppointment(req: Request, res: Response): Pr
     businessId: new Types.ObjectId(publicCustomer.businessId),
   });
 
-  if (!apt) {
+  if (!apt || !sessionOwnsAppointment(publicCustomer, apt)) {
     throw new NotFoundError('Appointment not found', 'APPOINTMENT_NOT_FOUND');
   }
 
@@ -725,6 +727,7 @@ async function moveAppointmentInOneTransaction(input: {
   status?: 'confirmed' | 'pending';
   rescheduledFrom: Types.ObjectId;
   originalId: Types.ObjectId;
+  createdBySessionId: string;
 }): Promise<IAppointment> {
   const apply = async (session?: mongoose.ClientSession): Promise<IAppointment> => {
     const created = await createAppointmentAtomic(
@@ -740,6 +743,7 @@ async function moveAppointmentInOneTransaction(input: {
         price: input.price,
         status: input.status,
         rescheduledFrom: input.rescheduledFrom,
+        createdBySessionId: input.createdBySessionId,
       },
       { requireCustomerId: true, excludeAppointmentId: input.originalId, session }
     );
@@ -787,7 +791,7 @@ async function moveAppointmentInOneTransaction(input: {
 
 export async function rescheduleCustomerAppointment(req: Request, res: Response): Promise<void> {
   const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
-  if (!publicCustomer?.verified || !publicCustomer.customerId) {
+  if (!publicCustomer?.customerId) {
     throw new UnauthorizedError('Authentication required', 'AUTH_REQUIRED');
   }
 
@@ -799,7 +803,9 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
     customerId: new Types.ObjectId(publicCustomer.customerId),
     businessId: new Types.ObjectId(publicCustomer.businessId),
   });
-  if (!apt) throw new NotFoundError('Appointment not found', 'APPOINTMENT_NOT_FOUND');
+  if (!apt || !sessionOwnsAppointment(publicCustomer, apt)) {
+    throw new NotFoundError('Appointment not found', 'APPOINTMENT_NOT_FOUND');
+  }
   if (!CLIENT_CANCELLABLE_STATUSES.has(apt.status)) {
     throw new ConflictError('This appointment cannot be changed', 'APPOINTMENT_NOT_CHANGEABLE');
   }
@@ -867,6 +873,7 @@ export async function rescheduleCustomerAppointment(req: Request, res: Response)
     status: apt.status === 'pending' ? 'pending' : 'confirmed',
     rescheduledFrom: apt._id,
     originalId: apt._id,
+    createdBySessionId: publicCustomer.sessionId,
   });
 
   await customerAudit(publicCustomer, 'appointment.rescheduled_by_customer', apt._id.toString(), {

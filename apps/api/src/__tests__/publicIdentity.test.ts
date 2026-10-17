@@ -261,10 +261,148 @@ describe('PUBLIC CLIENT IDENTITY', () => {
     expect(me.status).toBe(200);
     expect(me.body.verified).toBe(false);
     expect(me.body.firstName).toBeUndefined();
+    expect(me.body.hasVisibleAppointments).toBe(false);
     const upcoming = await request(app)
       .get('/api/public/appointments/upcoming')
       .set('Cookie', cookie);
-    expect(upcoming.status).toBe(401);
+    expect(upcoming.status).toBe(200);
+    expect(upcoming.body.appointment).toBeNull();
+    expect(upcoming.body.appointments.length).toBe(0);
+  });
+
+  it('shows a phone-mode booking only to the session that created it', async () => {
+    process.env.IDENTITY_MODE = 'phone';
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    const customer = await Customer.create({
+      businessId: business._id,
+      name: 'Noa Levi',
+      firstName: 'Noa',
+      phone: '0505555555',
+    });
+    const otherStart = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+    otherStart.setUTCHours(9, 0, 0, 0);
+    const otherApt = await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start: otherStart,
+      end: new Date(otherStart.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'client-online',
+    });
+
+    const start = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0505555555' });
+    const cookie = sessionCookie(start);
+    const sessionId = sessionIdFromCookie(cookie);
+    const when = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    when.setUTCHours(10, 0, 0, 0);
+    const date = when.toISOString().slice(0, 10);
+    const booked = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', cookie)
+      .send({
+        slug: business.slug,
+        serviceId: service._id.toString(),
+        date,
+        time: '10:00',
+      });
+    expect(booked.status).toBe(201);
+    const stored = await Appointment.findById(booked.body.id);
+    expect(stored?.createdBySessionId).toBe(decodeURIComponent(sessionId));
+    const steal = await request(app)
+      .delete(`/api/public/appointments/${otherApt._id.toString()}`)
+      .set('Cookie', cookie)
+      .send({ cancellationReason: 'לא' });
+    expect(steal.status).toBe(404);
+    expect((await Appointment.findById(otherApt._id))?.status).toBe('confirmed');
+
+    const me = await request(app).get('/api/public/session/me').set('Cookie', cookie);
+    expect(me.body.verified).toBe(false);
+    expect(me.body.firstName).toBeUndefined();
+    expect(me.body.hasVisibleAppointments).toBe(true);
+    const upcoming = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(upcoming.status).toBe(200);
+    expect(upcoming.body.appointments.length).toBe(1);
+    expect(upcoming.body.appointment.id).toBe(booked.body.id);
+    expect(upcoming.body.appointment.time).toBe('10:00');
+    expect(upcoming.body.customerName).toBeUndefined();
+
+    const other = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0505555555' });
+    const otherCookie = sessionCookie(other);
+    const otherMe = await request(app).get('/api/public/session/me').set('Cookie', otherCookie);
+    expect(otherMe.body.firstName).toBeUndefined();
+    expect(otherMe.body.hasVisibleAppointments).toBe(false);
+    const otherList = await request(app).get('/api/public/appointments/upcoming').set('Cookie', otherCookie);
+    expect(otherList.status).toBe(200);
+    expect(otherList.body.appointment).toBeNull();
+    expect(otherList.body.appointments.length).toBe(0);
+
+    const moved = await request(app)
+      .post(`/api/public/appointments/${booked.body.id}/reschedule`)
+      .set('Cookie', cookie)
+      .send({ date, time: '12:00' });
+    expect(moved.status).toBe(201);
+    const afterMove = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(afterMove.body.appointments.length).toBe(1);
+    expect(afterMove.body.appointment.id).toBe(moved.body.id);
+    expect(afterMove.body.appointment.time).toBe('12:00');
+    const movedRow = await Appointment.findById(moved.body.id);
+    expect(movedRow?.createdBySessionId).toBe(decodeURIComponent(sessionId));
+
+    const cancel = await request(app)
+      .delete(`/api/public/appointments/${moved.body.id}`)
+      .set('Cookie', cookie)
+      .send({ cancellationReason: 'לא יכולה' });
+    expect(cancel.status).toBe(200);
+    const afterCancel = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(afterCancel.body.appointment).toBeNull();
+    const afterMe = await request(app).get('/api/public/session/me').set('Cookie', cookie);
+    expect(afterMe.body.hasVisibleAppointments).toBe(false);
+    expect(afterMe.body.firstName).toBeUndefined();
+  });
+
+  it('a verified session still sees every upcoming appointment', async () => {
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    const customer = await Customer.create({
+      businessId: business._id,
+      name: 'Noa Levi',
+      firstName: 'Noa',
+      phone: '0504444444',
+    });
+    const start = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000);
+    start.setUTCHours(11, 0, 0, 0);
+    const older = await Appointment.create({
+      businessId: business._id,
+      customerId: customer._id,
+      serviceId: service._id,
+      start,
+      end: new Date(start.getTime() + 60 * 60 * 1000),
+      status: 'confirmed',
+      source: 'owner',
+    });
+    await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0504444444' });
+    const verify = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/verify`)
+      .send({ phone: '0504444444', code: await otpCode(business.slug, '0504444444') });
+    const cookie = sessionCookie(verify);
+    const me = await request(app).get('/api/public/session/me').set('Cookie', cookie);
+    expect(me.body.verified).toBe(true);
+    expect(me.body.firstName).toBe('Noa');
+    expect(me.body.hasVisibleAppointments).toBe(true);
+    const upcoming = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(upcoming.status).toBe(200);
+    expect(upcoming.body.appointments.length).toBe(1);
+    expect(upcoming.body.appointment.id).toBe(older._id.toString());
   });
 
   it('uses the customer duration and ignores a client-sent price', async () => {

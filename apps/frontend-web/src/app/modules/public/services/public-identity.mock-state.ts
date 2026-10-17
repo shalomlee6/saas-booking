@@ -27,6 +27,8 @@ interface MockClient {
   dead: boolean;
   /** undefined = not loaded yet; null = the client cancelled it. */
   upcoming?: MockUpcoming | null;
+  /** Appointment created by this unverified session. Other visits stay hidden. */
+  ownUpcoming?: MockUpcoming | null;
 }
 
 const clients = new Map<string, MockClient>();
@@ -91,10 +93,14 @@ function profileOf(client: MockClient): PublicClientProfile {
   const needsBirthday =
     mockBirthdayField() === 'required' &&
     (!client.hasCustomer || !client.birthday?.day || !client.birthday?.month);
+  const hasVisibleAppointments = client.verified
+    ? client.upcoming !== null
+    : !!client.ownUpcoming;
   return {
     verified: client.verified,
     hasCustomer: client.hasCustomer,
     needsBirthday,
+    hasVisibleAppointments,
     ...(client.verified && client.firstName ? { firstName: client.firstName } : {}),
   };
 }
@@ -190,12 +196,38 @@ function defaultUpcoming(): MockUpcoming {
   };
 }
 
+export function mockRememberPhoneBooking(body: { date: string; time: string; serviceId: string }): void {
+  const stored = readStored();
+  if (!stored || stored.verified) return;
+  const client = clientFor(stored.slug);
+  if (!client || client.verified) return;
+  client.ownUpcoming = {
+    id: 'apt-session',
+    date: body.date,
+    time: body.time,
+    status: 'confirmed',
+    serviceName: '',
+    serviceId: body.serviceId,
+    canChange: true,
+  };
+  persist(client, client.slug);
+}
+
 export function mockUpcomingAppointment(): {
   appointment: MockUpcoming | null;
   appointments: MockUpcoming[];
   businessPhone: string | null;
 } {
   const stored = readStored();
+  if (stored && !stored.verified) {
+    const client = clientFor(stored.slug);
+    const appointment = client?.ownUpcoming ?? null;
+    return {
+      appointment,
+      appointments: appointment ? [appointment] : [],
+      businessPhone: appointment ? '0501234567' : null,
+    };
+  }
   if (!stored?.verified || !stored.hasCustomer) {
     return { appointment: null, appointments: [], businessPhone: null };
   }
@@ -214,6 +246,13 @@ export function mockUpcomingAppointment(): {
 
 export function mockCancelUpcoming(id: string): boolean {
   const stored = readStored();
+  if (stored && !stored.verified) {
+    const client = clientFor(stored.slug);
+    if (!client?.ownUpcoming || client.ownUpcoming.id !== id || !client.ownUpcoming.canChange) return false;
+    client.ownUpcoming = null;
+    persist(client, client.slug);
+    return true;
+  }
   if (!stored?.verified) return false;
   const client = clientFor(stored.slug);
   if (!client?.upcoming || client.upcoming.id !== id || !client.upcoming.canChange) return false;
@@ -228,6 +267,14 @@ export function mockRescheduleUpcoming(
   time: string
 ): MockUpcoming | null {
   const stored = readStored();
+  if (stored && !stored.verified) {
+    const client = clientFor(stored.slug);
+    if (!client?.ownUpcoming || client.ownUpcoming.id !== id || !client.ownUpcoming.canChange) return null;
+    if (time === '15:00') return null;
+    client.ownUpcoming = { ...client.ownUpcoming, date, time };
+    persist(client, client.slug);
+    return client.ownUpcoming;
+  }
   if (!stored?.verified) return null;
   const client = clientFor(stored.slug);
   if (!client?.upcoming || client.upcoming.id !== id || !client.upcoming.canChange) return null;

@@ -47,6 +47,17 @@ export class PublicSessionService {
     return this.profileSignal()?.bookingLimitReached === true;
   }
 
+  /** Upcoming visits this session may see: every one when verified, or ones it created. */
+  hasVisibleAppointments(): boolean {
+    return this.profileSignal()?.hasVisibleAppointments === true;
+  }
+
+  setVisibleAppointments(visible: boolean): void {
+    const current = this.profileSignal();
+    if (!current || current.hasVisibleAppointments === visible) return;
+    this.profileSignal.set({ ...current, hasVisibleAppointments: visible });
+  }
+
   readyToBook(slug: string): boolean {
     if (this.slugSignal() !== slug) return false;
     return readyToBook(this.profileSignal());

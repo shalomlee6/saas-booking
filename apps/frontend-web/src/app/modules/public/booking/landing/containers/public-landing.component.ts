@@ -121,6 +121,21 @@ export class PublicLandingComponent implements OnInit {
   private readonly language = inject(LanguageService);
 
   constructor() {
+    // A logout bumps the flow epoch: drop everything that belonged to the signed-in client.
+    let prevEpoch: number | undefined;
+    effect(() => {
+      const epoch = this.session.flowEpoch();
+      if (prevEpoch !== undefined && prevEpoch !== epoch) {
+        untracked(() => {
+          this.upcomingApt.set(null);
+          this.justBookedApt.set(null);
+          this.upcomingError.set(false);
+          this.loadingUpcoming.set(false);
+        });
+      }
+      prevEpoch = epoch;
+    });
+
     let prevCustomerId: string | null | undefined;
     effect(() => {
       const currentId = this.session.customerId();
@@ -134,7 +149,7 @@ export class PublicLandingComponent implements OnInit {
           // to a different customer without navigating away) sets a new id — the stale
           // clear above is not enough on its own, this must actually re-fetch or the
           // previous customer's appointment can appear to "stick" after switching identity.
-          if (currentId && this.session.hasSessionFor(this.businessSlug())) {
+          if (currentId && this.canLoadAppointments()) {
             this.loadUpcoming();
           }
         });
@@ -341,7 +356,9 @@ export class PublicLandingComponent implements OnInit {
   readonly upcomingError = signal(false);
   readonly justBookedApt = signal<UpcomingAppointment | null>(null);
 
-  readonly showClientAppointments = computed(() => this.session.hasSessionFor(this.businessSlug()));
+  readonly showClientAppointments = computed(
+    () => this.session.hasSessionFor(this.businessSlug()) || this.session.hasVisibleAppointments()
+  );
 
   readonly displayApt = computed(
     () => this.upcomingApt() ?? this.justBookedApt()
@@ -367,6 +384,8 @@ export class PublicLandingComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((res) => {
+        const list = res.appointments ?? (res.appointment ? [res.appointment] : []);
+        this.session.setVisibleAppointments(list.length > 0);
         this.upcomingApt.set(res.appointment);
         if (res.businessPhone) this.businessPhone.set(res.businessPhone);
         this.loadingUpcoming.set(false);
@@ -387,7 +406,7 @@ export class PublicLandingComponent implements OnInit {
           }
 
           this.consumeBookedHistoryState();
-          if (this.session.hasSessionFor(slug)) {
+          if (this.canLoadAppointments()) {
             this.loadUpcoming();
           } else {
             this.upcomingTrigger.next(false);
@@ -541,7 +560,7 @@ export class PublicLandingComponent implements OnInit {
     const stateCustomerId = (state['customerId'] as string | null | undefined) ?? null;
     const identityMatch = stateCustomerId === currentCustomerId;
 
-    if (aptData && identityMatch && this.session.hasSessionFor(slug)) {
+    if (aptData && identityMatch && (this.session.hasSessionFor(slug) || this.session.hasVisibleAppointments())) {
       this.justBookedApt.set(aptData);
     }
 
@@ -572,9 +591,15 @@ export class PublicLandingComponent implements OnInit {
     this.upcomingApt.set(null);
     this.justBookedApt.set(null);
     this.detailsApt.set(null);
-    if (this.session.hasSessionFor(this.businessSlug())) {
+    if (this.canLoadAppointments()) {
       this.loadUpcoming();
+    } else {
+      this.session.setVisibleAppointments(false);
     }
+  }
+
+  private canLoadAppointments(): boolean {
+    return this.session.hasSessionFor(this.businessSlug()) || this.session.hasVisibleAppointments();
   }
 
   goToBook(serviceId?: string): void {

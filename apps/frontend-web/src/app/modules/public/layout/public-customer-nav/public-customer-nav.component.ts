@@ -73,7 +73,9 @@ export class PublicCustomerNavComponent implements OnDestroy {
     return null;
   });
 
-  readonly showMyAppointments = computed(() => this.session.identityMode() === 'otp');
+  readonly showMyAppointments = computed(
+    () => this.session.identityMode() === 'otp' || this.session.hasVisibleAppointments()
+  );
 
   readonly menuAriaLabel = computed(() =>
     this.menuOpen()
@@ -118,21 +120,26 @@ export class PublicCustomerNavComponent implements OnDestroy {
     this.closeMenu();
   }
 
+  /** Log out of this business only, then return to its home page (not the booking flow). */
   onSwitchUser(): void {
     const slug = this.slug();
     this.closeMenu();
     const done = (): void => {
       if (slug) this.session.clearSession(slug);
       else this.session.clearSession();
+      // Anything that shows who was signed in (home card, upcoming list, greeting) listens for this.
       this.session.bumpFlow();
-      if (slug) {
-        void this.router.navigate(['/b', slug, 'book'], { queryParams: { restart: Date.now() } });
-      }
+      if (!slug) return;
+      void this.router.navigate(['/b', slug]).then(() => this.focusMain());
     };
     if (!slug) {
       done();
       return;
     }
     this.publicApi.logoutPublicCustomer(slug).subscribe({ next: done, error: done });
+  }
+
+  private focusMain(): void {
+    this.doc.getElementById('main-content')?.focus();
   }
 }

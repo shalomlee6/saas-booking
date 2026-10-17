@@ -10,6 +10,7 @@ import {
   mockIdentifyStart,
   mockIdentifyVerify,
   mockCancelUpcoming,
+  mockRememberPhoneBooking,
   mockLogout,
   mockOffer,
   mockPublicConfig,
@@ -458,7 +459,8 @@ export class PublicApiService {
   /** POST /api/public/appointments */
   createAppointment(body: CreateAppointmentBody): Observable<CreateAppointmentResponse> {
     if (environment.mockPublicApi) {
-      return of({ id: 'apt1', status: 'confirmed', customerId: 'mock-customer' }).pipe(delay(200));
+      mockRememberPhoneBooking({ date: body.date, time: body.time, serviceId: body.serviceId });
+      return of({ id: 'apt-session', status: 'confirmed', customerId: 'mock-customer' }).pipe(delay(200));
     }
     return this.api.post<CreateAppointmentResponse>('public/appointments', body);
   }
