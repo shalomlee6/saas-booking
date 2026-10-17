@@ -7,15 +7,16 @@ import path from 'path';
 import { expect, test, type Page } from '@playwright/test';
 
 const OUT = path.join(__dirname, '..', 'playwright-screenshots', 'public-identity');
+/** Mock identity mode for this run: IDENTITY_MODE=phone or otp (default). */
+const MODE: 'otp' | 'phone' = process.env.IDENTITY_MODE === 'phone' ? 'phone' : 'otp';
 const BLOCKED = 'לא ניתן לקבוע תור אונליין. נא ליצור קשר עם העסק.';
 
-async function prepare(page: Page, extra?: () => void): Promise<void> {
-  await page.addInitScript((setup) => {
+async function prepare(page: Page): Promise<void> {
+  await page.addInitScript((mode) => {
     localStorage.setItem('sb_lang', 'he');
-    localStorage.removeItem('sb_mock_identity_mode');
+    localStorage.setItem('sb_mock_identity_mode', mode);
     localStorage.removeItem('sb_mock_public_session');
-    setup?.();
-  }, extra ? undefined : undefined);
+  }, MODE);
   await page.setViewportSize({ width: 390, height: 844 });
 }
 
@@ -34,6 +35,7 @@ test.describe('public client identity', () => {
   test.setTimeout(120_000);
 
   test('new client registers, then reaches confirm without a name field', async ({ page }) => {
+    test.skip(MODE === 'phone', 'needs a one-time code or a verified session');
     await prepare(page);
     await openBook(page);
     await shot(page, '01-service');
@@ -67,6 +69,7 @@ test.describe('public client identity', () => {
   });
 
   test('known client on a new device is greeted by name', async ({ page }) => {
+    test.skip(MODE === 'phone', 'needs a one-time code or a verified session');
     await prepare(page);
     await openBook(page);
     await page.locator('.book-service-card').first().click();
@@ -115,6 +118,7 @@ test.describe('public client identity', () => {
   });
 
   test('five wrong codes kill the code', async ({ page }) => {
+    test.skip(MODE === 'phone', 'needs a one-time code or a verified session');
     await prepare(page);
     await openBook(page);
     await page.locator('.book-service-card').first().click();
@@ -129,6 +133,7 @@ test.describe('public client identity', () => {
   });
 
   test('header is menu and name; side menu is my appointments', async ({ page }) => {
+    test.skip(MODE === 'phone', 'needs a one-time code or a verified session');
     await prepare(page);
     await openBook(page);
     const header = page.getByRole('banner');
@@ -273,5 +278,79 @@ test.describe('public client identity', () => {
     await expect(page.getByText('בחרי תאריך שנוח לך')).toBeVisible();
     await expect(page.getByTestId('identify-greeting')).toHaveCount(0);
     await shot(page, '11-phone-mode-date');
+  });
+
+  test.describe('phone mode: a booking made on this device stays visible to it', () => {
+    async function bookInPhoneMode(page: Page, phone: string): Promise<void> {
+      await page.addInitScript(() => {
+        localStorage.setItem('sb_lang', 'he');
+        localStorage.setItem('sb_mock_identity_mode', 'phone');
+      });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await openBook(page);
+      await page.locator('.book-service-card').first().click();
+      await page.locator('#identify-phone').fill(phone);
+      await page.locator('.identify-submit').click();
+      const profileForm = await page
+        .locator('#identify-name')
+        .or(page.getByText('בחרי תאריך שנוח לך'))
+        .first()
+        .waitFor({ timeout: 8_000 })
+        .then(() => page.locator('#identify-name').isVisible())
+        .catch(() => false);
+      if (profileForm) {
+        await page.locator('#identify-name').fill('דנה כהן');
+        await page.locator('#identify-day').selectOption({ index: 29 });
+        await page.locator('#identify-month').selectOption({ index: 2 });
+        await page.locator('.identify-submit').click();
+      }
+      await expect(page.getByText('בחרי תאריך שנוח לך')).toBeVisible();
+      await page.locator('span.p-datepicker-day:not(.p-disabled)').nth(2).click();
+      await page.getByRole('option', { name: '09:00' }).click();
+      await page.getByRole('button', { name: 'אישור התור' }).click();
+      await expect(page).toHaveURL(new RegExp('/b/demo-salon/?$'));
+    }
+
+    for (const [label, phone] of [
+      ['a known client', '0501111111'],
+      ['a new client', '0502222222'],
+    ] as const) {
+      test(`${label} sees the card, the menu entry and the list; no name is shown`, async ({ page }) => {
+        await bookInPhoneMode(page, phone);
+        await expect(page.locator('.public-apt-card')).toHaveCount(1);
+        await expect(page.locator('.public-apt-card')).toContainText('09:00');
+        await expect(page.locator('.pl-greeting__title')).toHaveText('שלום, ברוכות הבאות');
+        await page.getByRole('banner').getByRole('button', { name: 'פתיחת תפריט' }).click();
+        await page.getByRole('link', { name: 'התורים שלי' }).click();
+        await expect(page).toHaveURL(new RegExp('/upcoming'));
+        await expect(page.locator('.public-apt-card, .upcoming-card').first()).toBeVisible();
+        await expect(page.getByText('09:00').first()).toBeVisible();
+      });
+    }
+
+    test('it can reschedule its own booking from the home card', async ({ page }) => {
+      await bookInPhoneMode(page, '0501111111');
+      await page.getByRole('button', { name: 'עריכה' }).click();
+      const drawer = page.locator('.public-apt-details-drawer, .public-apt-details-dialog').first();
+      await drawer.getByRole('button', { name: 'קבעי מועד אחר' }).click();
+      await expect(page.getByText('בחרי תאריך שנוח לך')).toBeVisible();
+      await page.locator('span.p-datepicker-day:not(.p-disabled)').nth(3).click();
+      await page.getByRole('option', { name: '11:00' }).click();
+      await page.getByRole('button', { name: 'אישור התור' }).click();
+      await expect(page).toHaveURL(new RegExp('/b/demo-salon/?$'));
+      await expect(page.locator('.public-apt-card')).toHaveCount(1);
+      await expect(page.locator('.public-apt-card')).toContainText('11:00');
+    });
+
+    test('it can cancel its own booking, and the card and menu entry go away', async ({ page }) => {
+      await bookInPhoneMode(page, '0501111111');
+      await page.getByRole('button', { name: 'עריכה' }).click();
+      const drawer = page.locator('.public-apt-details-drawer, .public-apt-details-dialog').first();
+      await drawer.locator('#publicAptCancelReason').fill('לא יכולה להגיע');
+      await drawer.getByRole('button', { name: 'לחצי כאן לביטול התור' }).click();
+      await expect(page.locator('.public-apt-card')).toHaveCount(0);
+      await page.getByRole('banner').getByRole('button', { name: 'פתיחת תפריט' }).click();
+      await expect(page.getByRole('link', { name: 'התורים שלי' })).toHaveCount(0);
+    });
   });
 });

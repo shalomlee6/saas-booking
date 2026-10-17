@@ -14,6 +14,7 @@ import {
 import type { PublicCustomer } from '../types/publicCustomer';
 import { evaluateBookingBlock } from './customerNoShows';
 import { countActiveUpcoming, resolveOnlineBookingRules } from './bookingRules';
+import { countVisibleUpcoming } from './publicAppointmentVisibility';
 import { isRealBirthday, type Birthday } from './birthday';
 import { getSmsProvider } from './smsProvider';
 
@@ -242,6 +243,7 @@ export async function readSessionProfile(session: PublicCustomer): Promise<{
   hasCustomer: boolean;
   needsBirthday: boolean;
   bookingLimitReached: boolean;
+  hasVisibleAppointments: boolean;
   firstName?: string;
 }> {
   const settings = await ensureBusinessSettings(session.businessId);
@@ -259,14 +261,16 @@ export async function readSessionProfile(session: PublicCustomer): Promise<{
       : 0;
   const bookingLimitReached =
     rules.maxActiveAppointmentsPerClient != null && activeCount >= rules.maxActiveAppointmentsPerClient;
+  const hasVisibleAppointments = (await countVisibleUpcoming(session)) > 0;
   if (!session.verified || !customer) {
-    return { verified: session.verified, hasCustomer, needsBirthday, bookingLimitReached };
+    return { verified: session.verified, hasCustomer, needsBirthday, bookingLimitReached, hasVisibleAppointments };
   }
   return {
     verified: true,
     hasCustomer,
     needsBirthday,
     bookingLimitReached,
+    hasVisibleAppointments,
     firstName: firstNameOf(customer),
   };
 }

@@ -19,11 +19,6 @@
         <h1 class="sr-only">{{ business.name }}</h1>
         <router-outlet />
       </main>
-      <footer class="public-layout-footer">
-        <a class="public-layout-footer-link" [routerLink]="['/b', business.slug, 'accessibility']">
-          {{ 'accessibility.statementLink' | translate }}
-        </a>
-      </footer>
     </div>
   }
 </div>

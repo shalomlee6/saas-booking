@@ -4,12 +4,14 @@ import { Observable, of } from 'rxjs';
 import { catchError, delay, map, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../../core/api/api.service';
 import { environment } from '../../../../environments/environment';
+import { PublicSessionService } from './public-session.service';
 import type { BirthdayField, IdentityMode, PublicClientProfile } from './public-identity.rules';
 import {
   mockIdentifyComplete,
   mockIdentifyStart,
   mockIdentifyVerify,
   mockCancelUpcoming,
+  mockRememberPhoneBooking,
   mockLogout,
   mockOffer,
   mockPublicConfig,
@@ -215,6 +217,16 @@ export interface UpcomingAppointmentResponse {
 @Injectable({ providedIn: 'root' })
 export class PublicApiService {
   private readonly api = inject(ApiService);
+  private readonly session = inject(PublicSessionService);
+
+  /**
+   * A device can be remembered at several businesses. Requests that carry no slug of their own
+   * name the one this session is bound to, so the API picks the right binding.
+   */
+  private sessionBusiness(): { slug?: string } {
+    const slug = this.session.currentSlug();
+    return slug ? { slug } : {};
+  }
 
   /** GET /api/public/:businessSlug/business */
   getBusiness(businessSlug: string): Observable<PublicBusiness> {
@@ -458,7 +470,8 @@ export class PublicApiService {
   /** POST /api/public/appointments */
   createAppointment(body: CreateAppointmentBody): Observable<CreateAppointmentResponse> {
     if (environment.mockPublicApi) {
-      return of({ id: 'apt1', status: 'confirmed', customerId: 'mock-customer' }).pipe(delay(200));
+      mockRememberPhoneBooking({ date: body.date, time: body.time, serviceId: body.serviceId });
+      return of({ id: 'apt-session', status: 'confirmed', customerId: 'mock-customer' }).pipe(delay(200));
     }
     return this.api.post<CreateAppointmentResponse>('public/appointments', body);
   }
@@ -485,10 +498,11 @@ export class PublicApiService {
         serviceId: next.serviceId,
       }).pipe(delay(200));
     }
-    return this.api.post(`public/appointments/${encodeURIComponent(appointmentId)}/reschedule`, {
-      date,
-      time,
-    });
+    return this.api.post(
+      `public/appointments/${encodeURIComponent(appointmentId)}/reschedule`,
+      { date, time },
+      this.sessionBusiness()
+    );
   }
 
   /**
@@ -500,7 +514,7 @@ export class PublicApiService {
     if (environment.mockPublicApi) {
       return of(mockUpcomingAppointment()).pipe(delay(80));
     }
-    return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming');
+    return this.api.get<UpcomingAppointmentResponse>('public/appointments/upcoming', this.sessionBusiness());
   }
 
   /**
@@ -523,7 +537,8 @@ export class PublicApiService {
     }
     return this.api.deleteWithBody<{ ok: boolean }>(
       `public/appointments/${encodeURIComponent(appointmentId)}`,
-      { cancellationReason }
+      { cancellationReason },
+      this.sessionBusiness()
     );
   }
 }

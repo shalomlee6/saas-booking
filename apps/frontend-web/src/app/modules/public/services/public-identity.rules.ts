@@ -6,6 +6,8 @@ export interface PublicClientProfile {
   hasCustomer: boolean;
   needsBirthday: boolean;
   bookingLimitReached?: boolean;
+  /** At least one upcoming appointment this session is allowed to see. */
+  hasVisibleAppointments?: boolean;
   firstName?: string;
 }
 

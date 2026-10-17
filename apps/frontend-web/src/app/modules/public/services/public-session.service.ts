@@ -16,6 +16,8 @@ export class PublicSessionService {
   private readonly birthdaySignal = signal<BirthdayField | null>(null);
   readonly flowEpoch = signal(0);
 
+  /** Business this device session is bound to; names the business on requests that carry no slug. */
+  readonly currentSlug = this.slugSignal.asReadonly();
   readonly identityMode = this.modeSignal.asReadonly();
   readonly birthdayField = this.birthdaySignal.asReadonly();
   readonly customerId = this.customerIdSignal.asReadonly();
@@ -45,6 +47,17 @@ export class PublicSessionService {
 
   bookingLimitReached(): boolean {
     return this.profileSignal()?.bookingLimitReached === true;
+  }
+
+  /** Upcoming visits this session may see: every one when verified, or ones it created. */
+  hasVisibleAppointments(): boolean {
+    return this.profileSignal()?.hasVisibleAppointments === true;
+  }
+
+  setVisibleAppointments(visible: boolean): void {
+    const current = this.profileSignal();
+    if (!current || current.hasVisibleAppointments === visible) return;
+    this.profileSignal.set({ ...current, hasVisibleAppointments: visible });
   }
 
   readyToBook(slug: string): boolean {

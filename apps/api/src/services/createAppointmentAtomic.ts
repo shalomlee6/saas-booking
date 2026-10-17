@@ -40,6 +40,8 @@ export interface CreateAppointmentPayload {
   status?: AppointmentStatus;
   /** The visit this one replaces, stored on the new row. */
   rescheduledFrom?: Types.ObjectId | string;
+  /** Public session that booked this visit. Omitted for owner bookings. */
+  createdBySessionId?: string;
 }
 
 export interface CreateAppointmentOptions {
@@ -208,6 +210,7 @@ export async function createAppointmentAtomic(
             source,
             notes: payload.notes,
             rescheduledFrom: payload.rescheduledFrom,
+            createdBySessionId: payload.createdBySessionId,
           },
         ],
         { session }
@@ -229,6 +232,7 @@ export async function createAppointmentAtomic(
       source,
       notes: payload.notes,
       rescheduledFrom: payload.rescheduledFrom,
+      createdBySessionId: payload.createdBySessionId,
     });
 
     return created;

@@ -658,12 +658,12 @@ describe('PUBLIC BOOKING', () => {
       .delete(`/api/public/appointments/${apt._id.toString()}`)
       .set('Cookie', session.cookie)
       .send({ cancellationReason: 'no' });
-    expect(cancel.status).toBe(401);
+    expect(cancel.status).toBe(404);
     const moved = await request(app)
       .post(`/api/public/appointments/${apt._id.toString()}/reschedule`)
       .set('Cookie', session.cookie)
       .send({ date, time: '16:00' });
-    expect(moved.status).toBe(401);
+    expect(moved.status).toBe(404);
     expect((await Appointment.findById(apt._id))?.status).toBe('confirmed');
   });
 

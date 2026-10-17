@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { DOCUMENT, NgStyle } from '@angular/common';
-import { ActivatedRoute, RouterLink, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
 import { PublicThemeService } from '../services/public-theme.service';
@@ -12,7 +12,7 @@ import { TranslatePipe } from '../../../core/i18n/translate.pipe';
 @Component({
   selector: 'app-public-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, ToastModule, PublicCustomerNavComponent, TranslatePipe, NgStyle],
+  imports: [RouterOutlet, ToastModule, PublicCustomerNavComponent, TranslatePipe, NgStyle],
   templateUrl: './public-layout.component.html',
   styleUrl: './public-layout.component.scss',
 })

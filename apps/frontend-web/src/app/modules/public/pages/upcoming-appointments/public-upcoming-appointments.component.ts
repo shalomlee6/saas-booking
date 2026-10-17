@@ -88,11 +88,13 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
 
   loadAppointments(): void {
     const slug = this.slug();
-    if (this.session.identityMode() === 'phone') {
-      if (slug) void this.router.navigate(['/b', slug]);
-      return;
-    }
-    if (!slug || !this.session.hasSessionFor(slug)) {
+    const canList =
+      !!slug && (this.session.hasSessionFor(slug) || this.session.hasVisibleAppointments());
+    if (!canList) {
+      if (this.session.identityMode() === 'phone') {
+        if (slug) void this.router.navigate(['/b', slug]);
+        return;
+      }
       this.appointments.set([]);
       this.error.set(false);
       this.loading.set(false);
@@ -106,6 +108,7 @@ export class PublicUpcomingAppointmentsComponent implements OnInit {
     this.publicApi.getUpcomingAppointment().subscribe({
       next: (res) => {
         const list = res.appointments ?? (res.appointment ? [res.appointment] : []);
+        this.session.setVisibleAppointments(list.length > 0);
         this.appointments.set(sortUpcomingAppointments(list));
         if (res.businessPhone) this.businessPhone.set(res.businessPhone);
         this.loading.set(false);

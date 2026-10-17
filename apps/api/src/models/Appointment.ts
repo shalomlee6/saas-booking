@@ -28,6 +28,8 @@ export interface IAppointment extends Document {
   rescheduledTo?: Types.ObjectId;
   /** Set on the new visit, pointing at the one it replaced. */
   rescheduledFrom?: Types.ObjectId;
+  /** Public session that created this visit. Absent on older rows and owner bookings. */
+  createdBySessionId?: string;
   /** Excused no-shows stay `no_show` but drop out of the canonical count. */
   noShowExcused?: boolean;
   /** Owner cancelled inside the cancellation window and left the flag on. */
@@ -82,6 +84,7 @@ const AppointmentSchema = new Schema<IAppointment>(
     cancellationReason: String,
     rescheduledTo: { type: Schema.Types.ObjectId, ref: 'Appointment' },
     rescheduledFrom: { type: Schema.Types.ObjectId, ref: 'Appointment' },
+    createdBySessionId: { type: String },
     noShowExcused: { type: Boolean, default: false },
     lateCancellation: { type: Boolean, default: false },
     lateCancellationExcused: { type: Boolean, default: false },
@@ -98,6 +101,7 @@ const AppointmentSchema = new Schema<IAppointment>(
 AppointmentSchema.index({ businessId: 1, start: 1 });
 AppointmentSchema.index({ businessId: 1, status: 1 });
 AppointmentSchema.index({ businessId: 1, customerId: 1 });
+AppointmentSchema.index({ businessId: 1, createdBySessionId: 1 });
 
 AppointmentSchema.index({ businessId: 1, status: 1, start: 1, end: 1 });
 AppointmentSchema.index({ businessId: 1, customerId: 1, status: 1, start: -1 });
