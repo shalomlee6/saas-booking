@@ -66,6 +66,32 @@ describe('PublicCustomerNavComponent logout', () => {
     expect(document.activeElement).toBe(main);
   });
 
+  it('clears a stale customer id that has no business slug', async () => {
+    await router.navigateByUrl('/b/demo-salon/upcoming');
+    // Legacy state: a customer id was remembered but no session was ever bound to a slug.
+    session.rememberCustomerId('stale-customer');
+    expect(session.customerId()).toBe('stale-customer');
+    expect(session.currentSlug()).toBeNull();
+
+    fixture.componentInstance.onSwitchUser();
+    await fixture.whenStable();
+
+    expect(session.customerId()).toBeNull();
+    expect(session.customerName()).toBeNull();
+    expect(session.hasVisibleAppointments()).toBeFalse();
+    expect(session.readyToBook('demo-salon')).toBeFalse();
+    expect(router.url).toBe('/b/demo-salon');
+  });
+
+  it('clears client state even when the page has no business slug', () => {
+    TestBed.inject(PublicSessionService).rememberCustomerId('stale-customer');
+    const standalone = TestBed.createComponent(PublicCustomerNavComponent);
+    spyOn(standalone.componentInstance, 'slug').and.returnValue('');
+    standalone.componentInstance.onSwitchUser();
+    expect(TestBed.inject(PublicSessionService).customerId()).toBeNull();
+    expect(logout).not.toHaveBeenCalled();
+  });
+
   it('lists the accessibility statement in the side menu', () => {
     const hrefs = [...(fixture.nativeElement as HTMLElement).querySelectorAll('a')].map((a) =>
       a.getAttribute('href')

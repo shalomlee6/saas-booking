@@ -470,6 +470,8 @@ export class CustomerBookPageComponent implements OnInit {
         this.submitting.set(false);
         const slug = this.slug();
         if (res.customerId) this.session.rememberCustomerId(res.customerId);
+        // This session just made (or moved) a visit, so it may see it even when unverified.
+        this.session.setVisibleAppointments(true);
         if (slug) {
           this.router.navigate(['/b', slug], {
             state: {

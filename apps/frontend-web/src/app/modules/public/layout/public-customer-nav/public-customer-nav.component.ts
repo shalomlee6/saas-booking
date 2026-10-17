@@ -125,8 +125,8 @@ export class PublicCustomerNavComponent implements OnDestroy {
     const slug = this.slug();
     this.closeMenu();
     const done = (): void => {
-      if (slug) this.session.clearSession(slug);
-      else this.session.clearSession();
+      // Not slug-scoped: a stored customer id or session with no slug (stale or legacy) must go too.
+      this.session.clearSession();
       // Anything that shows who was signed in (home card, upcoming list, greeting) listens for this.
       this.session.bumpFlow();
       if (!slug) return;

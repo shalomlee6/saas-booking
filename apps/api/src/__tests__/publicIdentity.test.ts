@@ -6,6 +6,7 @@ import { OtpChallenge } from '../models/OtpChallenge';
 import { Customer } from '../models/Customer';
 import { Appointment } from '../models/Appointment';
 import { PublicClientSession } from '../models/PublicClientSession';
+import { BusinessSettings } from '../models/BusinessSettings';
 import { CustomerServiceConfig } from '../models/CustomerServiceConfig';
 import { AuditLog } from '../models/AuditLog';
 import { User } from '../models/User';
@@ -488,6 +489,157 @@ describe('PUBLIC CLIENT IDENTITY', () => {
     expect(customer?.birthday?.month).toBe(2);
     const named = await request(app).get('/api/public/session/me').set('Cookie', cookie);
     expect(named.body.firstName).toBe('Dana');
+  });
+
+  it('a brand-new phone-mode client sees the booking it just made, and nothing else', async () => {
+    process.env.IDENTITY_MODE = 'phone';
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+
+    const start = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0507777771' });
+    expect(start.body.status).toBe('new');
+    const cookie = sessionCookie(start);
+    const complete = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/complete`)
+      .set('Cookie', cookie)
+      .send({ name: 'Dana Cohen', birthday: { day: 4, month: 5 } });
+    expect(complete.status).toBe(200);
+
+    const beforeMe = await request(app).get('/api/public/session/me').set('Cookie', cookie);
+    expect(beforeMe.body.hasVisibleAppointments).toBe(false);
+
+    const when = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    when.setUTCHours(10, 0, 0, 0);
+    const booked = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', cookie)
+      .send({
+        slug: business.slug,
+        serviceId: service._id.toString(),
+        date: when.toISOString().slice(0, 10),
+        time: '10:00',
+      });
+    expect(booked.status).toBe(201);
+    const stored = await Appointment.findById(booked.body.id);
+    expect(stored?.createdBySessionId).toBe(decodeURIComponent(sessionIdFromCookie(cookie)));
+
+    const me = await request(app).get('/api/public/session/me').set('Cookie', cookie);
+    expect(me.body.verified).toBe(false);
+    expect(me.body.firstName).toBeUndefined();
+    expect(me.body.hasVisibleAppointments).toBe(true);
+    const upcoming = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(upcoming.body.appointments.length).toBe(1);
+    expect(upcoming.body.appointment.id).toBe(booked.body.id);
+    expect(upcoming.body.customerName).toBeUndefined();
+
+    const otherDevice = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0507777771' });
+    const otherCookie = sessionCookie(otherDevice);
+    const otherMe = await request(app).get('/api/public/session/me').set('Cookie', otherCookie);
+    expect(otherMe.body.hasVisibleAppointments).toBe(false);
+    expect(otherMe.body.firstName).toBeUndefined();
+    const otherList = await request(app).get('/api/public/appointments/upcoming').set('Cookie', otherCookie);
+    expect(otherList.body.appointments.length).toBe(0);
+    const cancelFromOther = await request(app)
+      .delete(`/api/public/appointments/${booked.body.id}`)
+      .set('Cookie', otherCookie)
+      .send({ cancellationReason: 'no' });
+    expect(cancelFromOther.status).toBe(404);
+  });
+
+  it('applies the cancellation window and status rules to a booking the session made', async () => {
+    process.env.IDENTITY_MODE = 'phone';
+    const { business } = await seedOwner();
+    const service = await seedService(business._id);
+    await seedBusinessSettings(business._id);
+    await BusinessSettings.updateOne({ businessId: business._id }, { $set: { cancellationWindowHours: 24 * 10 } });
+    await Customer.create({ businessId: business._id, name: 'Noa Levi', firstName: 'Noa', phone: '0507777772' });
+    const start = await request(app)
+      .post(`/api/public/businesses/${business.slug}/identify/start`)
+      .send({ phone: '0507777772' });
+    const cookie = sessionCookie(start);
+    const when = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    when.setUTCHours(10, 0, 0, 0);
+    const date = when.toISOString().slice(0, 10);
+    const booked = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', cookie)
+      .send({ slug: business.slug, serviceId: service._id.toString(), date, time: '10:00' });
+    expect(booked.status).toBe(201);
+
+    const list = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(list.body.appointment.canChange).toBe(false);
+    const cancel = await request(app)
+      .delete(`/api/public/appointments/${booked.body.id}`)
+      .set('Cookie', cookie)
+      .send({ cancellationReason: 'late' });
+    expect(cancel.status).toBe(409);
+    expect(cancel.body.code).toBe('OUTSIDE_CANCELLATION_WINDOW');
+    const move = await request(app)
+      .post(`/api/public/appointments/${booked.body.id}/reschedule`)
+      .set('Cookie', cookie)
+      .send({ date, time: '12:00' });
+    expect(move.status).toBe(409);
+    expect(move.body.code).toBe('OUTSIDE_CANCELLATION_WINDOW');
+
+    await BusinessSettings.updateOne({ businessId: business._id }, { $set: { cancellationWindowHours: 24 } });
+    await Appointment.updateOne({ _id: booked.body.id }, { $set: { status: 'completed' } });
+    const done = await request(app)
+      .delete(`/api/public/appointments/${booked.body.id}`)
+      .set('Cookie', cookie)
+      .send({ cancellationReason: 'done' });
+    expect(done.status).toBe(409);
+    expect(done.body.code).toBe('APPOINTMENT_NOT_CANCELLABLE');
+    const gone = await request(app).get('/api/public/appointments/upcoming').set('Cookie', cookie);
+    expect(gone.body.appointment).toBeNull();
+  });
+
+  it('finds the booking on a device remembered at two businesses when the request names its business', async () => {
+    process.env.IDENTITY_MODE = 'phone';
+    const first = await seedOwner({ email: 'a2@test.com' });
+    const second = await seedOwner({ email: 'b2@test.com' });
+    const service = await seedService(first.business._id);
+    await seedBusinessSettings(first.business._id);
+    await seedBusinessSettings(second.business._id);
+    await Customer.create({ businessId: first.business._id, name: 'Noa', firstName: 'Noa', phone: '0507777773' });
+    const startA = await request(app)
+      .post(`/api/public/businesses/${first.business.slug}/identify/start`)
+      .send({ phone: '0507777773' });
+    const cookie = sessionCookie(startA);
+    await request(app)
+      .post(`/api/public/businesses/${second.business.slug}/identify/start`)
+      .set('Cookie', cookie)
+      .send({ phone: '0507777773' });
+    const when = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+    when.setUTCHours(10, 0, 0, 0);
+    const booked = await request(app)
+      .post('/api/public/appointments')
+      .set('Cookie', cookie)
+      .send({
+        slug: first.business.slug,
+        serviceId: service._id.toString(),
+        date: when.toISOString().slice(0, 10),
+        time: '10:00',
+      });
+    expect(booked.status).toBe(201);
+
+    const named = await request(app)
+      .get(`/api/public/appointments/upcoming?slug=${first.business.slug}`)
+      .set('Cookie', cookie);
+    expect(named.body.appointments.length).toBe(1);
+    const other = await request(app)
+      .get(`/api/public/appointments/upcoming?slug=${second.business.slug}`)
+      .set('Cookie', cookie);
+    expect(other.body.appointments.length).toBe(0);
+    const cancel = await request(app)
+      .delete(`/api/public/appointments/${booked.body.id}?slug=${first.business.slug}`)
+      .set('Cookie', cookie)
+      .send({ cancellationReason: 'cannot' });
+    expect(cancel.status).toBe(200);
   });
 
   it('keeps a separate binding per business on one device cookie', async () => {

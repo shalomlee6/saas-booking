@@ -53,7 +53,8 @@ function persist(client: MockClient | null, slug: string): void {
   try {
     if (!client) {
       const current = readStored();
-      if (current?.slug === slug) localStorage.removeItem(STORAGE_SESSION);
+      // A stored session with no slug is stale; logout drops it too.
+      if (current && (!current.slug || current.slug === slug)) localStorage.removeItem(STORAGE_SESSION);
       return;
     }
     localStorage.setItem(STORAGE_SESSION, JSON.stringify(client));

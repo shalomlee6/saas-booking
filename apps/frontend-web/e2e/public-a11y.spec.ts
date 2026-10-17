@@ -5,6 +5,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
+/** Mock identity mode for this run: IDENTITY_MODE=phone or otp (default). */
+const MODE: 'otp' | 'phone' = process.env.IDENTITY_MODE === 'phone' ? 'phone' : 'otp';
+
 const SESSION = {
   slug: 'demo-salon',
   phone: '0501111111',
@@ -44,9 +47,10 @@ async function scan(page: Page, label: string): Promise<void> {
 }
 
 async function rememberEntrance(page: Page): Promise<void> {
-  await page.addInitScript(() => {
+  await page.addInitScript((mode) => {
     sessionStorage.setItem('boki:landingEntranceSeen:demo-salon', '1');
-  });
+    localStorage.setItem('sb_mock_identity_mode', mode);
+  }, MODE);
 }
 
 async function tabTo(page: Page, selector: string): Promise<void> {
@@ -110,19 +114,23 @@ test.describe('Public accessibility', () => {
     await scan(page, 'identify phone');
     await page.locator('#identify-phone').fill('0502222222');
     await page.locator('.identify-submit').click();
-    await page.locator('#identify-code').waitFor();
-    await scan(page, 'otp');
-    await page.locator('#identify-code').fill('482913');
-    await page.locator('.identify-submit').first().click();
+    if (MODE === 'otp') {
+      await page.locator('#identify-code').waitFor();
+      await scan(page, 'otp');
+      await page.locator('#identify-code').fill('482913');
+      await page.locator('.identify-submit').first().click();
+    }
     await page.locator('#identify-name').waitFor();
     await scan(page, 'profile');
     await page.locator('#identify-name').fill('דנה כהן');
     await page.locator('#identify-day').selectOption({ index: 29 });
     await page.locator('#identify-month').selectOption({ index: 2 });
     await page.locator('.identify-submit').click();
-    await page.getByTestId('identify-greeting').waitFor();
-    await scan(page, 'greeting');
-    await page.locator('.identify-submit').click();
+    if (MODE === 'otp') {
+      await page.getByTestId('identify-greeting').waitFor();
+      await scan(page, 'greeting');
+      await page.locator('.identify-submit').click();
+    }
     const day = page.locator('span.p-datepicker-day:not(.p-disabled)').nth(2);
     await day.waitFor();
     await scan(page, 'datetime');
@@ -189,11 +197,13 @@ test.describe('Public accessibility', () => {
     await tabTo(page, '.identify-submit');
     await page.keyboard.press('Enter');
 
-    await page.locator('#identify-code').waitFor();
-    await tabTo(page, '#identify-code');
-    await page.keyboard.type('482913');
-    await tabTo(page, '.identify-submit');
-    await page.keyboard.press('Enter');
+    if (MODE === 'otp') {
+      await page.locator('#identify-code').waitFor();
+      await tabTo(page, '#identify-code');
+      await page.keyboard.type('482913');
+      await tabTo(page, '.identify-submit');
+      await page.keyboard.press('Enter');
+    }
 
     await page.locator('#identify-name').waitFor();
     await tabTo(page, '#identify-name');
@@ -207,9 +217,11 @@ test.describe('Public accessibility', () => {
     await tabTo(page, '.identify-submit');
     await page.keyboard.press('Enter');
 
-    await page.getByTestId('identify-greeting').waitFor();
-    await tabTo(page, '.identify-submit');
-    await page.keyboard.press('Enter');
+    if (MODE === 'otp') {
+      await page.getByTestId('identify-greeting').waitFor();
+      await tabTo(page, '.identify-submit');
+      await page.keyboard.press('Enter');
+    }
 
     await page.locator('span.p-datepicker-day:not(.p-disabled)').nth(2).waitFor();
     await tabTo(page, 'span.p-datepicker-day[tabindex="0"]');

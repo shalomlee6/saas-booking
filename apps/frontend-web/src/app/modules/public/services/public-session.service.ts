@@ -16,6 +16,8 @@ export class PublicSessionService {
   private readonly birthdaySignal = signal<BirthdayField | null>(null);
   readonly flowEpoch = signal(0);
 
+  /** Business this device session is bound to; names the business on requests that carry no slug. */
+  readonly currentSlug = this.slugSignal.asReadonly();
   readonly identityMode = this.modeSignal.asReadonly();
   readonly birthdayField = this.birthdaySignal.asReadonly();
   readonly customerId = this.customerIdSignal.asReadonly();
