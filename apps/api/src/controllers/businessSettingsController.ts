@@ -18,6 +18,8 @@ import {
   saveOwnerReliability,
 } from '../services/bookingSettingsService';
 import type { BookingRulesBody, ReliabilityBody } from '../validation/schemas/bookingSettings';
+import type { PublicThemeBody } from '../validation/schemas/businessSettings';
+import { savePublicTheme } from '../services/publicThemeService';
 
 export async function getMyBusinessSettings(req: AuthRequest, res: Response): Promise<void> {
   if (!req.businessSettings) {
@@ -108,4 +110,22 @@ export async function putOwnerReliability(req: AuthRequest, res: Response): Prom
     });
   }
   res.json(await readOwnerBookingSettings(businessId));
+}
+
+/** PUT /api/settings/me/public-theme — the client-site theme (owner only). Applies to the public site at once. */
+export async function putOwnerPublicTheme(req: AuthRequest, res: Response): Promise<void> {
+  const businessId = getEffectiveBusinessId(req);
+  if (!businessId) throw new ValidationError('Business ID not found');
+  const result = await savePublicTheme(businessId, req.body as PublicThemeBody);
+  if (result.changed) {
+    await recordAudit({
+      actorUserId: req.user?.userId,
+      actorEmail: req.user?.email,
+      action: 'business.public_theme_updated',
+      entity: 'BusinessSettings',
+      entityId: result.settingsId,
+      metadata: { businessId, before: result.previous, after: result.current },
+    });
+  }
+  res.json({ publicTheme: result.current });
 }

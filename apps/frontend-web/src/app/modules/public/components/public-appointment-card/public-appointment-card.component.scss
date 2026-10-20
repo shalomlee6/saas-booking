@@ -37,10 +37,14 @@
 }
 
 .public-apt-countdown {
+  align-self: flex-start;
   margin: 0 0 0.35rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: $pl-secondary-pale;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: $pl-ink;
+  color: $pl-secondary-ink;
 }
 
 .public-apt-row {

@@ -189,17 +189,12 @@
 // profile (see PublicThemeService). Same token names as `body.theme-*` so
 // existing `var(--bg-app)`-style component styles work unchanged; these are
 // the *default* brand tokens for a tenant that hasn't customized its palette.
-// A tenant that has (see `PublicBusinessThemeFamily`) overrides `--color-primary`
-// and its derived shades inline, per light/dark mode, on `.public-shell` itself.
+// The brand colors (`--color-primary*`, `--color-secondary*`, `--on-primary`, `--on-secondary`) are NOT
+// declared here: they come only from the business's own stored theme, resolved by
+// `resolvePublicThemeVars` and set inline on `.public-shell` (a custom theme also sets the page
+// surfaces, text and borders the same way).
 
 .public-shell.theme-light {
-  --color-primary:        #F35271;
-  --color-primary-hover:  #de3b5c;
-  --color-primary-subtle: #fef1f4;
-  --color-primary-muted:  #fbc7d3;
-  --color-primary-ink:    #96263d;
-  --on-primary:           #111827;
-
   --bg-app:               #f5f5f7;
   --bg-card:              #ffffff;
   --bg-sidebar:           #ffffff;
@@ -255,15 +250,6 @@
 }
 
 .public-shell.theme-dark {
-  --color-primary:        #f06b8a;
-  --color-primary-hover:  #f8849f;
-  --color-primary-subtle: #2a1520;
-  --color-primary-muted:  #4a2030;
-  --color-primary-ink:    #f8849f;
-  // Dark mode's --color-primary is deliberately lighter/brighter (so it pops on
-  // black) — too light for white text (2.8:1). Dark text is the correct default here.
-  --on-primary:           #0d0d0f;
-
   --bg-app:               #0d0d0f;
   --bg-card:              #18181b;
   --bg-sidebar:           #18181b;

@@ -16,17 +16,26 @@ export interface AdminBusiness {
     theme?: {
       preset?: string;
       defaultMode?: 'light' | 'dark';
+      /** The client-site colors; used only while the preset is "custom". */
+      colors?: { primary?: string; secondary?: string; background?: string };
     };
   };
 }
 
+/** The public client-site theme: one stored object, edited here and by the owner. */
+export interface PublicThemeBody {
+  preset?: string;
+  defaultMode?: 'light' | 'dark';
+  colors?: { primary?: string; secondary?: string; background?: string };
+}
+
 export interface UpdateBusinessUiBody extends Partial<BusinessUi> {
-  publicTheme?: { preset?: string; defaultMode?: 'light' | 'dark' };
+  publicTheme?: PublicThemeBody;
 }
 
 export interface UpdateBusinessUiResponse {
   ui: BusinessUi;
-  publicTheme?: { preset?: string; defaultMode?: 'light' | 'dark' };
+  publicTheme?: PublicThemeBody;
 }
 
 export interface ImpersonateResponse {

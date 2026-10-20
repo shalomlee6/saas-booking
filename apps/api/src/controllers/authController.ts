@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { BUSINESS_SETTINGS_DEFAULTS } from '../config/businessSettingsDefaults';
 import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../middleware/auth';
 import { User } from '../models/User';
@@ -100,6 +101,8 @@ export async function getMe(req: AuthRequest, res: Response) {
       },
       business: business || null,
       businessSettings: businessSettings || null,
+      // The one defaults object (see config/businessSettingsDefaults.ts), so the app never hardcodes its own copy.
+      settingsDefaults: BUSINESS_SETTINGS_DEFAULTS,
       role: user.role,
     });
   } catch (err) {

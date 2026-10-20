@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, signal, untracked } from '@angular
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../../../core/api/api.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { SettingsSaveBarComponent } from './settings-save-bar.component';
@@ -20,11 +21,12 @@ interface ReliabilityRules {
   lookback: '12months' | 'all';
 }
 
-const DEFAULTS: ReliabilityRules = {
-  noShow: { enabled: true, threshold: 3 },
-  lateCancellation: { enabled: false, threshold: 3 },
-  lateArrival: { enabled: false, threshold: 3 },
-  lookback: '12months',
+/** Shown for the instant before the stored rules arrive: nothing counted. Not a default. */
+const BLANK_RULES: ReliabilityRules = {
+  noShow: { enabled: false, threshold: 0 },
+  lateCancellation: { enabled: false, threshold: 0 },
+  lateArrival: { enabled: false, threshold: 0 },
+  lookback: 'all',
 };
 
 @Component({
@@ -38,9 +40,12 @@ export class ReliabilitySectionComponent {
   private readonly api = inject(ApiService);
   private readonly messages = inject(MessageService);
   private readonly reset = inject(SettingsResetService);
+  private readonly auth = inject(AuthService);
   readonly language = inject(LanguageService);
-  readonly rules = signal<ReliabilityRules>(DEFAULTS);
-  private readonly saved = signal<ReliabilityRules>(DEFAULTS);
+  /** The server's defaults (from /auth/me) are the only fallback; there is no copy of them in this file. */
+  private readonly initial = this.initialRules();
+  readonly rules = signal<ReliabilityRules>(this.initial);
+  private readonly saved = signal<ReliabilityRules>(this.initial);
   readonly dirty = computed(() => JSON.stringify(this.rules()) !== JSON.stringify(this.saved()));
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -58,10 +63,16 @@ export class ReliabilitySectionComponent {
     });
   }
 
+  private initialRules(): ReliabilityRules {
+    const defaults = this.auth.settingsDefaults();
+    if (!defaults) return BLANK_RULES;
+    return { noShow: defaults.noShowPolicy, ...defaults.reliability };
+  }
+
   private load(): void {
     this.api.get<{ reliability: ReliabilityRules }>('settings/me/booking-rules').subscribe({
       next: (body) => {
-        const loaded = { ...DEFAULTS, ...body.reliability };
+        const loaded = { ...this.initialRules(), ...body.reliability };
         this.rules.set(loaded);
         this.saved.set(loaded);
         this.error.set(null);

@@ -17,13 +17,14 @@ import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { PublicApiService } from '../../services/public-api.service';
 import { PublicSessionService } from '../../services/public-session.service';
 import { readBusinessSlugFromPathFromRoot } from '../../utils/public-route-snapshot.util';
+import { PublicTopbarComponent } from '../public-topbar/public-topbar.component';
 
 export type PublicNavItemId = 'home' | 'upcoming' | 'location' | 'settings' | 'accessibility';
 
 @Component({
   selector: 'app-public-customer-nav',
   standalone: true,
-  imports: [RouterLink, TranslatePipe],
+  imports: [RouterLink, TranslatePipe, PublicTopbarComponent],
   templateUrl: './public-customer-nav.component.html',
   styleUrl: './public-customer-nav.component.scss',
 })
@@ -35,7 +36,7 @@ export class PublicCustomerNavComponent implements OnDestroy {
   private readonly publicApi = inject(PublicApiService);
   readonly language = inject(LanguageService);
 
-  private readonly menuBtn = viewChild<ElementRef<HTMLButtonElement>>('menuBtn');
+  private readonly topbar = viewChild(PublicTopbarComponent);
   private readonly firstLink = viewChild<ElementRef<HTMLAnchorElement>>('firstLink');
 
   readonly slug = computed(() => readBusinessSlugFromPathFromRoot(this.route));
@@ -112,7 +113,7 @@ export class PublicCustomerNavComponent implements OnDestroy {
     this.menuOpen.set(false);
     this.doc.body.classList.remove('public-nav-lock');
     if (restoreFocus) {
-      this.menuBtn()?.nativeElement.focus();
+      this.topbar()?.focusMenuButton();
     }
   }
 

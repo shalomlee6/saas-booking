@@ -5,6 +5,7 @@ import {
 } from '@angular/common/http';
 import { from, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
+import type { SettingsDefaults } from '../config/settings-defaults';
 import {
   WORKING_HOURS_DAY_KEYS,
   createDefaultSlots,
@@ -580,6 +581,60 @@ function buildDefaultWorkingHours(): Record<string, { enabled: boolean; slots: b
 
 const DEFAULT_WORKING_HOURS = buildDefaultWorkingHours();
 
+/**
+ * The mock backend's copy of the server's settings defaults (apps/api/src/config/businessSettingsDefaults.ts),
+ * sent with every /auth/me exactly as the real API does. Test data for the mock only: the app itself keeps no copy.
+ */
+const MOCK_SETTINGS_DEFAULTS: SettingsDefaults = {
+  ui: {
+    themeMode: 'light',
+    primaryColor: '#3787F6',
+    sidebarColor: '#0F172A',
+    backgroundColor: '#F6F8FB',
+    logoUrl: '',
+    dashboardLayout: 'classic',
+  },
+  theme: {
+    colors: { primary: '#F35271', secondary: '#FF9DBC', accent: '#6CD6CD', background: '#FFFFFF', text: '#111827' },
+    preset: 'prime-pink',
+    defaultMode: 'light',
+  },
+  onlineBooking: {
+    enabled: true,
+    minLeadMinutes: 60,
+    maxAdvanceDays: 60,
+    bufferMinutes: 0,
+    onlineDefaultStatus: 'confirmed',
+    maxActiveAppointmentsPerClient: null,
+    clientCanCancelOnline: true,
+  },
+  cancellationWindowHours: 24,
+  noShowPolicy: { enabled: true, threshold: 3 },
+  reliability: {
+    lateCancellation: { enabled: false, threshold: 3 },
+    lateArrival: { enabled: false, threshold: 3 },
+    lookback: '12months',
+  },
+  birthdayField: 'required',
+};
+
+/** A test can pin the whole stored public theme (preset, mode, colors) through localStorage. */
+function readPinnedPublicTheme(): Record<string, unknown> | null {
+  try {
+    const raw = localStorage.getItem('sb_mock_public_theme');
+    return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The owner's stored client-site theme in the mock (what PUT settings/me/public-theme writes). */
+let mockPublicTheme: { preset: string; defaultMode: 'light' | 'dark'; colors: Record<string, string> } = {
+  preset: MOCK_SETTINGS_DEFAULTS.theme.preset,
+  defaultMode: MOCK_SETTINGS_DEFAULTS.theme.defaultMode,
+  colors: { ...MOCK_SETTINGS_DEFAULTS.theme.colors },
+};
+
 let mockBusinessSettings: AuthMeResponse['businessSettings'] = {
   theme: null,
   workingHours: (() => {
@@ -621,7 +676,7 @@ function mockAuthMeResponseOwner(): AuthMeResponse {
       ui: { themeMode: 'light' },
     },
     businessSettings: {
-      theme: mockBusinessSettings?.theme ?? null,
+      theme: mockPublicTheme,
       workingHours,
     },
   };
@@ -745,7 +800,9 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
         }),
       ]);
     }
-    return from([new HttpResponse({ status: 200, body: mockAuthMeResponse(req) })]);
+    return from([
+      new HttpResponse({ status: 200, body: { ...mockAuthMeResponse(req), settingsDefaults: MOCK_SETTINGS_DEFAULTS } }),
+    ]);
   }
 
   // ——— Appointments ———
@@ -1446,8 +1503,13 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
     const name = known ? String(known['name']) : (slug === 'demo-salon' ? 'Demo Salon' : slug);
     // Each tenant references its OWN theme preset (or none, for the default) — this
     // used to return one hardcoded blue for every business regardless of slug.
-    const publicTheme =
+    const knownTheme =
       (known?.['publicTheme'] as { preset?: string; defaultMode?: 'light' | 'dark' } | null) ?? null;
+    const publicTheme = (readPinnedPublicTheme() ?? knownTheme) as {
+      preset?: string;
+      defaultMode?: 'light' | 'dark';
+      colors?: { primary?: string; secondary?: string; background?: string };
+    } | null;
     return from([
       new HttpResponse({
         status: 200,
@@ -1459,6 +1521,7 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
             theme: {
               preset: publicTheme?.preset,
               defaultMode: publicTheme?.defaultMode,
+              colors: publicTheme?.colors,
               logoUrl: null,
             },
             plan: 'free',
@@ -1619,6 +1682,21 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
           : { available: false },
       }),
     ]);
+  }
+
+  if (req.method === 'PUT' && req.url.includes('settings/me/public-theme')) {
+    const patch = (req.body ?? {}) as {
+      preset?: string;
+      defaultMode?: 'light' | 'dark';
+      colors?: { primary?: string; secondary?: string; background?: string };
+    };
+    mockPublicTheme = {
+      ...mockPublicTheme,
+      ...(patch.preset ? { preset: patch.preset } : {}),
+      ...(patch.defaultMode ? { defaultMode: patch.defaultMode } : {}),
+      colors: { ...mockPublicTheme.colors, ...patch.colors },
+    };
+    return from([new HttpResponse({ status: 200, body: { publicTheme: mockPublicTheme } })]);
   }
 
   if (req.method === 'POST' && req.url.includes('settings/me/reset/restore')) {

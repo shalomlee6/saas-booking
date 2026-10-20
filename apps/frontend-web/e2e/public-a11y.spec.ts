@@ -179,6 +179,45 @@ test.describe('Public accessibility', () => {
     await scan(page, 'drawer locked');
   });
 
+  // Two deliberately awkward custom themes: a bright yellow brand on cream, and a mid-tone purple page
+  // (where no single text color suits the page, the cards and a tint at once). Both modes of each.
+  const CUSTOM_THEMES = [
+    { name: 'yellow on cream', colors: { primary: '#FFD54F', secondary: '#7C4DFF', background: '#FFF8E1' } },
+    { name: 'mid-tone purple', colors: { primary: '#5A978A', secondary: '#72F849', background: '#B424DA' } },
+  ] as const;
+
+  for (const theme of CUSTOM_THEMES) {
+    for (const mode of ['light', 'dark'] as const) {
+      test(`custom theme (${theme.name}, ${mode}): landing, booking and menu have no axe violations`, async ({ page }) => {
+        await page.addInitScript(
+          ([pinned, entrance]) => {
+            localStorage.setItem('sb_lang', 'he');
+            localStorage.setItem('sb_mock_public_theme', pinned);
+            localStorage.removeItem('sb_public_theme');
+            sessionStorage.setItem('boki:landingEntranceSeen:demo-salon', entrance);
+          },
+          [JSON.stringify({ preset: 'custom', defaultMode: mode, colors: theme.colors }), '1']
+        );
+        await page.setViewportSize({ width: 390, height: 800 });
+        await page.goto('/b/demo-salon', { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('#main-content');
+        await page.waitForFunction(() => !document.querySelector('.pl-page--intro'));
+        // The site really is themed from the payload: the page background is the derived one.
+        const shellBackground = await page.locator('.public-shell').evaluate((el) => el.style.getPropertyValue('--bg-app'));
+        expect(shellBackground).not.toBe('');
+        await scan(page, `${theme.name} ${mode} landing`);
+
+        await page.getByRole('banner').getByRole('button', { name: 'פתיחת תפריט' }).click();
+        await scan(page, `${theme.name} ${mode} menu`);
+        await page.keyboard.press('Escape');
+
+        await page.goto('/b/demo-salon/book', { waitUntil: 'domcontentloaded' });
+        await page.locator('.book-service-card').first().waitFor({ timeout: 30_000 });
+        await scan(page, `${theme.name} ${mode} book service`);
+      });
+    }
+  }
+
   test('keyboard-only booking confirms an appointment', async ({ page }) => {
     await rememberEntrance(page);
     await page.setViewportSize({ width: 390, height: 800 });

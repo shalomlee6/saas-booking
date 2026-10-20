@@ -512,6 +512,42 @@ test.describe('Keyboard navigation — public booking', () => {
         await expect(restore).toHaveCount(0);
       }
     });
+
+    test('design page: both tabs, a custom client theme and its preview have no axe violations', async ({ page }) => {
+      await loginAsOwner(page);
+      await page.evaluate(() => localStorage.setItem('sb_lang', 'he'));
+      const scan = async (label: string) => {
+        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+        const results = await runAxe(page, label);
+        expect(results.violations, label).toHaveLength(0);
+      };
+
+      for (const dark of [false, true]) {
+        const mode = dark ? 'dark' : 'light';
+        await page.goto('/settings/design', { waitUntil: 'domcontentloaded' });
+        await page.locator('.settings-shell').waitFor({ timeout: 30_000 });
+        await setDark(page, dark);
+        await scan(`design management tab ${mode}`);
+
+        await page.getByRole('tab', { name: 'אתר הלקוחות' }).click();
+        await page.locator('app-public-theme-editor').waitFor();
+        await scan(`design client tab ${mode}`);
+
+        await page.getByRole('radio', { name: 'מותאם אישית' }).check({ force: true });
+        await page.locator('#clientPrimary').waitFor();
+        await scan(`design client tab custom ${mode}`);
+
+        // A color that fails as text on the page shows the contrast warning; the page must still pass.
+        await page.locator('#clientPrimary').fill('#FFFF00');
+        await expect(page.locator('#clientPrimary-warning')).toBeVisible();
+        await scan(`design client tab contrast warning ${mode}`);
+
+        await page.locator('input[name="previewMode"][value="dark"]').check({ force: true });
+        await scan(`design client preview dark ${mode}`);
+        await page.locator('input[name="previewMode"][value="light"]').check({ force: true });
+        await scan(`design client preview light ${mode}`);
+      }
+    });
   });
 
   test('booking/CTA button on /b/demo-salon is reachable via keyboard', async ({ page }) => {

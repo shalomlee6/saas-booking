@@ -16,6 +16,7 @@ import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { DatePickerModule } from 'primeng/datepicker';
 import { SkeletonModule } from 'primeng/skeleton';
+import { PublicTimeSlotsComponent } from '../../components/public-time-slots/public-time-slots.component';
 import { Subject, EMPTY, fromEvent, interval, filter, map, switchMap, catchError } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
@@ -65,6 +66,7 @@ const STEP_NAV_KEYS: Record<BookStep, string> = {
     HoldToConfirmButtonComponent,
     PublicIdentifyComponent,
     SkeletonModule,
+    PublicTimeSlotsComponent,
   ],
   templateUrl: './customer-book-page.component.html',
   styleUrl: './customer-book-page.component.scss',

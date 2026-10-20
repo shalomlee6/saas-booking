@@ -10,7 +10,8 @@ import { normalizeBusinessUi, validateBusinessUiBody } from '../utils/businessUi
 import { recordAudit } from '../utils/recordAudit';
 import { provisionTenant } from '../utils/provisionTenant';
 import { signImpersonationToken } from '../utils/staffSession';
-import { VALID_THEME_PRESET_IDS, isValidThemePresetId } from '../utils/themePresets';
+import { publicThemeBodySchema } from '../validation/schemas/businessSettings';
+import { readPublicTheme, savePublicTheme } from '../services/publicThemeService';
 import { logger } from '../utils/logger';
 import type { PlanTier } from '../utils/planPolicy';
 
@@ -37,6 +38,8 @@ export async function getAdminBusinesses(req: AuthRequest, res: Response): Promi
             theme: {
               colors: {
                 primary: settings.theme.colors.primary,
+                secondary: settings.theme.colors.secondary,
+                background: settings.theme.colors.background,
               },
               preset: settings.theme.preset,
               defaultMode: settings.theme.defaultMode,
@@ -263,31 +266,18 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
       return res.status(400).json({ message: result.message });
     }
 
-    const publicTheme = req.body?.publicTheme;
-    let presetUpdate: string | undefined;
-    let defaultModeUpdate: 'light' | 'dark' | undefined;
-    if (publicTheme !== undefined) {
-      if (typeof publicTheme !== 'object' || publicTheme === null) {
-        return res.status(400).json({ message: 'publicTheme must be an object' });
+    // The public theme is the same object the owner edits; it goes through the same validation.
+    let publicThemePatch: ReturnType<typeof publicThemeBodySchema.parse> | undefined;
+    if (req.body?.publicTheme !== undefined) {
+      const parsed = publicThemeBodySchema.safeParse(req.body.publicTheme);
+      if (!parsed.success) {
+        return res.status(400).json({ message: parsed.error.issues[0]?.message ?? 'Invalid publicTheme' });
       }
-      if (publicTheme.preset !== undefined) {
-        if (typeof publicTheme.preset !== 'string' || !isValidThemePresetId(publicTheme.preset)) {
-          return res.status(400).json({
-            message: `publicTheme.preset must be one of: ${VALID_THEME_PRESET_IDS.join(', ')}`,
-          });
-        }
-        presetUpdate = publicTheme.preset;
-      }
-      if (publicTheme.defaultMode !== undefined) {
-        if (publicTheme.defaultMode !== 'light' && publicTheme.defaultMode !== 'dark') {
-          return res.status(400).json({ message: 'publicTheme.defaultMode must be "light" or "dark"' });
-        }
-        defaultModeUpdate = publicTheme.defaultMode;
-      }
+      publicThemePatch = parsed.data;
     }
 
     const hasUiFields = !!result.ui && Object.keys(result.ui).length > 0;
-    if (!hasUiFields && presetUpdate === undefined && defaultModeUpdate === undefined) {
+    if (!hasUiFields && publicThemePatch === undefined) {
       return res.status(400).json({ message: 'No valid UI fields to update' });
     }
 
@@ -302,16 +292,24 @@ export async function adminUpdateBusinessUi(req: AuthRequest, res: Response): Pr
       await business.save();
     }
 
-    const settings = await ensureBusinessSettings(business._id);
-    if (presetUpdate !== undefined) settings.theme.preset = presetUpdate;
-    if (defaultModeUpdate !== undefined) settings.theme.defaultMode = defaultModeUpdate;
-    if (presetUpdate !== undefined || defaultModeUpdate !== undefined) {
-      await settings.save();
+    if (publicThemePatch !== undefined) {
+      const saved = await savePublicTheme(business._id.toString(), publicThemePatch);
+      if (saved.changed) {
+        await recordAudit({
+          actorUserId: req.user?.userId,
+          actorEmail: req.user?.email,
+          action: 'business.public_theme_updated',
+          entity: 'BusinessSettings',
+          entityId: saved.settingsId,
+          metadata: { businessId: business._id.toString(), by: 'super_admin', before: saved.previous, after: saved.current },
+        });
+      }
     }
 
+    const settings = await ensureBusinessSettings(business._id);
     return res.json({
       ui: normalizeBusinessUi(business.ui),
-      publicTheme: { preset: settings.theme.preset, defaultMode: settings.theme.defaultMode },
+      publicTheme: readPublicTheme(settings),
     });
   } catch (err) {
     logger.error('admin_patch_business_ui_failed', {

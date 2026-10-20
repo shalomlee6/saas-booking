@@ -11,7 +11,7 @@ import {
 import { forkJoin } from 'rxjs';
 import { ApiService } from '../../../../core/api/api.service';
 import { AuthService } from '../../../../core/auth/auth.service';
-import { resolveBusinessThemeVars, type ThemeMode } from '../../../../core/theming/resolve-business-theme-vars';
+import { resolvePublicThemeVars, type ThemeMode } from '../../../../core/theming/resolve-business-theme-vars';
 import { MessageService } from 'primeng/api';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
@@ -280,7 +280,7 @@ export class BusinessLandingSettingsComponent implements OnInit {
     this.auth.businessSettings()?.theme?.defaultMode === 'dark' ? 'dark' : 'light'
   );
   readonly previewThemeVars = computed<Record<string, string>>(() =>
-    resolveBusinessThemeVars(this.auth.businessSettings()?.theme?.preset, this.previewMode())
+    resolvePublicThemeVars(this.auth.businessSettings()?.theme, this.previewMode())
   );
 
   get products(): FormArray<FormGroup> {

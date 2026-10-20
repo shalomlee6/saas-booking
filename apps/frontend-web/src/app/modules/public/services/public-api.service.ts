@@ -31,6 +31,8 @@ export interface PublicBusiness {
       /** Business-configured default light/dark mode; the customer's own explicit
        *  choice (stored client-side) always takes priority over this. */
       defaultMode?: 'light' | 'dark';
+      /** Used only while `preset` is "custom". */
+      colors?: { primary?: string; secondary?: string; background?: string };
       logoUrl?: string;
     };
     plan?: string;

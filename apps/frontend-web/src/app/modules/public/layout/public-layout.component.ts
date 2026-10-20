@@ -4,7 +4,7 @@ import { ActivatedRoute, RouterOutlet } from '@angular/router';
 import { Subject, takeUntil, switchMap, catchError, of } from 'rxjs';
 import { PublicApiService, type PublicBusiness } from '../services/public-api.service';
 import { PublicThemeService } from '../services/public-theme.service';
-import { resolveBusinessThemeVars } from '../../../core/theming/resolve-business-theme-vars';
+import { resolvePublicThemeVars } from '../../../core/theming/resolve-business-theme-vars';
 import { ToastModule } from 'primeng/toast';
 import { PublicCustomerNavComponent } from './public-customer-nav/public-customer-nav.component';
 import { TranslatePipe } from '../../../core/i18n/translate.pipe';
@@ -29,11 +29,11 @@ export class PublicLayoutComponent implements OnInit, OnDestroy {
   error: string | null = null;
 
   /**
-   * Tenant accent tokens for the currently active light/dark mode, resolved
-   * from the business's configured theme preset, as a CSS custom-property map.
+   * The site's tokens for the currently active light/dark mode, resolved from the business's stored
+   * public theme (preset or custom colors) in the business payload, as a CSS custom-property map.
    */
   readonly tenantStyles = computed<Record<string, string>>(() =>
-    resolveBusinessThemeVars(this.businessData()?.settings?.theme?.preset, this.theme.mode())
+    resolvePublicThemeVars(this.businessData()?.settings?.theme, this.theme.mode())
   );
 
   constructor() {

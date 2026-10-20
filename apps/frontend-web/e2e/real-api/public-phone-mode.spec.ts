@@ -35,14 +35,25 @@ async function identify(page: Page, alreadyIdentified: boolean): Promise<void> {
   await expect(page.getByText('בחרי תאריך שנוח לך')).toBeVisible({ timeout: 30_000 });
 }
 
-/** Picks the nth open day and its first free slot; returns the slot's time. */
-async function pickSlot(page: Page, dayIndex: number): Promise<string> {
-  await page.locator('span.p-datepicker-day:not(.p-disabled)').nth(dayIndex).click();
+/**
+ * Picks the first day, from the `fromDay`-th selectable one on, that has a free slot, and its first slot;
+ * returns the slot's time. The date picker does not grey out closed days (the salon is closed on Saturdays),
+ * so which calendar cell has slots depends on the weekday the suite runs on: scan instead of assuming.
+ */
+async function pickSlot(page: Page, fromDay: number): Promise<string> {
+  const days = page.locator('span.p-datepicker-day:not(.p-disabled)');
   const slot = page.getByRole('option').first();
-  await slot.waitFor({ timeout: 30_000 });
-  const time = ((await slot.textContent()) ?? '').trim();
-  await slot.click();
-  return time;
+  const noSlots = page.getByText('אין שעות פנויות ביום הזה');
+  for (let index = fromDay; index < fromDay + 10; index++) {
+    await days.nth(index).click();
+    await slot.or(noSlots).first().waitFor({ timeout: 30_000 });
+    if (await slot.isVisible()) {
+      const time = ((await slot.textContent()) ?? '').trim();
+      await slot.click();
+      return time;
+    }
+  }
+  throw new Error('no day with a free slot in the next ten selectable days');
 }
 
 async function bookAppointment(page: Page, alreadyIdentified: boolean): Promise<string> {

@@ -1,0 +1,100 @@
+<form class="settings-section" (ngSubmit)="save()">
+  @if (error()) {
+    <p class="settings-error" role="alert">{{ error() }}</p>
+  }
+
+  <section class="settings-card" aria-labelledby="client-theme-title">
+    <h3 class="settings-card-title" id="client-theme-title">{{ 'settings.clientThemeTitle' | translate }}</h3>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label" id="client-theme-label">{{ 'settings.clientThemeLabel' | translate }}</span>
+        <span class="settings-row-hint" id="client-theme-hint">{{ 'settings.clientThemeHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <div class="settings-segment" role="radiogroup" aria-labelledby="client-theme-label" aria-describedby="client-theme-hint">
+          @for (option of presetOptions; track option.id) {
+            <label class="settings-segment-option">
+              <input type="radio" name="clientTheme" [value]="option.id" [checked]="preset() === option.id" (change)="preset.set(option.id)" />
+              <span>
+                <i class="client-theme-dot" [style.background-color]="option.light.primary" aria-hidden="true"></i>
+                {{ option.label }}
+              </span>
+            </label>
+          }
+          <label class="settings-segment-option">
+            <input type="radio" name="clientTheme" [value]="customId" [checked]="isCustom()" (change)="preset.set(customId)" />
+            <span>
+              <i class="client-theme-dot client-theme-dot-custom" aria-hidden="true"></i>
+              {{ 'settings.clientPresetCustom' | translate }}
+            </span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  @if (isCustom()) {
+    <section class="settings-card" aria-labelledby="client-colors-title">
+      <h3 class="settings-card-title" id="client-colors-title">{{ 'settings.clientColorsTitle' | translate }}</h3>
+      <p class="client-colors-note">{{ 'settings.clientColorsNote' | translate }}</p>
+      <app-color-field
+        fieldId="clientPrimary"
+        [label]="'settings.clientPrimaryLabel' | translate"
+        [hint]="'settings.clientPrimaryHint' | translate"
+        [presets]="primarySwatches"
+        [warning]="primaryWarning()"
+        fallback="#F35271"
+        [(value)]="primary"
+      />
+      <app-color-field
+        fieldId="clientSecondary"
+        [label]="'settings.clientSecondaryLabel' | translate"
+        [hint]="'settings.clientSecondaryHint' | translate"
+        [presets]="secondarySwatches"
+        [warning]="secondaryWarning()"
+        fallback="#FF9DBC"
+        [(value)]="secondary"
+      />
+      <app-color-field
+        fieldId="clientBackground"
+        [label]="'settings.clientBackgroundLabel' | translate"
+        [hint]="'settings.clientBackgroundHint' | translate"
+        [presets]="backgroundSwatches"
+        fallback="#FFFFFF"
+        [(value)]="background"
+      />
+    </section>
+  }
+
+  <section class="settings-card" aria-labelledby="client-mode-title">
+    <h3 class="settings-card-title" id="client-mode-title">{{ 'settings.clientModeTitle' | translate }}</h3>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <span class="settings-row-label" id="client-mode-label">{{ 'settings.clientModeLabel' | translate }}</span>
+        <span class="settings-row-hint" id="client-mode-hint">{{ 'settings.clientModeHint' | translate }}</span>
+      </div>
+      <div class="settings-row-control">
+        <div class="settings-segment" role="radiogroup" aria-labelledby="client-mode-label" aria-describedby="client-mode-hint">
+          <label class="settings-segment-option">
+            <input type="radio" name="clientDefaultMode" value="light" [checked]="defaultMode() === 'light'" (change)="defaultMode.set('light')" />
+            <span><i class="pi pi-sun" aria-hidden="true"></i>&nbsp;{{ 'settings.themeModeLight' | translate }}</span>
+          </label>
+          <label class="settings-segment-option">
+            <input type="radio" name="clientDefaultMode" value="dark" [checked]="defaultMode() === 'dark'" (change)="defaultMode.set('dark')" />
+            <span><i class="pi pi-moon" aria-hidden="true"></i>&nbsp;{{ 'settings.themeModeDark' | translate }}</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="settings-card" aria-labelledby="client-preview-title">
+    <h3 class="settings-card-title" id="client-preview-title">{{ 'settings.clientPreviewTitle' | translate }}</h3>
+    <p class="client-colors-note">{{ 'settings.clientPreviewHint' | translate }}</p>
+    <div class="client-preview">
+      <app-public-theme-preview [vars]="previewVars()" [(mode)]="previewMode" />
+    </div>
+  </section>
+
+  <app-settings-save-bar [dirty]="dirty() && canSave()" [saving]="saving()" />
+</form>

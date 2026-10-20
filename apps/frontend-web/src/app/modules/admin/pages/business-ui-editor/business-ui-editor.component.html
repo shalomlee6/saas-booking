@@ -5,30 +5,45 @@
   <div class="business-ui-editor-card">
     <form [formGroup]="form" (ngSubmit)="save()" class="business-ui-editor-form">
       <div class="business-ui-editor-field">
-        <label for="themeMode">Theme</label>
+        <label for="themeMode">Owner portal mode</label>
         <select id="themeMode" formControlName="themeMode" class="business-ui-editor-input">
           <option value="light">Light</option>
           <option value="dark">Dark</option>
         </select>
       </div>
       <div class="business-ui-editor-field">
-        <label for="primaryColor">Primary color</label>
-        <input id="primaryColor" type="text" formControlName="primaryColor" class="business-ui-editor-input" placeholder="#3787F6" />
+        <label for="primaryColor">Owner portal primary color</label>
+        <input id="primaryColor" type="text" formControlName="primaryColor" class="business-ui-editor-input" [placeholder]="uiDefaults?.primaryColor ?? ''" />
       </div>
       <div class="business-ui-editor-field">
-        <label for="sidebarColor">Sidebar color</label>
-        <input id="sidebarColor" type="text" formControlName="sidebarColor" class="business-ui-editor-input" placeholder="#0F172A" />
+        <label for="sidebarColor">Owner portal sidebar color</label>
+        <input id="sidebarColor" type="text" formControlName="sidebarColor" class="business-ui-editor-input" [placeholder]="uiDefaults?.sidebarColor ?? ''" />
       </div>
       <div class="business-ui-editor-field">
-        <label for="publicThemePreset">Theme</label>
+        <label for="publicThemePreset">Public site theme</label>
         <select id="publicThemePreset" formControlName="publicThemePreset" class="business-ui-editor-input">
           @for (preset of themePresets; track preset.id) {
             <option [value]="preset.id">{{ preset.label }}</option>
           }
+          <option value="custom">Custom</option>
         </select>
       </div>
+      @if (isCustomPublicTheme()) {
+        <div class="business-ui-editor-field">
+          <label for="publicPrimary">Public site primary color (header, buttons)</label>
+          <input id="publicPrimary" type="text" dir="ltr" maxlength="7" formControlName="publicPrimary" class="business-ui-editor-input" />
+        </div>
+        <div class="business-ui-editor-field">
+          <label for="publicSecondary">Public site secondary color (highlights, tags, badges)</label>
+          <input id="publicSecondary" type="text" dir="ltr" maxlength="7" formControlName="publicSecondary" class="business-ui-editor-input" />
+        </div>
+        <div class="business-ui-editor-field">
+          <label for="publicBackground">Public site background color</label>
+          <input id="publicBackground" type="text" dir="ltr" maxlength="7" formControlName="publicBackground" class="business-ui-editor-input" />
+        </div>
+      }
       <div class="business-ui-editor-field">
-        <label for="publicThemeMode">Default mode</label>
+        <label for="publicThemeMode">Public site mode</label>
         <select id="publicThemeMode" formControlName="publicThemeMode" class="business-ui-editor-input">
           <option value="light">Light</option>
           <option value="dark">Dark</option>

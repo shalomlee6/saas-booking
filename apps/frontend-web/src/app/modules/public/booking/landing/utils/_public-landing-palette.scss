@@ -21,7 +21,12 @@ $pl-on-primary: var(--on-primary, #fff);
 // guaranteed readable as a background; some tenant palettes (e.g. a pale mint) are far
 // too light to read as text against a white or pale card.
 $pl-ink: var(--color-primary-ink);
-$pl-gold: #7d5c00;
+// The secondary color (highlights, tags, badges). Same rule as the primary: the ink is the text-safe
+// variant, the pale tint is the background it sits on.
+$pl-secondary: var(--color-secondary);
+$pl-secondary-pale: var(--color-secondary-subtle);
+$pl-secondary-ink: var(--color-secondary-ink);
+$pl-on-secondary: var(--on-secondary);
 $pl-text-heading: var(--text-primary);
 $pl-text-body: var(--text-secondary);
 $pl-text-muted: var(--text-muted);

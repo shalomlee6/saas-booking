@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, signal, untracked } from '@angular
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../../../core/api/api.service';
+import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { SettingsSaveBarComponent } from './settings-save-bar.component';
@@ -21,9 +22,12 @@ export class CustomersSettingsSectionComponent {
   private readonly api = inject(ApiService);
   private readonly messages = inject(MessageService);
   private readonly reset = inject(SettingsResetService);
+  private readonly auth = inject(AuthService);
   readonly language = inject(LanguageService);
-  readonly birthdayField = signal<BirthdayField>('required');
-  private readonly saved = signal<BirthdayField>('required');
+  /** Starts from the server's default (from /auth/me), or empty until the stored value arrives. */
+  private readonly initial: BirthdayField | null = this.auth.settingsDefaults()?.birthdayField ?? null;
+  readonly birthdayField = signal<BirthdayField | null>(this.initial);
+  private readonly saved = signal<BirthdayField | null>(this.initial);
   readonly dirty = computed(() => this.birthdayField() !== this.saved());
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
@@ -48,8 +52,9 @@ export class CustomersSettingsSectionComponent {
   }
 
   save(): void {
-    this.saving.set(true);
     const sent = this.birthdayField();
+    if (!sent) return;
+    this.saving.set(true);
     this.api.put('customers/birthday-field', { birthdayField: sent }).subscribe({
       next: () => {
         this.saving.set(false);

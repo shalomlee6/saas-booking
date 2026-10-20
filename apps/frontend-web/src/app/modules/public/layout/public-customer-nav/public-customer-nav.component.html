@@ -1,17 +1,11 @@
-<header class="public-nav-topbar" role="banner">
-  <button
-    #menuBtn
-    type="button"
-    class="public-nav-menu-btn"
-    [attr.aria-label]="menuAriaLabel()"
-    [attr.aria-expanded]="menuOpen()"
-    [attr.aria-controls]="'public-customer-nav'"
-    (click)="toggleMenu()"
-  >
-    <i [class]="menuToggleIcon()" aria-hidden="true"></i>
-  </button>
-  <span class="public-nav-topbar-title">boki</span>
-</header>
+<app-public-topbar
+  title="boki"
+  [menuLabel]="menuAriaLabel()"
+  [icon]="menuToggleIcon()"
+  [expanded]="menuOpen()"
+  controls="public-customer-nav"
+  (toggled)="toggleMenu()"
+/>
 
 <div
   class="public-nav-backdrop"

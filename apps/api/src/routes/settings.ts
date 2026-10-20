@@ -9,6 +9,7 @@ import {
   getMyBusinessSettings,
   getOwnerBookingSettings,
   putOwnerBookingRules,
+  putOwnerPublicTheme,
   putOwnerReliability,
   updateMyBusinessSettings,
 } from '../controllers/businessSettingsController';
@@ -23,7 +24,7 @@ import {
   postSettingsRestore,
 } from '../controllers/settingsResetController';
 import { runLandingImageUpload, postLandingImageUpload } from '../controllers/landingUploadController';
-import { updateBusinessSettingsBodySchema } from '../validation/schemas/businessSettings';
+import { publicThemeBodySchema, updateBusinessSettingsBodySchema } from '../validation/schemas/businessSettings';
 import { asyncHandler } from '../utils/asyncHandler';
 
 export const settingsRouter = Router();
@@ -71,6 +72,16 @@ settingsRouter.put(
   requireOwner,
   validateBody(reliabilityBodySchema),
   asyncHandler(putOwnerReliability)
+);
+
+settingsRouter.put(
+  '/me/public-theme',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  validateBody(publicThemeBodySchema),
+  asyncHandler(putOwnerPublicTheme)
 );
 
 // Factory reset (settings only) and "restore previous settings". Owner only.

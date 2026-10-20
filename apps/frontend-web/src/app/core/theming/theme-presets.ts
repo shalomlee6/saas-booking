@@ -12,6 +12,8 @@ export interface ThemeFamily {
   primaryInk: string;
   /** Text/icon color for content sitting ON a solid `primary`/`primaryHover` fill. */
   onPrimary: string;
+  /** Seed of the secondary color (highlights, tags, badges); its tints and ink are derived from it. */
+  secondary: string;
 }
 
 export interface ThemePreset {
@@ -34,6 +36,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       primaryMuted: '#fbc7d3',
       primaryInk: '#96263d',
       onPrimary: '#ffffff',
+      secondary: '#FF9DBC',
     },
     dark: {
       primary: '#f06b8a',
@@ -44,6 +47,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       // Dark mode's primary is deliberately lighter/brighter (so it pops on
       // black) — too light for white text (2.8:1). Dark text is correct here.
       onPrimary: '#0d0d0f',
+      secondary: '#FF9DBC',
     },
   },
   'prime-mint': {
@@ -57,6 +61,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       primaryInk: '#3F5E4C',
       // Mint is too light for white button text (1.9:1) — use dark ink instead.
       onPrimary: '#111827',
+      secondary: '#E9C46A',
     },
     dark: {
       primary: '#A8C5B0',
@@ -65,6 +70,7 @@ export const THEME_PRESETS: Record<string, ThemePreset> = {
       primaryMuted: '#223B2E',
       primaryInk: '#C0DBC9',
       onPrimary: '#0d0d0f',
+      secondary: '#E9C46A',
     },
   },
 };

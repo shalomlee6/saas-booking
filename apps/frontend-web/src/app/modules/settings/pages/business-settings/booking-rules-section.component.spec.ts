@@ -4,6 +4,8 @@ import { provideNoopAnimations } from '@angular/platform-browser/animations';
 import { MessageService } from 'primeng/api';
 import { of } from 'rxjs';
 import { ApiService } from '../../../../core/api/api.service';
+import { AuthService } from '../../../../core/auth/auth.service';
+import type { SettingsDefaults } from '../../../../core/config/settings-defaults';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { BookingRulesSectionComponent } from './booking-rules-section.component';
 import { SettingsResetService } from './reset/settings-reset.service';
@@ -18,6 +20,19 @@ const LOADED = {
   clientCanCancelOnline: true,
   cancellationWindowHours: 24,
 };
+
+const DEFAULTS = {
+  onlineBooking: {
+    enabled: true,
+    minLeadMinutes: 60,
+    maxAdvanceDays: 60,
+    bufferMinutes: 0,
+    onlineDefaultStatus: 'confirmed',
+    maxActiveAppointmentsPerClient: null,
+    clientCanCancelOnline: true,
+  },
+  cancellationWindowHours: 24,
+} as unknown as SettingsDefaults;
 
 describe('BookingRulesSectionComponent', () => {
   let fixture: ComponentFixture<BookingRulesSectionComponent>;
@@ -51,6 +66,7 @@ describe('BookingRulesSectionComponent', () => {
         provideNoopAnimations(),
         MessageService,
         { provide: ApiService, useValue: { get, put } },
+        { provide: AuthService, useValue: { settingsDefaults: () => DEFAULTS } },
         { provide: SettingsResetService, useValue: { version, refresh, reset: () => of({}) } },
       ],
     }).compileComponents();

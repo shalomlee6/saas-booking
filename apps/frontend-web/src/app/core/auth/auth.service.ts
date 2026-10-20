@@ -4,6 +4,7 @@ import { Observable, tap, catchError, of, map } from 'rxjs';
 import { ApiService } from '../api/api.service';
 import type { BusinessUi } from '../config/theme.service';
 import { ThemeService } from '../config/theme.service';
+import type { SettingsDefaults } from '../config/settings-defaults';
 import { decodeJwtExpMs } from './jwt-session.util';
 import { AppointmentsApiService } from '../../modules/appointments/services/appointments-api.service';
 import { GrowthBrainService } from '../../modules/dashboard/services/growth-brain.service';
@@ -62,6 +63,8 @@ export interface AuthMeResponse {
       timezone?: string;
     } | null;
   } | null;
+  /** The server's settings defaults, the one copy the app falls back to. */
+  settingsDefaults?: SettingsDefaults;
 }
 
 const LS_IMPERSONATION_TOKEN = 'sb_impersonation_token';
@@ -87,6 +90,7 @@ export class AuthService {
   readonly user = signal<User | null>(null);
   readonly business = signal<AuthMeBusiness | null>(null);
   readonly businessSettings = signal<AuthMeResponse['businessSettings']>(null);
+  readonly settingsDefaults = signal<SettingsDefaults | null>(null);
   readonly initialized = signal<boolean>(false);
 
   // ── Impersonation reactive state ───────────────────────────────────────────
@@ -126,6 +130,7 @@ export class AuthService {
         this.user.set(u);
         this.business.set(res.business ?? null);
         this.businessSettings.set(res.businessSettings ?? null);
+        this.settingsDefaults.set(res.settingsDefaults ?? null);
         this.initialized.set(true);
 
         // The super-admin panel is permanently light and unaffected by any

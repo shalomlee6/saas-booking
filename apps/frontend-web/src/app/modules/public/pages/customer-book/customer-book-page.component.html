@@ -185,20 +185,12 @@
                 </button>
               </div>
             } @else {
-              <div class="book-slots-grid" role="listbox" [attr.aria-label]="'publicBook.slotsLabel' | translate">
-                @for (slot of slots(); track slot) {
-                  <button
-                    type="button"
-                    role="option"
-                    class="book-slot-btn"
-                    [class.book-slot-btn--selected]="selectedSlot() === slot"
-                    [attr.aria-selected]="selectedSlot() === slot"
-                    (click)="selectSlot(slot)"
-                  >
-                    {{ slot }}
-                  </button>
-                }
-              </div>
+              <app-public-time-slots
+                [slots]="slots()"
+                [selected]="selectedSlot()"
+                [label]="'publicBook.slotsLabel' | translate"
+                (picked)="selectSlot($event)"
+              />
             }
           </div>
         }

@@ -109,3 +109,27 @@ export const updateBusinessSettingsBodySchema = z
   .strict();
 
 export type UpdateBusinessSettingsBody = z.infer<typeof updateBusinessSettingsBodySchema>;
+
+const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Use a 6-digit hex color like #3787F6');
+
+/**
+ * The public client-site theme: one object, written by both the owner (settings → design → client site)
+ * and the super-admin "Edit Business UI" form. `colors` only matter while `preset` is "custom".
+ */
+export const publicThemeBodySchema = z
+  .object({
+    preset: z.enum(['prime-pink', 'prime-mint', 'custom']).optional(),
+    defaultMode: z.enum(['light', 'dark']).optional(),
+    colors: z
+      .object({
+        primary: hexColor.optional(),
+        secondary: hexColor.optional(),
+        background: hexColor.optional(),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict()
+  .refine((value) => Object.keys(value).length > 0, { message: 'No public theme fields to update' });
+
+export type PublicThemeBody = z.infer<typeof publicThemeBodySchema>;

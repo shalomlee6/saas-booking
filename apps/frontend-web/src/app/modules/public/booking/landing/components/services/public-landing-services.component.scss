@@ -75,10 +75,14 @@
 }
 
 .pl-svc__price {
+  align-self: flex-start;
   margin: 0;
+  padding: 0.125rem 0.625rem;
+  border-radius: 999px;
+  background: $pl-secondary-pale;
   font-size: 13px;
   font-weight: 600;
-  color: $pl-gold;
+  color: $pl-secondary-ink;
 }
 
 ::ng-deep .pl-svc__btn.p-button {
