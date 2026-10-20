@@ -14,7 +14,7 @@ const DEFAULTS = {
   theme: {
     preset: 'prime-pink',
     defaultMode: 'light',
-    colors: { primary: '#F35271', secondary: '#FF9DBC', accent: '#6CD6CD', background: '#FFFFFF', text: '#111827' },
+    colors: { primary: '#F35271', secondary: '#FF9DBC', background: '#FFFFFF' },
   },
 } as unknown as SettingsDefaults;
 
@@ -55,7 +55,7 @@ describe('PublicThemeEditorComponent', () => {
     stored = signal<Record<string, unknown> | null>({
       preset: 'prime-pink',
       defaultMode: 'light',
-      colors: { primary: '#F35271', secondary: '#FF9DBC', accent: '#6CD6CD', background: '#FFFFFF', text: '#111827' },
+      colors: { primary: '#F35271', secondary: '#FF9DBC', background: '#FFFFFF' },
     });
     put = jasmine.createSpy('put').and.returnValue(of({}));
     version = signal(0);

@@ -22,9 +22,7 @@ export interface BusinessSettingsTheme {
   colors?: {
     primary?: string;
     secondary?: string;
-    accent?: string;
     background?: string;
-    text?: string;
   };
   /** Public tenant site theme preset id (see core/theming/theme-presets.ts). */
   preset?: string;

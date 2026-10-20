@@ -419,16 +419,17 @@ body.public-nav-lock { overflow: hidden; }
 .p-dialog .p-dialog-footer  { border-top: 1px solid var(--border-color); }
 .p-dialog-mask { background: rgba(0,0,0,0.4); }
 
-// Disabled calendar days are text, so they still need 4.5:1. PrimeNG fades them
-// with opacity, which drops the composited gray below the ratio.
-.public-shell.theme-light .p-datepicker-day.p-disabled {
+// Disabled calendar days are text, so they still need 4.5:1. PrimeNG fades them with opacity, which
+// drops the composited gray below the ratio, so they use the site's own muted text color (guaranteed
+// 4.5:1 on the page and on cards for every theme) and a strike-through, so "unavailable" is not
+// carried by color alone. Days of the neighbouring months keep the plain look.
+.public-shell .p-datepicker-day.p-disabled {
   opacity: 1;
-  color: #4b5563;
+  color: var(--text-muted);
 }
 
-.public-shell.theme-dark .p-datepicker-day.p-disabled {
-  opacity: 1;
-  color: #d1d5db;
+.public-shell .p-datepicker-day-cell:not(.p-datepicker-other-month) .p-datepicker-day.p-disabled {
+  text-decoration: line-through;
 }
 
 .p-drawer {

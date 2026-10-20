@@ -13,7 +13,7 @@ export interface SettingsDefaults {
     dashboardLayout: 'classic' | 'compact';
   };
   theme: {
-    colors: { primary: string; secondary: string; accent: string; background: string; text: string };
+    colors: { primary: string; secondary: string; background: string };
     preset: string;
     defaultMode: 'light' | 'dark';
   };

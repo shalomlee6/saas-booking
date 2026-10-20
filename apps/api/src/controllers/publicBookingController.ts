@@ -10,7 +10,7 @@ import { BusinessReview } from '../models/BusinessReview';
 import type { RequestWithPublicCustomer } from '../middleware/optionalPublicCustomer';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { createAppointmentAtomic } from '../services/createAppointmentAtomic';
-import { getAvailabilityForBusiness } from '../services/publicAvailabilityService';
+import { getAvailabilityForBusiness, getMonthAvailabilityForBusiness } from '../services/publicAvailabilityService';
 import { getServiceOverrideForCustomer } from '../services/customerServiceConfigService';
 import { toUtcDate } from '../services/publicBookingTime';
 import {
@@ -396,6 +396,33 @@ export async function getPublicAvailability(req: Request, res: Response): Promis
     excludeId
   );
   res.json(result);
+}
+
+// --- GET /api/public/availability/month?businessId=...&serviceId=...&month=YYYY-MM
+// --- GET /api/public/businesses/:slug/availability/month?serviceId=...&month=YYYY-MM
+/** The days of a month that have a bookable slot for this service: what the date picker enables. */
+export async function getPublicMonthAvailability(req: Request, res: Response): Promise<void> {
+  const { slug } = req.params as { slug?: string };
+  const { businessId, serviceId, month, excludeAppointmentId } = req.query as {
+    businessId?: string;
+    serviceId: string;
+    month: string;
+    excludeAppointmentId?: string;
+  };
+
+  const business = slug ? await Business.findOne({ slug }) : await Business.findById(businessId);
+  if (!business) {
+    throw new NotFoundError('Business not found', 'BUSINESS_NOT_FOUND');
+  }
+
+  const publicCustomer = (req as RequestWithPublicCustomer).publicCustomer;
+  const customerId =
+    publicCustomer?.customerId && publicCustomer.businessId === business._id.toString()
+      ? publicCustomer.customerId
+      : undefined;
+  const excludeId = await ownedAppointmentId(publicCustomer, business._id.toString(), excludeAppointmentId);
+  setNoStore(res);
+  res.json(await getMonthAvailabilityForBusiness(business._id, serviceId, month, customerId, excludeId));
 }
 
 // --- POST /api/public/appointments

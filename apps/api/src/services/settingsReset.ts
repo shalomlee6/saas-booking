@@ -41,7 +41,7 @@ export interface SettingsState {
   design?: {
     ui: { themeMode: string; primaryColor: string; sidebarColor: string; backgroundColor: string; dashboardLayout: string };
     theme: {
-      colors: { primary: string; secondary: string; accent: string; background: string; text: string };
+      colors: { primary: string; secondary: string; background: string };
       preset: string;
       defaultMode: string;
       fontFamily: string;
@@ -93,9 +93,7 @@ export function readState(groups: ResetGroup[], settings: IBusinessSettings, bus
           colors: {
             primary: theme?.colors?.primary ?? D.theme.colors.primary,
             secondary: theme?.colors?.secondary ?? D.theme.colors.secondary,
-            accent: theme?.colors?.accent ?? D.theme.colors.accent,
             background: theme?.colors?.background ?? D.theme.colors.background,
-            text: theme?.colors?.text ?? D.theme.colors.text,
           },
           preset: theme?.preset ?? D.theme.preset,
           defaultMode: theme?.defaultMode ?? D.theme.defaultMode,

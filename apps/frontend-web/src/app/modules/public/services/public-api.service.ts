@@ -5,6 +5,7 @@ import { catchError, delay, map, switchMap } from 'rxjs/operators';
 import { ApiService } from '../../../core/api/api.service';
 import { environment } from '../../../../environments/environment';
 import { PublicSessionService } from './public-session.service';
+import { DEFAULT_PUBLIC_TIMEZONE, calendarDayInTimezone, dateKeyFromPicker } from '../dto/public-booking-dto.adapter';
 import type { BirthdayField, IdentityMode, PublicClientProfile } from './public-identity.rules';
 import {
   mockIdentifyComplete,
@@ -164,6 +165,15 @@ export interface PublicService {
   price?: number;
 }
 
+/** GET /api/public/availability/month: which days of a month have a bookable slot for a service. */
+export interface MonthAvailabilityResponse {
+  month: string;
+  /** `YYYY-MM-DD`, ascending. Every other day of the month is closed, full, past or out of reach. */
+  availableDays: string[];
+  /** The earliest bookable day on or after the start of `month`; it can be in a later month. */
+  firstAvailable: string | null;
+}
+
 export interface AvailabilityResponse {
   date: string;
   slots: string[];
@@ -214,6 +224,25 @@ export interface UpcomingAppointmentResponse {
   appointment: UpcomingAppointment | null;
   appointments?: UpcomingAppointment[];
   businessPhone?: string | null;
+}
+
+/**
+ * The mock salon: closed on Saturdays, bookable for the next 60 days, and fully booked on its fourth open
+ * day, so the date picker has a closed day and a full day to show.
+ */
+export function mockMonthAvailability(month: string, now: Date = new Date()): MonthAvailabilityResponse {
+  const today = calendarDayInTimezone(now, DEFAULT_PUBLIC_TIMEZONE);
+  const open: string[] = [];
+  for (let offset = 0; offset <= 60; offset++) {
+    const day = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
+    if (day.getDay() !== 6) open.push(dateKeyFromPicker(day));
+  }
+  const bookable = open.filter((_, index) => index !== 3);
+  return {
+    month,
+    availableDays: bookable.filter((day) => day.startsWith(month)),
+    firstAvailable: bookable.find((day) => day >= `${month}-01`) ?? null,
+  };
 }
 
 @Injectable({ providedIn: 'root' })
@@ -456,9 +485,11 @@ export class PublicApiService {
   ): Observable<AvailabilityResponse> {
     if (environment.mockPublicApi) {
       const offer = mockOffer();
+      // Same salon as the month mock: a day the calendar disables has no times.
+      const bookable = mockMonthAvailability(date.slice(0, 7)).availableDays.includes(date);
       const mock: AvailabilityResponse = {
         date,
-        slots: ['09:00', '11:00', '12:30', '14:00', '15:00', '16:00'],
+        slots: bookable ? ['09:00', '11:00', '12:30', '14:00', '15:00', '16:00'] : [],
         durationMinutes: offer.durationMinutes,
         price: offer.price,
       };
@@ -467,6 +498,22 @@ export class PublicApiService {
     const params = new URLSearchParams({ businessId, serviceId, date });
     if (excludeAppointmentId) params.set('excludeAppointmentId', excludeAppointmentId);
     return this.api.get<AvailabilityResponse>(`public/availability?${params}`);
+  }
+
+  /**
+   * GET /api/public/availability/month?businessId=...&serviceId=...&month=YYYY-MM
+   * One lightweight call per visible month: the date picker disables every day that is not in `availableDays`.
+   */
+  getMonthAvailabilityByBusinessId(
+    businessId: string,
+    serviceId: string,
+    month: string,
+    excludeAppointmentId?: string
+  ): Observable<MonthAvailabilityResponse> {
+    if (environment.mockPublicApi) return of(mockMonthAvailability(month)).pipe(delay(120));
+    const params = new URLSearchParams({ businessId, serviceId, month });
+    if (excludeAppointmentId) params.set('excludeAppointmentId', excludeAppointmentId);
+    return this.api.get<MonthAvailabilityResponse>(`public/availability/month?${params}`);
   }
 
   /** POST /api/public/appointments */

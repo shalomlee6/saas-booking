@@ -30,9 +30,7 @@ export const BUSINESS_SETTINGS_DEFAULTS = {
     colors: {
       primary: '#F35271',
       secondary: '#FF9DBC',
-      accent: '#6CD6CD',
       background: '#FFFFFF',
-      text: '#111827',
     },
     preset: 'prime-pink',
     defaultMode: 'light' as 'light' | 'dark',

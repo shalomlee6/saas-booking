@@ -595,7 +595,7 @@ const MOCK_SETTINGS_DEFAULTS: SettingsDefaults = {
     dashboardLayout: 'classic',
   },
   theme: {
-    colors: { primary: '#F35271', secondary: '#FF9DBC', accent: '#6CD6CD', background: '#FFFFFF', text: '#111827' },
+    colors: { primary: '#F35271', secondary: '#FF9DBC', background: '#FFFFFF' },
     preset: 'prime-pink',
     defaultMode: 'light',
   },

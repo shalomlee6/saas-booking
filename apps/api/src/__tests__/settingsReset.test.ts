@@ -33,9 +33,7 @@ beforeEach(async () => dbClear());
 const CUSTOM_SETTINGS = {
   'theme.colors.primary': '#112233',
   'theme.colors.secondary': '#223344',
-  'theme.colors.accent': '#334455',
   'theme.colors.background': '#445566',
-  'theme.colors.text': '#556677',
   'theme.preset': 'prime-mint',
   'theme.defaultMode': 'dark',
   'theme.fontFamily': 'Arial',

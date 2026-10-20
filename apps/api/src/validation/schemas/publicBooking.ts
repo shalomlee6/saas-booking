@@ -17,6 +17,26 @@ export const publicAvailabilityQuerySchema = z
   })
   .strip();
 
+const yyyyMm = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Use a month like 2026-10');
+
+/** Which days of a month can be booked for a service (the date picker's disabled days). */
+export const publicMonthAvailabilityQuerySchema = z
+  .object({
+    businessId: mongoObjectIdString,
+    serviceId: mongoObjectIdString,
+    month: yyyyMm,
+    excludeAppointmentId: mongoObjectIdString.optional(),
+  })
+  .strip();
+
+export const slugMonthAvailabilityQuerySchema = z
+  .object({
+    serviceId: mongoObjectIdString,
+    month: yyyyMm,
+    excludeAppointmentId: mongoObjectIdString.optional(),
+  })
+  .strip();
+
 export const slugAvailabilityQuerySchema = z
   .object({
     serviceId: mongoObjectIdString,

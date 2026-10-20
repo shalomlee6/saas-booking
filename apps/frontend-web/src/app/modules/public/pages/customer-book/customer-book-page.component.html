@@ -136,18 +136,34 @@
           </p>
         }
 
-        <!-- Calendar card -->
-        <div class="book-date-card">
+        @if (noDaysAvailable()) {
+          <div class="book-notice-state" role="status">
+            <p class="book-notice-title">{{ 'publicBook.noDaysAvailable' | translate }}</p>
+          </div>
+        }
+
+        <!-- Calendar card. Days with no bookable slot for this service are disabled. -->
+        <div class="book-date-card" [attr.aria-busy]="loadingMonth()">
           <p-datePicker
             [(ngModel)]="selectedDateValue"
             [inline]="true"
             [minDate]="minDate()"
             [maxDate]="maxDate()"
+            [disabledDates]="disabledDates()"
             [showIcon]="false"
             (onSelect)="onDateSelect()"
+            (onMonthChange)="onMonthChange($event)"
+            (onYearChange)="onMonthChange($event)"
             dateFormat="dd/mm/yy"
             styleClass="book-date-picker"
-          />
+          >
+            <ng-template #date let-date>
+              {{ date.day }}
+              @if (!date.selectable) {
+                <span class="sr-only">{{ 'publicBook.dayUnavailable' | translate }}</span>
+              }
+            </ng-template>
+          </p-datePicker>
         </div>
 
         <!-- Time slots — revealed once a date is selected -->

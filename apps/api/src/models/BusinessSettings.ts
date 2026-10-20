@@ -54,9 +54,7 @@ export interface IBusinessSettings extends Document {
     colors: {
       primary: string;
       secondary: string;
-      accent: string;
       background: string;
-      text: string;
     };
     /** Public tenant site theme preset id (see frontend `theme-presets.ts` registry). */
     preset?: string;
@@ -163,9 +161,7 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       colors: {
         primary: { type: String, default: D.theme.colors.primary },
         secondary: { type: String, default: D.theme.colors.secondary },
-        accent: { type: String, default: D.theme.colors.accent },
         background: { type: String, default: D.theme.colors.background },
-        text: { type: String, default: D.theme.colors.text },
       },
       preset: { type: String, default: D.theme.preset },
       defaultMode: { type: String, enum: ['light', 'dark'], default: D.theme.defaultMode },

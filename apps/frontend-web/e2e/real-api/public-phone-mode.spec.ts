@@ -37,8 +37,8 @@ async function identify(page: Page, alreadyIdentified: boolean): Promise<void> {
 
 /**
  * Picks the first day, from the `fromDay`-th selectable one on, that has a free slot, and its first slot;
- * returns the slot's time. The date picker does not grey out closed days (the salon is closed on Saturdays),
- * so which calendar cell has slots depends on the weekday the suite runs on: scan instead of assuming.
+ * returns the slot's time. The date picker already disables closed and full days, but which of the remaining
+ * cells is still free depends on the weekday the suite runs on and on earlier bookings: scan instead of assuming.
  */
 async function pickSlot(page: Page, fromDay: number): Promise<string> {
   const days = page.locator('span.p-datepicker-day:not(.p-disabled)');
@@ -100,6 +100,22 @@ test.describe('phone mode on the real API', () => {
     // The one deliberate difference from production: no Secure flag over plain http://localhost.
     expect(cookie).not.toContain('Secure');
     await device.context.clearCookies();
+  });
+
+  test('date picker: closed Saturdays are disabled, the first free day is preselected and announced', async ({ browser }) => {
+    const other = await newDevice(browser);
+    try {
+      await identify(other.page, false);
+      // The month answered, so the first day with slots is already chosen and its times show.
+      await expect(other.page.getByRole('option').first()).toBeVisible({ timeout: 30_000 });
+      // Saturday is the last column; the salon is closed that day.
+      await expect(other.page.locator('tbody td:last-child span.p-datepicker-day:not(.p-disabled)')).toHaveCount(0);
+      expect(await other.page.locator('span.p-datepicker-day:not(.p-disabled)').count()).toBeGreaterThan(0);
+      const saturday = other.page.locator('tbody td:last-child span.p-datepicker-day.p-disabled').first();
+      await expect(saturday.locator('.sr-only')).toHaveText('לא זמין');
+    } finally {
+      await other.context.close();
+    }
   });
 
   test('book: the home card and "התורים שלי" show it, with no name', async () => {

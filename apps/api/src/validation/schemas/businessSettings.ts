@@ -5,9 +5,7 @@ const themeColorsSchema = z
   .object({
     primary: z.string().optional(),
     secondary: z.string().optional(),
-    accent: z.string().optional(),
     background: z.string().optional(),
-    text: z.string().optional(),
   })
   .strict()
   .optional();

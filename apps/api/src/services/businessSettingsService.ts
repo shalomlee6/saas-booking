@@ -22,9 +22,7 @@ export function buildBusinessSettingsUpdateSet(
       const c = body.theme.colors;
       if (c.primary !== undefined) colors.primary = c.primary;
       if (c.secondary !== undefined) colors.secondary = c.secondary;
-      if (c.accent !== undefined) colors.accent = c.accent;
       if (c.background !== undefined) colors.background = c.background;
-      if (c.text !== undefined) colors.text = c.text;
       if (Object.keys(colors).length) theme.colors = colors;
     }
     if (body.theme.logoUrl !== undefined) {

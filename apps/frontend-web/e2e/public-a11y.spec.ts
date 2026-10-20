@@ -141,6 +141,13 @@ test.describe('Public accessibility', () => {
     }
     const day = page.locator('span.p-datepicker-day:not(.p-disabled)').nth(2);
     await day.waitFor();
+    // The first day with slots is already chosen: its times show without touching the calendar.
+    await page.getByRole('option', { name: '09:00' }).waitFor();
+    // Days with nothing to book (closed Saturdays, a full day) are disabled and read out as unavailable.
+    const disabledDay = page.locator('span.p-datepicker-day.p-disabled').filter({ has: page.locator('.sr-only') });
+    expect(await disabledDay.count()).toBeGreaterThan(0);
+    await expect(disabledDay.first().locator('.sr-only')).toHaveText('לא זמין');
+    await expect(page.locator('span.p-datepicker-day:not(.p-disabled) .sr-only')).toHaveCount(0);
     await scan(page, 'datetime');
     await day.click();
     await page.getByRole('option', { name: '09:00' }).click();

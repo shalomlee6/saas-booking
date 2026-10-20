@@ -92,6 +92,15 @@ export class CustomerBookPageComponent implements OnInit {
   private readonly minDateForCalendar = signal<Date>(
     calendarDayInTimezone(new Date(), DEFAULT_PUBLIC_TIMEZONE)
   );
+  /** Latest-wins month loads: the visible month's availability replaces whatever was still loading. */
+  private readonly monthTrigger = new Subject<{
+    businessId: string;
+    serviceId: string;
+    month: string;
+    excludeAppointmentId?: string;
+    /** True for the first load of the step: select the first day that has slots. */
+    pickFirst: boolean;
+  }>();
   /** Latest service tap wins; a slower session response cannot move the step. */
   private readonly sessionCheckTrigger = new Subject<void>();
 
@@ -100,6 +109,17 @@ export class CustomerBookPageComponent implements OnInit {
   readonly services = signal<PublicService[]>([]);
   readonly selectedService = signal<PublicService | null>(null);
   readonly selectedDate = signal<Date | null>(null);
+  /** The month the calendar is showing (month is 0-11). */
+  readonly visibleMonth = signal<{ year: number; month: number } | null>(null);
+  readonly loadingMonth = signal(false);
+  /** True when the next months hold no bookable day at all for this service. */
+  readonly noDaysAvailable = signal(false);
+  /** Bookable days by `service|reschedule|YYYY-MM`. A month missing here is still loading. */
+  /** The service/reschedule the calendar was last opened for; a different one opens on its own first day. */
+  private calendarPreparedFor = '';
+  private readonly monthDays = signal<Record<string, string[]>>({});
+  /** Months whose lookup failed: the calendar then does not block anything (the old behavior). */
+  private readonly monthFailed = signal<Record<string, true>>({});
   readonly slots = signal<string[]>([]);
   readonly selectedSlot = signal<string | null>(null);
   readonly offer = signal<{ durationMinutes: number; price: number } | null>(null);
@@ -160,6 +180,27 @@ export class CustomerBookPageComponent implements OnInit {
     () => this.loadingBusiness() || this.loadingServices()
   );
 
+  /**
+   * The days of the visible month the client cannot book for this service. Everything not in the month's
+   * available list is disabled, which covers closed weekdays, days off, fully booked days and days past the
+   * booking horizon or inside the lead time. While the month loads nothing is selectable.
+   */
+  readonly disabledDates = computed<Date[]>(() => {
+    const view = this.visibleMonth();
+    const service = this.selectedService();
+    if (!view || !service) return [];
+    const key = this.monthKey(service.id, view.year, view.month);
+    if (this.monthFailed()[key]) return [];
+    const available = this.monthDays()[key];
+    const total = new Date(view.year, view.month + 1, 0).getDate();
+    const blocked: Date[] = [];
+    for (let day = 1; day <= total; day++) {
+      const date = new Date(view.year, view.month, day);
+      if (!available || !available.includes(dateKeyFromPicker(date))) blocked.push(date);
+    }
+    return blocked;
+  });
+
   readonly selectedDateStr = computed(() => {
     const d = this.selectedDate();
     if (!d) return '';
@@ -216,6 +257,22 @@ export class CustomerBookPageComponent implements OnInit {
       });
     });
     effect(() => {
+      // The date step opens on its first free day once the business and service are known (a reschedule
+      // link can fill them in after the step is already 3).
+      const ready = this.currentStep() === 3 && !!this.business() && !!this.selectedService() && !this.selectedDate();
+      this.rescheduleId();
+      untracked(() => {
+        if (ready) this.prepareCalendar();
+      });
+    });
+    effect(() => {
+      // The visitor's own appointment counts as free while they move it.
+      this.rescheduleId();
+      untracked(() => {
+        if (this.currentStep() === 3) this.ensureVisibleMonth();
+      });
+    });
+    effect(() => {
       const epoch = this.session.flowEpoch();
       if (epoch === 0) return;
       untracked(() => this.resetToStart());
@@ -232,6 +289,7 @@ export class CustomerBookPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.wireSlotsLoadPipeline();
+    this.wireMonthPipeline();
     this.wireSessionCheck();
     this.wireMinDateRefresh();
 
@@ -244,6 +302,110 @@ export class CustomerBookPageComponent implements OnInit {
     }
     this.loadBusiness(slug);
     this.loadServices(slug);
+  }
+
+  private monthKey(serviceId: string, year: number, month: number): string {
+    return `${serviceId}|${this.rescheduleId() ?? ''}|${year}-${String(month + 1).padStart(2, '0')}`;
+  }
+
+  /** Opens the date step on the first day that has a slot, with the calendar showing that month. */
+  private prepareCalendar(): void {
+    const business = this.business();
+    const service = this.selectedService();
+    if (!business || !service || this.selectedDate()) return;
+    const preparedFor = `${service.id}|${this.rescheduleId() ?? ''}`;
+    if (this.calendarPreparedFor === preparedFor) return;
+    this.calendarPreparedFor = preparedFor;
+    const today = this.minDate();
+    this.visibleMonth.set({ year: today.getFullYear(), month: today.getMonth() });
+    this.noDaysAvailable.set(false);
+    this.monthTrigger.next({
+      businessId: business.id,
+      serviceId: service.id,
+      month: `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`,
+      excludeAppointmentId: this.rescheduleId() ?? undefined,
+      pickFirst: true,
+    });
+  }
+
+  /** The calendar moved to another month (or year): fetch its days unless they are already here. */
+  onMonthChange(event: { month?: number; year?: number }): void {
+    if (typeof event.month !== 'number' || typeof event.year !== 'number') return;
+    this.visibleMonth.set({ year: event.year, month: event.month - 1 });
+    this.ensureVisibleMonth();
+  }
+
+  private ensureVisibleMonth(): void {
+    const view = this.visibleMonth();
+    const business = this.business();
+    const service = this.selectedService();
+    if (!view || !business || !service) return;
+    const key = this.monthKey(service.id, view.year, view.month);
+    if (this.monthDays()[key] || this.monthFailed()[key]) return;
+    this.monthTrigger.next({
+      businessId: business.id,
+      serviceId: service.id,
+      month: `${view.year}-${String(view.month + 1).padStart(2, '0')}`,
+      excludeAppointmentId: this.rescheduleId() ?? undefined,
+      pickFirst: false,
+    });
+  }
+
+  /** A day filled up or a slot was taken while the visitor chose: forget what we knew and ask again. */
+  private refreshMonths(): void {
+    this.monthDays.set({});
+    this.monthFailed.set({});
+    this.ensureVisibleMonth();
+  }
+
+  private wireMonthPipeline(): void {
+    this.monthTrigger
+      .pipe(
+        switchMap((request) => {
+          this.loadingMonth.set(true);
+          return this.publicApi
+            .getMonthAvailabilityByBusinessId(request.businessId, request.serviceId, request.month, request.excludeAppointmentId)
+            .pipe(
+              map((response) => ({ request, response })),
+              catchError(() => {
+                // A failed lookup must not stop anyone from booking: leave this month's days enabled.
+                const [year, month] = request.month.split('-').map(Number);
+                const key = this.monthKey(request.serviceId, year, month - 1);
+                this.monthFailed.update((failed) => ({ ...failed, [key]: true }));
+                this.loadingMonth.set(false);
+                return EMPTY;
+              })
+            );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(({ request, response }) => {
+        const [year, month] = request.month.split('-').map(Number);
+        const key = this.monthKey(request.serviceId, year, month - 1);
+        this.monthDays.update((days) => ({ ...days, [key]: response.availableDays }));
+        this.loadingMonth.set(false);
+        // The visitor may have chosen another service while this month was on its way.
+        if (request.pickFirst && request.serviceId === this.selectedService()?.id) {
+          this.selectFirstAvailable(response.firstAvailable);
+        }
+      });
+  }
+
+  private selectFirstAvailable(firstAvailable: string | null): void {
+    if (this.selectedDate()) return;
+    if (!firstAvailable) {
+      this.noDaysAvailable.set(true);
+      return;
+    }
+    const [year, month, day] = firstAvailable.split('-').map(Number);
+    this.noDaysAvailable.set(false);
+    this.visibleMonth.set({ year, month: month - 1 });
+    // The first day can be in a later month than the one just loaded.
+    this.ensureVisibleMonth();
+    this.selectedDate.set(new Date(year, month - 1, day));
+    this.onDateSelect();
+    // The preselected day (and the month it opens on) become the keyboard tab stop once rendered.
+    setTimeout(() => this.ensureDatepickerTabStop(), 50);
   }
 
   /**
@@ -503,6 +665,7 @@ export class CustomerBookPageComponent implements OnInit {
           const b2 = this.business();
           const svc2 = this.selectedService();
           if (b2 && svc2 && dateStr) {
+            this.refreshMonths();
             this.loadSlots(b2.id, svc2.id, dateStr);
           }
         } else {
@@ -628,6 +791,9 @@ export class CustomerBookPageComponent implements OnInit {
     this.rescheduleId.set(null);
     this.rescheduleFrom.set(null);
     this.submitError.set(null);
+    this.calendarPreparedFor = '';
+    this.noDaysAvailable.set(false);
+    this.visibleMonth.set(null);
   }
 
   private formatVisitDate(dateStr: string): string {

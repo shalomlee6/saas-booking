@@ -10,6 +10,8 @@ declare module 'luxon' {
     /** 1 = Monday … 7 = Sunday, in this DateTime's zone. */
     weekday: number;
     toUTC(): DateTime;
+    /** The calendar date as YYYY-MM-DD in this DateTime's zone. */
+    toISODate(): string | null;
     toJSDate(): Date;
     /** Start of a calendar unit in this DateTime's zone. */
     startOf(unit: 'day' | 'month'): DateTime;

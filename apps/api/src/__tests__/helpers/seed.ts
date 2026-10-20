@@ -89,7 +89,6 @@ export async function seedBusinessSettings(businessId: Types.ObjectId | string) 
       colors: {
         primary: '#F35271',
         secondary: '#FF9DBC',
-        accent: '#6CD6CD',
         background: '#FFFFFF',
         text: '#111827',
       },

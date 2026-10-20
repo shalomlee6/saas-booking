@@ -12,6 +12,7 @@ import {
   getPublicServices as getPublicServicesBooking,
   getAvailability,
   getPublicAvailability,
+  getPublicMonthAvailability,
   createPublicAppointment as createPublicAppointmentBooking,
   getUpcomingCustomerAppointment,
   cancelCustomerAppointment,
@@ -34,6 +35,8 @@ import {
   legacyBusinessSlugParamsSchema,
   legacyPublicCreateAppointmentBodySchema,
   publicAvailabilityQuerySchema,
+  publicMonthAvailabilityQuerySchema,
+  slugMonthAvailabilityQuerySchema,
   publicCancelAppointmentBodySchema,
   publicCancelAppointmentParamsSchema,
   publicRescheduleAppointmentBodySchema,
@@ -58,6 +61,21 @@ publicRouter.get(
   validateQuery(publicAvailabilityQuerySchema),
   optionalPublicCustomer,
   asyncHandler(getPublicAvailability)
+);
+// Which days of a month can be booked (the date picker's enabled days). Registered before the
+// per-day routes so "/availability/month" is never read as something else.
+publicRouter.get(
+  '/availability/month',
+  validateQuery(publicMonthAvailabilityQuerySchema),
+  optionalPublicCustomer,
+  asyncHandler(getPublicMonthAvailability)
+);
+publicRouter.get(
+  '/businesses/:slug/availability/month',
+  validateParams(slugParamsSchema),
+  validateQuery(slugMonthAvailabilityQuerySchema),
+  optionalPublicCustomer,
+  asyncHandler(getPublicMonthAvailability)
 );
 publicRouter.get(
   '/businesses/:slug/config',
