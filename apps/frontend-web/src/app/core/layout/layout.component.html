@@ -47,8 +47,8 @@
 
         <a
           routerLink="/dashboard"
-          routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="{ exact: true }"
+          [class.layout-sidebar-link-active]="activeItem() === 'dashboard'"
+          [attr.aria-current]="activeItem() === 'dashboard' ? 'page' : null"
           class="layout-sidebar-link"
           [attr.aria-label]="isSidebarCollapsed() ? ('navigation.dashboard' | translate) : null"
           (click)="closeMobileMenu()"
@@ -59,8 +59,8 @@
 
         <a
           routerLink="/appointments"
-          routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="{ exact: false }"
+          [class.layout-sidebar-link-active]="activeItem() === 'appointments'"
+          [attr.aria-current]="activeItem() === 'appointments' ? 'page' : null"
           class="layout-sidebar-link"
           [attr.aria-label]="isSidebarCollapsed() ? ('navigation.appointments' | translate) : null"
           (click)="closeMobileMenu()"
@@ -74,8 +74,8 @@
 
         <a
           routerLink="/services"
-          routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="linkOptsPrefix"
+          [class.layout-sidebar-link-active]="activeItem() === 'services'"
+          [attr.aria-current]="activeItem() === 'services' ? 'page' : null"
           class="layout-sidebar-link"
           [attr.aria-label]="isSidebarCollapsed() ? ('navigation.services' | translate) : null"
           (click)="closeMobileMenu()"
@@ -86,8 +86,8 @@
 
         <a
           routerLink="/customers"
-          routerLinkActive="layout-sidebar-link-active"
-          [routerLinkActiveOptions]="linkOptsPrefix"
+          [class.layout-sidebar-link-active]="activeItem() === 'customers'"
+          [attr.aria-current]="activeItem() === 'customers' ? 'page' : null"
           class="layout-sidebar-link"
           [attr.aria-label]="isSidebarCollapsed() ? ('navigation.customers' | translate) : null"
           (click)="closeMobileMenu()"
@@ -101,8 +101,8 @@
 
           <a
             routerLink="/settings"
-            routerLinkActive="layout-sidebar-link-active"
-            [routerLinkActiveOptions]="{ exact: false }"
+            [class.layout-sidebar-link-active]="activeItem() === 'settings'"
+            [attr.aria-current]="activeItem() === 'settings' ? 'page' : null"
             class="layout-sidebar-link"
             [attr.aria-label]="isSidebarCollapsed() ? ('navigation.settings' | translate) : null"
             (click)="closeMobileMenu()"
@@ -113,8 +113,8 @@
 
           <a
             routerLink="/settings/landing"
-            routerLinkActive="layout-sidebar-link-active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [class.layout-sidebar-link-active]="activeItem() === 'landing'"
+            [attr.aria-current]="activeItem() === 'landing' ? 'page' : null"
             class="layout-sidebar-link"
             [attr.aria-label]="isSidebarCollapsed() ? ('navigation.landingPage' | translate) : null"
             (click)="closeMobileMenu()"
@@ -126,8 +126,8 @@
           @if (business()?.slug) {
             <a
               routerLink="/preview/customer-site"
-              routerLinkActive="layout-sidebar-link-active"
-              [routerLinkActiveOptions]="{ exact: true }"
+              [class.layout-sidebar-link-active]="activeItem() === 'preview'"
+              [attr.aria-current]="activeItem() === 'preview' ? 'page' : null"
               class="layout-sidebar-link"
               [attr.aria-label]="isSidebarCollapsed() ? ('navigation.previewSite' | translate) : null"
               (click)="closeMobileMenu()"
@@ -139,8 +139,8 @@
 
           <a
             routerLink="/settings/account"
-            routerLinkActive="layout-sidebar-link-active"
-            [routerLinkActiveOptions]="{ exact: true }"
+            [class.layout-sidebar-link-active]="activeItem() === 'account'"
+            [attr.aria-current]="activeItem() === 'account' ? 'page' : null"
             class="layout-sidebar-link"
             [attr.aria-label]="isSidebarCollapsed() ? ('navigation.account' | translate) : null"
             (click)="closeMobileMenu()"

@@ -1,5 +1,6 @@
 import { Schema, model, Types, Document } from 'mongoose';
 import type { SettingsPlan } from '../dto/enums';
+import { BUSINESS_SETTINGS_DEFAULTS as D } from '../config/businessSettingsDefaults';
 
 /** Day of week 0 = Sunday, 6 = Saturday */
 export interface IOpeningHoursRange {
@@ -131,23 +132,18 @@ export interface IBusinessSettings extends Document {
     currency: string;
   };
   openingHours?: IOpeningHours;
+  /**
+   * Bookkeeping for "restore previous settings" after a reset. Not a setting: never reset, never shown.
+   * `fingerprint` is the hash of the reset scope's values right after the reset; once any of them
+   * changes, the snapshot is no longer offered.
+   */
+  resetUndo?: { auditId: string; scope: string; fingerprint: string; at: Date };
   createdAt: Date;
   updatedAt: Date;
 }
 
-/** Default: Sun–Thu 08:00–18:00, Fri 08:00–14:00, Sat closed */
-export const defaultOpeningHours: IOpeningHours = {
-  slotStepMinutes: 30,
-  days: [
-    { day: 0, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
-    { day: 1, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
-    { day: 2, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
-    { day: 3, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
-    { day: 4, isOpen: true, ranges: [{ start: '08:00', end: '18:00' }] },
-    { day: 5, isOpen: true, ranges: [{ start: '08:00', end: '14:00' }] },
-    { day: 6, isOpen: false, ranges: [] },
-  ],
-};
+/** Default opening hours (see BUSINESS_SETTINGS_DEFAULTS). */
+export const defaultOpeningHours: IOpeningHours = D.openingHours;
 
 const BusinessSettingsSchema = new Schema<IBusinessSettings>(
   {
@@ -161,35 +157,35 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
     plan: {
       type: String,
       enum: ['free', 'normal', 'pro', 'premium'],
-      default: 'free',
+      default: D.plan,
     },
     theme: {
       colors: {
-        primary: { type: String, default: '#F35271' },
-        secondary: { type: String, default: '#FF9DBC' },
-        accent: { type: String, default: '#6CD6CD' },
-        background: { type: String, default: '#FFFFFF' },
-        text: { type: String, default: '#111827' },
+        primary: { type: String, default: D.theme.colors.primary },
+        secondary: { type: String, default: D.theme.colors.secondary },
+        accent: { type: String, default: D.theme.colors.accent },
+        background: { type: String, default: D.theme.colors.background },
+        text: { type: String, default: D.theme.colors.text },
       },
-      preset: { type: String, default: 'prime-pink' },
-      defaultMode: { type: String, enum: ['light', 'dark'], default: 'light' },
-      logoUrl: { type: String, default: null },
-      fontFamily: { type: String, default: 'system-ui' },
+      preset: { type: String, default: D.theme.preset },
+      defaultMode: { type: String, enum: ['light', 'dark'], default: D.theme.defaultMode },
+      logoUrl: { type: String, default: D.theme.logoUrl },
+      fontFamily: { type: String, default: D.theme.fontFamily },
     },
     features: {
-      bookingEnabled: { type: Boolean, default: true },
-      paymentsEnabled: { type: Boolean, default: false },
-      marketingModule: { type: Boolean, default: false },
-      chatModule: { type: Boolean, default: false },
-      waitlistEnabled: { type: Boolean, default: false },
-      analyticsEnabled: { type: Boolean, default: false },
-      customDomainEnabled: { type: Boolean, default: false },
+      bookingEnabled: { type: Boolean, default: D.features.bookingEnabled },
+      paymentsEnabled: { type: Boolean, default: D.features.paymentsEnabled },
+      marketingModule: { type: Boolean, default: D.features.marketingModule },
+      chatModule: { type: Boolean, default: D.features.chatModule },
+      waitlistEnabled: { type: Boolean, default: D.features.waitlistEnabled },
+      analyticsEnabled: { type: Boolean, default: D.features.analyticsEnabled },
+      customDomainEnabled: { type: Boolean, default: D.features.customDomainEnabled },
     },
-    bookingWelcomeMessage: { type: String, default: '' },
-    landingTagline: { type: String, default: '' },
-    coverImageUrl: { type: String, default: '' },
-    landingSecondaryHeroImageUrl: { type: String, default: '' },
-    landingHeroDescription: { type: String, default: '' },
+    bookingWelcomeMessage: { type: String, default: D.landing.bookingWelcomeMessage },
+    landingTagline: { type: String, default: D.landing.tagline },
+    coverImageUrl: { type: String, default: D.landing.coverImageUrl },
+    landingSecondaryHeroImageUrl: { type: String, default: D.landing.secondaryHeroImageUrl },
+    landingHeroDescription: { type: String, default: D.landing.heroDescription },
     landingGalleryItems: {
       type: [
         {
@@ -202,9 +198,9 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       default: [],
     },
     landingContact: {
-      whatsapp: { type: String, default: '' },
-      email: { type: String, default: '' },
-      location: { type: String, default: '' },
+      whatsapp: { type: String, default: D.landing.contact.whatsapp },
+      email: { type: String, default: D.landing.contact.email },
+      location: { type: String, default: D.landing.contact.location },
     },
     landingServiceOrder: { type: [String], default: [] },
     landingSectionVisibility: {
@@ -226,41 +222,45 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
       ],
       default: [],
     },
-    publicRating: { type: Number, min: 1, max: 5, default: 5 },
+    publicRating: { type: Number, min: 1, max: 5, default: D.landing.publicRating },
     noShowPolicy: {
-      enabled: { type: Boolean, default: true },
-      threshold: { type: Number, default: 3, min: 1, max: 20 },
+      enabled: { type: Boolean, default: D.noShowPolicy.enabled },
+      threshold: { type: Number, default: D.noShowPolicy.threshold, min: 1, max: 20 },
     },
-    birthdayField: { type: String, enum: ['required', 'optional', 'hidden'], default: 'required' },
-    cancellationWindowHours: { type: Number, default: 24, min: 0, max: 24 * 30 },
+    birthdayField: { type: String, enum: ['required', 'optional', 'hidden'], default: D.birthdayField },
+    cancellationWindowHours: { type: Number, default: D.cancellationWindowHours, min: 0, max: 24 * 30 },
     onlineBooking: {
-      enabled: { type: Boolean, default: true },
-      minLeadMinutes: { type: Number, default: 60 },
-      maxAdvanceDays: { type: Number, default: 60, min: 7, max: 365 },
-      bufferMinutes: { type: Number, default: 0 },
-      onlineDefaultStatus: { type: String, enum: ['confirmed', 'pending'], default: 'confirmed' },
-      maxActiveAppointmentsPerClient: { type: Number, default: null },
-      clientCanCancelOnline: { type: Boolean, default: true },
+      enabled: { type: Boolean, default: D.onlineBooking.enabled },
+      minLeadMinutes: { type: Number, default: D.onlineBooking.minLeadMinutes },
+      maxAdvanceDays: { type: Number, default: D.onlineBooking.maxAdvanceDays, min: 7, max: 365 },
+      bufferMinutes: { type: Number, default: D.onlineBooking.bufferMinutes },
+      onlineDefaultStatus: {
+        type: String,
+        enum: ['confirmed', 'pending'],
+        default: D.onlineBooking.onlineDefaultStatus,
+      },
+      maxActiveAppointmentsPerClient: { type: Number, default: D.onlineBooking.maxActiveAppointmentsPerClient },
+      clientCanCancelOnline: { type: Boolean, default: D.onlineBooking.clientCanCancelOnline },
     },
     reliability: {
       lateCancellation: {
-        enabled: { type: Boolean, default: false },
-        threshold: { type: Number, default: 3, min: 1, max: 20 },
+        enabled: { type: Boolean, default: D.reliability.lateCancellation.enabled },
+        threshold: { type: Number, default: D.reliability.lateCancellation.threshold, min: 1, max: 20 },
       },
       lateArrival: {
-        enabled: { type: Boolean, default: false },
-        threshold: { type: Number, default: 3, min: 1, max: 20 },
+        enabled: { type: Boolean, default: D.reliability.lateArrival.enabled },
+        threshold: { type: Number, default: D.reliability.lateArrival.threshold, min: 1, max: 20 },
       },
-      lookback: { type: String, enum: ['12months', 'all'], default: '12months' },
+      lookback: { type: String, enum: ['12months', 'all'], default: D.reliability.lookback },
     },
-    businessPhonePublic: { type: String, default: '' },
+    businessPhonePublic: { type: String, default: D.landing.businessPhonePublic },
     localization: {
-      language: { type: String, enum: ['he', 'en'], default: 'he' },
-      timezone: { type: String, default: 'Asia/Jerusalem' },
-      currency: { type: String, default: 'ILS' },
+      language: { type: String, enum: ['he', 'en'], default: D.localization.language },
+      timezone: { type: String, default: D.localization.timezone },
+      currency: { type: String, default: D.localization.currency },
     },
     openingHours: {
-      slotStepMinutes: { type: Number, default: 30 },
+      slotStepMinutes: { type: Number, default: D.openingHours.slotStepMinutes },
       days: [
         {
           day: Number,
@@ -268,6 +268,12 @@ const BusinessSettingsSchema = new Schema<IBusinessSettings>(
           ranges: [{ start: String, end: String }],
         },
       ],
+    },
+    resetUndo: {
+      auditId: String,
+      scope: String,
+      fingerprint: String,
+      at: Date,
     },
   },
   { timestamps: true }
@@ -278,13 +284,9 @@ BusinessSettingsSchema.pre('save', function (next) {
     this.openingHours = defaultOpeningHours;
   }
   if (!this.localization) {
-    this.localization = {
-      language: 'he',
-      timezone: 'Asia/Jerusalem',
-      currency: 'ILS',
-    };
+    this.localization = { ...D.localization };
   } else if (!this.localization.timezone) {
-    this.localization.timezone = 'Asia/Jerusalem';
+    this.localization.timezone = D.localization.timezone;
   }
   next();
 });

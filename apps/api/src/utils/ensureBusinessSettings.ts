@@ -9,36 +9,8 @@ export async function ensureBusinessSettings(
   let settings = await BusinessSettings.findOne({ businessId: businessIdObj });
 
   if (!settings) {
-    // Create default settings
-    settings = await BusinessSettings.create({
-      businessId: businessIdObj,
-      plan: 'free',
-      theme: {
-        colors: {
-          primary: '#F35271',
-          secondary: '#FF9DBC',
-          accent: '#6CD6CD',
-          background: '#FFFFFF',
-          text: '#111827',
-        },
-        logoUrl: null,
-        fontFamily: 'system-ui',
-      },
-      features: {
-        bookingEnabled: true,
-        paymentsEnabled: false,
-        marketingModule: false,
-        chatModule: false,
-        waitlistEnabled: false,
-        analyticsEnabled: false,
-        customDomainEnabled: false,
-      },
-      localization: {
-        language: 'he',
-        timezone: 'Asia/Jerusalem',
-        currency: 'ILS',
-      },
-    });
+    // Every field takes its default from the schema (BUSINESS_SETTINGS_DEFAULTS).
+    settings = await BusinessSettings.create({ businessId: businessIdObj });
   }
 
   return settings;

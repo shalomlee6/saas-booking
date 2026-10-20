@@ -14,6 +14,7 @@ import bcrypt from 'bcryptjs';
 import { LogSmsProvider, TextMeSmsProvider, installSmsProvider, getSmsProvider } from '../services/smsProvider';
 import { publicRouter } from '../routes/public';
 import { otpIpRouteLimiter, otpRouteLimiter } from '../middleware/rateLimits';
+import type * as RateLimits from '../middleware/rateLimits';
 import type { Request, Response } from 'express';
 
 const app = buildTestApp();
@@ -50,6 +51,59 @@ function sessionIdFromCookie(cookie: string): string {
 async function otpCode(slug: string, phone: string): Promise<string> {
   const stored = await OtpChallenge.findOne({ businessSlug: slug, phone });
   return stored?.code ?? '';
+}
+
+type Limiter = typeof otpRouteLimiter;
+
+/** Sends one request through a rate limiter and resolves with the status it ended on. */
+function hitLimiter(limiter: Limiter, phone: string, ip: string): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
+    const req = {
+      ip,
+      params: { slug: 'rate-check' },
+      body: { phone },
+      headers: {},
+      cookies: {},
+      method: 'POST',
+      path: '/identify/start',
+      app: { get: () => false },
+    } as unknown as Request;
+    const res = {
+      statusCode: 200,
+      headers: {} as Record<string, string>,
+      setHeader(name: string, value: string) {
+        this.headers[name.toLowerCase()] = value;
+      },
+      getHeader(name: string) {
+        return this.headers[name.toLowerCase()];
+      },
+      status(code: number) {
+        this.statusCode = code;
+        return this;
+      },
+      json() {
+        resolve(this.statusCode);
+        return this;
+      },
+    };
+    limiter(req, res as unknown as Response, (err?: unknown) => {
+      if (err) reject(err);
+      else resolve(res.statusCode);
+    });
+  });
+}
+
+/** How many requests a limiter lets through before it answers 429 (capped at `cap`). */
+async function allowedBeforeBlock(
+  limiter: Limiter,
+  phoneFor: (i: number) => string,
+  ipFor: (i: number) => string,
+  cap: number
+): Promise<number> {
+  for (let i = 0; i < cap; i++) {
+    if ((await hitLimiter(limiter, phoneFor(i), ipFor(i))) === 429) return i;
+  }
+  return cap;
 }
 
 describe('PUBLIC CLIENT IDENTITY', () => {
@@ -775,62 +829,89 @@ describe('PUBLIC CLIENT IDENTITY', () => {
     expect(invalid.status).toBe(400);
   });
 
-  it('applies the OTP rate limits to identify/start in phone mode', async () => {
+  function identifyStartHandlers(): unknown[] {
     const layer = publicRouter.stack.find((entry) => {
-      const route = entry.route as { path?: string; methods?: { post?: boolean }; stack?: { handle: unknown }[] } | undefined;
+      const route = entry.route as { path?: string; methods?: { post?: boolean } } | undefined;
       return route?.path === '/businesses/:slug/identify/start' && route.methods?.post === true;
     });
     const route = layer?.route as { stack?: { handle: unknown }[] } | undefined;
-    const handles = (route?.stack ?? []).map((entry) => entry.handle);
+    return (route?.stack ?? []).map((entry) => entry.handle);
+  }
+
+  it('puts both identify limiters on identify/start', () => {
+    const handles = identifyStartHandlers();
     expect(handles.includes(otpIpRouteLimiter)).toBe(true);
     expect(handles.includes(otpRouteLimiter)).toBe(true);
-
-    const hit = (limiter: typeof otpRouteLimiter, phone: string, ip: string) =>
-      new Promise<number>((resolve, reject) => {
-        const req = {
-          ip,
-          params: { slug: 'rate-check' },
-          body: { phone },
-          headers: {},
-          cookies: {},
-          method: 'POST',
-          path: '/identify/start',
-          app: { get: () => false },
-        } as unknown as Request;
-        const res = {
-          statusCode: 200,
-          headers: {} as Record<string, string>,
-          setHeader(name: string, value: string) {
-            this.headers[name.toLowerCase()] = value;
-          },
-          getHeader(name: string) {
-            return this.headers[name.toLowerCase()];
-          },
-          status(code: number) {
-            this.statusCode = code;
-            return this;
-          },
-          json() {
-            resolve(this.statusCode);
-            return this;
-          },
-        };
-        limiter(req, res as unknown as Response, (err?: unknown) => {
-          if (err) reject(err);
-          else resolve(res.statusCode);
-        });
-      });
-
-    let phoneStatus = 200;
-    for (let i = 0; i < 51; i++) {
-      phoneStatus = await hit(otpRouteLimiter, '0501000001', '203.0.113.21');
-    }
-    expect(phoneStatus).toBe(429);
-
-    let ipStatus = 200;
-    for (let i = 0; i < 201; i++) {
-      ipStatus = await hit(otpIpRouteLimiter, `0502${String(i).padStart(6, '0')}`, '203.0.113.22');
-    }
-    expect(ipStatus).toBe(429);
   });
+
+  it('keeps the OTP limits in otp mode', async () => {
+    process.env.IDENTITY_MODE = 'otp';
+    const perPhone = await allowedBeforeBlock(otpRouteLimiter, () => '0501000001', () => '203.0.113.21', 80);
+    expect(perPhone).toBe(50);
+    const perIp = await allowedBeforeBlock(
+      otpIpRouteLimiter,
+      (i) => `0502${String(i).padStart(6, '0')}`,
+      () => '203.0.113.22',
+      300
+    );
+    expect(perIp).toBe(200);
+  });
+
+  it('uses 10 per phone and 200 per IP for identify/start in phone mode', async () => {
+    process.env.IDENTITY_MODE = 'phone';
+    const perPhone = await allowedBeforeBlock(otpRouteLimiter, () => '0501000011', () => '203.0.113.31', 40);
+    expect(perPhone).toBe(10);
+    const perIp = await allowedBeforeBlock(
+      otpIpRouteLimiter,
+      (i) => `0503${String(i).padStart(6, '0')}`,
+      () => '203.0.113.32',
+      300
+    );
+    expect(perIp).toBe(200);
+  });
+
+  it('lets 150 different customers behind one carrier NAT address identify in phone mode', async () => {
+    process.env.IDENTITY_MODE = 'phone';
+    let blocked = 0;
+    for (let i = 0; i < 150; i++) {
+      const status = await hitLimiter(otpIpRouteLimiter, `0504${String(i).padStart(6, '0')}`, '203.0.113.41');
+      if (status === 429) blocked += 1;
+    }
+    expect(blocked).toBe(0);
+  });
+
+  it('applies the production ceilings: otp 5 per phone and 20 per IP, phone mode 10 and 200', async () => {
+    const keys = ['NODE_ENV', 'PORT', 'MONGO_URI', 'JWT_SECRET', 'BASE_URL', 'IDENTITY_MODE'] as const;
+    const before = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    Object.assign(process.env, {
+      NODE_ENV: 'production',
+      PORT: '3999',
+      MONGO_URI: 'mongodb://127.0.0.1:27017/rate-limit-check',
+      JWT_SECRET: 'rate-limit-check-secret-0123456789abcdef',
+      BASE_URL: 'http://localhost:4300',
+    });
+    try {
+      // A fresh copy of the module, so it reads the production environment set above.
+      let production!: typeof RateLimits;
+      jest.isolateModules(() => {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        production = require('../middleware/rateLimits') as typeof RateLimits;
+      });
+      const phoneFor = (prefix: string) => (i: number) => `${prefix}${String(i).padStart(6, '0')}`;
+
+      process.env.IDENTITY_MODE = 'otp';
+      expect(await allowedBeforeBlock(production.otpRouteLimiter, () => '0505000001', () => '203.0.113.51', 30)).toBe(5);
+      expect(await allowedBeforeBlock(production.otpIpRouteLimiter, phoneFor('0506'), () => '203.0.113.52', 60)).toBe(20);
+
+      process.env.IDENTITY_MODE = 'phone';
+      expect(await allowedBeforeBlock(production.otpRouteLimiter, () => '0505000002', () => '203.0.113.53', 30)).toBe(10);
+      expect(await allowedBeforeBlock(production.otpIpRouteLimiter, phoneFor('0507'), () => '203.0.113.54', 300)).toBe(200);
+    } finally {
+      for (const key of keys) {
+        if (before[key] === undefined) delete process.env[key];
+        else process.env[key] = before[key];
+      }
+    }
+  });
+
 });

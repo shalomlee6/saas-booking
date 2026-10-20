@@ -63,6 +63,14 @@ async function tabTo(page: Page, selector: string): Promise<void> {
 }
 
 test.describe('Public accessibility', () => {
+  // The landing page fades its sections in when a scroll observer fires. That can happen between the
+  // moment scan() finishes the running animations and the moment axe measures, so axe saw cards that
+  // were still ~10% opaque (contrast 1.2:1). Reduced motion is a setting the page supports: it shows
+  // the final state with no transitions, so every scan measures what a reader actually sees.
+  test.beforeEach(async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+  });
+
   test.setTimeout(90_000);
 
   test('landing, menu, settings, and 320px have no axe violations', async ({ page }) => {

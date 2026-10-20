@@ -1,3 +1,5 @@
+import { isProdlikeLocal } from '../config/env';
+
 export interface SmsProvider {
   send(phone: string, text: string): Promise<void>;
 }
@@ -26,11 +28,16 @@ export class TextMeSmsProvider implements SmsProvider {
 let installed: SmsProvider | null = null;
 
 /**
- * Development uses the log provider. Production uses TextMe.
+ * Development uses the log provider. Production uses TextMe (except a local prod-like run).
  * Startup in production constructs LogSmsProvider only to prove it refuses to run,
  * then installs TextMe.
  */
 export function installSmsProvider(nodeEnv: string): SmsProvider {
+  // A local prod-like run (see isProdlikeLocal) must not try to reach a real SMS gateway.
+  if (nodeEnv === 'production' && isProdlikeLocal()) {
+    installed = new LogSmsProvider('development');
+    return installed;
+  }
   if (nodeEnv === 'production') {
     try {
       new LogSmsProvider('production');

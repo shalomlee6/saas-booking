@@ -61,6 +61,20 @@ const BokiPreset = definePreset(Aura, {
       950: '#1e1b4b',
     },
   },
+  components: {
+    toast: {
+      // Aura's light toasts use the 500/600 shade for the message text on a pale tint (about 3:1).
+      // The 800 shade keeps the severity colour and passes WCAG AA (4.5:1) for every toast in the app.
+      colorScheme: {
+        light: {
+          info: { color: '{blue.800}' },
+          success: { color: '{green.800}' },
+          warn: { color: '{yellow.900}' },
+          error: { color: '{red.800}' },
+        },
+      },
+    },
+  },
 });
 
 export const appConfig: ApplicationConfig = {

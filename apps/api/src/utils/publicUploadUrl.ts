@@ -82,5 +82,7 @@ export function settingsDocToClientJson(settings: {
 }): Record<string, unknown> {
   const raw =
     typeof settings.toObject === 'function' ? settings.toObject() : { ...(settings as Record<string, unknown>) };
+  // Internal reset bookkeeping, not a setting.
+  delete raw.resetUndo;
   return rewriteLandingImageUrlsInSettings(raw);
 }

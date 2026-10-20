@@ -17,6 +17,7 @@ import { countActiveUpcoming, resolveOnlineBookingRules } from './bookingRules';
 import { countVisibleUpcoming } from './publicAppointmentVisibility';
 import { isRealBirthday, type Birthday } from './birthday';
 import { getSmsProvider } from './smsProvider';
+import { resolveIdentityMode } from '../config/identityMode';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
@@ -26,11 +27,7 @@ export type IdentityMode = 'otp' | 'phone';
 export type IdentifyStatus = 'known' | 'new' | 'blocked' | 'code_sent';
 export type BirthdayField = 'required' | 'optional' | 'hidden';
 
-export function resolveIdentityMode(): IdentityMode {
-  const raw = process.env.IDENTITY_MODE?.trim().toLowerCase();
-  if (raw === 'otp' || raw === 'phone') return raw;
-  return process.env.NODE_ENV === 'production' ? 'phone' : 'otp';
-}
+export { resolveIdentityMode };
 
 export function resolveBirthdayField(value: unknown): BirthdayField {
   return value === 'optional' || value === 'hidden' ? value : 'required';

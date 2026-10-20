@@ -2,6 +2,7 @@ import { DateTime } from 'luxon';
 import { Types } from 'mongoose';
 import { Appointment } from '../models/Appointment';
 import { HttpError } from '../errors/httpErrors';
+import { BUSINESS_SETTINGS_DEFAULTS } from '../config/businessSettingsDefaults';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
 import { publicRequestLanguage } from './publicBookingPolicy';
 import type { Request } from 'express';
@@ -26,14 +27,8 @@ export interface OnlineBookingRules {
 }
 
 const DEFAULT_RULES: OnlineBookingRules = {
-  enabled: true,
-  minLeadMinutes: 60,
-  maxAdvanceDays: 60,
-  bufferMinutes: 0,
-  onlineDefaultStatus: 'confirmed',
-  maxActiveAppointmentsPerClient: null,
-  clientCanCancelOnline: true,
-  cancellationWindowHours: 24,
+  ...BUSINESS_SETTINGS_DEFAULTS.onlineBooking,
+  cancellationWindowHours: BUSINESS_SETTINGS_DEFAULTS.cancellationWindowHours,
 };
 
 export const BOOKING_RULE_MESSAGES = {

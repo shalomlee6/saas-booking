@@ -5,6 +5,7 @@ import { Customer } from '../models/Customer';
 import { NotFoundError, ValidationError } from '../errors/httpErrors';
 import { recordAudit } from '../utils/recordAudit';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { BUSINESS_SETTINGS_DEFAULTS } from '../config/businessSettingsDefaults';
 
 export interface NoShowPolicy {
   enabled: boolean;
@@ -30,7 +31,7 @@ export interface ReliabilityCounts {
 export type BookingOverride = 'auto' | 'allow' | 'block';
 export type BlockReason = 'threshold' | 'manual' | 'allowed' | 'clear';
 
-const DEFAULT_POLICY: NoShowPolicy = { enabled: true, threshold: 3 };
+const DEFAULT_POLICY: NoShowPolicy = BUSINESS_SETTINGS_DEFAULTS.noShowPolicy;
 
 const CONTROL_ACTIONS = [
   'appointment.no_show_excused',
@@ -97,9 +98,15 @@ export function resolveReliabilityPolicy(
 ): ReliabilityPolicy {
   return {
     noShow: resolveNoShowPolicy(source),
-    lateCancellation: resolveCounter(source?.reliability?.lateCancellation, false),
-    lateArrival: resolveCounter(source?.reliability?.lateArrival, false),
-    lookback: source?.reliability?.lookback === 'all' ? 'all' : '12months',
+    lateCancellation: resolveCounter(
+      source?.reliability?.lateCancellation,
+      BUSINESS_SETTINGS_DEFAULTS.reliability.lateCancellation.enabled
+    ),
+    lateArrival: resolveCounter(
+      source?.reliability?.lateArrival,
+      BUSINESS_SETTINGS_DEFAULTS.reliability.lateArrival.enabled
+    ),
+    lookback: source?.reliability?.lookback === 'all' ? 'all' : BUSINESS_SETTINGS_DEFAULTS.reliability.lookback,
   };
 }
 

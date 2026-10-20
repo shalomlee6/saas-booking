@@ -3,6 +3,7 @@ import type { CookieOptions, Request, Response } from 'express';
 import { Types } from 'mongoose';
 import { PublicClientSession, type IPublicClientBinding } from '../models/PublicClientSession';
 import type { PublicCustomer } from '../types/publicCustomer';
+import { cookieSecure } from '../config/env';
 
 export const PUBLIC_CUSTOMER_COOKIE_NAME = 'sb_public_customer';
 export const PUBLIC_SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
@@ -15,7 +16,7 @@ export interface PublicBusinessHint {
 export function publicCustomerCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     sameSite: 'lax',
     maxAge: PUBLIC_SESSION_TTL_MS,
     path: '/api/public',
@@ -25,7 +26,7 @@ export function publicCustomerCookieOptions(): CookieOptions {
 export function clearPublicCustomerCookieOptions(): CookieOptions {
   return {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     sameSite: 'lax',
     path: '/api/public',
   };

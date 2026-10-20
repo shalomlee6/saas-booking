@@ -2,6 +2,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { validateEnv } from '../config/env';
+import { resolveIdentityMode } from '../config/identityMode';
 
 const env = validateEnv();
 const cfg = env.rateLimit;
@@ -92,7 +93,8 @@ export const sensitiveRouteLimiter = rateLimit({
  *  never be shared with (or exhausted by) verify attempts against an already-sent code. */
 export const otpRouteLimiter = rateLimit({
   windowMs: cfg.sensitiveWindowMs,
-  max: cfg.maxOtp,
+  // Phone mode sends no SMS, so it has its own (looser) per-phone ceiling; otp mode keeps maxOtp.
+  max: () => (resolveIdentityMode() === 'phone' ? cfg.maxPhoneModeIdentify : cfg.maxOtp),
   keyGenerator: keyByOtpTarget,
   ...shared,
 });
@@ -109,7 +111,8 @@ export const otpVerifyRouteLimiter = rateLimit({
 /** Apply alongside otpRouteLimiter: caps total OTP requests per IP regardless of phone. */
 export const otpIpRouteLimiter = rateLimit({
   windowMs: cfg.sensitiveWindowMs,
-  max: cfg.maxOtpPerIp,
+  // Phone mode: many customers share one carrier-NAT address, so the per-IP ceiling is much higher.
+  max: () => (resolveIdentityMode() === 'phone' ? cfg.maxPhoneModeIdentifyPerIp : cfg.maxOtpPerIp),
   keyGenerator: keyByIp,
   ...shared,
 });

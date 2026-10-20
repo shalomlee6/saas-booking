@@ -467,6 +467,51 @@ test.describe('Keyboard navigation — public booking', () => {
       const design = await runAxe(page, '/settings/design contrast warning');
       expect(design.violations).toHaveLength(0);
     });
+
+    test('factory reset area, both dialogs and the restore banner have no axe violations', async ({ page }) => {
+      await loginAsOwner(page);
+      await page.evaluate(() => localStorage.setItem('sb_lang', 'he'));
+      const settled = async () => {
+        await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => undefined))));
+      };
+      const scan = async (label: string) => {
+        await settled();
+        const results = await runAxe(page, label);
+        expect(results.violations, label).toHaveLength(0);
+      };
+
+      for (const dark of [false, true]) {
+        const mode = dark ? 'dark' : 'light';
+        await page.goto('/settings/booking', { waitUntil: 'domcontentloaded' });
+        await page.locator('.settings-shell').waitFor({ timeout: 30_000 });
+        await setDark(page, dark);
+        await page.locator('.danger-zone').waitFor();
+        await scan(`danger zone ${mode}`);
+
+        // Restore defaults for this section: a dialog without a typing step.
+        await page.getByRole('button', { name: 'החזרה לברירת מחדל' }).click();
+        await page.locator('.settings-reset-dialog').waitFor();
+        await scan(`section reset dialog ${mode}`);
+        await page.keyboard.press('Escape');
+        await expect(page.locator('.settings-reset-dialog')).toHaveCount(0);
+
+        // Factory reset: typed confirmation, then the restore banner.
+        await page.getByRole('button', { name: /איפוס להגדרות יצרן/ }).click();
+        await page.locator('.settings-reset-dialog').waitFor();
+        await scan(`factory reset dialog ${mode}`);
+        const confirm = page.locator('.settings-reset-dialog .reset-btn-danger');
+        await expect(confirm).toBeDisabled();
+        await page.locator('#settings-reset-confirm').fill('איפוס');
+        await expect(confirm).toBeEnabled();
+        await scan(`factory reset dialog typed ${mode}`);
+        await confirm.click();
+        const restore = page.getByRole('button', { name: 'שחזור ההגדרות הקודמות' });
+        await restore.waitFor();
+        await scan(`restore banner ${mode}`);
+        await restore.click();
+        await expect(restore).toHaveCount(0);
+      }
+    });
   });
 
   test('booking/CTA button on /b/demo-salon is reachable via keyboard', async ({ page }) => {

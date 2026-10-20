@@ -1,10 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MessageService } from 'primeng/api';
 import { ApiService } from '../../../../core/api/api.service';
 import { LanguageService } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { SettingsSaveBarComponent } from './settings-save-bar.component';
+import { SettingsResetService } from './reset/settings-reset.service';
+import { SettingsSectionResetComponent } from './reset/settings-section-reset.component';
 
 interface BookingRules {
   enabled: boolean;
@@ -31,13 +33,14 @@ const DEFAULT_RULES: BookingRules = {
 @Component({
   selector: 'app-booking-rules-section',
   standalone: true,
-  imports: [FormsModule, TranslatePipe, SettingsSaveBarComponent],
+  imports: [FormsModule, TranslatePipe, SettingsSaveBarComponent, SettingsSectionResetComponent],
   templateUrl: './booking-rules-section.component.html',
   styleUrl: './settings-section.scss',
 })
 export class BookingRulesSectionComponent {
   private readonly api = inject(ApiService);
   private readonly messages = inject(MessageService);
+  private readonly reset = inject(SettingsResetService);
   readonly language = inject(LanguageService);
   readonly leadOptions = [0, 30, 60, 120, 180, 360, 720, 1440];
   readonly bufferOptions = [0, 5, 10, 15, 20, 30];
@@ -49,11 +52,20 @@ export class BookingRulesSectionComponent {
   readonly error = signal<string | null>(null);
 
   constructor() {
+    // Loads on open, and again after a factory reset or a restore.
+    effect(() => {
+      this.reset.version();
+      untracked(() => this.load());
+    });
+  }
+
+  private load(): void {
     this.api.get<{ booking: BookingRules }>('settings/me/booking-rules').subscribe({
       next: (body) => {
         const loaded = { ...DEFAULT_RULES, ...body.booking };
         this.rules.set(loaded);
         this.saved.set(loaded);
+        this.error.set(null);
       },
       error: () => this.error.set(this.language.t('settings.loadFailed')),
     });
@@ -70,6 +82,7 @@ export class BookingRulesSectionComponent {
       next: () => {
         this.saving.set(false);
         this.saved.set(sent);
+        this.reset.refresh();
         this.messages.add({ severity: 'success', summary: this.language.t('settings.saved') });
       },
       error: () => {

@@ -3,6 +3,10 @@ import { NavigationEnd, Router, RouterLink, RouterLinkActive, RouterOutlet } fro
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
+import { AuthService } from '../../../../core/auth/auth.service';
+import { SettingsResetService } from './reset/settings-reset.service';
+import { SettingsDangerZoneComponent } from './reset/settings-danger-zone.component';
+import { SettingsUndoBannerComponent } from './reset/settings-undo-banner.component';
 
 const SECTIONS = [
   {
@@ -52,7 +56,14 @@ const SECTIONS = [
 @Component({
   selector: 'app-business-settings-shell',
   standalone: true,
-  imports: [RouterLink, RouterLinkActive, RouterOutlet, TranslatePipe],
+  imports: [
+    RouterLink,
+    RouterLinkActive,
+    RouterOutlet,
+    TranslatePipe,
+    SettingsDangerZoneComponent,
+    SettingsUndoBannerComponent,
+  ],
   templateUrl: './business-settings-shell.component.html',
   styleUrl: './business-settings-shell.component.scss',
 })
@@ -60,9 +71,15 @@ export class BusinessSettingsShellComponent {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly auth = inject(AuthService);
+  private readonly reset = inject(SettingsResetService);
   readonly sections = SECTIONS;
   readonly section = signal<string | null>(null);
   readonly current = computed(() => SECTIONS.find((item) => item.id === this.section()) ?? null);
+  /** Factory reset is owner-only (a super-admin impersonating the business counts as its owner). */
+  readonly canReset = computed(
+    () => this.auth.user()?.role === 'owner' || (this.auth.isSuperAdmin() && this.auth.isImpersonating())
+  );
 
   constructor() {
     this.router.events
@@ -70,13 +87,21 @@ export class BusinessSettingsShellComponent {
         filter((event) => event instanceof NavigationEnd),
         takeUntilDestroyed(this.destroyRef)
       )
-      .subscribe(() => this.readSection());
+      .subscribe(() => {
+        this.readSection();
+        this.refreshResetStatus();
+      });
     this.readSection();
+    this.refreshResetStatus();
     // The section list is always visible (a side list on desktop, a chip row on a phone),
     // so there is no separate "hub" screen: land on the first section.
     if (!this.section()) {
       void this.router.navigate(['/settings/design'], { replaceUrl: true });
     }
+  }
+
+  private refreshResetStatus(): void {
+    if (this.canReset()) this.reset.refresh();
   }
 
   private readSection(): void {

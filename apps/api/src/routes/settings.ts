@@ -12,7 +12,16 @@ import {
   putOwnerReliability,
   updateMyBusinessSettings,
 } from '../controllers/businessSettingsController';
-import { bookingRulesBodySchema, reliabilityBodySchema } from '../validation/schemas/bookingSettings';
+import {
+  bookingRulesBodySchema,
+  reliabilityBodySchema,
+  settingsResetBodySchema,
+} from '../validation/schemas/bookingSettings';
+import {
+  getSettingsResetStatus,
+  postSettingsReset,
+  postSettingsRestore,
+} from '../controllers/settingsResetController';
 import { runLandingImageUpload, postLandingImageUpload } from '../controllers/landingUploadController';
 import { updateBusinessSettingsBodySchema } from '../validation/schemas/businessSettings';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -62,6 +71,33 @@ settingsRouter.put(
   requireOwner,
   validateBody(reliabilityBodySchema),
   asyncHandler(putOwnerReliability)
+);
+
+// Factory reset (settings only) and "restore previous settings". Owner only.
+settingsRouter.post(
+  '/me/reset',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  validateBody(settingsResetBodySchema),
+  asyncHandler(postSettingsReset)
+);
+settingsRouter.get(
+  '/me/reset/status',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  asyncHandler(getSettingsResetStatus)
+);
+settingsRouter.post(
+  '/me/reset/restore',
+  auth,
+  requireBackofficeRole,
+  requireBusinessContext,
+  requireOwner,
+  asyncHandler(postSettingsRestore)
 );
 
 settingsRouter.post(

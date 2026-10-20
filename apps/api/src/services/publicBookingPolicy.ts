@@ -3,6 +3,7 @@ import type { ICustomer } from '../models/Customer';
 import { HttpError } from '../errors/httpErrors';
 import { recordAudit } from '../utils/recordAudit';
 import { ensureBusinessSettings } from '../utils/ensureBusinessSettings';
+import { BUSINESS_SETTINGS_DEFAULTS } from '../config/businessSettingsDefaults';
 import { evaluateBookingBlock } from './customerNoShows';
 
 export const ONLINE_BOOKING_UNAVAILABLE = {
@@ -11,7 +12,7 @@ export const ONLINE_BOOKING_UNAVAILABLE = {
 } as const;
 
 /** Hours before the visit during which the client can still cancel or reschedule. */
-export const DEFAULT_CANCELLATION_WINDOW_HOURS = 24;
+export const DEFAULT_CANCELLATION_WINDOW_HOURS = BUSINESS_SETTINGS_DEFAULTS.cancellationWindowHours;
 
 export function resolveCancellationWindowHours(value: unknown): number {
   if (typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 24 * 30) {

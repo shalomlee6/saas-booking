@@ -444,6 +444,9 @@ function clearMockSessionStorage(): void {
   sessionStorage.removeItem(SB_MOCK_BIZ_KEY);
 }
 
+/** Mock of the factory-reset snapshot: offered after a reset, gone after a restore. */
+let mockSettingsResetScope: string | null = null;
+
 const mockAlertDismissed = new Set<string>();
 const mockAlertResolved = new Set<string>();
 
@@ -1603,6 +1606,34 @@ export const mockApiInterceptor: HttpInterceptorFn = (req, next) => {
       new HttpResponse({
         status: 200,
         body: { workingHours: mockBusinessSettings?.workingHours ?? buildDefaultWorkingHours() },
+      }),
+    ]);
+  }
+
+  if (req.method === 'GET' && req.url.includes('settings/me/reset/status')) {
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: mockSettingsResetScope
+          ? { available: true, scope: mockSettingsResetScope }
+          : { available: false },
+      }),
+    ]);
+  }
+
+  if (req.method === 'POST' && req.url.includes('settings/me/reset/restore')) {
+    const scope = mockSettingsResetScope ?? 'all';
+    mockSettingsResetScope = null;
+    return from([new HttpResponse({ status: 200, body: { scope, status: { available: false } } })]);
+  }
+
+  if (req.method === 'POST' && req.url.includes('settings/me/reset')) {
+    const scope = (req.body as { scope?: string } | null)?.scope ?? 'all';
+    mockSettingsResetScope = scope;
+    return from([
+      new HttpResponse({
+        status: 200,
+        body: { scope, changed: true, restoreAvailable: true, status: { available: true, scope } },
       }),
     ]);
   }

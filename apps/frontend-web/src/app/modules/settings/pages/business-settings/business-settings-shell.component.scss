@@ -158,7 +158,8 @@
     grid-template-columns: 17rem minmax(0, 1fr);
     grid-template-areas:
       'header header'
-      'nav detail';
+      'nav detail'
+      'danger danger';
     align-items: start;
     column-gap: 2rem;
     row-gap: 1.5rem;
@@ -170,6 +171,10 @@
 
   .settings-nav {
     grid-area: nav;
+  }
+
+  .settings-danger {
+    grid-area: danger;
   }
 
   .settings-detail {

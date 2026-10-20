@@ -10,7 +10,7 @@ import {
   DestroyRef,
 } from '@angular/core';
 import { Title } from '@angular/platform-browser';
-import { NavigationEnd, Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet, RouterLink } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, filter, map, of, startWith } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -26,32 +26,21 @@ import { ToastModule } from 'primeng/toast';
 import { ButtonModule } from 'primeng/button';
 import { LanguageService } from '../i18n/language.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { SIDEBAR_ITEM_TITLE_KEY, sidebarItemForUrl } from './sidebar-active';
 
 /** Matches `$breakpoint` in layout.component.scss. Below this, the sidebar is a drawer. */
 export const LAYOUT_SIDEBAR_BREAKPOINT_PX = 1024;
 
-/** Translation-key namespace for the topbar's page title, derived from the current route. */
+/** Translation key for the topbar title, derived from the sidebar item that owns the route. */
 function pageTitleKeyFromUrl(url: string): string {
-  const path = url.split('?')[0] || '/';
-  if (path === '/' || path.startsWith('/dashboard')) return 'navigation.dashboard';
-  if (path.startsWith('/appointments')) return 'navigation.appointments';
-  if (path.startsWith('/services')) return 'navigation.services';
-  if (path.startsWith('/customers')) return 'navigation.customers';
-  if (path.startsWith('/settings/landing')) return 'navigation.landingPage';
-  if (path.startsWith('/settings')) return 'navigation.settings';
-  if (path.startsWith('/settings/account')) return 'navigation.account';
-  if (path.startsWith('/preview')) return 'navigation.previewSite';
-  return '';
+  const item = sidebarItemForUrl(url);
+  return item ? SIDEBAR_ITEM_TITLE_KEY[item] : '';
 }
-
-/** Stable object references for routerLinkActiveOptions — avoids recreating objects on every CD cycle. */
-const LINK_OPTS_EXACT = { exact: true } as const;
-const LINK_OPTS_PREFIX = { exact: false } as const;
 
 @Component({
   selector: 'app-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastModule, ButtonModule, TranslatePipe, NgStyle],
+  imports: [RouterOutlet, RouterLink, ToastModule, ButtonModule, TranslatePipe, NgStyle],
   templateUrl: './layout.component.html',
   styleUrl: './layout.component.scss',
 })
@@ -128,6 +117,9 @@ export class LayoutComponent implements OnInit, OnDestroy {
     ),
     { initialValue: this.router.url.split('?')[0] || '/' }
   );
+
+  /** The one sidebar item that is active on this route (see sidebar-active.ts). */
+  readonly activeItem = computed(() => sidebarItemForUrl(this.currentPath()));
 
   /** Translation key for the topbar H1; empty string falls back to the "boki" wordmark. */
   private readonly pageTitleKey = computed(() => pageTitleKeyFromUrl(this.currentPath()));
@@ -270,9 +262,6 @@ export class LayoutComponent implements OnInit, OnDestroy {
     const slug = this.auth.business()?.slug;
     return slug ? `/b/${encodeURIComponent(slug)}` : '#';
   });
-
-  readonly linkOptsExact = LINK_OPTS_EXACT;
-  readonly linkOptsPrefix = LINK_OPTS_PREFIX;
 
   onLogout(): void {
     this.closeMobileMenu();

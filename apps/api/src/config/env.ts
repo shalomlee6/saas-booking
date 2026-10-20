@@ -42,6 +42,40 @@ const productionSchema = z
     }
   });
 
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+
+function hostnameOf(raw: string): string | null {
+  try {
+    return new URL(raw).hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  } catch {
+    return null;
+  }
+}
+
+function everyUrlIsLocal(urls: string[]): boolean {
+  return urls.length > 0 && urls.every((url) => LOCAL_HOSTNAMES.has(hostnameOf(url) ?? ''));
+}
+
+/**
+ * `PRODLIKE_LOCAL=true` runs the API with NODE_ENV=production on a developer machine.
+ * It relaxes exactly two things that cannot work over plain http on localhost:
+ * Secure cookies and the SMS provider. Everything else stays production.
+ *
+ * It only counts when NODE_ENV=production AND MONGO_URI, BASE_URL and every CLIENT_ORIGIN are
+ * local, so a leaked flag on a real deployment does nothing (and validateEnv refuses to boot).
+ */
+export function isProdlikeLocal(): boolean {
+  if (process.env.PRODLIKE_LOCAL !== 'true') return false;
+  if (process.env.NODE_ENV !== 'production') return false;
+  const origins = (process.env.CLIENT_ORIGIN || 'http://localhost:4200').split(',').map((o) => o.trim());
+  return everyUrlIsLocal([process.env.MONGO_URI ?? '', process.env.BASE_URL ?? '', ...origins]);
+}
+
+/** Cookies are Secure in production, except for a local prod-like run over http. */
+export function cookieSecure(): boolean {
+  return process.env.NODE_ENV === 'production' && !isProdlikeLocal();
+}
+
 export type RateLimitConfig = {
   /** Window for the general tiers (public/api/admin), in ms. */
   windowMs: number;
@@ -56,6 +90,12 @@ export type RateLimitConfig = {
   maxOtpVerify: number;
   /** Second, IP-keyed ceiling on top of the per-phone OTP limit — stops phone rotation abuse. */
   maxOtpPerIp: number;
+  /** Identify requests per phone in `phone` identity mode. No SMS is sent, so this only slows guessing,
+   *  and it can be looser than `maxOtp`. */
+  maxPhoneModeIdentify: number;
+  /** Identify requests per IP in `phone` mode. Higher than `maxOtpPerIp`: Israeli mobile carriers put many
+   *  customers behind one NAT address. */
+  maxPhoneModeIdentifyPerIp: number;
   maxPublic: number;
   maxApi: number;
   maxAdmin: number;
@@ -133,6 +173,8 @@ function resolveRateLimitConfig(isProduction: boolean): RateLimitConfig {
     maxOtp: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP, isProduction ? 5 : 50),
     maxOtpVerify: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP_VERIFY, isProduction ? 5 : 50),
     maxOtpPerIp: parsePositiveInt(process.env.RATE_LIMIT_MAX_OTP_IP, isProduction ? 20 : 200),
+    maxPhoneModeIdentify: parsePositiveInt(process.env.RATE_LIMIT_MAX_PHONE_MODE, 10),
+    maxPhoneModeIdentifyPerIp: parsePositiveInt(process.env.RATE_LIMIT_MAX_PHONE_MODE_IP, 200),
     maxPublic: parsePositiveInt(process.env.RATE_LIMIT_MAX_PUBLIC, isProduction ? 100 : 2000),
     maxApi: parsePositiveInt(process.env.RATE_LIMIT_MAX_API, isProduction ? 300 : 5000),
     maxAdmin: parsePositiveInt(process.env.RATE_LIMIT_MAX_ADMIN, isProduction ? 100 : 2000),
@@ -183,6 +225,12 @@ export function validateEnv(): Env {
   const isProduction = nodeEnvRaw === 'production';
 
   if (isProduction) {
+    if (process.env.PRODLIKE_LOCAL === 'true' && !isProdlikeLocal()) {
+      console.error(
+        '❌ PRODLIKE_LOCAL=true is only allowed with local MONGO_URI, BASE_URL and CLIENT_ORIGIN. Refusing to start.'
+      );
+      process.exit(1);
+    }
     const result = productionSchema.safeParse(process.env);
     if (!result.success) {
       console.error('❌ Invalid or missing environment variables (production):');

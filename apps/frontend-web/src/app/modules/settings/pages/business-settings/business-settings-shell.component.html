@@ -26,6 +26,9 @@
   </nav>
 
   <div class="settings-detail">
+    @if (canReset()) {
+      <app-settings-undo-banner />
+    }
     @if (current(); as item) {
       <header class="settings-detail-head">
         <span class="settings-detail-tile" aria-hidden="true"><i [class]="item.icon"></i></span>
@@ -37,4 +40,10 @@
     }
     <router-outlet />
   </div>
+
+  @if (canReset()) {
+    <div class="settings-danger">
+      <app-settings-danger-zone />
+    </div>
+  }
 </div>

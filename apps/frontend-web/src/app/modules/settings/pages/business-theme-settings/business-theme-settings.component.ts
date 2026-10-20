@@ -1,4 +1,4 @@
-import { Component, Signal, computed, inject, signal } from '@angular/core';
+import { Component, Signal, computed, effect, inject, signal, untracked } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormBuilder, FormGroup, ReactiveFormsModule } from '@angular/forms';
 import type { Observable } from 'rxjs';
@@ -9,6 +9,8 @@ import { AuthService } from '../../../../core/auth/auth.service';
 import { LanguageService, type AppLanguage } from '../../../../core/i18n/language.service';
 import { TranslatePipe } from '../../../../core/i18n/translate.pipe';
 import { SettingsSaveBarComponent } from '../business-settings/settings-save-bar.component';
+import { SettingsResetService } from '../business-settings/reset/settings-reset.service';
+import { SettingsSectionResetComponent } from '../business-settings/reset/settings-section-reset.component';
 
 type ColorField = 'primaryColor' | 'sidebarColor';
 
@@ -25,7 +27,7 @@ const DEFAULT_SIDEBAR = '#0F172A';
 @Component({
   selector: 'app-business-theme-settings',
   standalone: true,
-  imports: [ReactiveFormsModule, TranslatePipe, SettingsSaveBarComponent],
+  imports: [ReactiveFormsModule, TranslatePipe, SettingsSaveBarComponent, SettingsSectionResetComponent],
   templateUrl: './business-theme-settings.component.html',
   styleUrls: ['../business-settings/settings-section.scss', './business-theme-settings.component.scss'],
 })
@@ -35,6 +37,7 @@ export class BusinessThemeSettingsComponent {
   private readonly theme = inject(ThemeService);
   private readonly auth = inject(AuthService);
   readonly language = inject(LanguageService);
+  private readonly reset = inject(SettingsResetService);
 
   private readonly initial: ThemeFormValue = {
     themeMode: this.auth.business()?.ui?.themeMode ?? 'light',
@@ -73,6 +76,25 @@ export class BusinessThemeSettingsComponent {
   readonly previewSidebarText = computed(() => onContrastColor(this.sidebarSwatch()));
   readonly previewDark = computed(() => this.value().themeMode === 'dark');
 
+  constructor() {
+    // After a factory reset or a restore the admin theme has changed on the server: show it here.
+    effect(() => {
+      this.reset.version();
+      untracked(() => this.showSavedUi());
+    });
+  }
+
+  private showSavedUi(): void {
+    const ui = this.auth.business()?.ui;
+    const next: ThemeFormValue = {
+      themeMode: ui?.themeMode ?? this.initial.themeMode,
+      primaryColor: ui?.primaryColor ?? this.initial.primaryColor,
+      sidebarColor: ui?.sidebarColor ?? this.initial.sidebarColor,
+    };
+    this.saved.set(next);
+    this.form.reset(next);
+  }
+
   private swatch(value: string, fallback: string): string {
     return HEX.test(value) ? value : fallback;
   }
@@ -103,6 +125,7 @@ export class BusinessThemeSettingsComponent {
         this.theme.applyBusinessUi(res.ui);
         this.saved.set(value);
         this.saving.set(false);
+        this.reset.refresh();
       },
       error: (err) => {
         this.error.set(err?.error?.message || this.language.t('settings.saveError'));

@@ -1,7 +1,7 @@
 import type { CookieOptions, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import type { Types } from 'mongoose';
-import { validateEnv } from '../config/env';
+import { cookieSecure, validateEnv } from '../config/env';
 
 export const STAFF_COOKIE_NAME = 'sb_token';
 export const STAFF_SESSION_TTL = '90d';
@@ -13,7 +13,7 @@ export function staffAuthCookieOptions(): CookieOptions {
   return {
     path: '/',
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     sameSite: 'lax',
     maxAge: STAFF_SESSION_MAX_AGE_MS,
   };
@@ -23,7 +23,7 @@ export function clearStaffAuthCookieOptions(): CookieOptions {
   return {
     path: '/',
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: cookieSecure(),
     sameSite: 'lax',
   };
 }

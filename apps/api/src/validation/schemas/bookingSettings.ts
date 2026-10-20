@@ -53,3 +53,13 @@ export const reliabilityBodySchema = z
 
 export type BookingRulesBody = z.infer<typeof bookingRulesBodySchema>;
 export type ReliabilityBody = z.infer<typeof reliabilityBodySchema>;
+
+export const settingsResetBodySchema = z
+  .object({
+    scope: z.enum(['all', 'design', 'booking', 'reliability', 'customers']),
+    /** Required for a full factory reset: the owner types "איפוס" or "reset". */
+    confirm: z.string().max(40).optional(),
+  })
+  .strict();
+
+export type SettingsResetBody = z.infer<typeof settingsResetBodySchema>;

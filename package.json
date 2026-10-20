@@ -5,7 +5,10 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "check": "turbo run lint typeCheck test"
+    "check": "turbo run lint typeCheck test",
+    "dev:prodlike": "node scripts/dev-prodlike.mjs",
+    "seed:prodlike": "node scripts/seed-prodlike.mjs",
+    "e2e:real-api": "node scripts/e2e-real-api.mjs"
   },
   "keywords": [],
   "author": "",

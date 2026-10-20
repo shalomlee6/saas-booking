@@ -1,13 +1,7 @@
 import { IBusinessUi } from '../models/Business';
+import { BUSINESS_SETTINGS_DEFAULTS } from '../config/businessSettingsDefaults';
 
-const DEFAULT_UI: IBusinessUi = {
-  themeMode: 'light',
-  primaryColor: '#3787F6',
-  sidebarColor: '#0F172A',
-  backgroundColor: '#F6F8FB',
-  logoUrl: '',
-  dashboardLayout: 'classic',
-};
+const DEFAULT_UI: IBusinessUi = BUSINESS_SETTINGS_DEFAULTS.ui;
 
 export function normalizeBusinessUi(ui?: Partial<IBusinessUi> | null): IBusinessUi {
   if (!ui || typeof ui !== 'object') {

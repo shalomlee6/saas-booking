@@ -1,4 +1,5 @@
 import { Schema, model, Types, Document } from 'mongoose';
+import { BUSINESS_SETTINGS_DEFAULTS as D } from '../config/businessSettingsDefaults';
 
 export interface IBusinessUi {
   themeMode: 'light' | 'dark';
@@ -26,12 +27,12 @@ export interface IBusiness extends Document {
 
 const BusinessUiSchema = new Schema<IBusinessUi>(
   {
-    themeMode: { type: String, enum: ['light', 'dark'], default: 'light' },
-    primaryColor: { type: String, default: '#3787F6' },
-    sidebarColor: { type: String, default: '#0F172A' },
-    backgroundColor: { type: String, default: '#F6F8FB' },
-    logoUrl: { type: String, default: '' },
-    dashboardLayout: { type: String, enum: ['classic', 'compact'], default: 'classic' },
+    themeMode: { type: String, enum: ['light', 'dark'], default: D.ui.themeMode },
+    primaryColor: { type: String, default: D.ui.primaryColor },
+    sidebarColor: { type: String, default: D.ui.sidebarColor },
+    backgroundColor: { type: String, default: D.ui.backgroundColor },
+    logoUrl: { type: String, default: D.ui.logoUrl },
+    dashboardLayout: { type: String, enum: ['classic', 'compact'], default: D.ui.dashboardLayout },
   },
   { _id: false }
 );
