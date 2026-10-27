@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { withKnownThemeColors } from '../utils/themeColors';
 import { DateTime } from 'luxon';
 import { Business } from '../models/Business';
 import { Service } from '../models/Service';
@@ -58,7 +59,7 @@ export async function getPublicBusiness(req: Request, res: Response) {
       name: business.name,
       slug: business.slug,
       settings: {
-        theme: settings.theme,
+        theme: withKnownThemeColors(settings.theme),
         plan: settings.plan,
       },
     });

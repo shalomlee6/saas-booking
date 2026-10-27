@@ -1,3 +1,4 @@
+import { withKnownThemeColors, type ThemeColors } from './themeColors';
 /**
  * Landing images used to be stored as `/uploads/...`. That path is reachable on
  * the admin origin (dev proxy / CloudFront `/uploads` behavior) but not on
@@ -84,5 +85,8 @@ export function settingsDocToClientJson(settings: {
     typeof settings.toObject === 'function' ? settings.toObject() : { ...(settings as Record<string, unknown>) };
   // Internal reset bookkeeping, not a setting.
   delete raw.resetUndo;
+  if (raw.theme && typeof raw.theme === 'object') {
+    raw.theme = withKnownThemeColors(raw.theme as { colors?: Partial<ThemeColors> | null });
+  }
   return rewriteLandingImageUrlsInSettings(raw);
 }

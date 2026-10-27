@@ -135,6 +135,10 @@ Run from the repo root unless noted.
    (PowerShell: `$env:IDENTITY_MODE='phone'; npx playwright test ...`.) Specs that need a one-time code skip in phone mode.
 6. **Production build:** `npm run build` (watch the initial-bundle budget warning)
 7. **Real-API e2e:** `npm run e2e:real-api`
-8. **Deploy environment:** `NODE_ENV=production`, `PORT`, `MONGO_URI` (replica set), `JWT_SECRET` (32+),
+8. **Optional data cleanup (nothing to run before a deploy):** settings written before `theme.colors.accent`/`text`
+   were removed still carry them. Reads leave them out and saves ignore them, so they are harmless. To drop them anyway,
+   count first, then run (add `--allow-remote` for a non-local database):
+   `npm run migrate:theme-colors -w @saas-booking/api -- --dry-run`, then without `--dry-run`. It never runs on API startup.
+9. **Deploy environment:** `NODE_ENV=production`, `PORT`, `MONGO_URI` (replica set), `JWT_SECRET` (32+),
    `BASE_URL`, `CLIENT_ORIGIN`, `IDENTITY_MODE=phone`, `TRUST_PROXY` matching your proxy hops,
    `SENDGRID_API_KEY` + `FROM_EMAIL`, optional `SUPER_ADMIN_EMAILS`. Do **not** set `PRODLIKE_LOCAL`.

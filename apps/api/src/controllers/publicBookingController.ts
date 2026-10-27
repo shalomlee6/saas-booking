@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { withKnownThemeColors } from '../utils/themeColors';
 import mongoose, { Types } from 'mongoose';
 import { DateTime } from 'luxon';
 import { Business } from '../models/Business';
@@ -142,7 +143,7 @@ export async function getPublicBusinessBySlug(req: Request, res: Response): Prom
     name: business.name,
     slug: business.slug,
     localization: { language, timezone, currency },
-    theme: settings.theme,
+    theme: withKnownThemeColors(settings.theme),
     openingHours,
     welcomeMessage: welcome,
     cancellationNoticeHe: CANCELLATION_NOTICE_HE,

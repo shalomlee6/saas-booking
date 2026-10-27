@@ -64,6 +64,10 @@ describe('THEME COLORS: accent and text are gone', () => {
       },
     ]);
 
+    // A dry run only counts.
+    expect(await removeThemeAccentAndText({ dryRun: true })).toEqual({ matched: 1, modified: 0 });
+    expect(Object.keys(await rawColors(withLegacy))).toContain('accent');
+
     const first = await removeThemeAccentAndText();
     expect(first).toEqual({ matched: 1, modified: 1 });
 

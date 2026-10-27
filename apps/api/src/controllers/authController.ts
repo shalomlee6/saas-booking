@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { pickThemeColors } from '../utils/themeColors';
 import { BUSINESS_SETTINGS_DEFAULTS } from '../config/businessSettingsDefaults';
 import bcrypt from 'bcryptjs';
 import { AuthRequest } from '../middleware/auth';
@@ -72,7 +73,7 @@ export async function getMe(req: AuthRequest, res: Response) {
       businessSettings = {
         theme: settingsDoc.theme
           ? {
-              colors: settingsDoc.theme.colors,
+              colors: pickThemeColors(settingsDoc.theme.colors),
               preset: settingsDoc.theme.preset,
               defaultMode: settingsDoc.theme.defaultMode,
               logoUrl: settingsDoc.theme.logoUrl,
